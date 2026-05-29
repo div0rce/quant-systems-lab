@@ -4,7 +4,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
+#include <string_view>
 #include <vector>
 
 using namespace qsl::protocol;
@@ -124,5 +126,27 @@ TEST_CASE("deterministic byte fixture pins the wire format", "[protocol]") {
     REQUIRE(frame.size() == expected.size());
     for (std::size_t i = 0; i < expected.size(); ++i) {
         REQUIRE(std::to_integer<std::uint8_t>(frame[i]) == expected[i]);
+    }
+}
+
+TEST_CASE("decode errors stringify deterministically", "[protocol]") {
+    REQUIRE(std::string_view{to_string(DecodeError::None)} == "None");
+    REQUIRE(std::string_view{to_string(DecodeError::Truncated)} == "Truncated");
+    REQUIRE(std::string_view{to_string(DecodeError::UnsupportedVersion)} == "UnsupportedVersion");
+    REQUIRE(std::string_view{to_string(DecodeError::UnknownType)} == "UnknownType");
+    REQUIRE(std::string_view{to_string(DecodeError::BodyTooLarge)} == "BodyTooLarge");
+    REQUIRE(std::string_view{to_string(DecodeError::BodyLengthMismatch)} == "BodyLengthMismatch");
+    REQUIRE(std::string_view{to_string(static_cast<DecodeError>(255))} == "Unknown");
+}
+
+TEST_CASE("signed price round-trips including int64 extremes", "[protocol]") {
+    for (const Price p :
+         {Price{-1}, std::numeric_limits<Price>::min(), std::numeric_limits<Price>::max()}) {
+        NewOrder in = sample_new_order();
+        in.price = p;
+        const std::vector<std::byte> frame = encode(in, /*seq=*/5);
+        const auto out = decode_new_order(as_span(frame));
+        REQUIRE(out.ok());
+        REQUIRE(out.value.price == p);
     }
 }

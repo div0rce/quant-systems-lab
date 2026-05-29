@@ -80,6 +80,9 @@ Status key:
 - [M2] Serialization is explicit byte-shift (`endian.hpp`); no `reinterpret_cast`/`memcpy`/struct overlay.
 - [M2] Decoders are non-throwing, bounds-safe, and return a deterministic `DecodeError`.
 - [M2] `MsgType` starts with `NewOrder`/`CancelOrder`; registry grows in later milestones.
+- [M2] `DecodeError` stringification test is exhaustive (all enumerators + out-of-range cast).
+- [M2] Signed `Price` round-trip coverage includes negative and int64 min/max values.
+- [M2] Typed decoders intentionally parse declared bodies; stream exact-size enforcement is deferred to M9.
 
 ---
 

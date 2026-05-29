@@ -55,6 +55,13 @@ Header validation (`decode_header`) checks version, type, and max length. Typed 
 (`decode_new_order`, `decode_cancel_order`) additionally verify the body size and that the
 buffer holds the full declared body before parsing.
 
+## Trailing bytes and framing
+
+Typed decoders treat `body_len` as authoritative and parse exactly the declared fixed
+body, so a buffer with extra bytes after the body still decodes (the trailing bytes are
+ignored rather than treated as an error). Exact-size enforcement and message framing over
+a byte stream belong to the TCP/session layer (M9), not the codec.
+
 ## Determinism
 
 The wire format is pinned by a byte-fixture test (`tests/unit/test_protocol.cpp`) so any
