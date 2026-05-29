@@ -7,8 +7,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Catch2)
 
-add_executable(test_smoke unit/test_smoke.cpp)
-target_link_libraries(test_smoke PRIVATE qsl_core Catch2::Catch2WithMain)
-
 include(Catch)
-catch_discover_tests(test_smoke)
+
+foreach(t test_smoke test_types test_clock)
+  add_executable(${t} unit/${t}.cpp)
+  target_link_libraries(${t} PRIVATE qsl_core qsl_warnings Catch2::Catch2WithMain)
+  catch_discover_tests(${t})
+endforeach()
