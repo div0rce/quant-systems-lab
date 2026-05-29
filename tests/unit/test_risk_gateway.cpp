@@ -48,6 +48,20 @@ TEST_CASE("accepted market order forwards", "[gateway]") {
     REQUIRE(r.events.size() == 2); // OrderAccepted + TradeEvent
 }
 
+TEST_CASE("market order unknown symbol rejects and does not reach the engine", "[gateway]") {
+    MatchingEngine eng;
+    eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    const auto before = eng.snapshot();
+    const auto r = gw.new_market(SymbolId{99}, 1, Side::Buy, 5);
+    REQUIRE_FALSE(r.accepted);
+    REQUIRE(r.reason == RejectReason::UnknownSymbol);
+    REQUIRE(r.events.empty());
+    REQUIRE(eng.last_seq() == 0);
+    REQUIRE(eng.snapshot() == before);
+}
+
 TEST_CASE("unknown symbol rejects and does not reach the engine", "[gateway]") {
     MatchingEngine eng;
     eng.register_symbol("AAPL");
@@ -72,6 +86,21 @@ TEST_CASE("duplicate active order id rejects", "[gateway]") {
     REQUIRE(eng.last_seq() == 1); // dup did not reach the engine
 }
 
+TEST_CASE("duplicate active market order id rejects without consuming sequence", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    REQUIRE(gw.new_limit(a, 1, Side::Sell, 100, 5, TimeInForce::GTC).accepted); // rests
+    const auto before = eng.snapshot();
+    const auto dup = gw.new_market(a, 1, Side::Buy, 5);
+    REQUIRE_FALSE(dup.accepted);
+    REQUIRE(dup.reason == RejectReason::DuplicateOrderId);
+    REQUIRE(dup.events.empty());
+    REQUIRE(eng.last_seq() == 1);
+    REQUIRE(eng.snapshot() == before);
+}
+
 TEST_CASE("invalid side rejects", "[gateway]") {
     MatchingEngine eng;
     const SymbolId a = eng.register_symbol("AAPL");
@@ -79,6 +108,17 @@ TEST_CASE("invalid side rejects", "[gateway]") {
 
     const auto r = gw.new_limit(a, 1, static_cast<Side>(9), 100, 5, TimeInForce::GTC);
     REQUIRE(r.reason == RejectReason::InvalidSide);
+}
+
+TEST_CASE("invalid market side rejects", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    const auto r = gw.new_market(a, 1, static_cast<Side>(9), 5);
+    REQUIRE_FALSE(r.accepted);
+    REQUIRE(r.reason == RejectReason::InvalidSide);
+    REQUIRE(eng.last_seq() == 0);
 }
 
 TEST_CASE("invalid price rejects without reaching the engine", "[gateway]") {
@@ -110,6 +150,20 @@ TEST_CASE("max quantity exceeded rejects", "[gateway]") {
 
     const auto r = gw.new_limit(a, 1, Side::Buy, 100, 2000, TimeInForce::GTC);
     REQUIRE(r.reason == RejectReason::MaxQuantityExceeded);
+}
+
+TEST_CASE("market order max quantity exceeded rejects without reaching the engine", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    const auto before = eng.snapshot();
+    const auto r = gw.new_market(a, 1, Side::Buy, 2000);
+    REQUIRE_FALSE(r.accepted);
+    REQUIRE(r.reason == RejectReason::MaxQuantityExceeded);
+    REQUIRE(r.events.empty());
+    REQUIRE(eng.last_seq() == 0);
+    REQUIRE(eng.snapshot() == before);
 }
 
 TEST_CASE("max notional exceeded rejects", "[gateway]") {
@@ -149,6 +203,90 @@ TEST_CASE("modify unknown order rejects; modify resting order forwards", "[gatew
     REQUIRE(r.accepted);
     REQUIRE(r.events.size() == 1);
     REQUIRE(std::holds_alternative<engine::OrderModified>(r.events[0]));
+}
+
+TEST_CASE("modify rejects invalid price without mutating engine", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    REQUIRE(gw.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC).accepted);
+    const auto before = eng.snapshot();
+    const auto before_seq = eng.last_seq();
+
+    const auto r = gw.modify(a, 1, 0, 5);
+    REQUIRE_FALSE(r.accepted);
+    REQUIRE(r.reason == RejectReason::InvalidPrice);
+    REQUIRE(r.events.empty());
+    REQUIRE(eng.last_seq() == before_seq);
+    REQUIRE(eng.snapshot() == before);
+}
+
+TEST_CASE("modify rejects max quantity without mutating engine", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    REQUIRE(gw.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC).accepted);
+    const auto before = eng.snapshot();
+    const auto before_seq = eng.last_seq();
+
+    const auto r = gw.modify(a, 1, 100, 2000);
+    REQUIRE_FALSE(r.accepted);
+    REQUIRE(r.reason == RejectReason::MaxQuantityExceeded);
+    REQUIRE(r.events.empty());
+    REQUIRE(eng.last_seq() == before_seq);
+    REQUIRE(eng.snapshot() == before);
+}
+
+TEST_CASE("modify rejects max notional without mutating engine", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, RiskConfig{/*max_order_quantity=*/1000, /*max_notional=*/10'000});
+
+    REQUIRE(gw.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC).accepted);
+    const auto before = eng.snapshot();
+    const auto before_seq = eng.last_seq();
+
+    const auto r = gw.modify(a, 1, 100, 200);
+    REQUIRE_FALSE(r.accepted);
+    REQUIRE(r.reason == RejectReason::MaxNotionalExceeded);
+    REQUIRE(r.events.empty());
+    REQUIRE(eng.last_seq() == before_seq);
+    REQUIRE(eng.snapshot() == before);
+}
+
+TEST_CASE("modify quantity zero remains cancel via modify", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    REQUIRE(gw.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC).accepted);
+    const auto r = gw.modify(a, 1, 0, 0);
+    REQUIRE(r.accepted);
+    REQUIRE(r.reason == RejectReason::None);
+    REQUIRE(r.events.size() == 1);
+    REQUIRE(std::holds_alternative<engine::OrderModified>(r.events[0]));
+    REQUIRE_FALSE(eng.contains(a, 1));
+    REQUIRE(gw.cancel(a, 1).reason == RejectReason::UnknownOrder);
+}
+
+TEST_CASE("positive nonzero modify within risk limits forwards", "[gateway]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw(eng, kConfig);
+
+    REQUIRE(gw.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC).accepted);
+    const auto before_seq = eng.last_seq();
+
+    const auto r = gw.modify(a, 1, 101, 6);
+    REQUIRE(r.accepted);
+    REQUIRE(r.reason == RejectReason::None);
+    REQUIRE(r.events.size() == 1);
+    REQUIRE(std::holds_alternative<engine::OrderModified>(r.events[0]));
+    REQUIRE(eng.last_seq() == before_seq + 1);
+    REQUIRE(eng.contains(a, 1));
+    REQUIRE(eng.snapshot().symbols[0].best_bid == std::optional<Price>{101});
 }
 
 TEST_CASE("cancel/modify on an unknown symbol reject", "[gateway]") {

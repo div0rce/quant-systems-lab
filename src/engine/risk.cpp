@@ -4,11 +4,7 @@
 
 namespace qsl::engine {
 
-RejectReason check_limit(const RiskConfig &config, Side side, Price price,
-                         Quantity quantity) noexcept {
-    if (!core::is_valid(side)) {
-        return RejectReason::InvalidSide;
-    }
+RejectReason check_limit_values(const RiskConfig &config, Price price, Quantity quantity) noexcept {
     if (!core::is_valid_price(price)) {
         return RejectReason::InvalidPrice;
     }
@@ -25,6 +21,14 @@ RejectReason check_limit(const RiskConfig &config, Side side, Price price,
         return RejectReason::MaxNotionalExceeded;
     }
     return RejectReason::None;
+}
+
+RejectReason check_limit(const RiskConfig &config, Side side, Price price,
+                         Quantity quantity) noexcept {
+    if (!core::is_valid(side)) {
+        return RejectReason::InvalidSide;
+    }
+    return check_limit_values(config, price, quantity);
 }
 
 RejectReason check_market(const RiskConfig &config, Side side, Quantity quantity) noexcept {

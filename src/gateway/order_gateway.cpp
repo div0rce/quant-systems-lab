@@ -49,6 +49,13 @@ GatewayResult OrderGateway::modify(SymbolId symbol, OrderId id, Price new_price,
     if (!engine_.contains(symbol, id)) {
         return GatewayResult::reject(RejectReason::UnknownOrder);
     }
+    if (new_quantity == 0) {
+        return GatewayResult::accept(engine_.modify(symbol, id, new_price, new_quantity));
+    }
+    if (const RejectReason r = engine::check_limit_values(config_, new_price, new_quantity);
+        r != RejectReason::None) {
+        return GatewayResult::reject(r);
+    }
     return GatewayResult::accept(engine_.modify(symbol, id, new_price, new_quantity));
 }
 

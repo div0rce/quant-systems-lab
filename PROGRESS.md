@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m05-risk-gateway`
 - **Last completed milestone:** M4 — Multi-symbol matching engine (PR #5, squash-merged)
-- **`make check` passing:** yes (68/68 tests)
-- **Last action:** implemented risk checks + in-process gateway (structured GatewayResult) + tests + docs; make check green
+- **`make check` passing:** yes (77/77 tests)
+- **Last action:** fixed modify value validation before engine forwarding and added market-path rejection coverage; make check green
 - **Next action:** human reviews and squash-merges M5 PR
 - **Blockers:** none
 
@@ -100,6 +100,10 @@ Status key:
 - [M5] Notional check is overflow-safe (`quantity > max_notional / price`), never computing `price * quantity`.
 - [M5] "Duplicate" = order id currently active (resting), via `MatchingEngine::contains`, matching the engine's duplicate-active-id no-op; completed-order ids may be reused.
 - [M5] Rejections return a structured `GatewayResult` and never reach the engine, so the sequence counter and state stay clean; rejections are not part of the engine's sequenced event stream.
+- [M5] Nonzero modify commands are re-validated with limit-order value constraints before reaching the engine.
+- [M5] Modify quantity 0 remains cancel-via-modify.
+- [M5] Market-order rejection branches are explicitly tested.
+- [M5] Rejected modifies do not mutate engine state or consume sequence numbers.
 - [M4] Active resting `OrderId`s are unique per symbol; duplicate active IDs are no-ops in M4 and become structured `DuplicateOrderId` rejections in M5.
 - [M4] Tests cover no orphaned liquidity after duplicate-id attempts.
 

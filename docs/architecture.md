@@ -93,12 +93,17 @@ ClientCommand -> OrderGateway (risk) -> MatchingEngine -> EngineEvents
   and deterministic: invalid side, invalid price tick (price must be positive), invalid
   quantity, max order quantity, and max notional. The notional check is overflow-safe —
   it compares `quantity > max_notional / price` rather than computing `price * quantity`.
+  Side validation applies to `new_limit` and `new_market`; modify has no side parameter.
+  Modify commands that leave a nonzero resting order are re-checked against the same
+  limit-order value constraints before reaching the engine. Modify quantity `0` remains
+  cancel-via-modify.
 - **Identity checks** live in the gateway, which knows engine state: an unregistered symbol
   rejects with `UnknownSymbol`; a new order whose id is already **active** (resting) rejects
   with `DuplicateOrderId`; a cancel/modify of an id that is not resting rejects with
   `UnknownOrder`. "Duplicate" and "unknown" are thus defined by current engine state
   (`MatchingEngine::has_symbol` / `contains`), consistent with the engine's no-op on a
-  duplicate active id. Completed-order ids are not retained, so they may be reused.
+  duplicate active id. The M4 engine/book duplicate guards remain as invariant defense.
+  Completed-order ids are not retained, so they may be reused.
 - **Structured result** — every submission returns a `GatewayResult{accepted, reason,
   events}`. A rejection carries a `RejectReason` and no events and never reaches the engine
   (so the engine's sequence counter and state are untouched); an acceptance carries the
