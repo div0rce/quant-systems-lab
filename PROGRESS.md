@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M0 — Scaffold, tooling, CI
+- **Active milestone:** M1 — Core exchange domain types and invariants
 - **Status:** ready for PR
-- **Active branch:** `feat/m00-scaffold`
-- **Last completed milestone:** _none_
-- **`make check` passing:** yes
-- **Last action:** scaffolded all M0 files, verified build/test/format
-- **Next action:** human reviews and squash-merges M0 PR
+- **Active branch:** `feat/m01-core-domain`
+- **Last completed milestone:** M0 — Scaffold, tooling, CI (PR #1, squash-merged)
+- **`make check` passing:** yes (10/10 tests)
+- **Last action:** implemented core domain types/enums/clock/invariants + tests + docs; make check green
+- **Next action:** human reviews and squash-merges M1 PR
 - **Blockers:** none
 
 ---
@@ -34,8 +34,8 @@ Do not rely on prior chat memory.
 
 | # | Milestone | Branch | Status | PR | Notes |
 |---|---|---|---|---|---|
-| M0 | Scaffold, tooling, CI | `feat/m00-scaffold` | ◐ ready for PR | — | Create repo structure, CMake, CI, Claude commands |
-| M1 | Core domain | `feat/m01-core-domain` | ☐ not started | — | Types, ticks, enums, logical clock |
+| M0 | Scaffold, tooling, CI | `feat/m00-scaffold` | ☑ merged | #1 | Create repo structure, CMake, CI, Claude commands |
+| M1 | Core domain | `feat/m01-core-domain` | ◐ in progress | — | Types, ticks, enums, logical clock |
 | M2 | Binary protocol | `feat/m02-binary-protocol` | ☐ not started | — | Explicit encode/decode, byte fixtures |
 | M3 | Order book | `feat/m03-order-book` | ☐ not started | — | Single-symbol price-time priority |
 | M4 | Matching engine | `feat/m04-matching-engine` | ☐ not started | — | Multi-symbol sequencing and snapshots |
@@ -71,6 +71,9 @@ Status key:
 - [M0] Build generator: Ninja via CMake presets (dev, release, asan).
 - [M0] Compiler warnings: strict wall of warnings via interface library target.
 - [M0] `build`/`test`/`check` auto-configure via a CMakeCache stamp so a cold clone works.
+- [M1] Domain enums are fixed-width (`uint8_t`) with `is_valid` + `to_string`; out-of-range casts reject deterministically.
+- [M1] `Result` is a minimal `{bool ok; RejectReason}` value type (no `std::expected`; that is C++23).
+- [M1] `LogicalClock` provides a monotonic logical `Timestamp`; core paths avoid wall-clock time.
 
 ---
 
@@ -86,7 +89,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M0 complete, PR pending review_
+- _M1 complete, PR pending review_
 
 
 ---
