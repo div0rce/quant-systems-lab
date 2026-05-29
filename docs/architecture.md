@@ -79,3 +79,32 @@ only at the gateway boundary and benchmark layer, never inside matching.
   sequence.
 
 The engine has no wall-clock dependence; ordering and sequencing are logical.
+
+## Risk checks and in-process gateway (M5)
+
+The `OrderGateway` (`include/qsl/gateway/order_gateway.hpp`) is the risk boundary in front
+of the engine:
+
+```text
+ClientCommand -> OrderGateway (risk) -> MatchingEngine -> EngineEvents
+```
+
+- **Value checks** (`engine/risk.hpp`, `RiskConfig` + `check_limit`/`check_market`) are pure
+  and deterministic: invalid side, invalid price tick (price must be positive), invalid
+  quantity, max order quantity, and max notional. The notional check is overflow-safe —
+  it compares `quantity > max_notional / price` rather than computing `price * quantity`.
+- **Identity checks** live in the gateway, which knows engine state: an unregistered symbol
+  rejects with `UnknownSymbol`; a new order whose id is already **active** (resting) rejects
+  with `DuplicateOrderId`; a cancel/modify of an id that is not resting rejects with
+  `UnknownOrder`. "Duplicate" and "unknown" are thus defined by current engine state
+  (`MatchingEngine::has_symbol` / `contains`), consistent with the engine's no-op on a
+  duplicate active id. Completed-order ids are not retained, so they may be reused.
+- **Structured result** — every submission returns a `GatewayResult{accepted, reason,
+  events}`. A rejection carries a `RejectReason` and no events and never reaches the engine
+  (so the engine's sequence counter and state are untouched); an acceptance carries the
+  engine's resulting event stream. Rejections are intentionally *not* part of the engine's
+  sequenced event stream because they do not mutate engine state (which keeps replay clean).
+
+Checks run in a fixed order so the returned reason is deterministic when multiple would
+apply: unknown symbol, duplicate id, then value checks (side, price, quantity, max
+quantity, max notional).
