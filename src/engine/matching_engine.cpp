@@ -102,6 +102,15 @@ std::vector<EngineEvent> MatchingEngine::modify(SymbolId symbol, OrderId id, Pri
     return events;
 }
 
+bool MatchingEngine::has_symbol(SymbolId symbol) const {
+    return books_.find(symbol) != books_.end();
+}
+
+bool MatchingEngine::contains(SymbolId symbol, OrderId id) const {
+    const auto it = books_.find(symbol);
+    return it != books_.end() && it->second.contains(id);
+}
+
 EngineSnapshot MatchingEngine::snapshot() const {
     EngineSnapshot snap;
     snap.last_seq = seq_;

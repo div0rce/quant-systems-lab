@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M4 — Multi-symbol matching engine
+- **Active milestone:** M5 — Deterministic risk checks and in-process order gateway
 - **Status:** ready for PR
-- **Active branch:** `feat/m04-matching-engine`
-- **Last completed milestone:** M3 — Price-time priority order book (PR #4, squash-merged)
-- **`make check` passing:** yes (55/55 tests)
-- **Last action:** fixed duplicate active OrderId no-op handling in the engine/book layers; make check green
-- **Next action:** human reviews and squash-merges M4 PR
+- **Active branch:** `feat/m05-risk-gateway`
+- **Last completed milestone:** M4 — Multi-symbol matching engine (PR #5, squash-merged)
+- **`make check` passing:** yes (77/77 tests)
+- **Last action:** fixed modify value validation before engine forwarding and added market-path rejection coverage; make check green
+- **Next action:** human reviews and squash-merges M5 PR
 - **Blockers:** none
 
 ---
@@ -38,8 +38,8 @@ Do not rely on prior chat memory.
 | M1 | Core domain | `feat/m01-core-domain` | ☑ merged | #2 | Types, ticks, enums, logical clock |
 | M2 | Binary protocol | `feat/m02-binary-protocol` | ☑ merged | #3 | Explicit encode/decode, byte fixtures |
 | M3 | Order book | `feat/m03-order-book` | ☑ merged | #4 | Single-symbol price-time priority |
-| M4 | Matching engine | `feat/m04-matching-engine` | ◐ in progress | — | Multi-symbol sequencing and snapshots |
-| M5 | Risk + gateway | `feat/m05-risk-gateway` | ☐ not started | — | Deterministic checks before engine |
+| M4 | Matching engine | `feat/m04-matching-engine` | ☑ merged | #5 | Multi-symbol sequencing and snapshots |
+| M5 | Risk + gateway | `feat/m05-risk-gateway` | ◐ in progress | — | Deterministic checks before engine |
 | M6 | Market data | `feat/m06-market-data` | ☐ not started | — | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☐ not started | — | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☐ not started | — | Rebuild engine state from log |
@@ -96,6 +96,14 @@ Status key:
 - [M4] Unknown symbol / unknown cancel-modify is a no-op at the engine; structured rejection (`OrderRejected`) is deferred to M5, `BookUpdate` to M6.
 - [M4] Global cross-symbol sequence monotonicity is explicitly tested (interleaved AAPL/MSFT share one counter).
 - [M4] `new_market` emitted event contents are asserted (OrderAccepted + TradeEvent fields).
+- [M5] Risk split: pure value checks in `engine/risk.hpp` (side, price tick, quantity, max qty, max notional); identity checks (unknown symbol, duplicate, unknown order) in the gateway, which knows engine state.
+- [M5] Notional check is overflow-safe (`quantity > max_notional / price`), never computing `price * quantity`.
+- [M5] "Duplicate" = order id currently active (resting), via `MatchingEngine::contains`, matching the engine's duplicate-active-id no-op; completed-order ids may be reused.
+- [M5] Rejections return a structured `GatewayResult` and never reach the engine, so the sequence counter and state stay clean; rejections are not part of the engine's sequenced event stream.
+- [M5] Nonzero modify commands are re-validated with limit-order value constraints before reaching the engine.
+- [M5] Modify quantity 0 remains cancel-via-modify.
+- [M5] Market-order rejection branches are explicitly tested.
+- [M5] Rejected modifies do not mutate engine state or consume sequence numbers.
 - [M4] Active resting `OrderId`s are unique per symbol; duplicate active IDs are no-ops in M4 and become structured `DuplicateOrderId` rejections in M5.
 - [M4] Tests cover no orphaned liquidity after duplicate-id attempts.
 
@@ -113,7 +121,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M4 complete, PR pending review_
+- _M5 complete, PR pending review_
 
 
 ---
