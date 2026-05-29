@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M3 — Price-time priority order book
+- **Active milestone:** M4 — Multi-symbol matching engine
 - **Status:** ready for PR
-- **Active branch:** `feat/m03-order-book`
-- **Last completed milestone:** M2 — Binary protocol (PR #3, squash-merged)
-- **`make check` passing:** yes (39/39 tests)
-- **Last action:** implemented single-symbol price-time-priority book + scenario tests + docs; make check green
-- **Next action:** human reviews and squash-merges M3 PR
+- **Active branch:** `feat/m04-matching-engine`
+- **Last completed milestone:** M3 — Price-time priority order book (PR #4, squash-merged)
+- **`make check` passing:** yes (50/50 tests)
+- **Last action:** implemented multi-symbol engine + sequenced event stream + snapshot + integration tests; make check green
+- **Next action:** human reviews and squash-merges M4 PR
 - **Blockers:** none
 
 ---
@@ -37,8 +37,8 @@ Do not rely on prior chat memory.
 | M0 | Scaffold, tooling, CI | `feat/m00-scaffold` | ☑ merged | #1 | Create repo structure, CMake, CI, Claude commands |
 | M1 | Core domain | `feat/m01-core-domain` | ☑ merged | #2 | Types, ticks, enums, logical clock |
 | M2 | Binary protocol | `feat/m02-binary-protocol` | ☑ merged | #3 | Explicit encode/decode, byte fixtures |
-| M3 | Order book | `feat/m03-order-book` | ◐ in progress | — | Single-symbol price-time priority |
-| M4 | Matching engine | `feat/m04-matching-engine` | ☐ not started | — | Multi-symbol sequencing and snapshots |
+| M3 | Order book | `feat/m03-order-book` | ☑ merged | #4 | Single-symbol price-time priority |
+| M4 | Matching engine | `feat/m04-matching-engine` | ◐ in progress | — | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☐ not started | — | Deterministic checks before engine |
 | M6 | Market data | `feat/m06-market-data` | ☐ not started | — | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☐ not started | — | Append-only records and reader |
@@ -90,6 +90,10 @@ Status key:
 - [M3] Modify: same-price quantity reduction preserves priority (in place); price change or quantity increase loses priority (cancel + re-add, may cross).
 - [M3] Distinguish per-order `Quantity` (u32) from aggregate `QuantityTotal` (u64); `quantity_at()` accumulates/returns the 64-bit total so level liquidity never wraps.
 - [M3] Modify zero-quantity (cancel) and unknown-id (no-op) branches are now tested; partially-filled maker priority retention is explicitly tested.
+- [M4] `EngineEvent` is a `std::variant` (OrderAccepted/OrderCanceled/OrderModified/TradeEvent); each event carries its `SeqNo`.
+- [M4] Single monotonic counter assigns each emitted event a strictly-increasing `SeqNo`.
+- [M4] Engine keys books in an ordered `std::map<SymbolId, OrderBook>`; snapshot iterates it for deterministic ordering.
+- [M4] Unknown symbol / unknown cancel-modify is a no-op at the engine; structured rejection (`OrderRejected`) is deferred to M5, `BookUpdate` to M6.
 
 ---
 
@@ -105,7 +109,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M3 complete, PR pending review_
+- _M4 complete, PR pending review_
 
 
 ---

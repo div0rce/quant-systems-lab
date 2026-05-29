@@ -157,4 +157,8 @@ std::size_t OrderBook::order_count() const {
     return index_.size();
 }
 
+bool OrderBook::contains(OrderId id) const {
+    return index_.find(id) != index_.end();
+}
+
 } // namespace qsl::engine
