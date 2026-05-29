@@ -7,6 +7,7 @@ namespace qsl::engine {
 using core::OrderId;
 using core::Price;
 using core::Quantity;
+using core::QuantityTotal;
 using core::Side;
 
 // A resting order in the book. Time priority is its position within a price level.

@@ -88,6 +88,8 @@ Status key:
 - [M3] `OrderId→{side,price,iterator}` index for O(1) cancel/modify; never iterated for matching, so its unordered layout does not affect determinism.
 - [M3] Fills execute at the resting maker's price; GTC rests remainder, IOC discards, market never rests.
 - [M3] Modify: same-price quantity reduction preserves priority (in place); price change or quantity increase loses priority (cancel + re-add, may cross).
+- [M3] Distinguish per-order `Quantity` (u32) from aggregate `QuantityTotal` (u64); `quantity_at()` accumulates/returns the 64-bit total so level liquidity never wraps.
+- [M3] Modify zero-quantity (cancel) and unknown-id (no-op) branches are now tested; partially-filled maker priority retention is explicitly tested.
 
 ---
 

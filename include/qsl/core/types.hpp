@@ -8,6 +8,9 @@ namespace qsl::core {
 using SymbolId = std::uint32_t;
 using Price = std::int64_t;
 using Quantity = std::uint32_t;
+// Aggregate of many per-order Quantity values (e.g. total resting size at a price
+// level). Wider than Quantity so level/snapshot totals never wrap.
+using QuantityTotal = std::uint64_t;
 using OrderId = std::uint64_t;
 using SeqNo = std::uint64_t;
 

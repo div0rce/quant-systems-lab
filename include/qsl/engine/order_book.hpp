@@ -39,7 +39,7 @@ class OrderBook {
 
     [[nodiscard]] std::optional<Price> best_bid() const;
     [[nodiscard]] std::optional<Price> best_ask() const;
-    [[nodiscard]] Quantity quantity_at(Side side, Price price) const;
+    [[nodiscard]] QuantityTotal quantity_at(Side side, Price price) const;
     [[nodiscard]] std::size_t order_count() const;
 
   private:

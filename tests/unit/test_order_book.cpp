@@ -1,6 +1,7 @@
 #include "qsl/engine/order_book.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <limits>
 #include <optional>
 
 using namespace qsl::engine;
@@ -163,4 +164,49 @@ TEST_CASE("book is never crossed after matching", "[book]") {
     REQUIRE(book.best_bid() == std::optional<Price>{101});
     REQUIRE(book.best_ask() == std::optional<Price>{102});
     REQUIRE(book.best_bid().value() < book.best_ask().value());
+}
+
+TEST_CASE("quantity_at aggregates without wrapping at the per-order width", "[book]") {
+    OrderBook book;
+    const Quantity big = std::numeric_limits<Quantity>::max();
+    book.add_limit(1, Side::Buy, 100, big, TimeInForce::GTC);
+    book.add_limit(2, Side::Buy, 100, 1, TimeInForce::GTC);
+
+    REQUIRE(book.quantity_at(Side::Buy, 100) == static_cast<QuantityTotal>(big) + 1);
+}
+
+TEST_CASE("modify to zero quantity cancels the order", "[book]") {
+    OrderBook book;
+    book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
+
+    REQUIRE(book.modify(1, 100, 0).empty());
+    REQUIRE(book.order_count() == 0);
+    REQUIRE_FALSE(book.best_bid().has_value());
+}
+
+TEST_CASE("modify of an unknown order is a no-op", "[book]") {
+    OrderBook book;
+    book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
+
+    REQUIRE(book.modify(999, 100, 3).empty());
+    REQUIRE(book.order_count() == 1);
+    REQUIRE(book.best_bid() == std::optional<Price>{100});
+    REQUIRE(book.quantity_at(Side::Buy, 100) == 5);
+}
+
+TEST_CASE("partially filled maker retains priority over later orders", "[book]") {
+    OrderBook book;
+    book.add_limit(1, Side::Sell, 100, 5, TimeInForce::GTC);
+    book.add_limit(2, Side::Sell, 100, 5, TimeInForce::GTC);
+
+    const auto first = book.add_limit(3, Side::Buy, 100, 3, TimeInForce::GTC);
+    REQUIRE(first.size() == 1);
+    REQUIRE(first[0].maker_id == 1); // order 1 partially filled, 2 remaining
+
+    const auto second = book.add_limit(4, Side::Buy, 100, 3, TimeInForce::GTC);
+    REQUIRE(second.size() == 2);
+    REQUIRE(second[0].maker_id == 1); // remainder of order 1 fills first
+    REQUIRE(second[0].quantity == 2);
+    REQUIRE(second[1].maker_id == 2); // only then order 2
+    REQUIRE(second[1].quantity == 1);
 }

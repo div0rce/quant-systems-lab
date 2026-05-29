@@ -60,4 +60,10 @@ book trades immediately, exactly as a fresh aggressor would.
 
 Semantic/policy validation (price ticks, max quantity/notional, duplicate ids, unknown
 symbols) is **not** done here; that is the risk layer's responsibility (M5). The book
-assumes well-formed, validated inputs.
+assumes well-formed, validated inputs. In particular, zero-quantity inputs are assumed to
+be rejected by the M5 risk layer; at the M3 book layer a zero-quantity order simply
+produces no trades and does not rest.
+
+`quantity_at()` reports aggregate resting liquidity using a wider aggregate type
+(`QuantityTotal`, 64-bit) so a price level's total never wraps at the per-order `Quantity`
+(32-bit) width, even when many orders rest at the same price.

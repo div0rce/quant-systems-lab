@@ -131,7 +131,7 @@ std::optional<Price> OrderBook::best_ask() const {
     return asks_.begin()->first;
 }
 
-Quantity OrderBook::quantity_at(Side side, Price price) const {
+QuantityTotal OrderBook::quantity_at(Side side, Price price) const {
     const Level *level = nullptr;
     if (side == Side::Buy) {
         const auto it = bids_.find(price);
@@ -144,10 +144,10 @@ Quantity OrderBook::quantity_at(Side side, Price price) const {
             level = &it->second;
         }
     }
-    Quantity total = 0;
+    QuantityTotal total = 0;
     if (level != nullptr) {
         for (const Order &o : *level) {
-            total += o.quantity;
+            total += static_cast<QuantityTotal>(o.quantity);
         }
     }
     return total;
