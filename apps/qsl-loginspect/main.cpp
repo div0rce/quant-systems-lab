@@ -9,6 +9,8 @@ const char *to_string(qsl::replay::LogError e) noexcept {
     switch (e) {
     case qsl::replay::LogError::None:
         return "ok";
+    case qsl::replay::LogError::OpenFailed:
+        return "open-failed";
     case qsl::replay::LogError::Truncated:
         return "truncated";
     case qsl::replay::LogError::BadChecksum:

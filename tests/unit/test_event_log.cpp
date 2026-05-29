@@ -65,6 +65,29 @@ TEST_CASE("records round-trip through an append-only file", "[log]") {
     std::filesystem::remove(path);
 }
 
+TEST_CASE("missing log paths report open failure", "[log]") {
+    const auto path = std::filesystem::temp_directory_path() / "qsl_eventlog_missing.bin";
+    std::filesystem::remove(path);
+
+    const auto result = EventLogReader(path).read_all();
+    REQUIRE(result.error == LogError::OpenFailed);
+    REQUIRE(result.records.empty());
+}
+
+TEST_CASE("an existing empty log reads cleanly as zero records", "[log]") {
+    const auto path = std::filesystem::temp_directory_path() / "qsl_eventlog_empty.bin";
+    std::filesystem::remove(path);
+    {
+        EventLogWriter writer(path);
+        REQUIRE(writer.good());
+    }
+
+    const auto result = EventLogReader(path).read_all();
+    REQUIRE(result.error == LogError::None);
+    REQUIRE(result.records.empty());
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("a truncated log fails safely, keeping intact records", "[log]") {
     std::vector<std::byte> buf;
     REQUIRE(encode_record(kR1, buf));
@@ -122,6 +145,18 @@ TEST_CASE("writer rejects oversized payload without appending", "[log]") {
     REQUIRE(result.records.size() == 1);
     REQUIRE(result.records[0] == kR1);
     std::filesystem::remove(path);
+}
+
+TEST_CASE("writer reports append failure after opening an unwritable sink", "[log]") {
+    const std::filesystem::path path{"/dev/full"};
+    if (!std::filesystem::exists(path)) {
+        SUCCEED("/dev/full is not available on this platform");
+        return;
+    }
+
+    EventLogWriter writer(path);
+    REQUIRE(writer.good());
+    REQUIRE_FALSE(writer.append(kR1));
 }
 
 TEST_CASE("encode_record rejects oversized payload without modifying output", "[log]") {

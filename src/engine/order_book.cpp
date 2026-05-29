@@ -167,4 +167,27 @@ bool OrderBook::contains(OrderId id) const {
     return index_.find(id) != index_.end();
 }
 
+namespace {
+template <class LevelMap> std::vector<LevelView> collect_levels(const LevelMap &book) {
+    std::vector<LevelView> levels;
+    levels.reserve(book.size());
+    for (const auto &[price, orders] : book) {
+        QuantityTotal total = 0;
+        for (const Order &o : orders) {
+            total += static_cast<QuantityTotal>(o.quantity);
+        }
+        levels.push_back(LevelView{price, total});
+    }
+    return levels;
+}
+} // namespace
+
+std::vector<LevelView> OrderBook::bid_levels() const {
+    return collect_levels(bids_);
+}
+
+std::vector<LevelView> OrderBook::ask_levels() const {
+    return collect_levels(asks_);
+}
+
 } // namespace qsl::engine

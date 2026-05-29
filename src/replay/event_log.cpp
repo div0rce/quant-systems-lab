@@ -114,14 +114,20 @@ EventLogReader::EventLogReader(std::filesystem::path path) : path_(std::move(pat
 
 LogReadResult EventLogReader::read_all() const {
     std::vector<std::byte> buf;
-    std::error_code ec;
-    if (std::filesystem::exists(path_, ec)) {
-        const auto size = static_cast<std::size_t>(std::filesystem::file_size(path_, ec));
-        if (!ec && size > 0) {
-            buf.resize(size);
-            FilePtr file(std::fopen(path_.string().c_str(), "rb"));
-            const std::size_t got = file ? std::fread(buf.data(), 1, size, file.get()) : 0;
-            buf.resize(got);
+    FilePtr file(std::fopen(path_.string().c_str(), "rb"));
+    if (!file) {
+        return {{}, LogError::OpenFailed};
+    }
+
+    while (true) {
+        std::byte chunk[4096];
+        const std::size_t got = std::fread(chunk, 1, sizeof(chunk), file.get());
+        buf.insert(buf.end(), chunk, chunk + got);
+        if (got < sizeof(chunk)) {
+            if (std::ferror(file.get()) != 0) {
+                return {{}, LogError::OpenFailed};
+            }
+            break;
         }
     }
     return read_log(buf);
