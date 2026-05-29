@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m08-replay-recovery`
 - **Last completed milestone:** M7 — Append-only event log (PR #8, squash-merged)
-- **`make check` passing:** yes (107/107 tests)
-- **Last action:** implemented replay command codec + replay/recovery + extended snapshot + synthetic flow + qsl-replay CLI + tests + docs; make check green
+- **`make check` passing:** yes (113/113 tests)
+- **Last action:** fixed replay CLI log I/O failure handling, file-level replay coverage, and decode_command negative tests; make check green
 - **Next action:** human reviews and squash-merges M8 PR
 - **Blockers:** none
 
@@ -42,7 +42,7 @@ Do not rely on prior chat memory.
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☑ merged | #6 | Deterministic checks before engine |
 | M6 | Market data | `feat/m06-market-data` | ☑ merged | #7 | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☑ merged | #8 | Append-only records and reader |
-| M8 | Replay/recovery | `feat/m08-replay-recovery` | ◐ in progress | — | Rebuild engine state from log |
+| M8 | Replay/recovery | `feat/m08-replay-recovery` | ◐ in progress | #9 | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☐ not started | — | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☐ not started | — | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☐ not started | — | Measured performance outputs |
@@ -112,6 +112,10 @@ Status key:
 - [M8] `EngineSnapshot` extended with per-level aggregates (`LevelView` bids/asks); replay equivalence compares snapshot (best bid/ask, levels, counts, last_seq) and the full emitted event sequence.
 - [M8] Synthetic flow uses a seeded `mt19937_64`; replay is deterministic because the engine is wall-clock independent.
 - [M8] `qsl-replay generate|<file>` provides a self-contained recovery demo (write a flow log, then rebuild from it).
+- [M8] `qsl-replay` generation fails if any `EventLogWriter` append fails.
+- [M8] `qsl-replay` distinguishes missing/unreadable logs from valid empty logs.
+- [M8] Replay integration tests exercise `EventLogWriter -> EventLogReader -> replay` through the real M7 byte framing.
+- [M8] `decode_command` failure branches are tested.
 - [M7] Writer enforces the same `kMaxPayload` cap as the reader.
 - [M7] Append checks both `fwrite` and `fflush` before reporting success.
 - [M7] Tests cover oversized payload rejection, `PayloadTooLarge`, and header checksum corruption.

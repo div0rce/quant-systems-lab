@@ -31,6 +31,7 @@ deterministic `LogError`:
 
 | Error             | Condition                                                  |
 |-------------------|------------------------------------------------------------|
+| `OpenFailed`      | the requested log file cannot be opened or read            |
 | `Truncated`       | the buffer ends before a full header, payload, or checksum |
 | `BadChecksum`     | the stored checksum does not match the record's bytes      |
 | `PayloadTooLarge` | the declared payload size exceeds `kMaxPayload`            |
@@ -42,6 +43,10 @@ returned.
 `EventLogWriter::append` checks both `fwrite` and `fflush` before reporting success. M7
 does not claim `fsync` or durable-to-disk semantics; the guarantee is stdio flush
 correctness for the append path.
+
+`EventLogReader::read_all` distinguishes a missing or unreadable file from a valid empty
+log: open/read failures return `LogError::OpenFailed`, while an existing empty file reads
+cleanly as zero records.
 
 `apps/qsl-loginspect` is a small CLI that prints a human-readable summary of a log file
 (record count, sequence range, command/event counts, and status).
@@ -88,6 +93,12 @@ qsl-replay generate <file> [seed]   # write a deterministic synthetic-flow comma
 qsl-replay <file>                   # rebuild engine state from the log and print it
 ```
 
+Generation checks every `EventLogWriter::append` result and exits nonzero on write or
+flush failure instead of reporting a complete generated log. Replay exits nonzero when the
+requested log cannot be opened or read; `records: 0` is only reported for a real log that
+was opened and decoded cleanly as empty. M8 tests include a file-level
+`EventLogWriter -> EventLogReader -> replay` round trip through the M7 byte framing.
+
 ### Limitations
 
 - Replay reconstructs from the recorded **command** stream; emitted events are recomputed,
@@ -97,4 +108,3 @@ qsl-replay <file>                   # rebuild engine state from the log and prin
 - Commands are trusted once their record checksum validates (M7); the command codec does not
   re-validate enum domains — wire-level enum validation lives at the protocol boundary (M2)
   and risk checks at the gateway (M5).
-

@@ -9,6 +9,22 @@
 
 namespace {
 
+const char *to_string(qsl::replay::LogError error) noexcept {
+    switch (error) {
+    case qsl::replay::LogError::None:
+        return "ok";
+    case qsl::replay::LogError::OpenFailed:
+        return "open-failed";
+    case qsl::replay::LogError::Truncated:
+        return "truncated";
+    case qsl::replay::LogError::BadChecksum:
+        return "bad-checksum";
+    case qsl::replay::LogError::PayloadTooLarge:
+        return "payload-too-large";
+    }
+    return "unknown";
+}
+
 int generate(const std::string &path, std::uint64_t seed) {
     const auto flow = qsl::replay::generate_flow(seed, /*symbols=*/4, /*orders=*/500);
     qsl::replay::EventLogWriter writer{path};
@@ -18,8 +34,11 @@ int generate(const std::string &path, std::uint64_t seed) {
     }
     std::uint64_t seq = 0;
     for (const auto &command : flow) {
-        writer.append(qsl::replay::LogRecord{seq, qsl::replay::RecordType::Command, seq,
-                                             qsl::replay::encode_command(command)});
+        if (!writer.append(qsl::replay::LogRecord{seq, qsl::replay::RecordType::Command, seq,
+                                                  qsl::replay::encode_command(command)})) {
+            std::cerr << "append failed for " << path << " at record " << seq << "\n";
+            return 1;
+        }
         ++seq;
     }
     std::cout << "wrote " << flow.size() << " command records to " << path << "\n";
@@ -30,7 +49,7 @@ int replay(const std::string &path) {
     const qsl::replay::EventLogReader reader{path};
     const auto log = reader.read_all();
     if (log.error != qsl::replay::LogError::None) {
-        std::cerr << "log read error\n";
+        std::cerr << "log read error: " << to_string(log.error) << "\n";
         return 1;
     }
     qsl::engine::MatchingEngine engine;

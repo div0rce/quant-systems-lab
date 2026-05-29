@@ -4,7 +4,10 @@
 #include "qsl/replay/recovery.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <span>
 #include <variant>
 #include <vector>
 
@@ -44,6 +47,37 @@ TEST_CASE("replay rebuilds identical final state and event sequence", "[replay]"
     REQUIRE(replay_events == original_events);          // emitted trade/event sequence
 }
 
+TEST_CASE("file-backed replay uses event-log framing before rebuilding state", "[replay]") {
+    const auto flow = generate_flow(/*seed=*/17, /*symbols=*/3, /*orders=*/300);
+    const auto path = std::filesystem::temp_directory_path() / "qsl_replay_file_level.bin";
+    std::filesystem::remove(path);
+
+    MatchingEngine original;
+    std::vector<EngineEvent> original_events;
+    {
+        EventLogWriter writer(path);
+        REQUIRE(writer.good());
+        std::uint64_t i = 0;
+        for (const auto &command : flow) {
+            const auto produced = apply(original, command);
+            original_events.insert(original_events.end(), produced.begin(), produced.end());
+            REQUIRE(writer.append(LogRecord{i, RecordType::Command, i, encode_command(command)}));
+            ++i;
+        }
+    }
+
+    const auto log = EventLogReader(path).read_all();
+    REQUIRE(log.error == LogError::None);
+    REQUIRE(log.records.size() == flow.size());
+
+    MatchingEngine rebuilt;
+    const auto replay_events = replay(rebuilt, log.records);
+    REQUIRE(rebuilt.snapshot() == original.snapshot());
+    REQUIRE(replay_events == original_events);
+
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("synthetic flow is deterministic in its seed", "[replay]") {
     REQUIRE(generate_flow(7, 3, 300) == generate_flow(7, 3, 300));
     REQUIRE_FALSE(generate_flow(7, 3, 300) == generate_flow(8, 3, 300));
@@ -61,6 +95,17 @@ TEST_CASE("commands round-trip through the codec", "[replay]") {
         REQUIRE(decoded.has_value());
         REQUIRE(*decoded == command);
     }
+}
+
+TEST_CASE("decode_command rejects malformed payloads", "[replay]") {
+    REQUIRE_FALSE(decode_command(std::span<const std::byte>{}).has_value());
+
+    const std::vector<std::byte> unknown_tag{static_cast<std::byte>(0xFF)};
+    REQUIRE_FALSE(decode_command(unknown_tag).has_value());
+
+    auto truncated = encode_command(Command{NewLimit{1, 2, Side::Buy, 100, 5, TimeInForce::GTC}});
+    truncated.pop_back();
+    REQUIRE_FALSE(decode_command(truncated).has_value());
 }
 
 TEST_CASE("snapshot reports aggregate per-level quantities", "[replay]") {

@@ -33,6 +33,7 @@ struct LogRecord {
 // Deterministic outcomes when reading a (possibly corrupt) log.
 enum class LogError : std::uint8_t {
     None = 0,
+    OpenFailed,      // file path could not be opened or read
     Truncated,       // buffer ends before a full record (header, payload, or checksum)
     BadChecksum,     // record checksum does not match its bytes
     PayloadTooLarge, // declared payload size exceeds kMaxPayload
