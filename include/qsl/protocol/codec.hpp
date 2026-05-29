@@ -19,6 +19,10 @@ template <class T> struct DecodeResult {
 [[nodiscard]] std::vector<std::byte> encode(const NewOrder &msg, SeqNo seq);
 [[nodiscard]] std::vector<std::byte> encode(const CancelOrder &msg, SeqNo seq);
 
+// Write a 16-byte frame header (big-endian) into `out`. Exposed so higher layers
+// (e.g. the market-data feed) can frame their own message bodies.
+void write_header(std::byte *out, const MessageHeader &header) noexcept;
+
 // Decode and validate the header only (version, type, max body length).
 [[nodiscard]] DecodeResult<MessageHeader> decode_header(std::span<const std::byte> bytes) noexcept;
 

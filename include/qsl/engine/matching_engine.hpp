@@ -63,6 +63,9 @@ class MatchingEngine {
     [[nodiscard]] bool has_symbol(SymbolId symbol) const;
     [[nodiscard]] bool contains(SymbolId symbol, OrderId id) const;
 
+    [[nodiscard]] std::optional<Price> best_bid(SymbolId symbol) const;
+    [[nodiscard]] std::optional<Price> best_ask(SymbolId symbol) const;
+
   private:
     OrderBook *find_book(SymbolId symbol) noexcept;
     SeqNo next_seq() noexcept { return ++seq_; }

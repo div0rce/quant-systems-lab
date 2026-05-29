@@ -3,7 +3,6 @@
 #include "qsl/protocol/endian.hpp"
 
 namespace qsl::protocol {
-namespace {
 
 void write_header(std::byte *p, const MessageHeader &h) noexcept {
     store_be<std::uint16_t>(p + 0, static_cast<std::uint16_t>(h.type));
@@ -11,8 +10,6 @@ void write_header(std::byte *p, const MessageHeader &h) noexcept {
     store_be<std::uint32_t>(p + 4, h.body_len);
     store_be<std::uint64_t>(p + 8, h.seq_no);
 }
-
-} // namespace
 
 std::vector<std::byte> encode(const NewOrder &msg, SeqNo seq) {
     std::vector<std::byte> buf(kHeaderSize + kNewOrderBodySize);

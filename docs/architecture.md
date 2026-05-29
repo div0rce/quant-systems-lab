@@ -113,3 +113,33 @@ ClientCommand -> OrderGateway (risk) -> MatchingEngine -> EngineEvents
 Checks run in a fixed order so the returned reason is deterministic when multiple would
 apply: unknown symbol, duplicate id, then value checks (side, price, quantity, max
 quantity, max notional).
+
+## Market data publisher (M6)
+
+`MarketDataPublisher` (`include/qsl/feed/publisher.hpp`) consumes the engine event stream
+and produces market-data messages for subscribers:
+
+```text
+EngineEvents -> MarketDataPublisher -> MarketDataSubscriber(s)
+```
+
+- **Messages** (`feed/market_data.hpp`) — `MarketDataMessage` is a `std::variant` of
+  `MdTrade` (symbol, price, quantity) and `MdTopOfBook` (symbol, optional best bid/ask).
+  Each carries a monotonic `md_seq`. `BookDelta`/`Snapshot` (full depth) are deferred to a
+  later networked-feed milestone.
+- **Derivation** — `publish(engine, events)` is called once per applied command. Each
+  `TradeEvent` yields an `MdTrade`; after the batch, each touched symbol whose top of book
+  changed (compared to the publisher's last known top, read from the engine) yields an
+  `MdTopOfBook`. Top-of-book is emitted only on change, so a resting order behind the best
+  produces no message.
+- **Sequencing** — every emitted message gets the next `md_seq` from a single monotonic
+  counter, and messages are emitted in engine-event order, so the market-data sequence is
+  monotonic and follows the engine sequence.
+- **Subscriber interface** — `MarketDataSubscriber::on_market_data` is the delivery hook;
+  the publisher fans out to all registered subscribers.
+- **Wire encoding** — `MdTrade`/`MdTopOfBook` encode via the M2 binary protocol framing
+  (`MsgType::MdTrade`/`MdTopOfBook`), reusing the shared header writer and big-endian
+  helpers; `md_seq` travels in the header's sequence field.
+
+The publisher has no wall-clock dependence; ordering and sequencing are logical, and it
+adds no nondeterminism (top-of-book is read from the deterministic engine).

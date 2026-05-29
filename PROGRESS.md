@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M5 — Deterministic risk checks and in-process order gateway
+- **Active milestone:** M6 — Market data event publisher
 - **Status:** ready for PR
-- **Active branch:** `feat/m05-risk-gateway`
-- **Last completed milestone:** M4 — Multi-symbol matching engine (PR #5, squash-merged)
-- **`make check` passing:** yes (77/77 tests)
-- **Last action:** fixed modify value validation before engine forwarding and added market-path rejection coverage; make check green
-- **Next action:** human reviews and squash-merges M5 PR
+- **Active branch:** `feat/m06-market-data`
+- **Last completed milestone:** M5 — Risk checks + in-process gateway (PR #6, squash-merged)
+- **`make check` passing:** yes (84/84 tests)
+- **Last action:** implemented market-data messages + publisher + binary encoding + tests + docs; make check green
+- **Next action:** human reviews and squash-merges M6 PR
 - **Blockers:** none
 
 ---
@@ -39,8 +39,8 @@ Do not rely on prior chat memory.
 | M2 | Binary protocol | `feat/m02-binary-protocol` | ☑ merged | #3 | Explicit encode/decode, byte fixtures |
 | M3 | Order book | `feat/m03-order-book` | ☑ merged | #4 | Single-symbol price-time priority |
 | M4 | Matching engine | `feat/m04-matching-engine` | ☑ merged | #5 | Multi-symbol sequencing and snapshots |
-| M5 | Risk + gateway | `feat/m05-risk-gateway` | ◐ in progress | — | Deterministic checks before engine |
-| M6 | Market data | `feat/m06-market-data` | ☐ not started | — | Trade/top-of-book/delta/snapshot publisher |
+| M5 | Risk + gateway | `feat/m05-risk-gateway` | ☑ merged | #6 | Deterministic checks before engine |
+| M6 | Market data | `feat/m06-market-data` | ◐ in progress | — | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☐ not started | — | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☐ not started | — | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☐ not started | — | Binary order gateway over TCP |
@@ -100,6 +100,10 @@ Status key:
 - [M5] Notional check is overflow-safe (`quantity > max_notional / price`), never computing `price * quantity`.
 - [M5] "Duplicate" = order id currently active (resting), via `MatchingEngine::contains`, matching the engine's duplicate-active-id no-op; completed-order ids may be reused.
 - [M5] Rejections return a structured `GatewayResult` and never reach the engine, so the sequence counter and state stay clean; rejections are not part of the engine's sequenced event stream.
+- [M6] Market-data messages are a `std::variant` (`MdTrade`, `MdTopOfBook`); each carries a monotonic `md_seq` from a single counter, emitted in engine-event order.
+- [M6] Publisher derives top-of-book by reading the deterministic engine (`best_bid`/`best_ask`); `MdTopOfBook` is emitted only when the top changes.
+- [M6] MD wire encoding reuses the M2 framing (`write_header` promoted out of the codec anon namespace); layering is `feed -> protocol -> core`.
+- [M6] `BookDelta`/`Snapshot` (full depth) deferred to the networked-feed/snapshot work.
 - [M5] Nonzero modify commands are re-validated with limit-order value constraints before reaching the engine.
 - [M5] Modify quantity 0 remains cancel-via-modify.
 - [M5] Market-order rejection branches are explicitly tested.
@@ -121,7 +125,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M5 complete, PR pending review_
+- _M6 complete, PR pending review_
 
 
 ---

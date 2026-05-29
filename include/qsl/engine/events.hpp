@@ -53,4 +53,9 @@ using EngineEvent = std::variant<OrderAccepted, OrderCanceled, OrderModified, Tr
     return std::visit([](const auto &e) noexcept { return e.seq; }, event);
 }
 
+/// Symbol of any engine event.
+[[nodiscard]] inline SymbolId symbol_of(const EngineEvent &event) noexcept {
+    return std::visit([](const auto &e) noexcept { return e.symbol; }, event);
+}
+
 } // namespace qsl::engine

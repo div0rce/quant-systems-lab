@@ -36,8 +36,14 @@ bit pattern (`std::int64_t` <-> `std::uint64_t` via `static_cast`, which is well
 |-------|-------------|-----------|--------------------------------------------------------------|
 | 1     | NewOrder    | 27        | order_id u64, symbol u32, price i64, quantity u32, side u8, order_type u8, tif u8 |
 | 2     | CancelOrder | 12        | order_id u64, symbol u32                                     |
+| 3     | MdTrade     | 16        | symbol u32, price i64, quantity u32                          |
+| 4     | MdTopOfBook | 22        | symbol u32, bid_present u8, bid i64, ask_present u8, ask i64  |
 
-The registry grows in later milestones (modify, heartbeat, gateway responses, market data).
+The registry grows in later milestones (modify, heartbeat, gateway responses, snapshots).
+
+Market-data messages (M6) reuse this framing: `md_seq` travels in the header `seq_no`
+field. For `MdTopOfBook`, a side's `*_present` flag is 0 when that side is empty (its price
+bytes are then zero and ignored on decode).
 
 ## Decode errors (`DecodeError`)
 
