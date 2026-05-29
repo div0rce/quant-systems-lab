@@ -1,5 +1,6 @@
 #pragma once
 
+#include "qsl/core/result.hpp"
 #include "qsl/core/types.hpp"
 
 #include <cstddef>
@@ -11,6 +12,7 @@ using core::OrderId;
 using core::OrderType;
 using core::Price;
 using core::Quantity;
+using core::RejectReason;
 using core::SeqNo;
 using core::Side;
 using core::SymbolId;
@@ -27,11 +29,27 @@ enum class MsgType : std::uint16_t {
     CancelOrder = 2,
     MdTrade = 3,
     MdTopOfBook = 4,
+    Heartbeat = 5,
+    HeartbeatAck = 6,
+    Ack = 7,
+    Reject = 8,
+    Fill = 9,
 };
 
 [[nodiscard]] constexpr bool is_known(MsgType t) noexcept {
-    return t == MsgType::NewOrder || t == MsgType::CancelOrder || t == MsgType::MdTrade ||
-           t == MsgType::MdTopOfBook;
+    switch (t) {
+    case MsgType::NewOrder:
+    case MsgType::CancelOrder:
+    case MsgType::MdTrade:
+    case MsgType::MdTopOfBook:
+    case MsgType::Heartbeat:
+    case MsgType::HeartbeatAck:
+    case MsgType::Ack:
+    case MsgType::Reject:
+    case MsgType::Fill:
+        return true;
+    }
+    return false;
 }
 
 struct MessageHeader {
@@ -58,6 +76,37 @@ struct CancelOrder {
     SymbolId symbol;
 };
 inline constexpr std::size_t kCancelOrderBodySize = 12; // 8+4
+
+// Session messages (M9). Heartbeat/HeartbeatAck echo a client token; Ack/Reject/Fill are
+// the gateway's responses to an order.
+struct Heartbeat {
+    std::uint64_t token;
+};
+struct HeartbeatAck {
+    std::uint64_t token;
+};
+inline constexpr std::size_t kHeartbeatBodySize = 8;
+
+struct Ack {
+    OrderId order_id;
+    SeqNo seq;
+};
+inline constexpr std::size_t kAckBodySize = 16; // 8+8
+
+struct Reject {
+    OrderId order_id;
+    RejectReason reason;
+};
+inline constexpr std::size_t kRejectBodySize = 9; // 8+1
+
+struct Fill {
+    OrderId taker_id;
+    OrderId maker_id;
+    Price price;
+    Quantity quantity;
+    SeqNo seq;
+};
+inline constexpr std::size_t kFillBodySize = 36; // 8+8+8+4+8
 
 // Deterministic decode outcomes for malformed/invalid frames.
 enum class DecodeError : std::uint8_t {
