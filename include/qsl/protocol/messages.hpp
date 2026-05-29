@@ -25,10 +25,13 @@ inline constexpr std::uint32_t kMaxBodyLen = 4096;
 enum class MsgType : std::uint16_t {
     NewOrder = 1,
     CancelOrder = 2,
+    MdTrade = 3,
+    MdTopOfBook = 4,
 };
 
 [[nodiscard]] constexpr bool is_known(MsgType t) noexcept {
-    return t == MsgType::NewOrder || t == MsgType::CancelOrder;
+    return t == MsgType::NewOrder || t == MsgType::CancelOrder || t == MsgType::MdTrade ||
+           t == MsgType::MdTopOfBook;
 }
 
 struct MessageHeader {

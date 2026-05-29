@@ -111,6 +111,16 @@ bool MatchingEngine::contains(SymbolId symbol, OrderId id) const {
     return it != books_.end() && it->second.contains(id);
 }
 
+std::optional<Price> MatchingEngine::best_bid(SymbolId symbol) const {
+    const auto it = books_.find(symbol);
+    return it == books_.end() ? std::nullopt : it->second.best_bid();
+}
+
+std::optional<Price> MatchingEngine::best_ask(SymbolId symbol) const {
+    const auto it = books_.find(symbol);
+    return it == books_.end() ? std::nullopt : it->second.best_ask();
+}
+
 EngineSnapshot MatchingEngine::snapshot() const {
     EngineSnapshot snap;
     snap.last_seq = seq_;
