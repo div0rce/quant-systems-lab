@@ -31,9 +31,14 @@ void MarketDataPublisher::publish(const MatchingEngine &engine,
     for (const SymbolId symbol : touched) {
         const Tob current{engine.best_bid(symbol), engine.best_ask(symbol)};
         const auto it = last_tob_.find(symbol);
-        if (it == last_tob_.end() || it->second != current) {
-            emit(MdTopOfBook{++md_seq_, symbol, current.bid, current.ask});
+        if (it == last_tob_.end()) {
             last_tob_[symbol] = current;
+            if (current.bid.has_value() || current.ask.has_value()) {
+                emit(MdTopOfBook{++md_seq_, symbol, current.bid, current.ask});
+            }
+        } else if (it->second != current) {
+            emit(MdTopOfBook{++md_seq_, symbol, current.bid, current.ask});
+            it->second = current;
         }
     }
 }

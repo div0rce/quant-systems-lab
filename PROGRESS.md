@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m06-market-data`
 - **Last completed milestone:** M5 — Risk checks + in-process gateway (PR #6, squash-merged)
-- **`make check` passing:** yes (84/84 tests)
-- **Last action:** implemented market-data messages + publisher + binary encoding + tests + docs; make check green
+- **`make check` passing:** yes (90/90 tests)
+- **Last action:** fixed first empty top-of-book observation semantics and expanded MD codec/publisher tests; make check green
 - **Next action:** human reviews and squash-merges M6 PR
 - **Blockers:** none
 
@@ -40,7 +40,7 @@ Do not rely on prior chat memory.
 | M3 | Order book | `feat/m03-order-book` | ☑ merged | #4 | Single-symbol price-time priority |
 | M4 | Matching engine | `feat/m04-matching-engine` | ☑ merged | #5 | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☑ merged | #6 | Deterministic checks before engine |
-| M6 | Market data | `feat/m06-market-data` | ◐ in progress | — | Trade/top-of-book/delta/snapshot publisher |
+| M6 | Market data | `feat/m06-market-data` | ◐ in progress | #7 | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☐ not started | — | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☐ not started | — | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☐ not started | — | Binary order gateway over TCP |
@@ -104,6 +104,8 @@ Status key:
 - [M6] Publisher derives top-of-book by reading the deterministic engine (`best_bid`/`best_ask`); `MdTopOfBook` is emitted only when the top changes.
 - [M6] MD wire encoding reuses the M2 framing (`write_header` promoted out of the codec anon namespace); layering is `feed -> protocol -> core`.
 - [M6] `BookDelta`/`Snapshot` (full depth) deferred to the networked-feed/snapshot work.
+- [M6] Publisher treats first empty observation as initialization, not a top-of-book delta.
+- [M6] Tests cover no-op first touch, cancel-driven TOB updates, MD malformed-frame decode paths, and a deterministic `MdTrade` byte fixture.
 - [M5] Nonzero modify commands are re-validated with limit-order value constraints before reaching the engine.
 - [M5] Modify quantity 0 remains cancel-via-modify.
 - [M5] Market-order rejection branches are explicitly tested.

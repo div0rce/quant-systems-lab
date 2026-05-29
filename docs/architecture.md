@@ -129,9 +129,10 @@ EngineEvents -> MarketDataPublisher -> MarketDataSubscriber(s)
   later networked-feed milestone.
 - **Derivation** — `publish(engine, events)` is called once per applied command. Each
   `TradeEvent` yields an `MdTrade`; after the batch, each touched symbol whose top of book
-  changed (compared to the publisher's last known top, read from the engine) yields an
-  `MdTopOfBook`. Top-of-book is emitted only on change, so a resting order behind the best
-  produces no message.
+  differs from the publisher's last observed top (read from the engine) yields an
+  `MdTopOfBook`. First observation of an empty book initializes publisher state but emits
+  no TOB, because no observable top changed. Transitions from non-empty to empty do emit
+  TOB because the top changed. A resting order behind the best produces no message.
 - **Sequencing** — every emitted message gets the next `md_seq` from a single monotonic
   counter, and messages are emitted in engine-event order, so the market-data sequence is
   monotonic and follows the engine sequence.
