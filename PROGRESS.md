@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m02-binary-protocol`
 - **Last completed milestone:** M1 — Core domain types (PR #2, squash-merged)
-- **`make check` passing:** yes (20/20 tests)
-- **Last action:** implemented big-endian codec + message structs + tests + docs; make check green
+- **`make check` passing:** yes (25/25 tests)
+- **Last action:** fixed NewOrder enum-byte validation at the protocol decode boundary; make check green
 - **Next action:** human reviews and squash-merges M2 PR
 - **Blockers:** none
 
@@ -36,7 +36,7 @@ Do not rely on prior chat memory.
 |---|---|---|---|---|---|
 | M0 | Scaffold, tooling, CI | `feat/m00-scaffold` | ☑ merged | #1 | Create repo structure, CMake, CI, Claude commands |
 | M1 | Core domain | `feat/m01-core-domain` | ☑ merged | #2 | Types, ticks, enums, logical clock |
-| M2 | Binary protocol | `feat/m02-binary-protocol` | ◐ in progress | — | Explicit encode/decode, byte fixtures |
+| M2 | Binary protocol | `feat/m02-binary-protocol` | ◐ in progress | #3 | Explicit encode/decode, byte fixtures |
 | M3 | Order book | `feat/m03-order-book` | ☐ not started | — | Single-symbol price-time priority |
 | M4 | Matching engine | `feat/m04-matching-engine` | ☐ not started | — | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☐ not started | — | Deterministic checks before engine |
@@ -83,6 +83,7 @@ Status key:
 - [M2] `DecodeError` stringification test is exhaustive (all enumerators + out-of-range cast).
 - [M2] Signed `Price` round-trip coverage includes negative and int64 min/max values.
 - [M2] Typed decoders intentionally parse declared bodies; stream exact-size enforcement is deferred to M9.
+- [M2] Protocol decode success implies valid `NewOrder` enum fields; invalid wire enum values return `DecodeError::InvalidEnumValue`.
 
 ---
 

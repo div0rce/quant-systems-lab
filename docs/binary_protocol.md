@@ -50,10 +50,15 @@ Decoding never throws and never reads out of bounds; it returns a deterministic 
 | `UnknownType`        | header `type` not in the registry (or wrong decoder)   |
 | `BodyTooLarge`       | declared `body_len` > `kMaxBodyLen`                    |
 | `BodyLengthMismatch` | declared `body_len` != the message type's fixed size   |
+| `InvalidEnumValue`   | enum byte is outside the target domain enum values      |
 
 Header validation (`decode_header`) checks version, type, and max length. Typed decoders
 (`decode_new_order`, `decode_cancel_order`) additionally verify the body size and that the
 buffer holds the full declared body before parsing.
+
+NewOrder enum fields are validated during decode. Out-of-range values for Side, OrderType,
+or TimeInForce return DecodeError::InvalidEnumValue and are not surfaced as internal domain
+messages.
 
 ## Trailing bytes and framing
 

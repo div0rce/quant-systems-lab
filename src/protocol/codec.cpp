@@ -82,9 +82,15 @@ DecodeResult<NewOrder> decode_new_order(std::span<const std::byte> frame) noexce
     msg.symbol = load_be<std::uint32_t>(b + 8);
     msg.price = static_cast<Price>(load_be<std::uint64_t>(b + 12));
     msg.quantity = load_be<std::uint32_t>(b + 20);
-    msg.side = static_cast<Side>(std::to_integer<std::uint8_t>(b[24]));
-    msg.type = static_cast<OrderType>(std::to_integer<std::uint8_t>(b[25]));
-    msg.tif = static_cast<TimeInForce>(std::to_integer<std::uint8_t>(b[26]));
+    const auto side = static_cast<Side>(std::to_integer<std::uint8_t>(b[24]));
+    const auto type = static_cast<OrderType>(std::to_integer<std::uint8_t>(b[25]));
+    const auto tif = static_cast<TimeInForce>(std::to_integer<std::uint8_t>(b[26]));
+    if (!is_valid(side) || !is_valid(type) || !is_valid(tif)) {
+        return {DecodeError::InvalidEnumValue, {}};
+    }
+    msg.side = side;
+    msg.type = type;
+    msg.tif = tif;
     return {DecodeError::None, msg};
 }
 

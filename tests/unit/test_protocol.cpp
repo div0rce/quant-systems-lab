@@ -22,6 +22,10 @@ std::span<const std::byte> as_span(const std::vector<std::byte> &v) {
     return {v.data(), v.size()};
 }
 
+inline constexpr std::size_t kNewOrderSideOffset = 24;
+inline constexpr std::size_t kNewOrderOrderTypeOffset = 25;
+inline constexpr std::size_t kNewOrderTifOffset = 26;
+
 } // namespace
 
 TEST_CASE("NewOrder encode/decode round-trips", "[protocol]") {
@@ -105,6 +109,33 @@ TEST_CASE("decoding a frame as the wrong type rejects", "[protocol]") {
     REQUIRE(out.error == DecodeError::UnknownType);
 }
 
+TEST_CASE("NewOrder rejects invalid side byte", "[protocol]") {
+    std::vector<std::byte> frame = encode(sample_new_order(), 1);
+    frame[kHeaderSize + kNewOrderSideOffset] = static_cast<std::byte>(99);
+
+    const auto out = decode_new_order(as_span(frame));
+    REQUIRE_FALSE(out.ok());
+    REQUIRE(out.error == DecodeError::InvalidEnumValue);
+}
+
+TEST_CASE("NewOrder rejects invalid order type byte", "[protocol]") {
+    std::vector<std::byte> frame = encode(sample_new_order(), 1);
+    frame[kHeaderSize + kNewOrderOrderTypeOffset] = static_cast<std::byte>(99);
+
+    const auto out = decode_new_order(as_span(frame));
+    REQUIRE_FALSE(out.ok());
+    REQUIRE(out.error == DecodeError::InvalidEnumValue);
+}
+
+TEST_CASE("NewOrder rejects invalid time-in-force byte", "[protocol]") {
+    std::vector<std::byte> frame = encode(sample_new_order(), 1);
+    frame[kHeaderSize + kNewOrderTifOffset] = static_cast<std::byte>(99);
+
+    const auto out = decode_new_order(as_span(frame));
+    REQUIRE_FALSE(out.ok());
+    REQUIRE(out.error == DecodeError::InvalidEnumValue);
+}
+
 TEST_CASE("deterministic byte fixture pins the wire format", "[protocol]") {
     const std::vector<std::byte> frame = encode(sample_new_order(), /*seq=*/7);
 
@@ -136,6 +167,7 @@ TEST_CASE("decode errors stringify deterministically", "[protocol]") {
     REQUIRE(std::string_view{to_string(DecodeError::UnknownType)} == "UnknownType");
     REQUIRE(std::string_view{to_string(DecodeError::BodyTooLarge)} == "BodyTooLarge");
     REQUIRE(std::string_view{to_string(DecodeError::BodyLengthMismatch)} == "BodyLengthMismatch");
+    REQUIRE(std::string_view{to_string(DecodeError::InvalidEnumValue)} == "InvalidEnumValue");
     REQUIRE(std::string_view{to_string(static_cast<DecodeError>(255))} == "Unknown");
 }
 

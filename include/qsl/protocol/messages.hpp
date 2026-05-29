@@ -64,6 +64,7 @@ enum class DecodeError : std::uint8_t {
     UnknownType,        // header type not in the message registry
     BodyTooLarge,       // declared body_len exceeds kMaxBodyLen
     BodyLengthMismatch, // declared body_len != the type's fixed body size
+    InvalidEnumValue,   // enum byte is not valid for the target domain enum
 };
 
 [[nodiscard]] constexpr const char *to_string(DecodeError e) noexcept {
@@ -80,6 +81,8 @@ enum class DecodeError : std::uint8_t {
         return "BodyTooLarge";
     case DecodeError::BodyLengthMismatch:
         return "BodyLengthMismatch";
+    case DecodeError::InvalidEnumValue:
+        return "InvalidEnumValue";
     }
     return "Unknown";
 }
