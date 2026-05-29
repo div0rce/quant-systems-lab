@@ -74,6 +74,8 @@ Status key:
 - [M1] Domain enums are fixed-width (`uint8_t`) with `is_valid` + `to_string`; out-of-range casts reject deterministically.
 - [M1] `Result` is a minimal `{bool ok; RejectReason}` value type (no `std::expected`; that is C++23).
 - [M1] `LogicalClock` provides a monotonic logical `Timestamp`; core paths avoid wall-clock time.
+- [M1] Test targets now link `qsl_warnings`, so header-only domain code is warning-checked through tests.
+- [M1] `RejectReason` stringification test is exhaustive (all enumerators + out-of-range cast).
 
 ---
 

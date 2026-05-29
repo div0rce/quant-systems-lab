@@ -39,8 +39,17 @@ TEST_CASE("enum to_string conversions are stable", "[types]") {
 
 TEST_CASE("reject reasons stringify deterministically", "[result]") {
     REQUIRE(std::string_view{to_string(RejectReason::None)} == "None");
+    REQUIRE(std::string_view{to_string(RejectReason::UnknownSymbol)} == "UnknownSymbol");
     REQUIRE(std::string_view{to_string(RejectReason::InvalidPrice)} == "InvalidPrice");
+    REQUIRE(std::string_view{to_string(RejectReason::InvalidQuantity)} == "InvalidQuantity");
+    REQUIRE(std::string_view{to_string(RejectReason::InvalidSide)} == "InvalidSide");
+    REQUIRE(std::string_view{to_string(RejectReason::MaxQuantityExceeded)} ==
+            "MaxQuantityExceeded");
+    REQUIRE(std::string_view{to_string(RejectReason::MaxNotionalExceeded)} ==
+            "MaxNotionalExceeded");
     REQUIRE(std::string_view{to_string(RejectReason::DuplicateOrderId)} == "DuplicateOrderId");
+    REQUIRE(std::string_view{to_string(RejectReason::UnknownOrder)} == "UnknownOrder");
+    REQUIRE(std::string_view{to_string(static_cast<RejectReason>(255))} == "Unknown");
 }
 
 TEST_CASE("Result carries ok/reason", "[result]") {
