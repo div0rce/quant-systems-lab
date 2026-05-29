@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M6 — Market data event publisher
+- **Active milestone:** M7 — Append-only event log
 - **Status:** ready for PR
-- **Active branch:** `feat/m06-market-data`
-- **Last completed milestone:** M5 — Risk checks + in-process gateway (PR #6, squash-merged)
-- **`make check` passing:** yes (90/90 tests)
-- **Last action:** fixed first empty top-of-book observation semantics and expanded MD codec/publisher tests; make check green
-- **Next action:** human reviews and squash-merges M6 PR
+- **Active branch:** `feat/m07-event-log`
+- **Last completed milestone:** M6 — Market data event publisher (PR #7, squash-merged)
+- **`make check` passing:** yes (102/102 tests)
+- **Last action:** fixed event-log writer/encoder guarantees for payload cap and stdio flush checks; make check green
+- **Next action:** human reviews and squash-merges M7 PR
 - **Blockers:** none
 
 ---
@@ -40,8 +40,8 @@ Do not rely on prior chat memory.
 | M3 | Order book | `feat/m03-order-book` | ☑ merged | #4 | Single-symbol price-time priority |
 | M4 | Matching engine | `feat/m04-matching-engine` | ☑ merged | #5 | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☑ merged | #6 | Deterministic checks before engine |
-| M6 | Market data | `feat/m06-market-data` | ◐ in progress | #7 | Trade/top-of-book/delta/snapshot publisher |
-| M7 | Event log | `feat/m07-event-log` | ☐ not started | — | Append-only records and reader |
+| M6 | Market data | `feat/m06-market-data` | ☑ merged | #7 | Trade/top-of-book/delta/snapshot publisher |
+| M7 | Event log | `feat/m07-event-log` | ◐ in progress | #8 | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☐ not started | — | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☐ not started | — | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☐ not started | — | Network feed client/publisher |
@@ -104,6 +104,13 @@ Status key:
 - [M6] Publisher derives top-of-book by reading the deterministic engine (`best_bid`/`best_ask`); `MdTopOfBook` is emitted only when the top changes.
 - [M6] MD wire encoding reuses the M2 framing (`write_header` promoted out of the codec anon namespace); layering is `feed -> protocol -> core`.
 - [M6] `BookDelta`/`Snapshot` (full depth) deferred to the networked-feed/snapshot work.
+- [M7] Log record framing: big-endian header (seq_no/record_type/logical_timestamp/payload_size) + opaque payload + FNV-1a u32 checksum; reuses the M2 byte helpers (`replay -> protocol -> core`).
+- [M7] `read_log` is pure and bounds-safe; corruption yields a deterministic `LogError` (Truncated/BadChecksum/PayloadTooLarge) and returns intact records read so far.
+- [M7] File I/O uses C stdio (`fwrite`/`fread`) so byte buffers pass as `void*` — no `reinterpret_cast`. Writer opens in append mode only (no update-in-place).
+- [M7] Payload is opaque to the log (e.g. a serialized protocol command frame); typed replay interpretation is M8.
+- [M7] Writer enforces the same `kMaxPayload` cap as the reader.
+- [M7] Append checks both `fwrite` and `fflush` before reporting success.
+- [M7] Tests cover oversized payload rejection, `PayloadTooLarge`, and header checksum corruption.
 - [M6] Publisher treats first empty observation as initialization, not a top-of-book delta.
 - [M6] Tests cover no-op first touch, cancel-driven TOB updates, MD malformed-frame decode paths, and a deterministic `MdTrade` byte fixture.
 - [M5] Nonzero modify commands are re-validated with limit-order value constraints before reaching the engine.
@@ -127,7 +134,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M6 complete, PR pending review_
+- _M7 complete, PR pending review_
 
 
 ---
