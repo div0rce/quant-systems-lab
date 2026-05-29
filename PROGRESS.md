@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M2 — Binary protocol encoding and decoding
+- **Active milestone:** M3 — Price-time priority order book
 - **Status:** ready for PR
-- **Active branch:** `feat/m02-binary-protocol`
-- **Last completed milestone:** M1 — Core domain types (PR #2, squash-merged)
-- **`make check` passing:** yes (25/25 tests)
-- **Last action:** fixed NewOrder enum-byte validation at the protocol decode boundary; make check green
-- **Next action:** human reviews and squash-merges M2 PR
+- **Active branch:** `feat/m03-order-book`
+- **Last completed milestone:** M2 — Binary protocol (PR #3, squash-merged)
+- **`make check` passing:** yes (39/39 tests)
+- **Last action:** implemented single-symbol price-time-priority book + scenario tests + docs; make check green
+- **Next action:** human reviews and squash-merges M3 PR
 - **Blockers:** none
 
 ---
@@ -36,8 +36,8 @@ Do not rely on prior chat memory.
 |---|---|---|---|---|---|
 | M0 | Scaffold, tooling, CI | `feat/m00-scaffold` | ☑ merged | #1 | Create repo structure, CMake, CI, Claude commands |
 | M1 | Core domain | `feat/m01-core-domain` | ☑ merged | #2 | Types, ticks, enums, logical clock |
-| M2 | Binary protocol | `feat/m02-binary-protocol` | ◐ in progress | #3 | Explicit encode/decode, byte fixtures |
-| M3 | Order book | `feat/m03-order-book` | ☐ not started | — | Single-symbol price-time priority |
+| M2 | Binary protocol | `feat/m02-binary-protocol` | ☑ merged | #3 | Explicit encode/decode, byte fixtures |
+| M3 | Order book | `feat/m03-order-book` | ◐ in progress | — | Single-symbol price-time priority |
 | M4 | Matching engine | `feat/m04-matching-engine` | ☐ not started | — | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☐ not started | — | Deterministic checks before engine |
 | M6 | Market data | `feat/m06-market-data` | ☐ not started | — | Trade/top-of-book/delta/snapshot publisher |
@@ -84,6 +84,12 @@ Status key:
 - [M2] Signed `Price` round-trip coverage includes negative and int64 min/max values.
 - [M2] Typed decoders intentionally parse declared bodies; stream exact-size enforcement is deferred to M9.
 - [M2] Protocol decode success implies valid `NewOrder` enum fields; invalid wire enum values return `DecodeError::InvalidEnumValue`.
+- [M3] Single-symbol book: price-ordered `std::map` levels (best-first) + FIFO `std::list` per level; matching iterates these deterministically.
+- [M3] `OrderId→{side,price,iterator}` index for O(1) cancel/modify; never iterated for matching, so its unordered layout does not affect determinism.
+- [M3] Fills execute at the resting maker's price; GTC rests remainder, IOC discards, market never rests.
+- [M3] Modify: same-price quantity reduction preserves priority (in place); price change or quantity increase loses priority (cancel + re-add, may cross).
+- [M3] Distinguish per-order `Quantity` (u32) from aggregate `QuantityTotal` (u64); `quantity_at()` accumulates/returns the 64-bit total so level liquidity never wraps.
+- [M3] Modify zero-quantity (cancel) and unknown-id (no-op) branches are now tested; partially-filled maker priority retention is explicitly tested.
 
 ---
 
@@ -99,7 +105,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M2 complete, PR pending review_
+- _M3 complete, PR pending review_
 
 
 ---
