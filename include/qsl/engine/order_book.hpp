@@ -41,6 +41,7 @@ class OrderBook {
     [[nodiscard]] std::optional<Price> best_ask() const;
     [[nodiscard]] QuantityTotal quantity_at(Side side, Price price) const;
     [[nodiscard]] std::size_t order_count() const;
+    [[nodiscard]] bool contains(OrderId id) const;
 
   private:
     using Level = std::list<Order>;

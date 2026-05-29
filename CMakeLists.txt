@@ -10,7 +10,8 @@ include(cmake/ProjectOptions.cmake)
 include(cmake/CompilerWarnings.cmake)
 include(cmake/Sanitizers.cmake)
 
-add_library(qsl_core src/core/types.cpp src/protocol/codec.cpp src/engine/order_book.cpp)
+add_library(qsl_core src/core/types.cpp src/protocol/codec.cpp src/engine/order_book.cpp
+                     src/engine/matching_engine.cpp)
 target_include_directories(qsl_core PUBLIC include)
 target_link_libraries(qsl_core PRIVATE qsl_warnings)
 

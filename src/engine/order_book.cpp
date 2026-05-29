@@ -52,6 +52,9 @@ void OrderBook::rest(OrderId id, Side side, Price price, Quantity quantity) {
 std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quantity quantity,
                                         TimeInForce tif) {
     std::vector<Trade> trades;
+    if (contains(id)) {
+        return trades;
+    }
     if (side == Side::Buy) {
         match_against(asks_, id, true, price, false, quantity, trades);
     } else {
@@ -65,6 +68,9 @@ std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quan
 
 std::vector<Trade> OrderBook::add_market(OrderId id, Side side, Quantity quantity) {
     std::vector<Trade> trades;
+    if (contains(id)) {
+        return trades;
+    }
     if (side == Side::Buy) {
         match_against(asks_, id, true, 0, true, quantity, trades);
     } else {
@@ -155,6 +161,10 @@ QuantityTotal OrderBook::quantity_at(Side side, Price price) const {
 
 std::size_t OrderBook::order_count() const {
     return index_.size();
+}
+
+bool OrderBook::contains(OrderId id) const {
+    return index_.find(id) != index_.end();
 }
 
 } // namespace qsl::engine

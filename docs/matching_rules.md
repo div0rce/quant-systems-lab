@@ -39,6 +39,14 @@ filled maker keeps its place (and thus its priority) with the reduced quantity.
 
 `cancel(id)` removes a resting order and returns `false` if the id is not resting.
 
+## Active order IDs
+
+An active resting `OrderId` may appear at most once per symbol. Duplicate active IDs are
+ignored at M4 to preserve the book's `OrderId -> locator` index invariant; they produce
+no trades and do not modify the book. M5 risk/gateway handling will convert the same
+condition into a structured `DuplicateOrderId` rejection before the command reaches the
+engine.
+
 ## Modify and priority
 
 | Change                              | Effect                                              |
@@ -57,12 +65,14 @@ book trades immediately, exactly as a fresh aggressor would.
   sides are present), because an aggressor matches until it no longer crosses before any
   remainder rests.
 - Executed quantity per fill never exceeds either side's remaining quantity.
+- A resting `OrderId` appears at most once per symbol, so cancel/modify lookup cannot
+  leave orphaned liquidity behind.
 
-Semantic/policy validation (price ticks, max quantity/notional, duplicate ids, unknown
-symbols) is **not** done here; that is the risk layer's responsibility (M5). The book
-assumes well-formed, validated inputs. In particular, zero-quantity inputs are assumed to
-be rejected by the M5 risk layer; at the M3 book layer a zero-quantity order simply
-produces no trades and does not rest.
+Most semantic/policy validation (price ticks, max quantity/notional, unknown symbols) is
+**not** done here; that is the risk layer's responsibility (M5). The book still defends
+its own active-ID index invariant by ignoring duplicate resting IDs. In particular,
+zero-quantity inputs are assumed to be rejected by the M5 risk layer; at the M3/M4 book
+layer a zero-quantity order simply produces no trades and does not rest.
 
 `quantity_at()` reports aggregate resting liquidity using a wider aggregate type
 (`QuantityTotal`, 64-bit) so a price level's total never wraps at the per-order `Quantity`
