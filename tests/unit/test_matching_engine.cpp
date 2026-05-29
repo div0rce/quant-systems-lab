@@ -127,3 +127,47 @@ TEST_CASE("command for an unregistered symbol is a no-op", "[engine]") {
     REQUIRE(eng.last_seq() == 0);
     REQUIRE(eng.snapshot().symbols.empty());
 }
+
+TEST_CASE("sequence numbers are global across symbols", "[engine]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    const SymbolId m = eng.register_symbol("MSFT");
+
+    std::vector<EngineEvent> all;
+    append(all, eng.new_limit(a, 1, Side::Sell, 100, 5, TimeInForce::GTC)); // AAPL accepted
+    append(all, eng.new_limit(m, 2, Side::Sell, 200, 5, TimeInForce::GTC)); // MSFT accepted
+    append(all, eng.new_limit(a, 3, Side::Buy, 100, 5, TimeInForce::GTC));  // AAPL accepted + trade
+
+    REQUIRE(all.size() == 4);
+    SeqNo prev = 0;
+    for (const auto &ev : all) {
+        REQUIRE(seq_of(ev) > prev); // strictly increases across symbols
+        prev = seq_of(ev);
+    }
+    // One global counter: the MSFT event sits between the AAPL events, not on its own series.
+    REQUIRE(seq_of(all[1]) > seq_of(all[0])); // MSFT accepted > first AAPL accepted
+    REQUIRE(seq_of(all[2]) > seq_of(all[1])); // later AAPL accepted > MSFT accepted
+}
+
+TEST_CASE("market order emits OrderAccepted then a TradeEvent", "[engine]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+    eng.new_limit(a, 1, Side::Sell, 100, 5, TimeInForce::GTC); // resting maker
+
+    const auto ev = eng.new_market(a, 2, Side::Buy, 5);
+    REQUIRE(ev.size() == 2);
+    REQUIRE(std::holds_alternative<OrderAccepted>(ev[0]));
+    REQUIRE(std::holds_alternative<TradeEvent>(ev[1]));
+
+    const auto &acc = std::get<OrderAccepted>(ev[0]);
+    REQUIRE(acc.symbol == a);
+    REQUIRE(acc.order_id == 2);
+
+    const auto &tr = std::get<TradeEvent>(ev[1]);
+    REQUIRE(tr.symbol == a);
+    REQUIRE(tr.taker_id == 2);
+    REQUIRE(tr.maker_id == 1);
+    REQUIRE(tr.price == 100); // resting maker price
+    REQUIRE(tr.quantity == 5);
+    REQUIRE(seq_of(ev[1]) > seq_of(ev[0]));
+}

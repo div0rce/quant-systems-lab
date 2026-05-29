@@ -94,6 +94,8 @@ Status key:
 - [M4] Single monotonic counter assigns each emitted event a strictly-increasing `SeqNo`.
 - [M4] Engine keys books in an ordered `std::map<SymbolId, OrderBook>`; snapshot iterates it for deterministic ordering.
 - [M4] Unknown symbol / unknown cancel-modify is a no-op at the engine; structured rejection (`OrderRejected`) is deferred to M5, `BookUpdate` to M6.
+- [M4] Global cross-symbol sequence monotonicity is explicitly tested (interleaved AAPL/MSFT share one counter).
+- [M4] `new_market` emitted event contents are asserted (OrderAccepted + TradeEvent fields).
 
 ---
 
