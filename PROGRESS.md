@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M1 — Core exchange domain types and invariants
+- **Active milestone:** M2 — Binary protocol encoding and decoding
 - **Status:** ready for PR
-- **Active branch:** `feat/m01-core-domain`
-- **Last completed milestone:** M0 — Scaffold, tooling, CI (PR #1, squash-merged)
-- **`make check` passing:** yes (10/10 tests)
-- **Last action:** implemented core domain types/enums/clock/invariants + tests + docs; make check green
-- **Next action:** human reviews and squash-merges M1 PR
+- **Active branch:** `feat/m02-binary-protocol`
+- **Last completed milestone:** M1 — Core domain types (PR #2, squash-merged)
+- **`make check` passing:** yes (20/20 tests)
+- **Last action:** implemented big-endian codec + message structs + tests + docs; make check green
+- **Next action:** human reviews and squash-merges M2 PR
 - **Blockers:** none
 
 ---
@@ -35,8 +35,8 @@ Do not rely on prior chat memory.
 | # | Milestone | Branch | Status | PR | Notes |
 |---|---|---|---|---|---|
 | M0 | Scaffold, tooling, CI | `feat/m00-scaffold` | ☑ merged | #1 | Create repo structure, CMake, CI, Claude commands |
-| M1 | Core domain | `feat/m01-core-domain` | ◐ in progress | — | Types, ticks, enums, logical clock |
-| M2 | Binary protocol | `feat/m02-binary-protocol` | ☐ not started | — | Explicit encode/decode, byte fixtures |
+| M1 | Core domain | `feat/m01-core-domain` | ☑ merged | #2 | Types, ticks, enums, logical clock |
+| M2 | Binary protocol | `feat/m02-binary-protocol` | ◐ in progress | — | Explicit encode/decode, byte fixtures |
 | M3 | Order book | `feat/m03-order-book` | ☐ not started | — | Single-symbol price-time priority |
 | M4 | Matching engine | `feat/m04-matching-engine` | ☐ not started | — | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☐ not started | — | Deterministic checks before engine |
@@ -76,6 +76,10 @@ Status key:
 - [M1] `LogicalClock` provides a monotonic logical `Timestamp`; core paths avoid wall-clock time.
 - [M1] Test targets now link `qsl_warnings`, so header-only domain code is warning-checked through tests.
 - [M1] `RejectReason` stringification test is exhaustive (all enumerators + out-of-range cast).
+- [M2] Wire format is big-endian, fixed-width: 16-byte header (type/version/body_len/seq_no) + body.
+- [M2] Serialization is explicit byte-shift (`endian.hpp`); no `reinterpret_cast`/`memcpy`/struct overlay.
+- [M2] Decoders are non-throwing, bounds-safe, and return a deterministic `DecodeError`.
+- [M2] `MsgType` starts with `NewOrder`/`CancelOrder`; registry grows in later milestones.
 
 ---
 
@@ -91,7 +95,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M1 complete, PR pending review_
+- _M2 complete, PR pending review_
 
 
 ---

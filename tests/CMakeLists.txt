@@ -9,7 +9,7 @@ FetchContent_MakeAvailable(Catch2)
 
 include(Catch)
 
-foreach(t test_smoke test_types test_clock)
+foreach(t test_smoke test_types test_clock test_protocol)
   add_executable(${t} unit/${t}.cpp)
   target_link_libraries(${t} PRIVATE qsl_core qsl_warnings Catch2::Catch2WithMain)
   catch_discover_tests(${t})
