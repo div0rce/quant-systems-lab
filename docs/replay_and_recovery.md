@@ -19,7 +19,8 @@ All integers are big-endian (reusing the M2 protocol byte helpers).
 
 - `record_type`: `Command` (1) or `Event` (2).
 - `payload`: the message's serialized bytes, opaque to the log (e.g. a binary-protocol
-  command frame). Capped at `kMaxPayload` (1 MiB).
+  command frame). Capped at `kMaxPayload` (1 MiB). The writer rejects records above this
+  cap before writing, so a successful append remains readable by this implementation.
 - `checksum`: FNV-1a 32-bit over the record's header + payload bytes.
 
 ### Reading and failure handling
@@ -37,6 +38,10 @@ deterministic `LogError`:
 A buffer that ends exactly on a record boundary reads cleanly (`LogError::None`); a
 truncated trailing record is reported as `Truncated` while earlier intact records are still
 returned.
+
+`EventLogWriter::append` checks both `fwrite` and `fflush` before reporting success. M7
+does not claim `fsync` or durable-to-disk semantics; the guarantee is stdio flush
+correctness for the append path.
 
 `apps/qsl-loginspect` is a small CLI that prints a human-readable summary of a log file
 (record count, sequence range, command/event counts, and status).

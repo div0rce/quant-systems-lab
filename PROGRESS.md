@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m07-event-log`
 - **Last completed milestone:** M6 — Market data event publisher (PR #7, squash-merged)
-- **`make check` passing:** yes (97/97 tests)
-- **Last action:** implemented append-only log codec + file writer/reader + CLI inspector + tests + docs; make check green
+- **`make check` passing:** yes (102/102 tests)
+- **Last action:** fixed event-log writer/encoder guarantees for payload cap and stdio flush checks; make check green
 - **Next action:** human reviews and squash-merges M7 PR
 - **Blockers:** none
 
@@ -41,7 +41,7 @@ Do not rely on prior chat memory.
 | M4 | Matching engine | `feat/m04-matching-engine` | ☑ merged | #5 | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☑ merged | #6 | Deterministic checks before engine |
 | M6 | Market data | `feat/m06-market-data` | ☑ merged | #7 | Trade/top-of-book/delta/snapshot publisher |
-| M7 | Event log | `feat/m07-event-log` | ◐ in progress | — | Append-only records and reader |
+| M7 | Event log | `feat/m07-event-log` | ◐ in progress | #8 | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☐ not started | — | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☐ not started | — | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☐ not started | — | Network feed client/publisher |
@@ -108,6 +108,9 @@ Status key:
 - [M7] `read_log` is pure and bounds-safe; corruption yields a deterministic `LogError` (Truncated/BadChecksum/PayloadTooLarge) and returns intact records read so far.
 - [M7] File I/O uses C stdio (`fwrite`/`fread`) so byte buffers pass as `void*` — no `reinterpret_cast`. Writer opens in append mode only (no update-in-place).
 - [M7] Payload is opaque to the log (e.g. a serialized protocol command frame); typed replay interpretation is M8.
+- [M7] Writer enforces the same `kMaxPayload` cap as the reader.
+- [M7] Append checks both `fwrite` and `fflush` before reporting success.
+- [M7] Tests cover oversized payload rejection, `PayloadTooLarge`, and header checksum corruption.
 - [M6] Publisher treats first empty observation as initialization, not a top-of-book delta.
 - [M6] Tests cover no-op first touch, cancel-driven TOB updates, MD malformed-frame decode paths, and a deterministic `MdTrade` byte fixture.
 - [M5] Nonzero modify commands are re-validated with limit-order value constraints before reaching the engine.

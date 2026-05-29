@@ -45,8 +45,9 @@ inline constexpr std::size_t kRecordHeaderSize = 22;   // 8 + 2 + 8 + 4
 inline constexpr std::size_t kChecksumSize = 4;        // u32
 inline constexpr std::uint32_t kMaxPayload = 1U << 20; // 1 MiB guard
 
-/// Append one record's framed bytes to `out`.
-void encode_record(const LogRecord &record, std::vector<std::byte> &out);
+/// Append one record's framed bytes to `out`. Returns false without modifying `out` when
+/// the payload exceeds the readable cap.
+[[nodiscard]] bool encode_record(const LogRecord &record, std::vector<std::byte> &out);
 
 struct RecordRead {
     LogError error;

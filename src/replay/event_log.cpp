@@ -20,7 +20,10 @@ std::uint32_t checksum(std::span<const std::byte> data) noexcept {
 
 } // namespace
 
-void encode_record(const LogRecord &record, std::vector<std::byte> &out) {
+bool encode_record(const LogRecord &record, std::vector<std::byte> &out) {
+    if (record.payload.size() > kMaxPayload) {
+        return false;
+    }
     const auto payload_size = static_cast<std::uint32_t>(record.payload.size());
     const std::size_t start = out.size();
     out.resize(start + kRecordHeaderSize + record.payload.size() + kChecksumSize);
@@ -33,10 +36,14 @@ void encode_record(const LogRecord &record, std::vector<std::byte> &out) {
     const std::uint32_t cs =
         checksum(std::span<const std::byte>(p, kRecordHeaderSize + record.payload.size()));
     protocol::store_be<std::uint32_t>(p + kRecordHeaderSize + record.payload.size(), cs);
+    return true;
 }
 
 RecordRead decode_record(std::span<const std::byte> bytes, std::size_t offset) {
-    if (bytes.size() < offset + kRecordHeaderSize) {
+    if (offset > bytes.size()) {
+        return {LogError::Truncated, {}, offset};
+    }
+    if (bytes.size() - offset < kRecordHeaderSize) {
         return {LogError::Truncated, {}, offset};
     }
     const std::byte *p = bytes.data() + offset;
@@ -49,7 +56,7 @@ RecordRead decode_record(std::span<const std::byte> bytes, std::size_t offset) {
         return {LogError::PayloadTooLarge, {}, offset};
     }
     const std::size_t total = kRecordHeaderSize + payload_size + kChecksumSize;
-    if (bytes.size() < offset + total) {
+    if (bytes.size() - offset < total) {
         return {LogError::Truncated, {}, offset};
     }
     const std::byte *payload_begin = p + kRecordHeaderSize;
@@ -93,10 +100,14 @@ bool EventLogWriter::append(const LogRecord &record) {
         return false;
     }
     std::vector<std::byte> buf;
-    encode_record(record, buf);
+    if (!encode_record(record, buf)) {
+        return false;
+    }
     const std::size_t written = std::fwrite(buf.data(), 1, buf.size(), file_.get());
-    std::fflush(file_.get());
-    return written == buf.size();
+    if (written != buf.size()) {
+        return false;
+    }
+    return std::fflush(file_.get()) == 0;
 }
 
 EventLogReader::EventLogReader(std::filesystem::path path) : path_(std::move(path)) {}
