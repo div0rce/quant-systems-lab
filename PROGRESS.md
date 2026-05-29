@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m04-matching-engine`
 - **Last completed milestone:** M3 — Price-time priority order book (PR #4, squash-merged)
-- **`make check` passing:** yes (50/50 tests)
-- **Last action:** implemented multi-symbol engine + sequenced event stream + snapshot + integration tests; make check green
+- **`make check` passing:** yes (55/55 tests)
+- **Last action:** fixed duplicate active OrderId no-op handling in the engine/book layers; make check green
 - **Next action:** human reviews and squash-merges M4 PR
 - **Blockers:** none
 
@@ -96,6 +96,8 @@ Status key:
 - [M4] Unknown symbol / unknown cancel-modify is a no-op at the engine; structured rejection (`OrderRejected`) is deferred to M5, `BookUpdate` to M6.
 - [M4] Global cross-symbol sequence monotonicity is explicitly tested (interleaved AAPL/MSFT share one counter).
 - [M4] `new_market` emitted event contents are asserted (OrderAccepted + TradeEvent fields).
+- [M4] Active resting `OrderId`s are unique per symbol; duplicate active IDs are no-ops in M4 and become structured `DuplicateOrderId` rejections in M5.
+- [M4] Tests cover no orphaned liquidity after duplicate-id attempts.
 
 ---
 

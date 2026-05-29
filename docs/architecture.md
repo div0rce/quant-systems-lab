@@ -63,6 +63,10 @@ only at the gateway boundary and benchmark layer, never inside matching.
 - **Command application** — `new_limit` / `new_market` / `cancel` / `modify` route to the
   symbol's book. A command for an unregistered symbol (or a cancel/modify of an unknown
   order) is a no-op here; structured rejection is the risk layer's job (M5).
+- **Active order IDs** — a resting `OrderId` is unique within each symbol book. Duplicate
+  active IDs are ignored in M4 before any acceptance event or sequence number is emitted
+  so the book's locator index cannot be corrupted. M5 turns this condition into a
+  structured `DuplicateOrderId` rejection.
 - **Event stream** — commands emit `EngineEvent`, a `std::variant` of `OrderAccepted`,
   `OrderCanceled`, `OrderModified`, and `TradeEvent` (`engine/events.hpp`). A new order
   emits `OrderAccepted` followed by a `TradeEvent` per fill. `OrderRejected` (M5) and

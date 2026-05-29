@@ -119,6 +119,24 @@ TEST_CASE("cancel removes a resting order", "[book]") {
     REQUIRE_FALSE(book.cancel(999)); // never existed
 }
 
+TEST_CASE("duplicate resting limit id is ignored without orphaned liquidity", "[book]") {
+    OrderBook book;
+    REQUIRE(book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC).empty());
+    REQUIRE(book.add_limit(1, Side::Buy, 99, 7, TimeInForce::GTC).empty());
+
+    REQUIRE(book.order_count() == 1);
+    REQUIRE(book.quantity_at(Side::Buy, 100) == 5);
+    REQUIRE(book.quantity_at(Side::Buy, 99) == 0);
+
+    REQUIRE(book.cancel(1));
+    REQUIRE(book.order_count() == 0);
+    REQUIRE_FALSE(book.best_bid().has_value());
+
+    const auto trades = book.add_limit(2, Side::Sell, 100, 5, TimeInForce::IOC);
+    REQUIRE(trades.empty());
+    REQUIRE(book.order_count() == 0);
+}
+
 TEST_CASE("modify quantity reduction preserves time priority", "[book]") {
     OrderBook book;
     book.add_limit(1, Side::Sell, 100, 5, TimeInForce::GTC);

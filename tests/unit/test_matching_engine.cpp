@@ -128,6 +128,42 @@ TEST_CASE("command for an unregistered symbol is a no-op", "[engine]") {
     REQUIRE(eng.snapshot().symbols.empty());
 }
 
+TEST_CASE("duplicate active limit id emits no events and consumes no sequence", "[engine]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+
+    const auto accepted = eng.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC);
+    REQUIRE(accepted.size() == 1);
+    REQUIRE(eng.last_seq() == 1);
+
+    const auto duplicate = eng.new_limit(a, 1, Side::Buy, 99, 7, TimeInForce::GTC);
+    REQUIRE(duplicate.empty());
+    REQUIRE(eng.last_seq() == 1);
+
+    const auto sell = eng.new_limit(a, 2, Side::Sell, 100, 5, TimeInForce::GTC);
+    REQUIRE(sell.size() == 2);
+    REQUIRE(seq_of(sell[0]) == 2);
+    REQUIRE(seq_of(sell[1]) == 3);
+}
+
+TEST_CASE("duplicate active market id emits no events and consumes no sequence", "[engine]") {
+    MatchingEngine eng;
+    const SymbolId a = eng.register_symbol("AAPL");
+
+    const auto accepted = eng.new_limit(a, 1, Side::Sell, 100, 5, TimeInForce::GTC);
+    REQUIRE(accepted.size() == 1);
+    REQUIRE(eng.last_seq() == 1);
+
+    const auto duplicate = eng.new_market(a, 1, Side::Buy, 5);
+    REQUIRE(duplicate.empty());
+    REQUIRE(eng.last_seq() == 1);
+
+    const auto market = eng.new_market(a, 2, Side::Buy, 5);
+    REQUIRE(market.size() == 2);
+    REQUIRE(seq_of(market[0]) == 2);
+    REQUIRE(seq_of(market[1]) == 3);
+}
+
 TEST_CASE("sequence numbers are global across symbols", "[engine]") {
     MatchingEngine eng;
     const SymbolId a = eng.register_symbol("AAPL");

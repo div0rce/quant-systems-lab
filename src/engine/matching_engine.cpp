@@ -46,6 +46,9 @@ std::vector<EngineEvent> MatchingEngine::new_limit(SymbolId symbol, OrderId id, 
     if (book == nullptr) {
         return events; // unknown symbol: rejection is the risk layer's job (M5)
     }
+    if (book->contains(id)) {
+        return events; // duplicate active id: structured rejection is added in M5
+    }
     events.push_back(OrderAccepted{next_seq(), symbol, id});
     for (const Trade &t : book->add_limit(id, side, price, quantity, tif)) {
         events.push_back(
@@ -60,6 +63,9 @@ std::vector<EngineEvent> MatchingEngine::new_market(SymbolId symbol, OrderId id,
     OrderBook *book = find_book(symbol);
     if (book == nullptr) {
         return events;
+    }
+    if (book->contains(id)) {
+        return events; // duplicate active id: structured rejection is added in M5
     }
     events.push_back(OrderAccepted{next_seq(), symbol, id});
     for (const Trade &t : book->add_market(id, side, quantity)) {
