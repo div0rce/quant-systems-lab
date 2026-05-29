@@ -70,6 +70,7 @@ Status key:
 - [M0] Test framework: Catch2 v3.5.2 via FetchContent.
 - [M0] Build generator: Ninja via CMake presets (dev, release, asan).
 - [M0] Compiler warnings: strict wall of warnings via interface library target.
+- [M0] `build`/`test`/`check` auto-configure via a CMakeCache stamp so a cold clone works.
 
 ---
 

@@ -1,12 +1,16 @@
 .PHONY: configure build test check fmt fmt-check tidy bench asan clean
 
-configure:
+BUILD_DIR := build/dev
+
+$(BUILD_DIR)/CMakeCache.txt:
 	cmake --preset dev
 
-build:
+configure: $(BUILD_DIR)/CMakeCache.txt
+
+build: $(BUILD_DIR)/CMakeCache.txt
 	cmake --build --preset dev
 
-test:
+test: build
 	ctest --preset dev
 
 check: fmt-check build test
