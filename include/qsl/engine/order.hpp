@@ -27,4 +27,11 @@ struct Trade {
     Quantity quantity;
 };
 
+// Aggregate resting quantity at one price level (used for snapshots/replay comparison).
+struct LevelView {
+    Price price;
+    QuantityTotal quantity;
+    bool operator==(const LevelView &) const = default;
+};
+
 } // namespace qsl::engine

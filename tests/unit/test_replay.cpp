@@ -1,0 +1,100 @@
+#include "qsl/engine/matching_engine.hpp"
+#include "qsl/replay/command.hpp"
+#include "qsl/replay/event_log.hpp"
+#include "qsl/replay/recovery.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+#include <cstdint>
+#include <variant>
+#include <vector>
+
+using namespace qsl::replay;
+using namespace qsl::engine;
+
+TEST_CASE("replay rebuilds identical final state and event sequence", "[replay]") {
+    const auto flow = generate_flow(/*seed=*/7, /*symbols=*/3, /*orders=*/400);
+
+    // Original run: drive the engine and record each command to a log.
+    MatchingEngine original;
+    std::vector<EngineEvent> original_events;
+    std::vector<LogRecord> records;
+    std::uint64_t i = 0;
+    for (const auto &command : flow) {
+        const auto produced = apply(original, command);
+        original_events.insert(original_events.end(), produced.begin(), produced.end());
+        records.push_back(LogRecord{i, RecordType::Command, i, encode_command(command)});
+        ++i;
+    }
+
+    // The flow must actually exercise the engine for the comparison to be meaningful.
+    REQUIRE(original.last_seq() > 0);
+    bool saw_trade = false;
+    for (const auto &ev : original_events) {
+        if (std::holds_alternative<TradeEvent>(ev)) {
+            saw_trade = true;
+        }
+    }
+    REQUIRE(saw_trade);
+
+    // Replay run: rebuild a fresh engine purely from the log.
+    MatchingEngine rebuilt;
+    const auto replay_events = replay(rebuilt, records);
+
+    REQUIRE(rebuilt.snapshot() == original.snapshot()); // best bid/ask, levels, counts, last_seq
+    REQUIRE(replay_events == original_events);          // emitted trade/event sequence
+}
+
+TEST_CASE("synthetic flow is deterministic in its seed", "[replay]") {
+    REQUIRE(generate_flow(7, 3, 300) == generate_flow(7, 3, 300));
+    REQUIRE_FALSE(generate_flow(7, 3, 300) == generate_flow(8, 3, 300));
+}
+
+TEST_CASE("commands round-trip through the codec", "[replay]") {
+    const std::vector<Command> commands{
+        RegisterSymbol{"AAPL"},         NewLimit{1, 2, Side::Buy, 12345, 10, TimeInForce::IOC},
+        NewMarket{1, 3, Side::Sell, 7}, Cancel{1, 2},
+        Modify{1, 2, 9999, 5},
+    };
+    for (const auto &command : commands) {
+        const auto bytes = encode_command(command);
+        const auto decoded = decode_command(bytes);
+        REQUIRE(decoded.has_value());
+        REQUIRE(*decoded == command);
+    }
+}
+
+TEST_CASE("snapshot reports aggregate per-level quantities", "[replay]") {
+    const std::vector<Command> flow{
+        RegisterSymbol{"X"},
+        NewLimit{0, 1, Side::Buy, 100, 5, TimeInForce::GTC},
+        NewLimit{0, 2, Side::Buy, 100, 3, TimeInForce::GTC}, // same level -> aggregates to 8
+        NewLimit{0, 3, Side::Buy, 99, 4, TimeInForce::GTC},
+        NewLimit{0, 4, Side::Sell, 101, 6, TimeInForce::GTC},
+    };
+    MatchingEngine engine;
+    for (const auto &command : flow) {
+        static_cast<void>(apply(engine, command));
+    }
+
+    const auto snapshot = engine.snapshot();
+    REQUIRE(snapshot.symbols.size() == 1);
+    const auto &s = snapshot.symbols[0];
+    REQUIRE(s.bids.size() == 2);
+    REQUIRE(s.bids[0] == LevelView{100, 8}); // best (highest) first, quantities aggregated
+    REQUIRE(s.bids[1] == LevelView{99, 4});
+    REQUIRE(s.asks.size() == 1);
+    REQUIRE(s.asks[0] == LevelView{101, 6});
+}
+
+TEST_CASE("non-command records are skipped on replay", "[replay]") {
+    std::vector<LogRecord> records{
+        LogRecord{0, RecordType::Command, 0, encode_command(Command{RegisterSymbol{"X"}})},
+        LogRecord{1, RecordType::Event, 1, {}}, // an event record: ignored by replay
+        LogRecord{2, RecordType::Command, 2,
+                  encode_command(Command{NewLimit{0, 1, Side::Buy, 100, 5, TimeInForce::GTC}})},
+    };
+    MatchingEngine engine;
+    static_cast<void>(replay(engine, records));
+    REQUIRE(engine.best_bid(0) == std::optional<Price>{100});
+    REQUIRE(engine.snapshot().symbols.size() == 1);
+}

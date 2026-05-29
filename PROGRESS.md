@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M7 — Append-only event log
+- **Active milestone:** M8 — Deterministic replay and recovery
 - **Status:** ready for PR
-- **Active branch:** `feat/m07-event-log`
-- **Last completed milestone:** M6 — Market data event publisher (PR #7, squash-merged)
-- **`make check` passing:** yes (102/102 tests)
-- **Last action:** fixed event-log writer/encoder guarantees for payload cap and stdio flush checks; make check green
-- **Next action:** human reviews and squash-merges M7 PR
+- **Active branch:** `feat/m08-replay-recovery`
+- **Last completed milestone:** M7 — Append-only event log (PR #8, squash-merged)
+- **`make check` passing:** yes (107/107 tests)
+- **Last action:** implemented replay command codec + replay/recovery + extended snapshot + synthetic flow + qsl-replay CLI + tests + docs; make check green
+- **Next action:** human reviews and squash-merges M8 PR
 - **Blockers:** none
 
 ---
@@ -41,8 +41,8 @@ Do not rely on prior chat memory.
 | M4 | Matching engine | `feat/m04-matching-engine` | ☑ merged | #5 | Multi-symbol sequencing and snapshots |
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☑ merged | #6 | Deterministic checks before engine |
 | M6 | Market data | `feat/m06-market-data` | ☑ merged | #7 | Trade/top-of-book/delta/snapshot publisher |
-| M7 | Event log | `feat/m07-event-log` | ◐ in progress | #8 | Append-only records and reader |
-| M8 | Replay/recovery | `feat/m08-replay-recovery` | ☐ not started | — | Rebuild engine state from log |
+| M7 | Event log | `feat/m07-event-log` | ☑ merged | #8 | Append-only records and reader |
+| M8 | Replay/recovery | `feat/m08-replay-recovery` | ◐ in progress | — | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☐ not started | — | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☐ not started | — | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☐ not started | — | Measured performance outputs |
@@ -108,6 +108,10 @@ Status key:
 - [M7] `read_log` is pure and bounds-safe; corruption yields a deterministic `LogError` (Truncated/BadChecksum/PayloadTooLarge) and returns intact records read so far.
 - [M7] File I/O uses C stdio (`fwrite`/`fread`) so byte buffers pass as `void*` — no `reinterpret_cast`. Writer opens in append mode only (no update-in-place).
 - [M7] Payload is opaque to the log (e.g. a serialized protocol command frame); typed replay interpretation is M8.
+- [M8] Recorded unit is a `Command` sum type including `RegisterSymbol`, so a log replays standalone (same names in order -> same SymbolIds).
+- [M8] `EngineSnapshot` extended with per-level aggregates (`LevelView` bids/asks); replay equivalence compares snapshot (best bid/ask, levels, counts, last_seq) and the full emitted event sequence.
+- [M8] Synthetic flow uses a seeded `mt19937_64`; replay is deterministic because the engine is wall-clock independent.
+- [M8] `qsl-replay generate|<file>` provides a self-contained recovery demo (write a flow log, then rebuild from it).
 - [M7] Writer enforces the same `kMaxPayload` cap as the reader.
 - [M7] Append checks both `fwrite` and `fflush` before reporting success.
 - [M7] Tests cover oversized payload rejection, `PayloadTooLarge`, and header checksum corruption.
@@ -134,7 +138,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M7 complete, PR pending review_
+- _M8 complete, PR pending review_
 
 
 ---

@@ -32,6 +32,8 @@ struct SymbolSnapshot {
     std::optional<Price> best_bid;
     std::optional<Price> best_ask;
     std::size_t order_count;
+    std::vector<LevelView> bids; // best (highest) first
+    std::vector<LevelView> asks; // best (lowest) first
     bool operator==(const SymbolSnapshot &) const = default;
 };
 

@@ -43,6 +43,10 @@ class OrderBook {
     [[nodiscard]] std::size_t order_count() const;
     [[nodiscard]] bool contains(OrderId id) const;
 
+    // Aggregate resting quantity per price level, best price first.
+    [[nodiscard]] std::vector<LevelView> bid_levels() const;
+    [[nodiscard]] std::vector<LevelView> ask_levels() const;
+
   private:
     using Level = std::list<Order>;
     using BidMap = std::map<Price, Level, std::greater<Price>>; // best (highest) first

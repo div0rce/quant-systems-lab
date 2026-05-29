@@ -125,8 +125,9 @@ EngineSnapshot MatchingEngine::snapshot() const {
     EngineSnapshot snap;
     snap.last_seq = seq_;
     for (const auto &[id, book] : books_) {
-        snap.symbols.push_back(
-            SymbolSnapshot{id, book.best_bid(), book.best_ask(), book.order_count()});
+        snap.symbols.push_back(SymbolSnapshot{id, book.best_bid(), book.best_ask(),
+                                              book.order_count(), book.bid_levels(),
+                                              book.ask_levels()});
     }
     return snap;
 }

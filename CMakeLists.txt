@@ -13,12 +13,16 @@ include(cmake/Sanitizers.cmake)
 add_library(qsl_core src/core/types.cpp src/protocol/codec.cpp src/engine/order_book.cpp
                      src/engine/matching_engine.cpp src/engine/risk.cpp
                      src/gateway/order_gateway.cpp src/feed/market_data.cpp
-                     src/feed/publisher.cpp src/replay/event_log.cpp)
+                     src/feed/publisher.cpp src/replay/event_log.cpp src/replay/command.cpp
+                     src/replay/recovery.cpp)
 target_include_directories(qsl_core PUBLIC include)
 target_link_libraries(qsl_core PRIVATE qsl_warnings)
 
 add_executable(qsl-loginspect apps/qsl-loginspect/main.cpp)
 target_link_libraries(qsl-loginspect PRIVATE qsl_core qsl_warnings)
+
+add_executable(qsl-replay apps/qsl-replay/main.cpp)
+target_link_libraries(qsl-replay PRIVATE qsl_core qsl_warnings)
 
 enable_testing()
 add_subdirectory(tests)

@@ -46,7 +46,21 @@ correctness for the append path.
 `apps/qsl-loginspect` is a small CLI that prints a human-readable summary of a log file
 (record count, sequence range, command/event counts, and status).
 
-## Replay invariant (M8)
+## Deterministic replay and recovery (M8)
+
+The log is a stream of `Command` records (`include/qsl/replay/command.hpp`). The recordable
+command set is `RegisterSymbol`, `NewLimit`, `NewMarket`, `Cancel`, `Modify` — a
+`std::variant` serialized with a 1-byte tag plus fixed-width fields (`RegisterSymbol`
+carries a variable-length name). Including `RegisterSymbol` makes a log **self-contained**:
+registering the same names in the same order reproduces identical `SymbolId`s, so the
+commands' numeric symbol references line up on replay.
+
+`replay(engine, records)` (`replay/recovery.hpp`) rebuilds state by decoding each command
+record and applying it to a fresh engine in order; non-command records and undecodable
+payloads are skipped. Because the engine is deterministic and wall-clock independent,
+applying the same command stream reproduces the same state and the same emitted events.
+
+### Replay invariant
 
 ```text
 fresh engine + replay(log) == original engine final state
@@ -54,8 +68,33 @@ fresh engine + replay(log) == original engine final state
 
 ### Comparison dimensions
 
-- Best bid/ask per symbol
-- Resting order counts
-- Aggregate quantity at each price level
-- Emitted trade sequence
-- Last sequence number
+`EngineSnapshot` (compared with a defaulted `==`) covers, per symbol ordered by `SymbolId`:
+
+- best bid / best ask,
+- resting order count,
+- **aggregate quantity at each price level** (`bids`/`asks` as `LevelView{price, quantity}`,
+  best price first),
+
+plus the engine's **last sequence number**. The **emitted trade/event sequence** is compared
+separately by replaying and checking the event stream equals the original. The
+replay-equivalence test drives a deterministic synthetic flow (fixed RNG seed,
+`generate_flow`) of limit/market/cancel/modify commands across several symbols, then asserts
+both the final snapshot and the full event sequence match.
+
+### Recovery CLI
+
+```text
+qsl-replay generate <file> [seed]   # write a deterministic synthetic-flow command log
+qsl-replay <file>                   # rebuild engine state from the log and print it
+```
+
+### Limitations
+
+- Replay reconstructs from the recorded **command** stream; emitted events are recomputed,
+  not read back from the log (the log could also store events, but the engine is the source
+  of truth for replay equivalence).
+- The reader loads the whole log into memory before replaying (adequate for the simulator).
+- Commands are trusted once their record checksum validates (M7); the command codec does not
+  re-validate enum domains — wire-level enum validation lives at the protocol boundary (M2)
+  and risk checks at the gateway (M5).
+
