@@ -60,6 +60,34 @@ TEST_CASE("CancelOrder encode/decode round-trips", "[protocol]") {
     REQUIRE(out.value.symbol == 3);
 }
 
+TEST_CASE("session response messages encode/decode round-trip", "[protocol]") {
+    const auto heartbeat = decode_heartbeat(encode(Heartbeat{42}));
+    REQUIRE(heartbeat.ok());
+    REQUIRE(heartbeat.value.token == 42);
+
+    const auto heartbeat_ack = decode_heartbeat_ack(encode(HeartbeatAck{43}));
+    REQUIRE(heartbeat_ack.ok());
+    REQUIRE(heartbeat_ack.value.token == 43);
+
+    const auto ack = decode_ack(encode(Ack{7, 11}));
+    REQUIRE(ack.ok());
+    REQUIRE(ack.value.order_id == 7);
+    REQUIRE(ack.value.seq == 11);
+
+    const auto reject = decode_reject(encode(Reject{8, RejectReason::UnknownSymbol}));
+    REQUIRE(reject.ok());
+    REQUIRE(reject.value.order_id == 8);
+    REQUIRE(reject.value.reason == RejectReason::UnknownSymbol);
+
+    const auto fill = decode_fill(encode(Fill{9, 10, 123, 4, 12}));
+    REQUIRE(fill.ok());
+    REQUIRE(fill.value.taker_id == 9);
+    REQUIRE(fill.value.maker_id == 10);
+    REQUIRE(fill.value.price == 123);
+    REQUIRE(fill.value.quantity == 4);
+    REQUIRE(fill.value.seq == 12);
+}
+
 TEST_CASE("truncated header rejects deterministically", "[protocol]") {
     const std::array<std::byte, 8> tooShort{};
     const auto hdr = decode_header(std::span<const std::byte>{tooShort.data(), tooShort.size()});

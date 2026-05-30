@@ -101,3 +101,30 @@ TEST_CASE("tcp loopback: orders and heartbeat over a real socket", "[gateway][tc
     REQUIRE(has(MsgType::Fill));
     REQUIRE(has(MsgType::HeartbeatAck));
 }
+
+TEST_CASE("tcp server rejects non-numeric bind hosts", "[gateway][tcp]") {
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    TcpServer server{gateway};
+
+    REQUIRE_FALSE(server.run("localhost", 0));
+    REQUIRE_FALSE(server.run("not-an-ip", 0));
+}
+
+TEST_CASE("tcp server survives a peer closing before response write", "[gateway][tcp]") {
+    int fds[2]{};
+    REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+
+    write_all(fds[1],
+              encode(NewOrder{1, 0, 100, 5, Side::Buy, OrderType::Limit, TimeInForce::GTC}, 1));
+    REQUIRE(::close(fds[1]) == 0);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    TcpServer server{gateway};
+    server.serve_connection(fds[0]);
+
+    REQUIRE(::close(fds[0]) == 0);
+}

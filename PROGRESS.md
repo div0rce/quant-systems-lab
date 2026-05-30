@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m09-tcp-gateway`
 - **Last completed milestone:** M8 — Deterministic replay and recovery (PR #9, squash-merged)
-- **`make check` passing:** yes (121/121 tests)
-- **Last action:** implemented protocol responses + Session + TcpServer + client/server CLIs + tests + socket docs; make check green; TCP demo verified
+- **`make check` passing:** yes (127/127 tests)
+- **Last action:** fixed TCP bind validation and SIGPIPE-safe writes; added session/socket coverage; make check green
 - **Next action:** human reviews and squash-merges M9 PR
 - **Blockers:** none
 
@@ -43,7 +43,7 @@ Do not rely on prior chat memory.
 | M6 | Market data | `feat/m06-market-data` | ☑ merged | #7 | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☑ merged | #8 | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☑ merged | #9 | Rebuild engine state from log |
-| M9 | TCP gateway | `feat/m09-tcp-gateway` | ◐ in progress | — | Binary order gateway over TCP |
+| M9 | TCP gateway | `feat/m09-tcp-gateway` | ◐ in progress | #10 | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☐ not started | — | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☐ not started | — | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☐ not started | — | Sanitizers and invariant tests |
@@ -119,6 +119,9 @@ Status key:
 - [M9] Single-threaded accept-and-serve loop (one connection at a time); no thread pool / event loop.
 - [M9] The only `reinterpret_cast` in the codebase is the POSIX `sockaddr*` cast; protocol serialization stays shift-based.
 - [M9] No authentication; binds `127.0.0.1` only. Local simulator, not a venue (documented in docs/socket_gateway.md).
+- [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
+- [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
+- [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
 - [M8] Replay integration tests exercise `EventLogWriter -> EventLogReader -> replay` through the real M7 byte framing.
 - [M8] `decode_command` failure branches are tested.
 - [M7] Writer enforces the same `kMaxPayload` cap as the reader.

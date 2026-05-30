@@ -29,7 +29,10 @@ client <- Ack / Reject / Fill / HeartbeatAck <- Session
 The wire is a byte stream, not a message stream. `Session` accumulates bytes in a buffer and
 only processes a frame once the 16-byte header plus the declared `body_len` are present; a
 frame split across multiple `read()`s is held until complete. Outbound responses are written
-with a write-all loop that tolerates partial `write()`s.
+with a send-all loop that tolerates partial writes. The socket write path uses
+`send(..., MSG_NOSIGNAL)` where available, and the platform socket option where available,
+so a client that drops before reading a response cannot terminate the gateway through
+`SIGPIPE`.
 
 ## Malformed frames
 
@@ -55,9 +58,10 @@ event loop, and no TLS.
 ## Security
 
 There is **no authentication or authorization**. The server binds to **`127.0.0.1` only**, so
-it is reachable only from the local machine. Do not expose it on a routable interface or an
-untrusted network — it accepts and acts on any order from any local connection. This is a
-local simulator, not a real venue.
+it is reachable only from the local machine in the default demo. M9 accepts numeric IPv4 bind
+hosts only; invalid hosts such as `"localhost"` or typos fail startup and must not fall back
+to `0.0.0.0`. Do not expose it on a routable interface or an untrusted network — it accepts
+and acts on any order from any local connection. This is a local simulator, not a real venue.
 
 ## Local demo
 

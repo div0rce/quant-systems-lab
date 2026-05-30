@@ -16,9 +16,21 @@ namespace {
 
 // Write all bytes, tolerating partial writes. std::byte* converts implicitly to void*.
 bool write_all(int fd, std::span<const std::byte> data) {
+#if defined(SO_NOSIGPIPE)
+    int yes = 1;
+    static_cast<void>(
+        ::setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &yes, static_cast<socklen_t>(sizeof(yes))));
+#endif
     std::size_t offset = 0;
     while (offset < data.size()) {
-        const ssize_t n = ::write(fd, data.data() + offset, data.size() - offset);
+#if defined(MSG_NOSIGNAL)
+        const ssize_t n = ::send(fd, data.data() + offset, data.size() - offset, MSG_NOSIGNAL);
+#else
+        // Some platforms, including macOS, suppress SIGPIPE through SO_NOSIGPIPE above.
+        // Where neither mechanism exists, send() still reports write failure normally after
+        // the platform's default signal handling.
+        const ssize_t n = ::send(fd, data.data() + offset, data.size() - offset, 0);
+#endif
         if (n <= 0) {
             return false;
         }
@@ -56,7 +68,11 @@ bool TcpServer::run(const std::string &host, std::uint16_t port) {
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    ::inet_pton(AF_INET, host.c_str(), &addr.sin_addr);
+    const int parsed = ::inet_pton(AF_INET, host.c_str(), &addr.sin_addr);
+    if (parsed != 1) {
+        ::close(listen_fd);
+        return false;
+    }
 
     // The sockaddr_in* -> sockaddr* cast is required by the POSIX socket API.
     auto *generic = reinterpret_cast<sockaddr *>(&addr); // NOLINT: POSIX socket API

@@ -82,6 +82,20 @@ TEST_CASE("a market order crosses resting liquidity", "[session]") {
     REQUIRE(decode_fill(frames[1]).value.maker_id == 1);
 }
 
+TEST_CASE("a cancel order through the session yields an Ack", "[session]") {
+    MatchingEngine eng;
+    eng.register_symbol("AAPL");
+    OrderGateway gw{eng, RiskConfig{1000, 1'000'000}};
+    Session session{gw};
+
+    static_cast<void>(session.on_bytes(encode(limit(1, Side::Buy, 100, 5), 1)));
+    const auto ack = decode_ack(session.on_bytes(encode(CancelOrder{1, 0}, 2)));
+    REQUIRE(ack.ok());
+    REQUIRE(ack.value.order_id == 1);
+    REQUIRE_FALSE(session.logged_out());
+    REQUIRE_FALSE(eng.best_bid(0).has_value());
+}
+
 TEST_CASE("a risk-rejected order yields a Reject and keeps the session", "[session]") {
     MatchingEngine eng;
     eng.register_symbol("AAPL");
@@ -117,6 +131,30 @@ TEST_CASE("a malformed frame flags disconnect without crashing", "[session]") {
     std::array<std::byte, kHeaderSize> garbage{};
     garbage.fill(static_cast<std::byte>(0xFF)); // bad version/type
     const auto out = session.on_bytes(garbage);
+    REQUIRE(session.logged_out());
+    REQUIRE(out.empty());
+}
+
+TEST_CASE("a valid header with an undecodable body flags disconnect", "[session]") {
+    MatchingEngine eng;
+    eng.register_symbol("AAPL");
+    OrderGateway gw{eng, RiskConfig{1000, 1'000'000}};
+    Session session{gw};
+
+    auto frame = encode(limit(1, Side::Buy, 100, 5), 1);
+    frame[kHeaderSize + 24] = static_cast<std::byte>(99); // invalid Side byte
+    const auto out = session.on_bytes(frame);
+    REQUIRE(session.logged_out());
+    REQUIRE(out.empty());
+}
+
+TEST_CASE("an unexpected message type flags disconnect", "[session]") {
+    MatchingEngine eng;
+    eng.register_symbol("AAPL");
+    OrderGateway gw{eng, RiskConfig{1000, 1'000'000}};
+    Session session{gw};
+
+    const auto out = session.on_bytes(encode(Ack{1, 1}));
     REQUIRE(session.logged_out());
     REQUIRE(out.empty());
 }
