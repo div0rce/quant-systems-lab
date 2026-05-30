@@ -97,4 +97,23 @@ protocol::DecodeResult<MdTopOfBook> decode_md_top_of_book(std::span<const std::b
     return {DecodeError::None, msg};
 }
 
+std::optional<MarketDataMessage> decode_market_data(std::span<const std::byte> frame) {
+    const auto header = protocol::decode_header(frame);
+    if (!header.ok()) {
+        return std::nullopt;
+    }
+    if (header.value.type == MsgType::MdTrade) {
+        const auto r = decode_md_trade(frame);
+        if (r.ok()) {
+            return MarketDataMessage{r.value};
+        }
+    } else if (header.value.type == MsgType::MdTopOfBook) {
+        const auto r = decode_md_top_of_book(frame);
+        if (r.ok()) {
+            return MarketDataMessage{r.value};
+        }
+    }
+    return std::nullopt;
+}
+
 } // namespace qsl::feed
