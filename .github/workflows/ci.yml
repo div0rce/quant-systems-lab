@@ -26,6 +26,9 @@ jobs:
       - name: Test
         run: ctest --preset dev
 
+      - name: Differential fixture golden check
+        run: make check-fixtures
+
       - name: Format check
         run: make fmt-check
 

@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench asan demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench asan demo check-fixtures clean
 
 BUILD_DIR := build/dev
 
@@ -37,6 +37,9 @@ asan:
 
 demo: build
 	bash scripts/demo.sh
+
+check-fixtures: build
+	bash scripts/check_fixtures.sh
 
 clean:
 	rm -rf build

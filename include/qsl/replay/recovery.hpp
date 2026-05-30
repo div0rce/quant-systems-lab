@@ -29,4 +29,11 @@ using engine::MatchingEngine;
 [[nodiscard]] std::vector<Command> generate_flow(std::uint64_t seed, SymbolId symbols,
                                                  std::size_t orders);
 
+/// Enriched deterministic flow for property/differential testing: covers IOC, invalid prices
+/// and quantities, duplicate active ids, reused inactive ids, unknown symbols, cancels/modifies
+/// of active and inactive orders, market orders, and multi-symbol interleavings. Both the C++
+/// engine and the independent OCaml replay must agree on the resulting snapshot.
+[[nodiscard]] std::vector<Command> generate_property_flow(std::uint64_t seed, SymbolId symbols,
+                                                          std::size_t orders);
+
 } // namespace qsl::replay

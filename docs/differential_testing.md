@@ -109,3 +109,32 @@ Fixtures under test:
 
 The check runs under the existing `ocaml-verifier` CI job via `dune runtest` (no separate job).
 It is differential testing against the C++ system under test, not formal verification.
+
+
+## M18 — property-based command generator
+
+`generate_property_flow(seed)` (C++) produces an enriched, seed-deterministic command stream
+that deliberately exercises the full command space: valid limit/market orders, IOC, invalid
+prices and quantities, duplicate active ids, reused inactive ids, unknown symbols, cancels and
+modifies of active and inactive orders, and multi-symbol interleavings. `qsl-export-stream prop
+<seed>` exports one fixture per seed; `prop_seed1..8.txt` are committed.
+
+`test_differential.ml` discovers every `prop_*.txt` fixture (via `Sys.readdir`) and runs the
+same C++-vs-OCaml snapshot equality plus a no-crossed-book invariant on each, reporting the
+failing fixture/seed on divergence. Across seeds 1–8 the two engines agree exactly while
+exercising all reject reasons (UnknownSymbol, UnknownOrder, InvalidPrice, InvalidQuantity,
+MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) and real trades.
+
+### Oracle hardening
+
+- **Negative coverage:** three hand-corrupted fixtures (`stream_bad_snapshot`,
+  `stream_bad_lastseq`, `stream_bad_orders`) corrupt distinct snapshot fields (an ask level,
+  `last_seq`, and `order_count`); the test asserts each is detected, proving the comparison
+  is not blind to those fields.
+- **Golden regeneration:** `make check-fixtures` (`scripts/check_fixtures.sh`, run in the
+  `build-test` CI job) regenerates every C++-produced fixture and diffs it against the
+  committed copy, so the differential tests can never silently compare OCaml against a stale
+  C++ snapshot. Hand-authored `stream_bad_*` fixtures are intentionally not regenerated.
+
+This is property-based differential testing against the C++ system under test — not formal
+verification or a proof of correctness.

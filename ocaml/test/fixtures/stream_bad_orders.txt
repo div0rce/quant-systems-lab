@@ -1,0 +1,13 @@
+# deliberate mismatch (test-only): order_count is corrupted (should be 1) -> must be detected.
+version 1
+meta seed 0 symbols 1 orders 6 max_qty 1000 max_notional 1000000
+cmd reg S0
+cmd limit 0 1 S 100 3 GTC
+cmd limit 0 2 B 100 5 IOC
+cmd limit 0 3 B 99 4 IOC
+cmd limit 0 4 S 101 5 GTC
+cmd limit 0 5 B 101 2 IOC
+cmd market 0 6 B 1
+snapshot last_seq 9 trades 3
+sym 0 bid - ask 101 orders 2
+level 0 A 101 2
