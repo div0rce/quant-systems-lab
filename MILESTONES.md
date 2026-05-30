@@ -467,6 +467,15 @@ Do not pull backlog items into earlier PRs.
 - Docker packaging.
 - Perf/flamegraph docs.
 - GitHub Pages documentation site.
+- Differential negative-fixture coverage: add dedicated corruption fixtures for `best_bid`,
+  `best_ask`, `trades` (trade_count), and bid-side `level` lines. Today only ask-level qty,
+  `last_seq`, and `order_count` have dedicated negative fixtures; the other snapshot fields are
+  exercised only via the positive fixtures' symmetric rendering, so a future `snapshot_to_lines`
+  regression dropping one of them would not be caught by a negative test.
+- Shrinker against a real divergence: inject a synthetic C++/OCaml engine divergence (e.g. a
+  build flag) and demonstrate `replay::shrink` reducing the failing stream to a minimal
+  C++≠OCaml reproducer, proving the headline use case end-to-end (M19 currently demonstrates the
+  mechanism only, via an artificial "produces a trade" predicate).
 
 
 ---
