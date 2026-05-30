@@ -16,7 +16,7 @@ if [[ ! -x "$BIN/qsl-gateway" || ! -x "$BIN/qsl-replay" ]]; then
     make build >/dev/null
 fi
 
-LOG="$(mktemp -t qsl-demo)"
+LOG="$(mktemp "${TMPDIR:-/tmp}/qsl-demo.XXXXXX")"
 GW_PID=""
 cleanup() {
     [[ -n "$GW_PID" ]] && kill "$GW_PID" 2>/dev/null || true

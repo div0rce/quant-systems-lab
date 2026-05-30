@@ -24,7 +24,7 @@ Do not rely on prior chat memory.
 - **Active branch:** `feat/m13-docs-polish`
 - **Last completed milestone:** M12 — Hardening with sanitizers and invariant tests (PR #13, squash-merged)
 - **`make check` passing:** yes (144/144 tests)
-- **Last action:** rewrote README + mermaid diagram, added demo script + make demo, expanded recruiting notes; make check and make demo green
+- **Last action:** fixed demo temp-file portability; bash -n, make demo, and make check green
 - **Next action:** human reviews and squash-merges M13 PR
 - **Blockers:** none
 
@@ -47,7 +47,7 @@ Do not rely on prior chat memory.
 | M10 | Network market data | `feat/m10-network-market-data` | ☑ merged | #11 | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☑ merged | #12 | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☑ merged | #13 | Sanitizers and invariant tests |
-| M13 | Docs polish | `feat/m13-docs-polish` | ◐ in progress | — | README, diagram, demo, recruiting notes |
+| M13 | Docs polish | `feat/m13-docs-polish` | ◐ in progress | #14 | README, diagram, demo, recruiting notes |
 
 Status key:
 
@@ -144,6 +144,7 @@ Status key:
 - [M13] README rewritten for a <60s read with a committed mermaid architecture diagram, clean-clone quickstart, demo section, and honest limitations; benchmark table cites results/latest.txt exactly (no new/unmeasured numbers).
 - [M13] Added scripts/demo.sh + `make demo`: deterministic replay/recovery then a loopback TCP gateway round-trip (readiness polling + cleanup trap). Gateway is unauthenticated/loopback-only — flagged in README and the script.
 - [M13] Expanded docs/recruiting_notes.md with conservative SWE + Linux résumé bullets, measured-only benchmark bullets (with exclusions caveat), and interview-defense notes. No production/profitability claims.
+- [M13] Demo script uses a portable `mktemp` template so `make demo` works on GNU/Linux and macOS.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
 - [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
