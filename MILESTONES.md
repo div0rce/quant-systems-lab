@@ -457,66 +457,66 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 Do not pull backlog items into earlier PRs.
 
-- Lock-free queue / ring-buffer internals.
-- Memory pool allocator.
-- Multithreaded gateway and market data pipeline.
-- ThreadSanitizer coverage.
-- More realistic synthetic order-flow model.
-- FIX-like text protocol adapter.
-- Web dashboard for visualization.
-- Docker packaging.
-- Perf/flamegraph docs.
-- GitHub Pages documentation site.
+- Lock-free queue / ring-buffer internals. (#24)
+- Memory pool allocator. (#25)
+- Multithreaded gateway and market data pipeline. (#26)
+- ThreadSanitizer coverage. (#27)
+- More realistic synthetic order-flow model. (#28)
+- FIX-like text protocol adapter. (#29)
+- Web dashboard for visualization. (#30)
+- Docker packaging. (#31)
+- Perf/flamegraph docs. (#32)
+- GitHub Pages documentation site. (#33)
 
 ### Differential-testing follow-ups (prioritized)
 
 **Definitely track — differential oracle self-test.** Deliberately inject a known C++≠OCaml
 mismatch and assert end-to-end: (1) the differential test fails, (2) the failure is detected
 correctly, (3) the shrinker reduces the failing stream, (4) the resulting minimal fixture
-reproduces the mismatch. This tests the fire alarm, not just the building.
+reproduces the mismatch. This tests the fire alarm, not just the building. (#34)
 
 High:
 
 - CI seed sweep: generate seeds 1..N dynamically in CI instead of relying on only the 8
-  committed property seeds — stronger differential coverage.
+  committed property seeds — stronger differential coverage. (#35)
 - Dedicated negative fixtures for `best_bid`, `best_ask`, `trades` (trade_count), and bid-side
   `level` lines (today only ask-level qty, `last_seq`, and `order_count` are covered) — cheap,
-  improves oracle robustness.
+  improves oracle robustness. (#36)
 - Synthetic divergence demonstration: show the shrinker finding a real C++≠OCaml failure rather
-  than only the artificial "produces a trade" predicate.
+  than only the artificial "produces a trade" predicate. (#37)
 - Differential fixture coverage matrix: a maintained table of every snapshot field × {positive,
-  negative, property, shrink} coverage, so blind spots cannot silently reappear.
+  negative, property, shrink} coverage, so blind spots cannot silently reappear. (#38)
 - Oracle independence audit: document every place the OCaml oracle could accidentally mirror C++
-  implementation details, to evidence that it is genuinely independently implemented.
+  implementation details, to evidence that it is genuinely independently implemented. (#39)
 
 Medium:
 
 - Shared gateway-replay helper to remove the duplicated command-dispatch logic in `fixture.cpp`,
-  `shrink.cpp`, and the exporters.
-- Price simplification in the shrinker (alongside quantity) for smaller counterexamples.
-- Symbol/id renumbering shrink pass (could reduce fixtures further than 123 -> 5).
-- Generator coverage reporting: track reject-reason frequencies automatically in CI.
+  `shrink.cpp`, and the exporters. (#41)
+- Price simplification in the shrinker (alongside quantity) for smaller counterexamples. (#42)
+- Symbol/id renumbering shrink pass (could reduce fixtures further than 123 -> 5). (#43)
+- Generator coverage reporting: track reject-reason frequencies automatically in CI. (#44)
 - Explicit determinism test across compilers/platforms (currently only indirectly validated by
-  the Linux golden check against macOS-committed fixtures).
+  the Linux golden check against macOS-committed fixtures). (#45)
 - **Differential failure artifact bundle (highest-value addition):** on a CI divergence, save and
   upload as artifacts the original stream, the shrunk stream, the C++ output, the OCaml output,
-  and the unified diff — mirrors mature fuzzing/differential systems and makes debugging easy.
+  and the unified diff — mirrors mature fuzzing/differential systems and makes debugging easy. (#40)
 - Shrinker effectiveness metrics: report original/final command counts, reduction %, and shrink
-  iterations during CI.
+  iterations during CI. (#46)
 - Seed reproducibility manifest: record generator version, seed, and fixture hash so future
-  generator changes cannot cause confusion.
+  generator changes cannot cause confusion. (#47)
 
 Medium-Low:
 
 - Mutation testing for the oracle: intentionally corrupt snapshots, trade counts, best bid/ask,
-  and sequence numbers, and verify the differential layer detects each — validates the checker.
+  and sequence numbers, and verify the differential layer detects each — validates the checker. (#48)
 
 Low:
 
-- Larger committed corpus (e.g. prop_seed1..50) — more confidence, lower signal per maintenance.
+- Larger committed corpus (e.g. prop_seed1..50) — more confidence, lower signal per maintenance. (#49)
 - Historical regression archive: keep a folder of important shrunk failures discovered over time
-  (useful once real bugs are ever found).
-- Performance benchmarks for the differential harness.
+  (useful once real bugs are ever found). (#50)
+- Performance benchmarks for the differential harness. (#51)
 
 
 ---
