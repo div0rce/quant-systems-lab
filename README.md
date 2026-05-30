@@ -103,14 +103,22 @@ Reproduce with `make bench` (numbers will differ by machine).
 - **Not production-hardened**: no persistence beyond the flat event log, no clustering,
   no exchange-grade risk/clearing.
 
-## Independent replay verifier (OCaml)
+## Differential testing (OCaml)
 
-A small OCaml subproject (`ocaml/`) independently checks exported event-log fixtures against
-replay invariants (sequence monotonicity, positive trade quantities, canceled-can't-trade,
-rejected-can't-rest, and event-log/summary consistency). It does not re-implement the engine
-and is not formal verification — it is a cross-check in a typed functional language that
-validates the *output* of the C++ pipeline. Details in
-[docs/ocaml_verifier.md](docs/ocaml_verifier.md); build/test with `cd ocaml && dune runtest`.
+The C++ engine is the system under test; an **independent OCaml engine** (`ocaml/`) replays the
+same command streams and must compute the same final snapshot. In 60 seconds: a seeded C++
+**property generator** produces command streams spanning the full command space (valid/invalid,
+duplicate/reused ids, unknown symbols, IOC/market, cancel/modify, multi-symbol); the C++ engine
+exports a fixture (commands + its snapshot); OCaml replays the **commands only** and the
+**differential test** asserts its snapshot equals the C++ snapshot (best bid/ask, level
+aggregates, order counts, last_seq, trade count); a **shrinker** reduces any disagreement to a
+minimal counterexample. Committed fixtures are golden-regenerated in CI so they cannot drift.
+
+This is cross-language differential + property testing — **not** formal verification or a
+correctness proof. An earlier OCaml layer also checks log invariants directly
+([docs/ocaml_verifier.md](docs/ocaml_verifier.md)). Architecture and exact "what this proves /
+does not prove" are in [docs/differential_testing.md](docs/differential_testing.md) and
+[docs/property_testing.md](docs/property_testing.md); build/test with `cd ocaml && dune runtest`.
 
 ## Repository layout
 

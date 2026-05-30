@@ -33,6 +33,12 @@
 - Wrote an independent replay-invariant verifier in OCaml (typed, immutable) that re-checks
   exported C++ event-log fixtures against replay invariants — a cross-language check, not a
   re-implementation of the engine.
+- Built a cross-language differential testing system: an independent OCaml engine replays
+  seeded, property-generated command streams and its final snapshot is asserted equal to the
+  C++ engine's (best bid/ask, level aggregates, order counts, sequence, trade count) in CI.
+- Added a deterministic shrinker that reduces a failing command stream to a minimal
+  counterexample, plus golden-regenerated fixtures so the comparison cannot drift from current
+  C++ output.
 
 ## Résumé bullets — Linux Engineering (conservative)
 
