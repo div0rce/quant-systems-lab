@@ -32,4 +32,9 @@ void write_ioc_scenario_fixture(std::ostream &os);
 // drive the cross-language differential tests over many seeds.
 void write_property_fixture(std::ostream &os, std::uint64_t seed);
 
+// Shrink the property flow for `seed` against an artificial "produces a trade" predicate and
+// write the minimized differential fixture, prefixed with a shrink report (seed, original and
+// minimized lengths, failure reason).
+void write_shrunk_fixture(std::ostream &os, std::uint64_t seed);
+
 } // namespace qsl::replay

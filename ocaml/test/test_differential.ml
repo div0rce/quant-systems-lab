@@ -67,6 +67,7 @@ let property_fixtures () =
 let () =
   expect_match "fixtures/stream_seed7.txt";
   expect_match "fixtures/stream_ioc.txt";
+  expect_match "fixtures/shrunk_seed1.txt"; (* M19: minimized counterexample replays independently *)
   List.iter expect_match (property_fixtures ());
   (* negative coverage: each corrupts a distinct snapshot field *)
   expect_mismatch "fixtures/stream_bad_snapshot.txt"; (* ask-level qty *)

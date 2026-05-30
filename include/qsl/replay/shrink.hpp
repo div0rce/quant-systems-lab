@@ -1,0 +1,28 @@
+#pragma once
+
+#include "qsl/core/types.hpp"
+#include "qsl/replay/command.hpp"
+
+#include <cstddef>
+#include <functional>
+#include <vector>
+
+namespace qsl::replay {
+
+// A failure predicate over a command stream: true when the stream still "fails" (reproduces
+// the property of interest). In real differential use this would be "C++ and OCaml snapshots
+// disagree"; the tests use an artificial predicate since the engines currently agree.
+using ShrinkPredicate = std::function<bool(const std::vector<Command> &)>;
+
+// Greedy, deterministic shrink: returns a reduced command stream for which `fails` still holds.
+// Strategies (iterated to a fixed point): remove contiguous chunks, remove single commands,
+// and simplify command fields (lower quantities). Not guaranteed globally minimal.
+[[nodiscard]] std::vector<Command> shrink(std::vector<Command> commands,
+                                          const ShrinkPredicate &fails);
+
+// Replay `commands` through the risk gateway and return the number of trades produced.
+// A convenient building block for predicates.
+[[nodiscard]] std::size_t count_trades(const std::vector<Command> &commands, core::Quantity max_qty,
+                                       core::QuantityTotal max_notional);
+
+} // namespace qsl::replay
