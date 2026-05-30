@@ -31,4 +31,17 @@ void write_header(std::byte *out, const MessageHeader &header) noexcept;
 [[nodiscard]] DecodeResult<CancelOrder>
 decode_cancel_order(std::span<const std::byte> frame) noexcept;
 
+// Session messages (M9).
+[[nodiscard]] std::vector<std::byte> encode(const Heartbeat &msg);
+[[nodiscard]] std::vector<std::byte> encode(const HeartbeatAck &msg);
+[[nodiscard]] std::vector<std::byte> encode(const Ack &msg);
+[[nodiscard]] std::vector<std::byte> encode(const Reject &msg);
+[[nodiscard]] std::vector<std::byte> encode(const Fill &msg);
+[[nodiscard]] DecodeResult<Heartbeat> decode_heartbeat(std::span<const std::byte> frame) noexcept;
+[[nodiscard]] DecodeResult<HeartbeatAck>
+decode_heartbeat_ack(std::span<const std::byte> frame) noexcept;
+[[nodiscard]] DecodeResult<Ack> decode_ack(std::span<const std::byte> frame) noexcept;
+[[nodiscard]] DecodeResult<Reject> decode_reject(std::span<const std::byte> frame) noexcept;
+[[nodiscard]] DecodeResult<Fill> decode_fill(std::span<const std::byte> frame) noexcept;
+
 } // namespace qsl::protocol

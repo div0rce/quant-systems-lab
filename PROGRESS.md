@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M8 — Deterministic replay and recovery
+- **Active milestone:** M9 — TCP binary order gateway
 - **Status:** ready for PR
-- **Active branch:** `feat/m08-replay-recovery`
-- **Last completed milestone:** M7 — Append-only event log (PR #8, squash-merged)
-- **`make check` passing:** yes (113/113 tests)
-- **Last action:** fixed replay CLI log I/O failure handling, file-level replay coverage, and decode_command negative tests; make check green
-- **Next action:** human reviews and squash-merges M8 PR
+- **Active branch:** `feat/m09-tcp-gateway`
+- **Last completed milestone:** M8 — Deterministic replay and recovery (PR #9, squash-merged)
+- **`make check` passing:** yes (127/127 tests)
+- **Last action:** fixed TCP bind validation and SIGPIPE-safe writes; added session/socket coverage; make check green
+- **Next action:** human reviews and squash-merges M9 PR
 - **Blockers:** none
 
 ---
@@ -42,8 +42,8 @@ Do not rely on prior chat memory.
 | M5 | Risk + gateway | `feat/m05-risk-gateway` | ☑ merged | #6 | Deterministic checks before engine |
 | M6 | Market data | `feat/m06-market-data` | ☑ merged | #7 | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☑ merged | #8 | Append-only records and reader |
-| M8 | Replay/recovery | `feat/m08-replay-recovery` | ◐ in progress | #9 | Rebuild engine state from log |
-| M9 | TCP gateway | `feat/m09-tcp-gateway` | ☐ not started | — | Binary order gateway over TCP |
+| M8 | Replay/recovery | `feat/m08-replay-recovery` | ☑ merged | #9 | Rebuild engine state from log |
+| M9 | TCP gateway | `feat/m09-tcp-gateway` | ◐ in progress | #10 | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☐ not started | — | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☐ not started | — | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☐ not started | — | Sanitizers and invariant tests |
@@ -114,6 +114,14 @@ Status key:
 - [M8] `qsl-replay generate|<file>` provides a self-contained recovery demo (write a flow log, then rebuild from it).
 - [M8] `qsl-replay` generation fails if any `EventLogWriter` append fails.
 - [M8] `qsl-replay` distinguishes missing/unreadable logs from valid empty logs.
+- [M9] Protocol/session logic lives in a pure `Session` (bytes in -> OrderGateway -> bytes out); the TCP transport (`TcpServer`) is a thin POSIX wrapper, so the gateway logic is unit-tested without sockets.
+- [M9] A malformed frame flags the session for disconnect (server drops the peer, no crash/desync); a well-formed but risk-rejected order returns a structured `Reject`.
+- [M9] Single-threaded accept-and-serve loop (one connection at a time); no thread pool / event loop.
+- [M9] The only `reinterpret_cast` in the codebase is the POSIX `sockaddr*` cast; protocol serialization stays shift-based.
+- [M9] No authentication; binds `127.0.0.1` only. Local simulator, not a venue (documented in docs/socket_gateway.md).
+- [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
+- [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
+- [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
 - [M8] Replay integration tests exercise `EventLogWriter -> EventLogReader -> replay` through the real M7 byte framing.
 - [M8] `decode_command` failure branches are tested.
 - [M7] Writer enforces the same `kMaxPayload` cap as the reader.
@@ -142,7 +150,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M8 complete, PR pending review_
+- _M9 complete, PR pending review_
 
 
 ---
