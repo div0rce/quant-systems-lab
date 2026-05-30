@@ -28,4 +28,8 @@ void write_stream_fixture(std::ostream &os, const FixtureParams &params);
 // maker fills, so the differential replay tests cover IOC (the synthetic flow uses only GTC).
 void write_ioc_scenario_fixture(std::ostream &os);
 
+// Write an enriched property-test fixture for the given seed (generate_property_flow), used to
+// drive the cross-language differential tests over many seeds.
+void write_property_fixture(std::ostream &os, std::uint64_t seed);
+
 } // namespace qsl::replay

@@ -150,4 +150,14 @@ void write_ioc_scenario_fixture(std::ostream &os) {
     run_and_emit(os, p, flow);
 }
 
+void write_property_fixture(std::ostream &os, std::uint64_t seed) {
+    FixtureParams p;
+    p.seed = seed;
+    p.symbols = 3;
+    p.orders = 120;
+    p.max_qty = 20;        // qty 50 -> MaxQuantityExceeded
+    p.max_notional = 1000; // large valid orders -> MaxNotionalExceeded
+    run_and_emit(os, p, generate_property_flow(seed, p.symbols, p.orders));
+}
+
 } // namespace qsl::replay
