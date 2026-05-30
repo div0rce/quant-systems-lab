@@ -12,12 +12,25 @@ flowchart LR
     gw --> risk{Risk checks}
     risk -->|reject| client
     risk -->|accept| eng[Matching engine]
+
     eng -->|ack / fill| gw
     gw -->|responses| client
+
     eng -->|engine events| pub[Market-data publisher]
-    eng -->|append| log[(Event log)]
     pub -->|UDP feed| sub[MD subscriber]
+
+    eng -->|append| log[(Event log)]
     log -.->|replay rebuilds identical state| rec[Recovered engine]
+
+    gen[Property command generator] -->|seeded streams| fix[Golden / property fixtures]
+    fix -->|replay| cpp[C++ replay]
+    fix -->|independent replay| ocaml[OCaml oracle]
+    cpp -->|snapshots| diff{Snapshot equality}
+    ocaml -->|snapshots| diff
+
+    diff -->|match| ci[CI pass]
+    diff -->|mismatch| shrink[Shrinker]
+    shrink -->|minimal failing fixture| fix
 ```
 
 ## Components
