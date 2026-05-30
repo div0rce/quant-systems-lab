@@ -19,12 +19,12 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M21 — Repository license and maintainer docs
+- **Active milestone:** M22 — Release readiness audit
 - **Status:** ready for PR
-- **Active branch:** `feat/m21-repo-license-maintainer-docs`
-- **Last completed milestone:** M20 — Final differential-testing architecture docs (PR #52, squash-merged)
+- **Active branch:** `feat/m22-release-readiness-audit`
+- **Last completed milestone:** M21 — Repository license and maintainer docs (PR #53, squash-merged)
 - **`make check` passing:** yes (152/152 tests); OCaml `dune runtest` passing
-- **Last action:** added MIT LICENSE, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md + README links (no CODE_OF_CONDUCT/GOVERNANCE, no packaging/release)
+- **Last action:** ran the full audit (check/asan/check-fixtures/dune/demo/bench all green, links resolve, no overclaiming) and recorded docs/release_readiness.md
 - **Next action:** `/finish-milestone`
 - **Blockers:** none
 
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M21 complete, PR pending review_
+- _M22 complete, PR pending review_
 
 
 ---
@@ -244,8 +244,8 @@ Lower priority:
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☑ merged | #21 | Seeded randomized market command streams |
 | M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☑ merged | #22 | Minimal counterexamples for failed properties |
 | M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☑ merged | #52 | Final docs for differential/property testing system |
-| M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ◐ in progress | — | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
-| M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☐ not started | — | M13-style final polish/readiness pass after Phase II |
+| M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☑ merged | #53 | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
+| M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ◐ in progress | — | M13-style final polish/readiness pass after Phase II |
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release` | ☐ not started | — | Conservative GitHub-only release; optional, human-approved |
 
 ## Decision log additions
@@ -316,4 +316,5 @@ Decision log additions:
 - [M20] Added docs/property_testing.md (generator coverage + delta-debug shrinker + determinism/golden + honest limits); added a README "Differential testing (OCaml)" <60s section + diagram links and conservative differential-testing résumé bullets. Docs-only; no code change.
 - [M21] Added MIT LICENSE (Copyright (c) 2026 Moustafa Nasr), CONTRIBUTING.md (branch-per-milestone workflow + checks + no fabricated perf), SECURITY.md (no bounty; qsl-gateway/qsl-mdfeed unauthenticated + loopback-only; honest systems-lab-not-production), CHANGELOG.md ([Unreleased] M3–M20 history), and README links.
 - [M21] Deliberately omitted CODE_OF_CONDUCT.md and GOVERNANCE.md (single-maintainer; no community-process theater) and skipped SUPPORT.md; no packaging and no release (deferred to optional M23).
+- [M22] Release-readiness audit recorded in docs/release_readiness.md: verified make check/asan/check-fixtures/dune runtest/demo/bench all green, all README + doc-to-doc links resolve, no overclaiming (forbidden phrases appear only as negations or avoid-lists), benchmark language measured/synthetic/reproducible, differential vocabulary distinct. `make bench` was rerun to confirm reproduction; committed results/latest.txt retained (single-machine variance). No GitHub release created (that is the optional, human-approved M23).
 - [M17] Snapshot parsing validates per-level symbol ownership so malformed embedded C++ snapshots cannot be normalized into equality.
