@@ -1,0 +1,6 @@
+# bad: order 9 is rejected then appears as an accepted (resting) order -> must FAIL
+v 1
+meta seed 0 symbols 1 orders 0 max_qty 8
+reject 9 MaxQuantityExceeded
+accept 1 0 9
+summary last_seq 1 trades 0

@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M13 — Final architecture, demo, and recruiting polish
+- **Active milestone:** M14 — OCaml replay verifier
 - **Status:** ready for PR
-- **Active branch:** `feat/m13-docs-polish`
-- **Last completed milestone:** M12 — Hardening with sanitizers and invariant tests (PR #13, squash-merged)
-- **`make check` passing:** yes (144/144 tests)
-- **Last action:** fixed demo temp-file portability; bash -n, make demo, and make check green
-- **Next action:** human reviews and squash-merges M13 PR
+- **Active branch:** `feat/m14-ocaml-replay-verifier`
+- **Last completed milestone:** M13 — Final architecture, demo, and recruiting polish (PR #14, squash-merged)
+- **`make check` passing:** yes (144/144 tests); OCaml `dune runtest` passing
+- **Last action:** built C++ fixture exporter + OCaml verifier subproject + CI job + docs; make check and dune runtest green
+- **Next action:** human reviews and squash-merges M14 PR
 - **Blockers:** none
 
 ---
@@ -47,7 +47,8 @@ Do not rely on prior chat memory.
 | M10 | Network market data | `feat/m10-network-market-data` | ☑ merged | #11 | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☑ merged | #12 | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☑ merged | #13 | Sanitizers and invariant tests |
-| M13 | Docs polish | `feat/m13-docs-polish` | ◐ in progress | #14 | README, diagram, demo, recruiting notes |
+| M13 | Docs polish | `feat/m13-docs-polish` | ☑ merged | #14 | README, diagram, demo, recruiting notes |
+| M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ◐ in progress | — | Independent typed-functional replay invariant checker |
 
 Status key:
 
@@ -144,6 +145,10 @@ Status key:
 - [M13] README rewritten for a <60s read with a committed mermaid architecture diagram, clean-clone quickstart, demo section, and honest limitations; benchmark table cites results/latest.txt exactly (no new/unmeasured numbers).
 - [M13] Added scripts/demo.sh + `make demo`: deterministic replay/recovery then a loopback TCP gateway round-trip (readiness polling + cleanup trap). Gateway is unauthenticated/loopback-only — flagged in README and the script.
 - [M13] Expanded docs/recruiting_notes.md with conservative SWE + Linux résumé bullets, measured-only benchmark bullets (with exclusions caveat), and interview-defense notes. No production/profitability claims.
+- [M14] OCaml toolchain installed via Homebrew (ocaml 5.4.1 + dune 3.23.1); no opam, no third-party packages — verifier uses only the standard library.
+- [M14] Added a C++ `qsl-export-fixture` app that drives a deterministic flow through the gateway (low max_qty → real rejects) and writes a normalized textual event-log fixture. No engine code changed.
+- [M14] OCaml verifier (`ocaml/`) re-derives replay invariants from the exported log (sequence monotonicity, positive trade qty, canceled-can't-trade, rejected-can't-rest, event-log/summary consistency). It is an independent cross-check, not a re-implementation of matching and not formal verification.
+- [M14] Committed a generated valid fixture plus two hand-crafted violation fixtures so `dune runtest` proves the checker both passes clean logs and catches violations. CI runs a dedicated `ocaml-verifier` job (apt ocaml+dune; opam-free).
 - [M13] Demo script uses a portable `mktemp` template so `make demo` works on GNU/Linux and macOS.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
@@ -186,7 +191,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M13 complete, PR pending review_
+- _M14 complete, PR pending review_
 
 
 ---

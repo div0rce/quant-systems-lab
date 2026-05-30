@@ -34,6 +34,9 @@ target_link_libraries(qsl-client PRIVATE qsl_core qsl_warnings)
 add_executable(qsl-mdfeed apps/qsl-mdfeed/main.cpp)
 target_link_libraries(qsl-mdfeed PRIVATE qsl_core qsl_warnings)
 
+add_executable(qsl-export-fixture apps/qsl-export-fixture/main.cpp)
+target_link_libraries(qsl-export-fixture PRIVATE qsl_core qsl_warnings)
+
 if(QSL_BUILD_BENCHMARKS)
   add_executable(qsl-bench apps/qsl-bench/main.cpp)
   target_link_libraries(qsl-bench PRIVATE qsl_core qsl_warnings)
