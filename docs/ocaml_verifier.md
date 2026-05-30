@@ -60,6 +60,29 @@ fresh active lifetime that clears any prior rejected/canceled state, and the can
 checks only fire against the id's *current* lifetime. This keeps the verifier from rejecting
 logs that are valid under the engine's active-order semantics.
 
+## Independent replay engine (M16)
+
+Beyond the log-invariant checker above, `ocaml/lib/replay_engine.ml` is an **independent**
+matching engine: it consumes an M15 command-stream fixture (`stream_parser.ml` parses the
+`meta` risk config and `cmd` lines, ignoring the C++ `evt`/`snapshot` output) and replays it
+immutably to compute its own final snapshot — it does not trust the C++ engine's emitted
+events. It mirrors the C++ semantics so the snapshots can be compared:
+
+- integer ticks; bids best = highest, asks best = lowest; FIFO within a level; fills at the
+  resting maker's price;
+- GTC rests the remainder, IOC discards it, market orders never rest;
+- gateway risk (unknown symbol → duplicate active id → value/quantity/notional checks) gates
+  the engine; OrderId uniqueness is active-lifetime scoped;
+- every registered symbol appears in the snapshot;
+- sequence numbers count emitted events, so `last_seq` matches the C++ engine.
+
+`replay_snapshot <fixture>` prints the OCaml-computed snapshot. On the committed
+`stream_seed7.txt` it independently reproduces the C++ result (`last_seq 47`, `trades 13`, and
+the same per-symbol best bid/ask and order counts). The **automated** C++-vs-OCaml snapshot
+equality check (with readable diffs, in CI) is M17; M16 provides the engine and unit tests
+covering matching, partial fills, cancel, modify (in-place and repricing), IOC, market,
+duplicate id, risk rejection, id reuse, and the empty-registered-symbol contract.
+
 ## Scope and limitations
 
 - This checks **invariants over the exported log**, not full book-state re-computation. It does
