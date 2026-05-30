@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <span>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <variant>
 
@@ -55,6 +56,11 @@ UdpFeedClient::UdpFeedClient(std::uint16_t port) {
         fd_ = -1;
         return;
     }
+    // Bounded receive timeout so a subscriber waiting for missing datagrams does not hang
+    // forever; recvfrom then fails with EAGAIN and receive() returns std::nullopt.
+    timeval timeout{};
+    timeout.tv_sec = 1;
+    ::setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, static_cast<socklen_t>(sizeof(timeout)));
     sockaddr_in bound{};
     socklen_t len = sizeof(bound);
     auto *bound_generic = reinterpret_cast<sockaddr *>(&bound); // NOLINT: POSIX socket API

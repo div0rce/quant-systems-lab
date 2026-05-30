@@ -1,6 +1,7 @@
 #include "qsl/feed/market_data.hpp"
 #include "qsl/feed/sequence_tracker.hpp"
 #include "qsl/feed/udp_feed.hpp"
+#include "qsl/protocol/codec.hpp"
 
 #include <array>
 #include <catch2/catch_test_macros.hpp>
@@ -75,4 +76,32 @@ TEST_CASE("udp feed delivers market data over a real socket", "[feed][udp]") {
 TEST_CASE("an invalid host leaves the publisher unusable", "[feed][udp]") {
     UdpPublisher publisher{"not-an-ip", 9999};
     REQUIRE_FALSE(publisher.good());
+}
+
+TEST_CASE("udp client detects an out-of-sequence gap end-to-end", "[feed][udp]") {
+    UdpFeedClient client{0};
+    REQUIRE(client.good());
+    UdpPublisher publisher{"127.0.0.1", client.port()};
+    REQUIRE(publisher.good());
+
+    // Deterministically inject an out-of-sequence stream (md_seq 1 then 3) -- no real loss.
+    publisher.on_market_data(MdTrade{1, 0, 100, 5});
+    publisher.on_market_data(MdTrade{3, 0, 101, 5});
+
+    std::uint64_t gap = 0;
+    const auto first = client.receive(gap);
+    REQUIRE(first.has_value());
+    REQUIRE(std::get<MdTrade>(*first).md_seq == 1);
+    REQUIRE(gap == 0);
+
+    const auto second = client.receive(gap);
+    REQUIRE(second.has_value()); // the later message is still accepted
+    REQUIRE(std::get<MdTrade>(*second).md_seq == 3);
+    REQUIRE(gap == 1); // one message (md_seq 2) missed
+    REQUIRE(client.total_gaps() == 1);
+}
+
+TEST_CASE("decode_market_data rejects a known non-market-data frame", "[feed]") {
+    const auto ack = qsl::protocol::encode(qsl::protocol::Ack{/*order_id=*/1, /*seq=*/2});
+    REQUIRE_FALSE(decode_market_data(ack).has_value());
 }

@@ -162,7 +162,14 @@ engine events -> MarketDataPublisher -> UdpPublisher --UDP--> UdpFeedClient -> S
   It compares each message's `md_seq` to the last seen and reports how many were missed; it
   does not recover them. Duplicates and reordered (lower) sequence numbers are ignored.
 - **Client**: `UdpFeedClient` binds a UDP socket, receives datagrams, decodes them, and runs
-  each `md_seq` through the tracker, accumulating a total gap count.
+  each `md_seq` through the tracker, accumulating a total gap count. The receive socket has a
+  bounded `SO_RCVTIMEO` timeout, so `receive()` returns `std::nullopt` instead of blocking
+  forever when no datagram arrives (the `qsl-mdfeed subscribe N` demo therefore cannot hang
+  indefinitely waiting for fewer than `N` messages).
+- **Testing strategy**: gap detection is verified deterministically by **injecting
+  out-of-sequence datagrams** (publishing `md_seq` 1 then 3 and asserting the client observes
+  a gap of one) through the real receive/decode/client path — never by relying on
+  nondeterministic packet loss.
 
 ### Local demo
 

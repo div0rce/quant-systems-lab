@@ -123,6 +123,9 @@ Status key:
 - [M10] Gap detection is a pure `SequenceTracker` (forward gaps only; duplicates/reorder ignored); UDP loss is detected, not recovered — no retransmit/snapshot channel.
 - [M10] `UdpPublisher` is a `MarketDataSubscriber`, so the network feed reuses the M6 publisher unchanged; `inet_pton` is checked (invalid host -> unusable), applying the M9 bind-validation lesson.
 - [M10] UDP unicast on `127.0.0.1` only; no multicast/auth/encryption (documented honestly).
+- [M10] Wire-level UDP test covers out-of-sequence datagrams and gap detection through the real receive/decode/client path.
+- [M10] Known non-market-data frames decode to no market-data message (`decode_market_data` -> nullopt).
+- [M10] `UdpFeedClient` receive uses a bounded `SO_RCVTIMEO` so demo subscribers do not hang indefinitely.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
 - [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
