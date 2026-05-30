@@ -49,6 +49,10 @@ void emit_events(std::ostream &os, const std::vector<engine::EngineEvent> &event
     }
 }
 
+void emit_reject(std::ostream &os, const char *kind, core::OrderId id, core::RejectReason reason) {
+    os << "reject " << kind << " " << id << " " << core::to_string(reason) << "\n";
+}
+
 } // namespace
 
 void write_stream_fixture(std::ostream &os, const FixtureParams &p) {
@@ -72,25 +76,37 @@ void write_stream_fixture(std::ostream &os, const FixtureParams &p) {
             const auto r =
                 gw.new_limit(nl->symbol, nl->id, nl->side, nl->price, nl->quantity, nl->tif);
             if (!r.accepted) {
-                os << "reject " << nl->id << " " << core::to_string(r.reason) << "\n";
+                emit_reject(os, "new_limit", nl->id, r.reason);
+            } else {
+                emit_events(os, r.events, trades);
             }
-            emit_events(os, r.events, trades);
         } else if (const auto *nm = std::get_if<NewMarket>(&command)) {
             os << "cmd market " << nm->symbol << " " << nm->id << " " << side_ch(nm->side) << " "
                << nm->quantity << "\n";
             const auto r = gw.new_market(nm->symbol, nm->id, nm->side, nm->quantity);
             if (!r.accepted) {
-                os << "reject " << nm->id << " " << core::to_string(r.reason) << "\n";
+                emit_reject(os, "new_market", nm->id, r.reason);
+            } else {
+                emit_events(os, r.events, trades);
             }
-            emit_events(os, r.events, trades);
         } else if (const auto *cn = std::get_if<Cancel>(&command)) {
             os << "cmd cancel " << cn->symbol << " " << cn->id << "\n";
-            emit_events(os, gw.cancel(cn->symbol, cn->id).events, trades);
+            const auto r = gw.cancel(cn->symbol, cn->id);
+            if (!r.accepted) {
+                emit_reject(os, "cancel", cn->id, r.reason);
+            } else {
+                emit_events(os, r.events, trades);
+            }
         } else {
             const auto &md = std::get<Modify>(command);
             os << "cmd modify " << md.symbol << " " << md.id << " " << px(md.price) << " "
                << md.quantity << "\n";
-            emit_events(os, gw.modify(md.symbol, md.id, md.price, md.quantity).events, trades);
+            const auto r = gw.modify(md.symbol, md.id, md.price, md.quantity);
+            if (!r.accepted) {
+                emit_reject(os, "modify", md.id, r.reason);
+            } else {
+                emit_events(os, r.events, trades);
+            }
         }
     }
 

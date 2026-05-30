@@ -23,8 +23,8 @@ Do not rely on prior chat memory.
 - **Status:** ready for PR
 - **Active branch:** `feat/m15-export-command-streams-and-snapshots`
 - **Last completed milestone:** M14 — OCaml replay verifier (PR #16, squash-merged)
-- **`make check` passing:** yes (146/146 tests); OCaml `dune runtest` passing
-- **Last action:** added differential-fixture exporter + schema doc + determinism/parseability tests; make check and dune runtest green
+- **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing
+- **Last action:** fixed stream fixtures to emit command-scoped gateway/risk rejections, including rejected modifies; make check and dune runtest green
 - **Next action:** human reviews and squash-merges M15 PR
 - **Blockers:** none
 
@@ -151,9 +151,14 @@ Status key:
 - [M14] Committed a generated valid fixture plus two hand-crafted violation fixtures so `dune runtest` proves the checker both passes clean logs and catches violations. CI runs a dedicated `ocaml-verifier` job (apt ocaml+dune; opam-free).
 - [M14] OCaml verifier tracks OrderId lifetimes instead of treating rejected/canceled numeric IDs as globally dead (a later accept reuses an id legally); added valid-reuse fixtures alongside the violation fixtures.
 - [M14] Malformed verifier fixtures now fail cleanly with exit 2 instead of uncaught parser exceptions.
-- [M15] Added a differential-fixture exporter (`qsl-export-stream` + `replay::write_stream_fixture`) emitting a normalized command stream, engine events, new-order rejections, and the full final per-symbol snapshot (best bid/ask, per-price level aggregates, order counts, last_seq, trade count). Schema in docs/differential_testing.md.
+- [M15] Added a differential-fixture exporter (`qsl-export-stream` + `replay::write_stream_fixture`) emitting a normalized command stream, engine events, command-scoped gateway rejections, and the full final per-symbol snapshot (best bid/ask, per-price level aggregates, order counts, last_seq, trade count). Schema in docs/differential_testing.md.
 - [M15] Reused the deterministic `generate_flow` (no new/random generation — that is M18); a low max_qty yields real rejections. Export is byte-deterministic per seed.
 - [M15] M15 only exports + tests determinism/parseability; the independent OCaml replay engine (M16) and C++-vs-OCaml snapshot equality (M17) are deferred. M14 verifier (v1 event-log fixtures) is untouched and still green.
+- [M15] Stream fixtures emit structured modify rejection outcomes instead of dropping rejected modify commands.
+- [M15] Differential fixture reject lines are command-scoped so M17 can distinguish C++ risk rejection from no-op commands.
+- [M15] Meta risk fields are parse-tested because M16 needs them to reproduce C++ risk-filtered state.
+- [M15] Registered-but-empty symbols are part of the snapshot contract and must be mirrored by the OCaml replay engine.
+- [M15] Byte-for-byte golden pinning for stream fixtures remains deferred to M17; M15 covers deterministic generation, schema parseability, and targeted outcome contracts.
 - [M13] Demo script uses a portable `mktemp` template so `make demo` works on GNU/Linux and macOS.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.

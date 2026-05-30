@@ -41,8 +41,8 @@ evt cancel <seq> <sym> <id>
 evt modify <seq> <sym> <id>
 evt trade  <seq> <sym> <taker> <maker> <price> <qty>
 
-# a rejected NEW order (never entered the engine; lifetime-consistent with M14)
-reject <id> <reason>
+# a gateway/risk rejection (never entered the engine event stream)
+reject <new_limit|new_market|cancel|modify> <id> <reason>
 
 # final state
 snapshot last_seq <n> trades <n>
@@ -55,9 +55,14 @@ level <sym> <B|A> <price> <qty>
 - **Command stream** is the authoritative replay input: registration order plus every
   submitted command. The independent OCaml engine (M16) replays these and ignores the `evt`
   lines, computing its own events/snapshot.
-- **`evt` / `reject` lines** are the C++ engine's emitted outcomes, included for cross-checking
-  in M17. `reject` is emitted only for rejected *new orders* (cancels/modifies of
-  unknown/inactive ids are no-ops and emit nothing), consistent with the M14 lifetime model.
+- **`evt` / `reject` lines** are the C++ gateway/engine outcomes, included for cross-checking
+  in M17. `evt` lines are sequenced engine events. `reject` lines are structured gateway/risk
+  rejections scoped by command kind; rejected commands never enter the engine event stream and
+  do not consume sequence numbers.
+- Accepted commands may emit zero or more `evt` lines. Unknown-order no-ops may emit no event
+  and no rejection, so M17 must not assume every command has an outcome line. Explicit `reject`
+  lines are part of the C++ outcome stream and distinguish risk/gateway rejection from no-op
+  commands.
 - **Snapshot** is the full final per-symbol state: best bid/ask, per-price aggregate levels
   (`level` lines, best-first as the engine reports them), resting order counts, last sequence
   number, and trade count.
@@ -67,9 +72,11 @@ level <sym> <B|A> <price> <qty>
 `tests/unit/test_fixture_export.cpp` asserts:
 
 - the export is byte-identical for a fixed seed, and differs across seeds;
-- every line matches the grammar above (record type + arity);
+- every line matches the grammar above (record type + arity), including command-scoped
+  rejection lines and parseable risk metadata;
 - `snapshot last_seq` equals the maximum event sequence, and the reported trade count equals
   the number of `evt trade` lines;
+- registered-but-empty symbols remain present in the snapshot with no `level` records;
 - the flow is non-vacuous (real commands, trades, and rejections occur).
 
 ## Scope and limits
