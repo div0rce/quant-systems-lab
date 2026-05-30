@@ -484,6 +484,10 @@ High:
   improves oracle robustness.
 - Synthetic divergence demonstration: show the shrinker finding a real C++≠OCaml failure rather
   than only the artificial "produces a trade" predicate.
+- Differential fixture coverage matrix: a maintained table of every snapshot field × {positive,
+  negative, property, shrink} coverage, so blind spots cannot silently reappear.
+- Oracle independence audit: document every place the OCaml oracle could accidentally mirror C++
+  implementation details, to evidence that it is genuinely independently implemented.
 
 Medium:
 
@@ -494,10 +498,24 @@ Medium:
 - Generator coverage reporting: track reject-reason frequencies automatically in CI.
 - Explicit determinism test across compilers/platforms (currently only indirectly validated by
   the Linux golden check against macOS-committed fixtures).
+- **Differential failure artifact bundle (highest-value addition):** on a CI divergence, save and
+  upload as artifacts the original stream, the shrunk stream, the C++ output, the OCaml output,
+  and the unified diff — mirrors mature fuzzing/differential systems and makes debugging easy.
+- Shrinker effectiveness metrics: report original/final command counts, reduction %, and shrink
+  iterations during CI.
+- Seed reproducibility manifest: record generator version, seed, and fixture hash so future
+  generator changes cannot cause confusion.
+
+Medium-Low:
+
+- Mutation testing for the oracle: intentionally corrupt snapshots, trade counts, best bid/ask,
+  and sequence numbers, and verify the differential layer detects each — validates the checker.
 
 Low:
 
 - Larger committed corpus (e.g. prop_seed1..50) — more confidence, lower signal per maintenance.
+- Historical regression archive: keep a folder of important shrunk failures discovered over time
+  (useful once real bugs are ever found).
 - Performance benchmarks for the differential harness.
 
 
