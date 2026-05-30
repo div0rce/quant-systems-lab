@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M15 — Export normalized command streams + final snapshots
+- **Active milestone:** Roadmap maintenance — append M21–M23 (no implementation)
 - **Status:** ready for PR
-- **Active branch:** `feat/m15-export-command-streams-and-snapshots`
-- **Last completed milestone:** M14 — OCaml replay verifier (PR #16, squash-merged)
+- **Active branch:** `docs/add-m21-m23-roadmap`
+- **Last completed milestone:** M15 — Export normalized command streams + final snapshots (PR #17, squash-merged)
 - **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing
-- **Last action:** fixed stream fixtures to emit command-scoped gateway/risk rejections, including rejected modifies; make check and dune runtest green
-- **Next action:** human reviews and squash-merges M15 PR
+- **Last action:** appended M21 (repo license/maintainer docs), M22 (release-readiness audit), M23 (optional v0.1.0 release) to the roadmap; updated milestone table + decision log
+- **Next action:** human merges this docs PR, then `/start-milestone 16` (independent OCaml replay engine)
 - **Blockers:** none
 
 ---
@@ -237,13 +237,16 @@ Lower priority:
 
 | # | Milestone | Branch | Status | PR | Notes |
 |---|---|---|---|---|---|
-| M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☐ not started | — | Jane Street SWE language/culture signal |
-| M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ◐ in progress | — | Fixture schema for independent replay |
+| M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☑ merged | #16 | Jane Street SWE language/culture signal |
+| M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ☑ merged | #17 | Normalized command stream + final snapshot export for Phase II differential testing |
 | M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☐ not started | — | OCaml computes final snapshot independently |
 | M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☐ not started | — | C++ vs OCaml snapshot equality in CI |
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☐ not started | — | Seeded randomized market command streams |
 | M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☐ not started | — | Minimal counterexamples for failed properties |
 | M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☐ not started | — | Final docs for differential/property testing system |
+| M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☐ not started | — | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
+| M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☐ not started | — | M13-style final polish/readiness pass after Phase II |
+| M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release` | ☐ not started | — | Conservative GitHub-only release; optional, human-approved |
 
 ## Decision log additions
 
@@ -292,3 +295,7 @@ Decision log additions:
 - [2026-05-30] Removed optional Jane Street application-polish milestone because recruiter-facing polish is lower signal than technical depth.
 - [2026-05-30] Added M15–M20 to turn the OCaml verifier into independent replay/differential-testing infrastructure.
 - [2026-05-30] Property-based generation and shrinking are now the intended final “deep idea” layer: the repo should test market-state systems, not merely implement one.
+- [Roadmap] Repository hygiene is deferred until after Phase II differential testing; no CODE_OF_CONDUCT.md or GOVERNANCE.md unless the project becomes multi-maintainer.
+- [Roadmap] Packaging is intentionally deferred; the repo is a technical artifact, not an installable product.
+- [Roadmap] A GitHub v0.1.0 release is optional and only after the release-readiness audit.
+- [Roadmap] M22 is the Phase II equivalent of M13: final README/demo/docs/readiness polish with conservative claims and reproducible checks.

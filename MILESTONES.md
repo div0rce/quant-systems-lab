@@ -809,6 +809,130 @@ Document:
 - [ ] `dune runtest --root ocaml` passes.
 - [ ] `PROGRESS.md` updated.
 
+## M21 — Repository license and maintainer docs
+
+- **Branch:** `feat/m21-repo-license-maintainer-docs`
+- **PR title:** `chore: add repository license and maintainer docs`
+
+### Goal
+
+Add the minimal legal and maintainer documentation expected of a serious public technical
+repo, without pretending this is a large community project. This is practical hygiene, not
+corporate open-source governance theater.
+
+### Scope
+
+- Add MIT `LICENSE`.
+- Add `CONTRIBUTING.md`.
+- Add `SECURITY.md`.
+- Add `CHANGELOG.md`.
+- Optionally add `SUPPORT.md` only if it stays short and useful.
+- Do not add `CODE_OF_CONDUCT.md`.
+- Do not add `GOVERNANCE.md`.
+- Do not add a root `ARCHITECTURE.md` unless it is only a short pointer to `docs/architecture.md`.
+- Do not package the project.
+- Do not create a release.
+
+### Required content
+
+- `LICENSE`: MIT, with `Copyright (c) 2026 Moustafa Nasr`.
+- `CONTRIBUTING.md` documents: branch-per-milestone workflow; never work on `main`; `make
+  check`; `make asan`; `dune runtest --root ocaml`; `make bench` only for benchmark updates;
+  no fabricated performance claims; PRs should be small, scoped, and reviewable; generated
+  benchmark numbers must be reproducible from committed scripts.
+- `SECURITY.md` documents: no bug bounty; local/demo TCP/UDP services are unauthenticated and
+  loopback-focused; do not expose `qsl-gateway` or `qsl-mdfeed` to untrusted networks; report
+  issues through GitHub issues or maintainer contact; honest language — this is a systems lab,
+  not a hardened production service.
+- `CHANGELOG.md` starts with: Unreleased; M15–M20 Phase II differential-testing roadmap; M14
+  OCaml replay verifier; M12 sanitizer/fuzz/invariant hardening; M11 measured benchmarks;
+  M7/M8 replay log and recovery; M3–M6 matching/risk/market-data core.
+
+### Definition of Done
+
+- [ ] GitHub recognizes the license.
+- [ ] Maintainer docs are short, honest, and one-maintainer appropriate.
+- [ ] No fake foundation/project-governance language.
+- [ ] No community-process theater.
+- [ ] README links to the new docs only where useful.
+- [ ] `make check` passes.
+- [ ] `dune runtest --root ocaml` passes.
+- [ ] PR opened and not merged.
+
+## M22 — Release readiness audit
+
+- **Branch:** `feat/m22-release-readiness-audit`
+- **PR title:** `docs: audit release readiness`
+
+### Goal
+
+The M13-style final polish pass after Phase II: verify the repo reads cleanly, demos cleanly,
+reproduces cleanly, and does not overclaim. Recruiting-safe phrasing through technical
+substance, not marketing.
+
+### Scope
+
+- Audit README quickstart, demo, benchmark reproduction, docs links, fixture examples, and the
+  final Phase II differential-testing docs.
+- Verify the repo still tells a coherent story from M0 through M20.
+- Regenerate benchmark numbers only if intentionally updating `results/latest.txt` with a
+  clean tree.
+- Verify: `make demo`; `make check`; `make asan`; `make bench`; `dune runtest --root ocaml`.
+- Confirm all README links resolve.
+- Confirm all docs and README avoid forbidden claims: production-grade; formal verification;
+  HFT platform; low-latency trading system; real exchange; trading bot; production exchange.
+- Confirm benchmark language remains: measured; hardware-dependent; synthetic; reproducible
+  from committed scripts.
+- Confirm fixture/export/replay docs distinguish: invariant checking; independent OCaml
+  replay; differential snapshot comparison; property-based generation; shrinking.
+- Confirm demo output is clean, deterministic, and useful.
+- Do not create a GitHub release in this milestone unless explicitly instructed.
+
+### Definition of Done
+
+- [ ] Final audit notes recorded in `CHANGELOG.md` or `docs/release_readiness.md`.
+- [ ] README quickstart verified.
+- [ ] Demo verified.
+- [ ] Benchmark reproduction verified or explicitly documented if not rerun.
+- [ ] All checks pass.
+- [ ] No stale milestone references.
+- [ ] No overclaiming.
+- [ ] No fake production claims.
+- [ ] PR opened and not merged.
+
+## M23 — Optional v0.1.0 release
+
+- **Branch:** `feat/m23-v0-1-0-release`
+- **PR title:** `chore: prepare v0.1.0 release notes`
+- **Suggested release title:** `v0.1.0 — deterministic exchange systems lab`
+
+### Goal
+
+Prepare a conservative GitHub-only `v0.1.0` release after the technical roadmap and readiness
+audit are complete. This is optional and requires explicit human approval.
+
+### Scope
+
+- Only start if M20–M22 are merged and the human explicitly approves a release.
+- Create release notes for `v0.1.0`.
+- Do not package the project.
+- Do not publish to Homebrew, vcpkg, Conan, opam, pip, npm, or Docker.
+- GitHub release only.
+- Release notes must state this is a deterministic exchange-systems lab / research portfolio
+  project, not a production exchange.
+- Release notes should summarize: deterministic matching/risk/market-data core; replay/event
+  log; TCP/UDP demo networking; measured synthetic benchmarks; sanitizer/fuzz/invariant
+  hardening; OCaml verifier / independent replay / differential testing, depending on what is
+  complete by then; known limitations.
+
+### Definition of Done
+
+- [ ] `CHANGELOG.md` has a `v0.1.0` section.
+- [ ] Release notes are conservative and accurate.
+- [ ] Git tag prepared only if the human approves.
+- [ ] PR opened and not merged unless the human explicitly says to release.
+- [ ] No package publishing.
+
 ## Jane Street-specific final acceptance bar
 
 The project is strong enough when a reviewer can quickly infer:
