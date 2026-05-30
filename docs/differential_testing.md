@@ -65,7 +65,9 @@ level <sym> <B|A> <price> <qty>
   commands.
 - **Snapshot** is the full final per-symbol state: best bid/ask, per-price aggregate levels
   (`level` lines, best-first as the engine reports them), resting order counts, last sequence
-  number, and trade count.
+  number, and trade count. Each `level` line carries its symbol explicitly; the OCaml parser
+  validates that the level symbol matches the surrounding `sym` block. Malformed snapshot
+  ownership is rejected rather than normalized away.
 
 ## Determinism and consistency (tested)
 
@@ -101,6 +103,9 @@ Fixtures under test:
   (partial and no-cross), market, and partial-maker fills (the synthetic flow uses only GTC);
 - `stream_bad_snapshot.txt` — a valid command stream with a deliberately corrupted snapshot
   section; the test asserts the mismatch **is** detected.
+- `bad_snapshot_level_symbol.txt` — a deliberately malformed snapshot where a `level` record
+  claims a different symbol than the surrounding `sym` block; the parser rejects it before
+  comparison, so malformed per-symbol ownership cannot be normalized into equality.
 
 The check runs under the existing `ocaml-verifier` CI job via `dune runtest` (no separate job).
 It is differential testing against the C++ system under test, not formal verification.

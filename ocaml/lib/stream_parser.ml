@@ -66,10 +66,15 @@ let parse_full_lines lines =
     | [ "snapshot"; "last_seq"; ls; "trades"; t ] -> last_seq := int_of ls; n_trades := int_of t
     | [ "sym"; s; "bid"; b; "ask"; a; "orders"; n ] ->
         syms := Replay_engine.{ sym = int_of s; best_bid = opt b; best_ask = opt a; order_count = int_of n; bid_levels = []; ask_levels = [] } :: !syms
-    | [ "level"; _; ba; price; qty ] -> (
+    | [ "level"; s; ba; price; qty ] -> (
+        let level_sym = int_of s in
         match !syms with
         | [] -> raise (Parse_error "level line before any sym line")
         | (cur : Replay_engine.sym_snapshot) :: rest ->
+            if level_sym <> cur.sym then
+              raise
+                (Parse_error
+                   (Printf.sprintf "level symbol %d does not match current sym %d" level_sym cur.sym));
             let lv = Replay_engine.{ price = int_of price; qty = int_of qty } in
             let cur =
               if ba = "B" then { cur with bid_levels = cur.bid_levels @ [ lv ] }

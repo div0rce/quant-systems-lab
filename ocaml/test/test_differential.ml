@@ -35,8 +35,16 @@ let expect_mismatch path =
   | false, Some _ -> () (* correctly detected, diff available *)
   | _ -> Printf.eprintf "FAIL %s: expected a detected mismatch but snapshots compared equal\n" path; exit 1
 
+let expect_parse_error path =
+  try
+    let _ = differential path in
+    Printf.eprintf "FAIL %s: expected parser rejection but fixture parsed\n" path;
+    exit 1
+  with Stream_parser.Parse_error _ -> ()
+
 let () =
   expect_match "fixtures/stream_seed7.txt";
   expect_match "fixtures/stream_ioc.txt";
   expect_mismatch "fixtures/stream_bad_snapshot.txt";
+  expect_parse_error "fixtures/bad_snapshot_level_symbol.txt";
   print_endline "ocaml differential replay: all tests passed"

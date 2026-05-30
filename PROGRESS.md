@@ -24,7 +24,7 @@ Do not rely on prior chat memory.
 - **Active branch:** `feat/m17-differential-replay-tests`
 - **Last completed milestone:** M16 — Independent OCaml replay engine (PR #19, squash-merged)
 - **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing (verifier + engine + differential)
-- **Last action:** added OCaml differential test (C++-vs-OCaml snapshot equality) over seed7 + IOC fixtures + a deliberate-mismatch fixture; added a C++ IOC scenario exporter
+- **Last action:** added parser validation for snapshot level-symbol ownership and a malformed ownership fixture; make check and dune runtest green
 - **Next action:** `/finish-milestone`
 - **Blockers:** none
 
@@ -305,3 +305,4 @@ Decision log additions:
 - [M17] Differential test compares the OCaml-computed snapshot against the C++ snapshot embedded in each fixture (best bid/ask, level aggregates, order counts, last_seq, trade count) via canonical `snapshot_to_lines`, printing a readable computed-vs-expected diff on mismatch; runs under the existing `ocaml-verifier` CI job (no new job).
 - [M17] Added a C++ `qsl-export-stream ioc` scenario (hand-built IOC + market + partial-maker) so the differential test covers IOC, which the GTC-only synthetic flow never exercises; OCaml reproduces it exactly (last_seq 9, trades 3).
 - [M17] A deliberately corrupted-snapshot fixture (`stream_bad_snapshot.txt`) is asserted to be detected as a mismatch, proving the check fails on divergence.
+- [M17] Snapshot parsing validates per-level symbol ownership so malformed embedded C++ snapshots cannot be normalized into equality.
