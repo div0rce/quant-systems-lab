@@ -149,6 +149,8 @@ Status key:
 - [M14] Added a C++ `qsl-export-fixture` app that drives a deterministic flow through the gateway (low max_qty → real rejects) and writes a normalized textual event-log fixture. No engine code changed.
 - [M14] OCaml verifier (`ocaml/`) re-derives replay invariants from the exported log (sequence monotonicity, positive trade qty, canceled-can't-trade, rejected-can't-rest, event-log/summary consistency). It is an independent cross-check, not a re-implementation of matching and not formal verification.
 - [M14] Committed a generated valid fixture plus two hand-crafted violation fixtures so `dune runtest` proves the checker both passes clean logs and catches violations. CI runs a dedicated `ocaml-verifier` job (apt ocaml+dune; opam-free).
+- [M14] OCaml verifier tracks OrderId lifetimes instead of treating rejected/canceled numeric IDs as globally dead (a later accept reuses an id legally); added valid-reuse fixtures alongside the violation fixtures.
+- [M14] Malformed verifier fixtures now fail cleanly with exit 2 instead of uncaught parser exceptions.
 - [M13] Demo script uses a portable `mktemp` template so `make demo` works on GNU/Linux and macOS.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.

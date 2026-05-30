@@ -1,6 +1,7 @@
-# bad: order 9 is rejected then appears as an accepted (resting) order -> must FAIL
+# bad: rejected id 9 appears as a resting maker in a trade with no later accept -> must FAIL
 v 1
-meta seed 0 symbols 1 orders 0 max_qty 8
+meta hand-crafted
 reject 9 MaxQuantityExceeded
-accept 1 0 9
-summary last_seq 1 trades 0
+accept 1 0 8
+trade 2 0 8 9 100 3
+summary last_seq 2 trades 1

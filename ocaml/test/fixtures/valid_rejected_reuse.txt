@@ -1,0 +1,8 @@
+# valid: rejected id 1 never entered the engine, so a later accept reuses it legally -> PASS
+v 1
+meta hand-crafted
+reject 1 MaxQuantityExceeded
+accept 1 0 1
+accept 2 0 2
+trade 3 0 1 2 100 5
+summary last_seq 3 trades 1

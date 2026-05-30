@@ -38,12 +38,27 @@ Each is recomputed from the raw records, independently of the engine:
 
 1. **Sequence strictly increasing** — event sequence numbers are monotonic.
 2. **Positive trade quantity** — no zero/negative trade quantities.
-3. **Canceled order cannot later trade** — an id seen in a `cancel` never appears as taker or
-   maker in a later `trade`.
-4. **Rejected order never rests or trades** — a rejected new-order id never appears in any
-   engine event.
+3. **Canceled order cannot later trade** — an id is canceled only for its *current* lifetime;
+   trading it counts as a violation only if there is no later `accept` re-establishing it.
+4. **Rejected order never rests or trades** — a rejected attempt never entered the engine, so
+   the id must not rest (`cancel`/`modify`) or trade *until* a later `accept` reuses it.
 5. **Summary matches event log** — the reported `last_seq` equals the maximum event sequence
    and the reported trade count equals the number of `trade` records.
+
+## OrderId lifetimes
+
+OrderId uniqueness in this system is scoped to currently-active resting orders, **not** to
+global history:
+
+- A rejected attempt never enters the engine, so the same numeric id may later be submitted
+  and accepted — the rejected attempt does not permanently tombstone the id.
+- A canceled (or fully-filled) order leaves the active set, so its id may be reused by a later
+  accept, which begins a new valid lifetime.
+
+The verifier therefore tracks per-id lifetime state in sequence order: an `accept` starts a
+fresh active lifetime that clears any prior rejected/canceled state, and the canceled/rejected
+checks only fire against the id's *current* lifetime. This keeps the verifier from rejecting
+logs that are valid under the engine's active-order semantics.
 
 ## Scope and limitations
 
