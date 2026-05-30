@@ -24,4 +24,8 @@ struct FixtureParams {
 // docs/differential_testing.md. Output is deterministic for a given `params`.
 void write_stream_fixture(std::ostream &os, const FixtureParams &params);
 
+// Write a small hand-built fixture exercising IOC (partial + no-cross), market, and partial
+// maker fills, so the differential replay tests cover IOC (the synthetic flow uses only GTC).
+void write_ioc_scenario_fixture(std::ostream &os);
+
 } // namespace qsl::replay
