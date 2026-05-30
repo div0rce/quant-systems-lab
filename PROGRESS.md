@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Roadmap maintenance — append M21–M23 (no implementation)
+- **Active milestone:** M16 — Independent OCaml replay engine
 - **Status:** ready for PR
-- **Active branch:** `docs/add-m21-m23-roadmap`
-- **Last completed milestone:** M15 — Export normalized command streams + final snapshots (PR #17, squash-merged)
-- **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing
-- **Last action:** appended M21 (repo license/maintainer docs), M22 (release-readiness audit), M23 (optional v0.1.0 release) to the roadmap; updated milestone table + decision log
-- **Next action:** human merges this docs PR, then `/start-milestone 16` (independent OCaml replay engine)
+- **Active branch:** `feat/m16-independent-ocaml-replay-engine`
+- **Last completed milestone:** Roadmap maintenance — appended M21–M23 (PR #18, squash-merged); last technical milestone M15 (PR #17)
+- **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing (verifier + replay engine)
+- **Last action:** built independent OCaml replay engine (replay_engine.ml + stream_parser.ml + replay_snapshot CLI + tests); on stream_seed7.txt it reproduces the C++ snapshot exactly (last_seq 47, trades 13)
+- **Next action:** finish docs/PROGRESS, run checks, then `/finish-milestone`
 - **Blockers:** none
 
 ---
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M15 complete, PR pending review_
+- _M16 complete, PR pending review_
 
 
 ---
@@ -239,7 +239,7 @@ Lower priority:
 |---|---|---|---|---|---|
 | M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☑ merged | #16 | Jane Street SWE language/culture signal |
 | M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ☑ merged | #17 | Normalized command stream + final snapshot export for Phase II differential testing |
-| M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☐ not started | — | OCaml computes final snapshot independently |
+| M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ◐ in progress | — | OCaml computes final snapshot independently |
 | M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☐ not started | — | C++ vs OCaml snapshot equality in CI |
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☐ not started | — | Seeded randomized market command streams |
 | M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☐ not started | — | Minimal counterexamples for failed properties |
@@ -299,3 +299,6 @@ Decision log additions:
 - [Roadmap] Packaging is intentionally deferred; the repo is a technical artifact, not an installable product.
 - [Roadmap] A GitHub v0.1.0 release is optional and only after the release-readiness audit.
 - [Roadmap] M22 is the Phase II equivalent of M13: final README/demo/docs/readiness polish with conservative claims and reproducible checks.
+- [M16] OCaml `replay_engine.ml` is an independent immutable matching engine (price-time, GTC/IOC/market/cancel/modify, gateway risk, active-lifetime ids) that replays the M15 command stream and computes its own snapshot — it does not read the C++ events/snapshot during replay.
+- [M16] Sequence numbers count emitted events (accept + trades; cancel; modify + trades) so the OCaml `last_seq` matches the C++ engine; snapshot includes every registered symbol (mirrors `try_emplace`).
+- [M16] On the committed `stream_seed7.txt`, the OCaml-computed snapshot matches the C++ snapshot exactly (last_seq 47, trades 13, per-symbol best bid/ask + counts); the automated C++-vs-OCaml equality check in CI is deferred to M17.

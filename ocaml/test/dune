@@ -1,5 +1,5 @@
-(test
- (name test_replay)
+(tests
+ (names test_replay test_replay_engine)
  (libraries qsl_verifier)
  (deps
   (glob_files fixtures/*.txt)))
