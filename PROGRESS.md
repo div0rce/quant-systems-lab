@@ -237,8 +237,8 @@ Lower priority:
 
 | # | Milestone | Branch | Status | PR | Notes |
 |---|---|---|---|---|---|
-| M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☐ not started | — | Jane Street SWE language/culture signal |
-| M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ◐ in progress | — | Fixture schema for independent replay |
+| M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☑ merged | #16 | Jane Street SWE language/culture signal |
+| M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ☑ merged | #17 | Normalized command stream + final snapshot export for Phase II differential testing |
 | M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☐ not started | — | OCaml computes final snapshot independently |
 | M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☐ not started | — | C++ vs OCaml snapshot equality in CI |
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☐ not started | — | Seeded randomized market command streams |
