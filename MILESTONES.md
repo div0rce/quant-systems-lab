@@ -557,41 +557,256 @@ ocaml/bin/verify_replay.ml <event-log-fixture>
 - [ ] Root README references the OCaml verifier only after it exists.
 - [ ] `PROGRESS.md` updated.
 
-## Optional M15 — Jane Street application polish
+## M15 — Export normalized command streams + final snapshots
 
-Only after M14, if needed.
-
-- **Branch:** `feat/m15-jane-street-application-polish`
-- **PR title:** `docs: Jane Street application positioning and resume bullets`
+- **Branch:** `feat/m15-export-command-streams-and-snapshots`
+- **PR title:** `feat: export normalized command streams and final snapshots`
 
 ### Goal
 
-Add recruiter-facing documentation and résumé bullets for SWE and Linux Engineering variants.
+Move beyond log-invariant checking by exporting the complete data needed for independent replay: normalized command streams and final C++ engine snapshots.
+
+This replaces the prior optional Jane Street application-polish milestone. Application polish is not the goal. Technical comparability is the goal.
 
 ### Scope
 
-Add:
+Add or extend tooling so the C++ side can export deterministic fixtures containing:
 
-```text
-docs/recruiting/jane_street_swe.md
-docs/recruiting/jane_street_linux.md
-```
+1. symbol registration order;
+2. every submitted command in normalized order;
+3. every emitted engine event;
+4. every structured rejection;
+5. final per-symbol snapshot:
+   - best bid/ask;
+   - per-price aggregate bid levels;
+   - per-price aggregate ask levels;
+   - resting order counts;
+   - last sequence number;
+   - trade count;
+6. stable text or JSON schema documented in `docs/differential_testing.md`.
 
-Include:
+### Non-goals
 
-1. SWE framing.
-2. Linux Engineering framing.
-3. conservative résumé bullets.
-4. measured benchmark bullets only if M11 produced results.
-5. limitations.
-6. interview defense notes.
+- Do not build the OCaml replay engine here.
+- Do not add random generation yet.
+- Do not add résumé-polish documents.
 
 ### Definition of Done
 
-- [ ] Docs distinguish SWE vs Linux positioning.
-- [ ] No fake metrics.
-- [ ] No overclaiming.
-- [ ] Resume bullets are conservative and technically defensible.
+- [ ] C++ fixture exporter emits normalized command stream fixtures.
+- [ ] C++ fixture exporter emits final snapshots with per-symbol level aggregates.
+- [ ] Fixture schema is documented.
+- [ ] At least one committed fixture exists.
+- [ ] Existing M14 OCaml verifier still passes.
+- [ ] `make check` passes.
+- [ ] `dune runtest --root ocaml` passes.
+- [ ] `PROGRESS.md` updated.
+
+## M16 — Independent OCaml replay engine
+
+- **Branch:** `feat/m16-independent-ocaml-replay-engine`
+- **PR title:** `feat: independently replay command streams in OCaml`
+
+### Goal
+
+Upgrade the OCaml verifier from log-invariant checker to independent replay engine.
+
+The OCaml side should consume exported command streams, replay the market state immutably, and compute its own final snapshot without trusting the C++ engine's event output.
+
+### Scope
+
+Implement OCaml modules for:
+
+1. command ADTs;
+2. symbol registry replay;
+3. immutable per-symbol order book;
+4. price-time priority matching;
+5. active-order lifetime tracking;
+6. risk/rejection semantics matching the C++ gateway where fixture data requires it;
+7. final snapshot computation.
+
+### Required semantic alignment
+
+- OrderId uniqueness is active-lifetime scoped, not global.
+- Integer price ticks only.
+- Maker-price fills.
+- GTC rests remainder.
+- IOC discards remainder.
+- Market orders never rest.
+- Duplicate active IDs reject/no-op according to the exported fixture semantics.
+- Invalid commands must not mutate replay state.
+
+### Non-goals
+
+- Do not optimize OCaml performance.
+- Do not claim formal verification.
+- Do not reimplement networking.
+
+### Definition of Done
+
+- [ ] OCaml parses normalized command-stream fixtures from M15.
+- [ ] OCaml independently replays command streams into immutable state.
+- [ ] OCaml computes final snapshot without reading the C++ final snapshot during replay.
+- [ ] Unit tests cover matching, cancel, modify, IOC, market, duplicate ID, rejected command, and ID reuse cases.
+- [ ] `dune build --root ocaml` passes.
+- [ ] `dune runtest --root ocaml` passes.
+- [ ] Docs state exact limitations.
+- [ ] `PROGRESS.md` updated.
+
+## M17 — Differential replay tests: C++ vs OCaml snapshot equality
+
+- **Branch:** `feat/m17-differential-replay-tests`
+- **PR title:** `test: compare C++ and OCaml replay snapshots`
+
+### Goal
+
+Turn the project into a cross-language differential testing system.
+
+For fixed fixtures, the C++ engine and independent OCaml replay engine must converge to the same final snapshot.
+
+### Scope
+
+Add test harnesses that:
+
+1. generate or load C++ normalized fixtures;
+2. run the OCaml replay CLI over them;
+3. compare OCaml-computed snapshots against C++-exported snapshots;
+4. fail with clear diffs on mismatch;
+5. run in CI.
+
+### Definition of Done
+
+- [ ] At least one deterministic C++ fixture is checked by OCaml in CI.
+- [ ] Snapshot equality includes per-symbol best bid/ask, level aggregates, order counts, last sequence number, and trade count.
+- [ ] A deliberately bad fixture fails with a readable diff.
+- [ ] CI has a stable differential-replay job or extends the existing OCaml job.
+- [ ] `make check` passes.
+- [ ] `dune runtest --root ocaml` passes.
+- [ ] `PROGRESS.md` updated.
+
+## M18 — Property-based command generator
+
+- **Branch:** `feat/m18-property-command-generator`
+- **PR title:** `test: generate property-based market command streams`
+
+### Goal
+
+Add the deep testing idea: randomized command generation for market-event/state-machine testing.
+
+This is the milestone that moves the project closer to the Jane Street intern-project pattern: not merely building a simulator, but building machinery that attacks the simulator.
+
+### Scope
+
+Implement a deterministic generator for command streams covering:
+
+1. symbol registration;
+2. valid limit and market orders;
+3. invalid prices and quantities;
+4. duplicate active IDs;
+5. reusable inactive IDs;
+6. unknown symbols;
+7. cancels of active and inactive orders;
+8. modifies that preserve priority;
+9. modifies that lose priority;
+10. IOC edge cases;
+11. empty-book market orders;
+12. multi-symbol interleavings.
+
+### Required properties
+
+Generated streams must be replayable by both C++ and OCaml. Seeds must be printed and saved on failure.
+
+### Definition of Done
+
+- [ ] Generator is deterministic by seed.
+- [ ] Generator produces non-vacuous flows: trades, rejects, cancels, modifies, rests, and multi-symbol activity.
+- [ ] Generated fixtures feed the C++ engine and OCaml replay path.
+- [ ] Property tests assert snapshot equality and core invariants.
+- [ ] Failing seeds are reported clearly.
+- [ ] `make check` passes.
+- [ ] `dune runtest --root ocaml` passes.
+- [ ] `PROGRESS.md` updated.
+
+## M19 — Shrinker + minimal failing fixture exporter
+
+- **Branch:** `feat/m19-shrinker-minimal-failing-fixtures`
+- **PR title:** `test: shrink failing command streams to minimal fixtures`
+
+### Goal
+
+Add shrinking so randomized failures produce small, reviewable counterexamples rather than useless thousand-command blobs.
+
+This is the strongest testing-systems signal in the project.
+
+### Scope
+
+Implement shrink strategy for failing command streams:
+
+1. remove contiguous chunks;
+2. remove single commands;
+3. simplify command fields where valid:
+   - lower quantities;
+   - simpler prices;
+   - fewer symbols;
+   - fewer order IDs;
+4. preserve the failure predicate;
+5. export minimized failing fixture and seed metadata.
+
+### Definition of Done
+
+- [ ] A known failing artificial property shrinks to a small fixture in tests.
+- [ ] Shrinker is deterministic.
+- [ ] Exported failing fixture can be replayed independently.
+- [ ] Shrink report includes original seed, original length, minimized length, and failure reason.
+- [ ] Docs explain shrink limitations honestly.
+- [ ] `make check` passes.
+- [ ] `dune runtest --root ocaml` passes.
+- [ ] `PROGRESS.md` updated.
+
+## M20 — Final docs: differential testing architecture
+
+- **Branch:** `feat/m20-differential-testing-docs`
+- **PR title:** `docs: document differential replay and property testing architecture`
+
+### Goal
+
+Finalize technical documentation around the actual deep idea: differential replay plus property-based generation and shrinking.
+
+This is not application polish. It is architecture documentation for a testing system.
+
+### Scope
+
+Add or update:
+
+```text
+docs/differential_testing.md
+docs/property_testing.md
+README.md
+docs/recruiting_notes.md
+PROGRESS.md
+```
+
+Document:
+
+1. C++ engine as implementation under test;
+2. normalized command stream schema;
+3. C++ snapshot schema;
+4. independent OCaml replay model;
+5. C++ vs OCaml snapshot equality;
+6. property-based command generation;
+7. shrinking and minimal failing fixtures;
+8. what this proves;
+9. what it does not prove.
+
+### Definition of Done
+
+- [ ] README explains the differential-testing architecture in under 60 seconds.
+- [ ] Docs include an architecture diagram.
+- [ ] Docs include one minimized failing-fixture example if M19 produced one.
+- [ ] Resume bullets emphasize differential testing, not fake production trading.
+- [ ] No overclaiming: not formal verification, not production exchange, not profitable trading.
+- [ ] `make check` passes.
+- [ ] `dune runtest --root ocaml` passes.
 - [ ] `PROGRESS.md` updated.
 
 ## Jane Street-specific final acceptance bar

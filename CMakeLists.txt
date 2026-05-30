@@ -15,7 +15,7 @@ add_library(qsl_core src/core/types.cpp src/protocol/codec.cpp src/engine/order_
                      src/gateway/order_gateway.cpp src/feed/market_data.cpp
                      src/feed/publisher.cpp src/replay/event_log.cpp src/replay/command.cpp
                      src/replay/recovery.cpp src/gateway/session.cpp src/gateway/tcp_server.cpp
-                     src/feed/udp_feed.cpp)
+                     src/feed/udp_feed.cpp src/replay/fixture.cpp)
 target_include_directories(qsl_core PUBLIC include)
 target_link_libraries(qsl_core PRIVATE qsl_warnings)
 
@@ -36,6 +36,9 @@ target_link_libraries(qsl-mdfeed PRIVATE qsl_core qsl_warnings)
 
 add_executable(qsl-export-fixture apps/qsl-export-fixture/main.cpp)
 target_link_libraries(qsl-export-fixture PRIVATE qsl_core qsl_warnings)
+
+add_executable(qsl-export-stream apps/qsl-export-stream/main.cpp)
+target_link_libraries(qsl-export-stream PRIVATE qsl_core qsl_warnings)
 
 if(QSL_BUILD_BENCHMARKS)
   add_executable(qsl-bench apps/qsl-bench/main.cpp)

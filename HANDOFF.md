@@ -818,3 +818,37 @@ Before every PR, check:
 6. Are protocol boundaries explicit?
 7. Are Linux/socket concepts documented honestly?
 8. Is OCaml isolated to the replay verifier, not mixed into the core engine prematurely?
+
+
+## Additive M15–M20 technical roadmap replacing old optional application polish
+
+The prior optional `M15 — Jane Street application polish` milestone is removed. Do not implement recruiter-facing polish as the next milestone. The project should now continue with technical depth:
+
+1. **M15 — Export normalized command streams + final snapshots**
+   - Export complete command streams, engine events, rejections, symbol registration order, and final per-symbol snapshots.
+   - This gives the OCaml side enough information to replay independently.
+2. **M16 — Independent OCaml replay engine**
+   - OCaml replays the command stream immutably and computes its own final snapshot.
+   - It must not merely inspect the C++ event log.
+3. **M17 — Differential replay tests: C++ vs OCaml snapshot equality**
+   - CI compares C++ exported snapshots against OCaml-computed snapshots.
+4. **M18 — Property-based command generator**
+   - Generate seeded randomized command streams covering valid, invalid, duplicate, reused, IOC, market, cancel, modify, and multi-symbol cases.
+5. **M19 — Shrinker + minimal failing fixture exporter**
+   - Reduce failing generated streams to small, replayable counterexamples.
+6. **M20 — Final docs: differential testing architecture**
+   - Document the architecture, fixture schemas, property generator, shrinker, and exact limits.
+
+### Strategic reason
+
+The repo should not stop at “built a matching engine.” That is a known portfolio project. The stronger claim is: built a deterministic exchange simulator plus a cross-language differential testing system that can generate, replay, compare, and shrink market-state counterexamples.
+
+### Non-negotiable constraints
+
+- Do not remove existing context or prior milestone history.
+- Do not overclaim formal verification.
+- Do not claim production exchange behavior.
+- Do not claim trading profitability.
+- Do not add application-polish docs unless M20 explicitly needs final technical framing.
+- Keep C++ as the system under test and OCaml as independent replay/checking infrastructure.
+- Every benchmark or performance claim must remain measured by committed scripts.
