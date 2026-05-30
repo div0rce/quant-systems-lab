@@ -467,15 +467,38 @@ Do not pull backlog items into earlier PRs.
 - Docker packaging.
 - Perf/flamegraph docs.
 - GitHub Pages documentation site.
-- Differential negative-fixture coverage: add dedicated corruption fixtures for `best_bid`,
-  `best_ask`, `trades` (trade_count), and bid-side `level` lines. Today only ask-level qty,
-  `last_seq`, and `order_count` have dedicated negative fixtures; the other snapshot fields are
-  exercised only via the positive fixtures' symmetric rendering, so a future `snapshot_to_lines`
-  regression dropping one of them would not be caught by a negative test.
-- Shrinker against a real divergence: inject a synthetic C++/OCaml engine divergence (e.g. a
-  build flag) and demonstrate `replay::shrink` reducing the failing stream to a minimal
-  C++≠OCaml reproducer, proving the headline use case end-to-end (M19 currently demonstrates the
-  mechanism only, via an artificial "produces a trade" predicate).
+
+### Differential-testing follow-ups (prioritized)
+
+**Definitely track — differential oracle self-test.** Deliberately inject a known C++≠OCaml
+mismatch and assert end-to-end: (1) the differential test fails, (2) the failure is detected
+correctly, (3) the shrinker reduces the failing stream, (4) the resulting minimal fixture
+reproduces the mismatch. This tests the fire alarm, not just the building.
+
+High:
+
+- CI seed sweep: generate seeds 1..N dynamically in CI instead of relying on only the 8
+  committed property seeds — stronger differential coverage.
+- Dedicated negative fixtures for `best_bid`, `best_ask`, `trades` (trade_count), and bid-side
+  `level` lines (today only ask-level qty, `last_seq`, and `order_count` are covered) — cheap,
+  improves oracle robustness.
+- Synthetic divergence demonstration: show the shrinker finding a real C++≠OCaml failure rather
+  than only the artificial "produces a trade" predicate.
+
+Medium:
+
+- Shared gateway-replay helper to remove the duplicated command-dispatch logic in `fixture.cpp`,
+  `shrink.cpp`, and the exporters.
+- Price simplification in the shrinker (alongside quantity) for smaller counterexamples.
+- Symbol/id renumbering shrink pass (could reduce fixtures further than 123 -> 5).
+- Generator coverage reporting: track reject-reason frequencies automatically in CI.
+- Explicit determinism test across compilers/platforms (currently only indirectly validated by
+  the Linux golden check against macOS-committed fixtures).
+
+Low:
+
+- Larger committed corpus (e.g. prop_seed1..50) — more confidence, lower signal per maintenance.
+- Performance benchmarks for the differential harness.
 
 
 ---
