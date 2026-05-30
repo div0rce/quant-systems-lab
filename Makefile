@@ -26,9 +26,9 @@ tidy:
 	@echo "  run-clang-tidy -p build/dev include/ src/"
 
 bench:
-	cmake --preset release
-	cmake --build --preset release --target qsl-bench
-	bash scripts/run_benchmarks.sh
+	cmake --preset bench
+	cmake --build --preset bench --target qsl-bench
+	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/run_benchmarks.sh
 
 asan:
 	cmake --preset asan

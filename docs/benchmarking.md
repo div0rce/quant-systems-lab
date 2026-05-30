@@ -24,6 +24,11 @@ A `volatile` sink consumes each operation's result so the optimizer cannot elide
 Timing uses `std::chrono::steady_clock` — wall-clock at the **benchmark layer only**; the
 deterministic engine never reads a clock.
 
+`make bench` uses a benchmark-specific CMake preset (`bench`) with
+`QSL_BUILD_TESTS=OFF` and `QSL_BUILD_BENCHMARKS=ON`. This keeps benchmark configuration
+separate from test-only dependencies: Catch2 `FetchContent` is not entered or populated for
+benchmark-only builds.
+
 ## Scenarios
 
 | Benchmark                  | Measures                                                        |
@@ -62,7 +67,7 @@ Scenario / Metric / Result:
 ## Running
 
 ```bash
-make bench   # configures + builds the release preset, runs qsl-bench, writes results/latest.txt
+make bench   # configures + builds the bench preset, runs qsl-bench, writes results/latest.txt
 ```
 
 ## What these numbers do and do not prove

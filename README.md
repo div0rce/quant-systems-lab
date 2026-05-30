@@ -35,7 +35,7 @@ results/       — benchmark outputs (after M11)
 make check     # format check + build + test
 make fmt       # apply clang-format
 make asan      # build and test with AddressSanitizer
-make bench     # build release + run benchmarks -> results/latest.txt
+make bench     # build benchmark preset + run benchmarks -> results/latest.txt
 ```
 
 ## Benchmarks
@@ -53,13 +53,16 @@ and metadata are in [`results/latest.txt`](results/latest.txt); methodology and 
 
 | Scenario (synthetic, in-process) | Measured on this run |
 |---|---|
-| Order book add/modify/cancel | ~68 ns/op |
-| Protocol `NewOrder` encode+decode | ~20 ns/op |
-| Gateway session, crossing order with fill | ~204 ns/op |
-| Matching-engine flow (apply) | ~104 ns/command |
-| Replay from command log | ~118 ns/command |
+| Order book add/modify/cancel | ~126 ns/op |
+| Protocol `NewOrder` encode+decode | ~39 ns/op |
+| Gateway session, crossing order with fill | ~270 ns/op |
+| Matching-engine flow (apply) | ~121 ns/command |
+| Replay from command log | ~132 ns/command |
 
 Reproduce with `make bench` (numbers will differ by machine).
+
+`make bench` uses a dedicated CMake `bench` preset with tests disabled, so benchmark builds
+do not require Catch2 or other test-only dependency population.
 
 ## Status
 

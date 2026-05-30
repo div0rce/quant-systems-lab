@@ -5,11 +5,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-BIN="build/release/qsl-bench"
+BIN="${QSL_BENCH_BIN:-build/release/qsl-bench}"
 OUT="results/latest.txt"
 
 if [[ ! -x "$BIN" ]]; then
-    echo "error: $BIN not found; build the release preset first (make bench)." >&2
+    echo "error: $BIN not found; build the benchmark preset first (make bench)." >&2
     exit 1
 fi
 

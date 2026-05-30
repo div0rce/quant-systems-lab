@@ -5,8 +5,8 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
 
 ## Build mode and flags
 
-- Benchmark only the **Release** preset (`-O2`/`-O3`, `NDEBUG`). Debug numbers are meaningless
-  for latency. `make bench` always uses the release preset.
+- Benchmark only the **bench** preset, which inherits the Release configuration
+  (`-O2`/`-O3`, `NDEBUG`) and disables tests. Debug numbers are meaningless for latency.
 - Sanitizer builds (ASan/UBSan, see `make asan`) are for correctness, not timing — they add
   large, uneven overhead.
 
@@ -34,7 +34,7 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
 
 ## Measuring deeper
 
-- `perf stat ./build/release/qsl-bench` for cycles, instructions, IPC, cache misses, branch
+- `perf stat ./build/bench/qsl-bench` for cycles, instructions, IPC, cache misses, branch
   mispredictions.
 - `perf record` / `perf report` (or a flamegraph) to find hot paths before optimizing.
 

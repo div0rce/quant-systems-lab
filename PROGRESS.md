@@ -24,7 +24,7 @@ Do not rely on prior chat memory.
 - **Active branch:** `feat/m11-benchmarks`
 - **Last completed milestone:** M10 — Network market data publisher (PR #11, squash-merged)
 - **`make check` passing:** yes (133/133 tests)
-- **Last action:** built qsl-bench harness + run script + make bench + docs; benchmark honesty pass (real gateway fill, conservative README, apps in fmt); produced measured results/latest.txt
+- **Last action:** decoupled benchmark builds from test-only Catch2 FetchContent; make check and make bench green
 - **Next action:** human reviews and squash-merges M11 PR
 - **Blockers:** none
 
@@ -45,7 +45,7 @@ Do not rely on prior chat memory.
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☑ merged | #9 | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☑ merged | #10 | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☑ merged | #11 | Network feed client/publisher |
-| M11 | Benchmarks | `feat/m11-benchmarks` | ◐ in progress | — | Measured performance outputs |
+| M11 | Benchmarks | `feat/m11-benchmarks` | ◐ in progress | #12 | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☐ not started | — | Sanitizers and invariant tests |
 | M13 | Docs polish | `feat/m13-docs-polish` | ☐ not started | — | README, diagram, demo, recruiting notes |
 
@@ -127,7 +127,8 @@ Status key:
 - [M10] Known non-market-data frames decode to no market-data message (`decode_market_data` -> nullopt).
 - [M10] `UdpFeedClient` receive uses a bounded `SO_RCVTIMEO` so demo subscribers do not hang indefinitely.
 - [M11] Custom `qsl-bench` harness (no external benchmark dep); timing uses `steady_clock` at the benchmark layer only, with a `volatile` sink to prevent dead-code elimination.
-- [M11] `make bench` builds the release preset and runs `scripts/run_benchmarks.sh`, which writes `results/latest.txt` with full metadata; only measured numbers appear anywhere.
+- [M11] `make bench` builds the bench preset and runs `scripts/run_benchmarks.sh`, which writes `results/latest.txt` with full metadata; only measured numbers appear anywhere.
+- [M11] Benchmark preset disables test configuration so `make bench` does not depend on Catch2/test-only FetchContent.
 - [M11] Benchmark workloads use the deterministic `generate_flow(seed=42)`; numbers are hardware/compiler/build-dependent (caveat documented in docs/benchmarking.md + docs/linux_performance.md).
 - [M11] Benchmarks avoid degenerate paths: the gateway-session benchmark crosses deep resting liquidity so a real fill is produced each call (not an empty-book no-op); cross-TU calls + a volatile sink prevent dead-code elimination.
 - [M11] `results/latest.txt` records iterations, warmup, seed, units, dirty-tree flag, and an explicit "synthetic microbenchmark, not production throughput" caveat.
@@ -161,12 +162,12 @@ Status key:
 Measured by `make bench` (full metadata + raw output in `results/latest.txt`). Hardware-,
 compiler-, and build-dependent — these are from one machine, not a production-latency claim.
 
-- Run: arm64, Apple clang 17, Release, seed 42, commit 6c7990c (synthetic, in-process; excludes network/disk/kernel path).
-- order book add/modify/cancel: ~68 ns/op
-- protocol NewOrder encode+decode: ~20 ns/op
-- in-process gateway session (crossing order with fill): ~204 ns/op
-- matching-engine flow apply: ~104 ns/command
-- replay from command log: ~118 ns/command
+- Run: arm64, Apple clang 17, Release, seed 42, commit fbb8180 (synthetic, in-process; excludes network/disk/kernel path).
+- order book add/modify/cancel: ~126 ns/op
+- protocol NewOrder encode+decode: ~39 ns/op
+- in-process gateway session (crossing order with fill): ~270 ns/op
+- matching-engine flow apply: ~121 ns/command
+- replay from command log: ~132 ns/command
 
 ---
 
