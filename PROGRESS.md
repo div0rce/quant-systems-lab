@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M14 — OCaml replay verifier
+- **Active milestone:** M15 — Export normalized command streams + final snapshots
 - **Status:** ready for PR
-- **Active branch:** `feat/m14-ocaml-replay-verifier`
-- **Last completed milestone:** M13 — Final architecture, demo, and recruiting polish (PR #14, squash-merged)
-- **`make check` passing:** yes (144/144 tests); OCaml `dune runtest` passing
-- **Last action:** built C++ fixture exporter + OCaml verifier subproject + CI job + docs; make check and dune runtest green
-- **Next action:** human reviews and squash-merges M14 PR
+- **Active branch:** `feat/m15-export-command-streams-and-snapshots`
+- **Last completed milestone:** M14 — OCaml replay verifier (PR #16, squash-merged)
+- **`make check` passing:** yes (146/146 tests); OCaml `dune runtest` passing
+- **Last action:** added differential-fixture exporter + schema doc + determinism/parseability tests; make check and dune runtest green
+- **Next action:** human reviews and squash-merges M15 PR
 - **Blockers:** none
 
 ---
@@ -48,7 +48,7 @@ Do not rely on prior chat memory.
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☑ merged | #12 | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☑ merged | #13 | Sanitizers and invariant tests |
 | M13 | Docs polish | `feat/m13-docs-polish` | ☑ merged | #14 | README, diagram, demo, recruiting notes |
-| M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ◐ in progress | — | Independent typed-functional replay invariant checker |
+| M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☑ merged | #16 | Independent typed-functional replay invariant checker |
 
 Status key:
 
@@ -151,6 +151,9 @@ Status key:
 - [M14] Committed a generated valid fixture plus two hand-crafted violation fixtures so `dune runtest` proves the checker both passes clean logs and catches violations. CI runs a dedicated `ocaml-verifier` job (apt ocaml+dune; opam-free).
 - [M14] OCaml verifier tracks OrderId lifetimes instead of treating rejected/canceled numeric IDs as globally dead (a later accept reuses an id legally); added valid-reuse fixtures alongside the violation fixtures.
 - [M14] Malformed verifier fixtures now fail cleanly with exit 2 instead of uncaught parser exceptions.
+- [M15] Added a differential-fixture exporter (`qsl-export-stream` + `replay::write_stream_fixture`) emitting a normalized command stream, engine events, new-order rejections, and the full final per-symbol snapshot (best bid/ask, per-price level aggregates, order counts, last_seq, trade count). Schema in docs/differential_testing.md.
+- [M15] Reused the deterministic `generate_flow` (no new/random generation — that is M18); a low max_qty yields real rejections. Export is byte-deterministic per seed.
+- [M15] M15 only exports + tests determinism/parseability; the independent OCaml replay engine (M16) and C++-vs-OCaml snapshot equality (M17) are deferred. M14 verifier (v1 event-log fixtures) is untouched and still green.
 - [M13] Demo script uses a portable `mktemp` template so `make demo` works on GNU/Linux and macOS.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
@@ -193,7 +196,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M14 complete, PR pending review_
+- _M15 complete, PR pending review_
 
 
 ---
@@ -230,7 +233,7 @@ Lower priority:
 | # | Milestone | Branch | Status | PR | Notes |
 |---|---|---|---|---|---|
 | M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☐ not started | — | Jane Street SWE language/culture signal |
-| M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ☐ not started | — | Fixture schema for independent replay |
+| M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ◐ in progress | — | Fixture schema for independent replay |
 | M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☐ not started | — | OCaml computes final snapshot independently |
 | M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☐ not started | — | C++ vs OCaml snapshot equality in CI |
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☐ not started | — | Seeded randomized market command streams |
