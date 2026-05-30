@@ -65,7 +65,9 @@ level <sym> <B|A> <price> <qty>
   commands.
 - **Snapshot** is the full final per-symbol state: best bid/ask, per-price aggregate levels
   (`level` lines, best-first as the engine reports them), resting order counts, last sequence
-  number, and trade count.
+  number, and trade count. Each `level` line carries its symbol explicitly; the OCaml parser
+  validates that the level symbol matches the surrounding `sym` block. Malformed snapshot
+  ownership is rejected rather than normalized away.
 
 ## Determinism and consistency (tested)
 
@@ -84,3 +86,26 @@ level <sym> <B|A> <price> <qty>
 - This is a deterministic export + parseability contract, not a correctness proof and not
   formal verification.
 - Independent OCaml replay (M16) and C++-vs-OCaml snapshot equality (M17) build on this schema.
+
+
+## M17 — differential replay (C++ vs OCaml)
+
+`ocaml/test/test_differential.ml` closes the loop: for each fixture it independently replays the
+command stream in OCaml (`Replay_engine`), then compares the OCaml-computed snapshot against the
+C++ snapshot embedded in the same fixture. Equality covers per-symbol best bid/ask, per-price
+level aggregates, resting order counts, `last_seq`, and trade count (compared via the canonical
+`snapshot_to_lines` rendering, so a mismatch prints a readable `computed` vs `expected` line).
+
+Fixtures under test:
+
+- `stream_seed7.txt` — the synthetic flow (GTC limits, market, cancel, modify, rejects, 4 symbols);
+- `stream_ioc.txt` — a hand-built scenario from `qsl-export-stream ioc` covering IOC discard
+  (partial and no-cross), market, and partial-maker fills (the synthetic flow uses only GTC);
+- `stream_bad_snapshot.txt` — a valid command stream with a deliberately corrupted snapshot
+  section; the test asserts the mismatch **is** detected.
+- `bad_snapshot_level_symbol.txt` — a deliberately malformed snapshot where a `level` record
+  claims a different symbol than the surrounding `sym` block; the parser rejects it before
+  comparison, so malformed per-symbol ownership cannot be normalized into equality.
+
+The check runs under the existing `ocaml-verifier` CI job via `dune runtest` (no separate job).
+It is differential testing against the C++ system under test, not formal verification.

@@ -270,3 +270,17 @@ let snapshot st =
            })
   in
   { last_seq = st.seq; n_trades = st.trades; symbols }
+
+
+let opt_str = function Some p -> string_of_int p | None -> "-"
+
+(* Render a snapshot to the canonical fixture text lines (snapshot / sym / level), in the same
+   order the C++ exporter emits them, so two snapshots can be compared with a readable diff. *)
+let snapshot_to_lines s =
+  let p = Printf.sprintf in
+  let sym_block (x : sym_snapshot) =
+    (p "sym %d bid %s ask %s orders %d" x.sym (opt_str x.best_bid) (opt_str x.best_ask) x.order_count
+    :: List.map (fun (l : level_view) -> p "level %d B %d %d" x.sym l.price l.qty) x.bid_levels)
+    @ List.map (fun (l : level_view) -> p "level %d A %d %d" x.sym l.price l.qty) x.ask_levels
+  in
+  p "snapshot last_seq %d trades %d" s.last_seq s.n_trades :: List.concat_map sym_block s.symbols

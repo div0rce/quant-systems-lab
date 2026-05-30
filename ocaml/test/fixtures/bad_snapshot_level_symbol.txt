@@ -1,0 +1,9 @@
+# deliberate malformed snapshot: level symbol does not match the surrounding sym block.
+# The parser must reject this instead of normalizing it into `level 0 ...`.
+version 1
+meta seed 0 symbols 1 orders 2 max_qty 1000 max_notional 1000000
+cmd reg S0
+cmd limit 0 1 B 101 2 GTC
+snapshot last_seq 1 trades 0
+sym 0 bid 101 ask - orders 1
+level 1 B 101 2

@@ -10,6 +10,10 @@
 // rejections + final per-symbol snapshot) to stdout. Deterministic for a given seed; this
 // is the data the independent OCaml replay engine (M16) consumes and M17 compares against.
 int main(int argc, char **argv) {
+    if (argc >= 2 && std::string(argv[1]) == "ioc") {
+        qsl::replay::write_ioc_scenario_fixture(std::cout);
+        return 0;
+    }
     qsl::replay::FixtureParams params;
     if (argc >= 2) {
         params.seed = std::stoull(argv[1]);

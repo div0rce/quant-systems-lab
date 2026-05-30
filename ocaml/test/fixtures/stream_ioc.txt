@@ -1,0 +1,22 @@
+# qsl differential-testing fixture: command stream + events + rejections + snapshot
+version 1
+meta seed 0 symbols 1 orders 6 max_qty 1000 max_notional 1000000
+cmd reg S0
+cmd limit 0 1 S 100 3 GTC
+evt accept 1 0 1
+cmd limit 0 2 B 100 5 IOC
+evt accept 2 0 2
+evt trade 3 0 2 1 100 3
+cmd limit 0 3 B 99 4 IOC
+evt accept 4 0 3
+cmd limit 0 4 S 101 5 GTC
+evt accept 5 0 4
+cmd limit 0 5 B 101 2 IOC
+evt accept 6 0 5
+evt trade 7 0 5 4 101 2
+cmd market 0 6 B 1
+evt accept 8 0 6
+evt trade 9 0 6 4 101 1
+snapshot last_seq 9 trades 3
+sym 0 bid - ask 101 orders 1
+level 0 A 101 2

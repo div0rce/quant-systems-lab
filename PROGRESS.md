@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M16 — Independent OCaml replay engine
+- **Active milestone:** M17 — Differential replay tests (C++ vs OCaml snapshot equality)
 - **Status:** ready for PR
-- **Active branch:** `feat/m16-independent-ocaml-replay-engine`
-- **Last completed milestone:** Roadmap maintenance — appended M21–M23 (PR #18, squash-merged); last technical milestone M15 (PR #17)
-- **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing (verifier + replay engine)
-- **Last action:** built independent OCaml replay engine (replay_engine.ml + stream_parser.ml + replay_snapshot CLI + tests); on stream_seed7.txt it reproduces the C++ snapshot exactly (last_seq 47, trades 13)
-- **Next action:** finish docs/PROGRESS, run checks, then `/finish-milestone`
+- **Active branch:** `feat/m17-differential-replay-tests`
+- **Last completed milestone:** M16 — Independent OCaml replay engine (PR #19, squash-merged)
+- **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing (verifier + engine + differential)
+- **Last action:** added parser validation for snapshot level-symbol ownership and a malformed ownership fixture; make check and dune runtest green
+- **Next action:** `/finish-milestone`
 - **Blockers:** none
 
 ---
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M16 complete, PR pending review_
+- _M17 complete, PR pending review_
 
 
 ---
@@ -239,8 +239,8 @@ Lower priority:
 |---|---|---|---|---|---|
 | M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☑ merged | #16 | Jane Street SWE language/culture signal |
 | M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ☑ merged | #17 | Normalized command stream + final snapshot export for Phase II differential testing |
-| M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ◐ in progress | — | OCaml computes final snapshot independently |
-| M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☐ not started | — | C++ vs OCaml snapshot equality in CI |
+| M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☑ merged | #19 | OCaml computes final snapshot independently |
+| M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ◐ in progress | — | C++ vs OCaml snapshot equality in CI |
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☐ not started | — | Seeded randomized market command streams |
 | M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☐ not started | — | Minimal counterexamples for failed properties |
 | M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☐ not started | — | Final docs for differential/property testing system |
@@ -302,3 +302,7 @@ Decision log additions:
 - [M16] OCaml `replay_engine.ml` is an independent immutable matching engine (price-time, GTC/IOC/market/cancel/modify, gateway risk, active-lifetime ids) that replays the M15 command stream and computes its own snapshot — it does not read the C++ events/snapshot during replay.
 - [M16] Sequence numbers count emitted events (accept + trades; cancel; modify + trades) so the OCaml `last_seq` matches the C++ engine; snapshot includes every registered symbol (mirrors `try_emplace`).
 - [M16] On the committed `stream_seed7.txt`, the OCaml-computed snapshot matches the C++ snapshot exactly (last_seq 47, trades 13, per-symbol best bid/ask + counts); the automated C++-vs-OCaml equality check in CI is deferred to M17.
+- [M17] Differential test compares the OCaml-computed snapshot against the C++ snapshot embedded in each fixture (best bid/ask, level aggregates, order counts, last_seq, trade count) via canonical `snapshot_to_lines`, printing a readable computed-vs-expected diff on mismatch; runs under the existing `ocaml-verifier` CI job (no new job).
+- [M17] Added a C++ `qsl-export-stream ioc` scenario (hand-built IOC + market + partial-maker) so the differential test covers IOC, which the GTC-only synthetic flow never exercises; OCaml reproduces it exactly (last_seq 9, trades 3).
+- [M17] A deliberately corrupted-snapshot fixture (`stream_bad_snapshot.txt`) is asserted to be detected as a mismatch, proving the check fails on divergence.
+- [M17] Snapshot parsing validates per-level symbol ownership so malformed embedded C++ snapshots cannot be normalized into equality.

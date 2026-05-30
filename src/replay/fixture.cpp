@@ -55,10 +55,10 @@ void emit_reject(std::ostream &os, const char *kind, core::OrderId id, core::Rej
 
 } // namespace
 
-void write_stream_fixture(std::ostream &os, const FixtureParams &p) {
+static void run_and_emit(std::ostream &os, const FixtureParams &p,
+                         const std::vector<Command> &flow) {
     engine::MatchingEngine engine;
     gateway::OrderGateway gw{engine, gateway::RiskConfig{p.max_qty, p.max_notional}};
-    const auto flow = generate_flow(p.seed, p.symbols, p.orders);
 
     os << "# qsl differential-testing fixture: command stream + events + rejections + snapshot\n";
     os << "version 1\n";
@@ -122,6 +122,32 @@ void write_stream_fixture(std::ostream &os, const FixtureParams &p) {
             os << "level " << s.symbol << " A " << px(lv.price) << " " << lv.quantity << "\n";
         }
     }
+}
+
+void write_stream_fixture(std::ostream &os, const FixtureParams &p) {
+    run_and_emit(os, p, generate_flow(p.seed, p.symbols, p.orders));
+}
+
+void write_ioc_scenario_fixture(std::ostream &os) {
+    using core::Side;
+    using core::TimeInForce;
+    FixtureParams p;
+    p.seed = 0;
+    p.symbols = 1;
+    p.orders = 6;
+    p.max_qty = 1000;
+    p.max_notional = 1'000'000;
+    // Hand-built scenario exercising IOC discard (partial + no-cross), market, partial maker.
+    const std::vector<Command> flow = {
+        RegisterSymbol{"S0"},
+        NewLimit{0, 1, Side::Sell, 100, 3, TimeInForce::GTC}, // rests ask 100x3
+        NewLimit{0, 2, Side::Buy, 100, 5, TimeInForce::IOC},  // fills 3, discards 2
+        NewLimit{0, 3, Side::Buy, 99, 4, TimeInForce::IOC},   // no cross, discarded
+        NewLimit{0, 4, Side::Sell, 101, 5, TimeInForce::GTC}, // rests ask 101x5
+        NewLimit{0, 5, Side::Buy, 101, 2, TimeInForce::IOC},  // fills 2, ask 101 -> 3
+        NewMarket{0, 6, Side::Buy, 1},                        // fills 1, ask 101 -> 2
+    };
+    run_and_emit(os, p, flow);
 }
 
 } // namespace qsl::replay
