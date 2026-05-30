@@ -4,6 +4,7 @@
 #include "qsl/gateway/order_gateway.hpp"
 #include "qsl/replay/command.hpp"
 #include "qsl/replay/recovery.hpp"
+#include "qsl/replay/shrink.hpp"
 
 #include <string>
 #include <type_traits>
@@ -158,6 +159,30 @@ void write_property_fixture(std::ostream &os, std::uint64_t seed) {
     p.max_qty = 20;        // qty 50 -> MaxQuantityExceeded
     p.max_notional = 1000; // large valid orders -> MaxNotionalExceeded
     run_and_emit(os, p, generate_property_flow(seed, p.symbols, p.orders));
+}
+
+void write_shrunk_fixture(std::ostream &os, std::uint64_t seed) {
+    const core::Quantity max_qty = 20;
+    const core::QuantityTotal max_notional = 1000;
+    const ShrinkPredicate produces_trade = [&](const std::vector<Command> &cmds) {
+        return count_trades(cmds, max_qty, max_notional) > 0;
+    };
+    const auto original = generate_property_flow(seed, 3, 120);
+    const auto minimized = shrink(original, produces_trade);
+
+    os << "# shrink report\n";
+    os << "# seed: " << seed << "\n";
+    os << "# original length: " << original.size() << "\n";
+    os << "# minimized length: " << minimized.size() << "\n";
+    os << "# failure reason: produces a trade (artificial differential-test predicate)\n";
+
+    FixtureParams p;
+    p.seed = seed;
+    p.symbols = 3;
+    p.orders = minimized.size();
+    p.max_qty = max_qty;
+    p.max_notional = max_notional;
+    run_and_emit(os, p, minimized);
 }
 
 } // namespace qsl::replay

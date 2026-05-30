@@ -138,3 +138,32 @@ MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) and real trades.
 
 This is property-based differential testing against the C++ system under test — not formal
 verification or a proof of correctness.
+
+
+## M19 — shrinker + minimal failing fixtures
+
+`replay::shrink(commands, predicate)` (C++) reduces a failing command stream to a small,
+reviewable counterexample while preserving a failure predicate. It is greedy and deterministic,
+iterating three strategies to a fixed point: remove contiguous chunks (decreasing size), remove
+single commands, and simplify fields (lower quantities). `qsl-export-stream shrink <seed>`
+shrinks the property flow for a seed and writes the minimized differential fixture prefixed
+with a shrink report (seed, original length, minimized length, failure reason).
+
+The committed `shrunk_seed1.txt` reduces a 123-command flow to **5** commands (three symbol
+registrations + a resting sell + a crossing IOC buy that trades), and the OCaml differential
+test replays it independently.
+
+### Limitations (honest)
+
+- **Artificial predicate.** The real predicate would be "C++ and OCaml snapshots disagree", but
+  the engines currently agree on every tested stream, so the demonstrated predicate is the
+  artificial "produces a trade". The shrinker is predicate-agnostic; a divergence predicate
+  plugs in unchanged.
+- **Greedy, not globally minimal.** It finds a 1-minimal stream under removal, not the smallest
+  possible counterexample.
+- **Field simplification is limited to lowering quantities.** Prices and symbol/order ids are
+  reduced only indirectly, via command removal.
+- **No symbol/id renumbering.** Symbol ids are assigned by registration order, so a registration
+  referenced by a surviving order cannot be removed (removing it would renumber ids and break
+  the stream) — which is why three registrations remain in `shrunk_seed1.txt`.
+- This is shrinking for differential/property testing, not a proof of minimality or correctness.

@@ -19,12 +19,12 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M18 — Property-based command generator
+- **Active milestone:** M19 — Shrinker + minimal failing fixture exporter
 - **Status:** ready for PR
-- **Active branch:** `feat/m18-property-command-generator`
-- **Last completed milestone:** M17 — Differential replay tests (PR #20, squash-merged)
-- **`make check` passing:** yes (149/149 tests); OCaml `dune runtest` passing (verifier + engine + differential, 8 property fixtures)
-- **Last action:** enriched property generator + per-seed fixtures (C++≡OCaml on all 8 seeds); restored the M17 parser-rejection check dropped by the differential-test rewrite; added golden fixture-regeneration guard
+- **Active branch:** `feat/m19-shrinker-minimal-failing-fixtures`
+- **Last completed milestone:** M18 — Property-based command generator (PR #21, squash-merged)
+- **`make check` passing:** yes (152/152 tests); OCaml `dune runtest` passing (verifier + engine + differential incl. shrunk fixture)
+- **Last action:** added deterministic command-stream shrinker + `qsl-export-stream shrink`; committed shrunk_seed1 (123→5 cmds) golden-checked and replayed by OCaml
 - **Next action:** `/finish-milestone`
 - **Blockers:** none
 
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M18 complete, PR pending review_
+- _M19 complete, PR pending review_
 
 
 ---
@@ -241,8 +241,8 @@ Lower priority:
 | M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ☑ merged | #17 | Normalized command stream + final snapshot export for Phase II differential testing |
 | M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☑ merged | #19 | OCaml computes final snapshot independently |
 | M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☑ merged | #20 | C++ vs OCaml snapshot equality in CI |
-| M18 | Property-based command generator | `feat/m18-property-command-generator` | ◐ in progress | — | Seeded randomized market command streams |
-| M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☐ not started | — | Minimal counterexamples for failed properties |
+| M18 | Property-based command generator | `feat/m18-property-command-generator` | ☑ merged | #21 | Seeded randomized market command streams |
+| M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ◐ in progress | — | Minimal counterexamples for failed properties |
 | M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☐ not started | — | Final docs for differential/property testing system |
 | M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☐ not started | — | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☐ not started | — | M13-style final polish/readiness pass after Phase II |
@@ -309,4 +309,7 @@ Decision log additions:
 - [M18] The differential test discovers all `prop_*.txt` via `Sys.readdir` and checks snapshot equality + a no-crossed-book invariant per fixture, reporting the failing seed.
 - [M18] Restored the M17 parser-rejection check (`bad_snapshot_level_symbol.txt` / `expect_parse_error`) that the M18 differential-test rewrite had dropped; this also cleared a warning-as-error (unused value) that had broken the OCaml build.
 - [M18] Broadened negative coverage (`stream_bad_lastseq.txt`, `stream_bad_orders.txt`) and added a golden fixture-regeneration guard (`scripts/check_fixtures.sh`, `make check-fixtures`, CI `build-test` step) so committed fixtures must match current C++ output — closing the M17-review gap where the differential could compare OCaml against a stale C++ snapshot.
+- [M19] Added a deterministic, greedy command-stream shrinker (`replay::shrink`): chunk removal, single-command removal, and field simplification (lower quantities), iterated to a fixed point, preserving a pluggable failure predicate; `count_trades` is a gateway-driven predicate helper.
+- [M19] Demonstrated against an artificial "produces a trade" predicate (the engines currently agree, so there is no real divergence to shrink); the shrinker is predicate-agnostic and a divergence predicate plugs in unchanged.
+- [M19] `qsl-export-stream shrink <seed>` writes a minimized differential fixture + shrink report; committed `shrunk_seed1.txt` (123→5 commands) is golden-checked and replayed by the OCaml differential test. Limitations (greedy/not-globally-minimal, qty-only field simplification, no symbol/id renumbering) documented in docs/differential_testing.md.
 - [M17] Snapshot parsing validates per-level symbol ownership so malformed embedded C++ snapshots cannot be normalized into equality.
