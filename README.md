@@ -58,7 +58,8 @@ Detailed design is in [docs/architecture.md](docs/architecture.md); tested guara
 
 ## Quickstart
 
-From a clean clone (needs a C++20 compiler — Clang or GCC — plus CMake ≥ 3.24 and Ninja):
+From a clean clone (needs a C++20 compiler — Clang or GCC — plus CMake ≥ 3.24 and Ninja; the
+OCaml differential tests additionally need OCaml + dune, e.g. `brew install ocaml dune`):
 
 ```bash
 make build     # configure + build (auto-configures on a fresh clone)
@@ -68,7 +69,8 @@ make demo      # end-to-end local demo (see below)
 
 Other targets: `make check` (format-check + build + test), `make fmt`, `make asan`
 (AddressSanitizer + UBSan), `make bench` (build the bench preset and write
-`results/latest.txt`).
+`results/latest.txt`), `make check-fixtures` (regenerate the differential fixtures and verify
+they match current C++ output).
 
 ## Demo
 

@@ -228,7 +228,7 @@ Finish:
 
 Human reviews and squash-merges.
 
-Repeat until M13.
+Repeat until M23.
 
 ---
 

@@ -165,14 +165,19 @@ quant-systems-lab/
 │   ├── replay/
 │   └── util/
 ├── apps/
-│   ├── qsl-engine/
-│   │   └── main.cpp
-│   ├── qsl-client/
-│   │   └── main.cpp
-│   ├── qsl-replay/
-│   │   └── main.cpp
-│   └── qsl-bench/
-│       └── main.cpp
+│   ├── qsl-gateway/         # TCP order gateway
+│   ├── qsl-client/          # TCP client CLI
+│   ├── qsl-mdfeed/          # UDP market-data feed
+│   ├── qsl-loginspect/      # event-log inspector
+│   ├── qsl-replay/          # replay/recovery CLI
+│   ├── qsl-bench/           # benchmark harness
+│   ├── qsl-export-fixture/  # event-log fixture exporter
+│   └── qsl-export-stream/   # differential command-stream / shrink exporter
+├── ocaml/                   # independent OCaml replay verifier + differential tests
+│   ├── dune-project
+│   ├── lib/                 # event, parser, invariant, replay_engine, stream_parser
+│   ├── bin/                 # verify_replay, replay_snapshot
+│   └── test/                # tests + fixtures/
 ├── tests/
 │   ├── unit/
 │   ├── integration/
