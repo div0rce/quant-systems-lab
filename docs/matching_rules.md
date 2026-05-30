@@ -43,9 +43,8 @@ filled maker keeps its place (and thus its priority) with the reduced quantity.
 
 An active resting `OrderId` may appear at most once per symbol. Duplicate active IDs are
 ignored at M4 to preserve the book's `OrderId -> locator` index invariant; they produce
-no trades and do not modify the book. M5 risk/gateway handling will convert the same
-condition into a structured `DuplicateOrderId` rejection before the command reaches the
-engine.
+no trades and do not modify the book. The risk gateway converts the same condition into a
+structured `DuplicateOrderId` rejection before the command reaches the engine.
 
 ## Modify and priority
 
