@@ -16,17 +16,19 @@ test: build
 check: fmt-check build test
 
 fmt:
-	@find include src tests -name '*.hpp' -o -name '*.cpp' | xargs clang-format -i
+	@find include src tests apps -name '*.hpp' -o -name '*.cpp' | xargs clang-format -i
 
 fmt-check:
-	@find include src tests -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run --Werror
+	@find include src tests apps -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run --Werror
 
 tidy:
 	@echo "clang-tidy: run manually with compile_commands.json from build/dev"
 	@echo "  run-clang-tidy -p build/dev include/ src/"
 
 bench:
-	@echo "Benchmarks not yet implemented (M11)."
+	cmake --preset release
+	cmake --build --preset release --target qsl-bench
+	bash scripts/run_benchmarks.sh
 
 asan:
 	cmake --preset asan
