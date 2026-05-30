@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench asan clean
+.PHONY: configure build test check fmt fmt-check tidy bench asan demo clean
 
 BUILD_DIR := build/dev
 
@@ -34,6 +34,9 @@ asan:
 	cmake --preset asan
 	cmake --build --preset asan
 	ctest --preset asan
+
+demo: build
+	bash scripts/demo.sh
 
 clean:
 	rm -rf build
