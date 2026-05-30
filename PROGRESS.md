@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M11 — Benchmarks and performance reporting
+- **Active milestone:** M12 — Hardening with sanitizers and invariant tests
 - **Status:** ready for PR
-- **Active branch:** `feat/m11-benchmarks`
-- **Last completed milestone:** M10 — Network market data publisher (PR #11, squash-merged)
-- **`make check` passing:** yes (133/133 tests)
-- **Last action:** decoupled benchmark builds from test-only Catch2 FetchContent; make check and make bench green
-- **Next action:** human reviews and squash-merges M11 PR
+- **Active branch:** `feat/m12-hardening`
+- **Last completed milestone:** M11 — Benchmarks and performance reporting (PR #12, squash-merged)
+- **`make check` passing:** yes (140/140 tests)
+- **Last action:** added invariant + fuzz + replay-stress tests, CI ASan/UBSan job, invariants doc; make check and make asan both green
+- **Next action:** human reviews and squash-merges M12 PR
 - **Blockers:** none
 
 ---
@@ -45,8 +45,8 @@ Do not rely on prior chat memory.
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☑ merged | #9 | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☑ merged | #10 | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☑ merged | #11 | Network feed client/publisher |
-| M11 | Benchmarks | `feat/m11-benchmarks` | ◐ in progress | #12 | Measured performance outputs |
-| M12 | Hardening | `feat/m12-hardening` | ☐ not started | — | Sanitizers and invariant tests |
+| M11 | Benchmarks | `feat/m11-benchmarks` | ☑ merged | #12 | Measured performance outputs |
+| M12 | Hardening | `feat/m12-hardening` | ◐ in progress | — | Sanitizers and invariant tests |
 | M13 | Docs polish | `feat/m13-docs-polish` | ☐ not started | — | README, diagram, demo, recruiting notes |
 
 Status key:
@@ -134,6 +134,10 @@ Status key:
 - [M11] `results/latest.txt` records iterations, warmup, seed, units, dirty-tree flag, and an explicit "synthetic microbenchmark, not production throughput" caveat.
 - [M11] README benchmark section leads with methodology/exclusions; no production/low-latency/exchange-grade claims; numbers labelled single-machine.
 - [M11] `make fmt`/`fmt-check` now also cover `apps/` (benchmark and CLI code is formatting-checked).
+- [M12] Invariants verified over randomized deterministic flows (`generate_flow`, seeds 1–8): strictly-increasing sequence, no crossed book, executed ≤ submitted, positive quantities; plus focused rejected-cannot-rest, canceled-cannot-trade, and replay-stress (seeds 11/22/33 × 8000 orders) tests.
+- [M12] Protocol/session fuzz tests feed tens of thousands of random buffers to every decoder and the TCP session; decoders are non-throwing and bounds-safe, so the assertion is "no crash / no UB" — proven under the ASan+UBSan build.
+- [M12] Added a CI `sanitizers` job (`cmake --preset asan` + `ctest --preset asan`) so ASan/UBSan runs on every PR, not just locally.
+- [M12] docs/invariants.md enumerates each invariant and where it is tested; reaffirms structural guarantees (integer-only prices, wall-clock-independent core). No new floating-point or clock dependency introduced.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
 - [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
@@ -175,7 +179,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M11 complete, PR pending review_
+- _M12 complete, PR pending review_
 
 
 ---
