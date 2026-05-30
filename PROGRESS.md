@@ -19,12 +19,12 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M20 — Final differential-testing architecture docs
+- **Active milestone:** M21 — Repository license and maintainer docs
 - **Status:** ready for PR
-- **Active branch:** `feat/m20-differential-testing-docs`
-- **Last completed milestone:** M19 — Shrinker + minimal failing fixture exporter (PR #22, squash-merged)
+- **Active branch:** `feat/m21-repo-license-maintainer-docs`
+- **Last completed milestone:** M20 — Final differential-testing architecture docs (PR #52, squash-merged)
 - **`make check` passing:** yes (152/152 tests); OCaml `dune runtest` passing
-- **Last action:** finalized differential_testing.md (architecture + diagram + proves/does-not-prove), added property_testing.md, README differential-testing section, and résumé bullets
+- **Last action:** added MIT LICENSE, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md + README links (no CODE_OF_CONDUCT/GOVERNANCE, no packaging/release)
 - **Next action:** `/finish-milestone`
 - **Blockers:** none
 
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M20 complete, PR pending review_
+- _M21 complete, PR pending review_
 
 
 ---
@@ -243,8 +243,8 @@ Lower priority:
 | M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☑ merged | #20 | C++ vs OCaml snapshot equality in CI |
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☑ merged | #21 | Seeded randomized market command streams |
 | M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☑ merged | #22 | Minimal counterexamples for failed properties |
-| M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ◐ in progress | — | Final docs for differential/property testing system |
-| M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☐ not started | — | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
+| M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☑ merged | #52 | Final docs for differential/property testing system |
+| M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ◐ in progress | — | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☐ not started | — | M13-style final polish/readiness pass after Phase II |
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release` | ☐ not started | — | Conservative GitHub-only release; optional, human-approved |
 
@@ -314,4 +314,6 @@ Decision log additions:
 - [M19] `qsl-export-stream shrink <seed>` writes a minimized differential fixture + shrink report; committed `shrunk_seed1.txt` (123→5 commands) is golden-checked and replayed by the OCaml differential test. Limitations (greedy/not-globally-minimal, qty-only field simplification, no symbol/id renumbering) documented in docs/differential_testing.md.
 - [M20] Finalized docs/differential_testing.md with a top-level architecture overview, a mermaid pipeline diagram, a minimized-fixture example, and an explicit "what this proves / does not prove" section (agreement over tested seeds; not formal verification; shared-assumption risk acknowledged).
 - [M20] Added docs/property_testing.md (generator coverage + delta-debug shrinker + determinism/golden + honest limits); added a README "Differential testing (OCaml)" <60s section + diagram links and conservative differential-testing résumé bullets. Docs-only; no code change.
+- [M21] Added MIT LICENSE (Copyright (c) 2026 Moustafa Nasr), CONTRIBUTING.md (branch-per-milestone workflow + checks + no fabricated perf), SECURITY.md (no bounty; qsl-gateway/qsl-mdfeed unauthenticated + loopback-only; honest systems-lab-not-production), CHANGELOG.md ([Unreleased] M3–M20 history), and README links.
+- [M21] Deliberately omitted CODE_OF_CONDUCT.md and GOVERNANCE.md (single-maintainer; no community-process theater) and skipped SUPPORT.md; no packaging and no release (deferred to optional M23).
 - [M17] Snapshot parsing validates per-level symbol ownership so malformed embedded C++ snapshots cannot be normalized into equality.

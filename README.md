@@ -136,3 +136,7 @@ This repo is written to be defensible under technical questioning, not to impres
 claims. Positioning notes and conservative résumé bullets are in
 [docs/recruiting_notes.md](docs/recruiting_notes.md). The build plan is in
 [MILESTONES.md](MILESTONES.md); incremental decisions are logged in [PROGRESS.md](PROGRESS.md).
+
+Licensed under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+branch-per-milestone workflow and checks, [SECURITY.md](SECURITY.md) for the (loopback-only,
+unauthenticated) network-service caveats, and [CHANGELOG.md](CHANGELOG.md) for history.
