@@ -1,0 +1,8 @@
+# bad: order 10 is canceled (seq 3) then trades as maker (seq 4) -> must FAIL
+v 1
+meta seed 0 symbols 1 orders 0 max_qty 8
+accept 1 0 10
+accept 2 0 11
+cancel 3 0 10
+trade 4 0 11 10 100 5
+summary last_seq 4 trades 1

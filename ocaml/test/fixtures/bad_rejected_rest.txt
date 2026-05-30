@@ -1,0 +1,7 @@
+# bad: rejected id 9 appears as a resting maker in a trade with no later accept -> must FAIL
+v 1
+meta hand-crafted
+reject 9 MaxQuantityExceeded
+accept 1 0 8
+trade 2 0 8 9 100 3
+summary last_seq 2 trades 1

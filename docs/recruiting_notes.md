@@ -30,6 +30,9 @@
   and structure-aware protocol fuzzing, run under AddressSanitizer/UBSan in CI.
 - Set up the full toolchain: CMake/Ninja, clang-format/clang-tidy, GitHub Actions with a
   sanitizer job, and a reproducible benchmark harness committing results with metadata.
+- Wrote an independent replay-invariant verifier in OCaml (typed, immutable) that re-checks
+  exported C++ event-log fixtures against replay invariants — a cross-language check, not a
+  re-implementation of the engine.
 
 ## Résumé bullets — Linux Engineering (conservative)
 
@@ -73,3 +76,8 @@ allocator tuning — not production throughput or end-to-end latency:
   persistence beyond the flat log — see the README Limitations section.
 - **What would you do next?** Lock-free queues / memory-pool internals, a multithreaded
   pipeline with ThreadSanitizer, a richer order-flow model, and the OCaml replay verifier.
+- **Why OCaml, and what does it actually prove?** It's an independent cross-check: a small
+  typed/immutable verifier parses the exported event log and re-derives replay invariants, so
+  a bug in a shared C++ assumption is less likely to pass unnoticed. It does not re-implement
+  matching and is explicitly not formal verification — I'd describe it as a disciplined
+  external checker, not OCaml expertise theater.

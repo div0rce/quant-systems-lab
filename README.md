@@ -103,12 +103,22 @@ Reproduce with `make bench` (numbers will differ by machine).
 - **Not production-hardened**: no persistence beyond the flat event log, no clustering,
   no exchange-grade risk/clearing.
 
+## Independent replay verifier (OCaml)
+
+A small OCaml subproject (`ocaml/`) independently checks exported event-log fixtures against
+replay invariants (sequence monotonicity, positive trade quantities, canceled-can't-trade,
+rejected-can't-rest, and event-log/summary consistency). It does not re-implement the engine
+and is not formal verification — it is a cross-check in a typed functional language that
+validates the *output* of the C++ pipeline. Details in
+[docs/ocaml_verifier.md](docs/ocaml_verifier.md); build/test with `cd ocaml && dune runtest`.
+
 ## Repository layout
 
 ```text
 include/qsl/   public headers          src/          implementation
 apps/          CLI tools (gateway,     tests/        unit + invariant + fuzz tests
-               client, replay, feed)   docs/         design docs + ADRs
+               client, replay, feed,   docs/         design docs + ADRs
+               fixture exporter)       ocaml/        independent replay verifier
 scripts/       demo + benchmark        results/      benchmark outputs
 ```
 

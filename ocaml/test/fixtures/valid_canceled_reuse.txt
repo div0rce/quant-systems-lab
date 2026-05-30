@@ -1,0 +1,9 @@
+# valid: id 1 is canceled, then re-accepted (new active lifetime), then trades -> PASS
+v 1
+meta hand-crafted
+accept 1 0 1
+cancel 2 0 1
+accept 3 0 1
+accept 4 0 2
+trade 5 0 1 2 100 5
+summary last_seq 5 trades 1
