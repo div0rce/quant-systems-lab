@@ -230,7 +230,12 @@ Lower priority:
 | # | Milestone | Branch | Status | PR | Notes |
 |---|---|---|---|---|---|
 | M14 | OCaml replay verifier | `feat/m14-ocaml-replay-verifier` | ☐ not started | — | Jane Street SWE language/culture signal |
-| M15 | Jane Street application polish | `feat/m15-jane-street-application-polish` | ☐ optional | — | Only after M14 if useful |
+| M15 | Export normalized command streams + final snapshots | `feat/m15-export-command-streams-and-snapshots` | ☐ not started | — | Fixture schema for independent replay |
+| M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☐ not started | — | OCaml computes final snapshot independently |
+| M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☐ not started | — | C++ vs OCaml snapshot equality in CI |
+| M18 | Property-based command generator | `feat/m18-property-command-generator` | ☐ not started | — | Seeded randomized market command streams |
+| M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☐ not started | — | Minimal counterexamples for failed properties |
+| M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☐ not started | — | Final docs for differential/property testing system |
 
 ## Decision log additions
 
@@ -261,3 +266,21 @@ Start M0 unless already scaffolded:
 ```
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
+
+
+## Additive deep-testing roadmap replacing old optional M15
+
+The old optional `M15 — Jane Street application polish` is removed. It is replaced by technical milestones M15–M20. The purpose is to add actual depth rather than recruiter-facing decoration.
+
+- **M15** exports normalized command streams and final C++ snapshots.
+- **M16** implements an independent OCaml replay engine.
+- **M17** compares C++ and OCaml final snapshots in differential tests.
+- **M18** adds seeded property-based command generation.
+- **M19** adds shrinking and minimal failing fixture export.
+- **M20** documents the differential testing architecture.
+
+Decision log additions:
+
+- [2026-05-30] Removed optional Jane Street application-polish milestone because recruiter-facing polish is lower signal than technical depth.
+- [2026-05-30] Added M15–M20 to turn the OCaml verifier into independent replay/differential-testing infrastructure.
+- [2026-05-30] Property-based generation and shrinking are now the intended final “deep idea” layer: the repo should test market-state systems, not merely implement one.
