@@ -138,6 +138,9 @@ Status key:
 - [M12] Protocol/session fuzz tests feed tens of thousands of random buffers to every decoder and the TCP session; decoders are non-throwing and bounds-safe, so the assertion is "no crash / no UB" — proven under the ASan+UBSan build.
 - [M12] Added a CI `sanitizers` job (`cmake --preset asan` + `ctest --preset asan`) so ASan/UBSan runs on every PR, not just locally.
 - [M12] docs/invariants.md enumerates each invariant and where it is tested; reaffirms structural guarantees (integer-only prices, wall-clock-independent core). No new floating-point or clock dependency introduced.
+- [M12] Added structure-aware mutated-frame fuzz tests so malformed-but-plausible inputs reach body decoders, not only header rejection.
+- [M12] Added valid-frame chunking tests for TCP Session reassembly.
+- [M12] Randomized invariant tests include non-vacuity guards so future generator changes cannot silently remove trades/book activity.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
 - [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.

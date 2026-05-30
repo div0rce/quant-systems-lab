@@ -19,12 +19,27 @@ behavior and out-of-bounds access.
 
 ## Fuzz / malformed input
 
-`test_fuzz_protocol` feeds tens of thousands of random byte buffers to every decoder
-(`decode_header`, the order/session message decoders, and `decode_market_data`) and to the
-TCP `Session` (whole buffers and small random chunks). The decoders are non-throwing and
-bounds-safe, so they return a deterministic error rather than crashing; the session either
-responds or flags disconnect. Under `make asan` this proves there is no out-of-bounds read or
-undefined behavior on hostile input.
+`test_fuzz_protocol` provides layered, sanitizer-backed crash/UB guards (run under `make
+asan`). It is hardening coverage, not a proof of correctness.
+
+- **Uniform-random hostile input** — random buffers fed to every decoder and the `Session`.
+  These almost never form a valid header, so they primarily exercise the framing /
+  header-rejection path and prove it is bounds-safe.
+- **Structure-aware input** — a valid header (correct version, known type, matching
+  `body_len`) followed by random body bytes. Because the header passes validation, the result
+  can only be a body-level outcome (success or `InvalidEnumValue`), which proves the random
+  bytes actually reach the body decoder rather than being rejected at the header.
+- **Mutated valid frames** — a known-good frame corrupted in targeted, deterministic ways
+  (single-byte flips at every offset, enum bytes, the `body_len` field, the sequence-number
+  bytes, trailing garbage, and truncation at every length). Each must reject deterministically
+  where assertable and stay crash-free everywhere.
+- **Valid-frame reassembly** — valid frames (single and coalesced) split across arbitrary
+  1–7 byte chunks. Asserts the `Session` never logs out mid-frame, withholds any response
+  until a frame is complete, and yields a response byte-identical to whole delivery.
+
+All seeds are fixed, so every randomized test is deterministic and reproducible. Decoders are
+non-throwing and bounds-safe by construction; the session flags disconnect on a malformed
+header rather than risking stream desync.
 
 ## Structural guarantees (by construction)
 

@@ -29,6 +29,13 @@ bool not_crossed(const engine::EngineSnapshot &snap) {
 } // namespace
 
 TEST_CASE("randomized flows preserve engine invariants", "[invariants]") {
+    // Non-vacuity counters: prove the flow actually produced meaningful activity, so a
+    // future generator change cannot silently turn these invariants into no-ops.
+    std::uint64_t trades_seen = 0;
+    std::uint64_t cancels_attempted = 0;
+    std::uint64_t modifies_attempted = 0;
+    bool ever_rested = false;
+
     for (std::uint64_t seed = 1; seed <= 8; ++seed) {
         const auto flow = replay::generate_flow(seed, /*symbols=*/4, /*orders=*/2000);
         engine::MatchingEngine eng;
@@ -43,6 +50,10 @@ TEST_CASE("randomized flows preserve engine invariants", "[invariants]") {
             } else if (const auto *nm = std::get_if<replay::NewMarket>(&cmd)) {
                 taker = nm->id;
                 submitted = nm->quantity;
+            } else if (std::holds_alternative<replay::Cancel>(cmd)) {
+                ++cancels_attempted;
+            } else if (std::holds_alternative<replay::Modify>(cmd)) {
+                ++modifies_attempted;
             }
 
             const auto events = replay::apply(eng, cmd);
@@ -53,6 +64,7 @@ TEST_CASE("randomized flows preserve engine invariants", "[invariants]") {
                 prev_seq = seq;
                 if (const auto *t = std::get_if<engine::TradeEvent>(&ev)) {
                     REQUIRE(t->quantity > 0); // (1) no zero/negative trade quantity
+                    ++trades_seen;
                     if (t->taker_id == taker) {
                         executed += t->quantity;
                     }
@@ -65,6 +77,9 @@ TEST_CASE("randomized flows preserve engine invariants", "[invariants]") {
             const auto snap = eng.snapshot();
             REQUIRE(not_crossed(snap)); // (2) no crossed book after matching
             for (const auto &s : snap.symbols) {
+                if (s.order_count > 0) {
+                    ever_rested = true;
+                }
                 for (const auto &lv : s.bids) {
                     REQUIRE(lv.quantity > 0); // (1) no zero-quantity resting levels
                 }
@@ -74,6 +89,12 @@ TEST_CASE("randomized flows preserve engine invariants", "[invariants]") {
             }
         }
     }
+
+    // Non-vacuity: the fixed seeds must have exercised the interesting paths.
+    REQUIRE(trades_seen > 0);
+    REQUIRE(ever_rested);
+    REQUIRE(cancels_attempted > 0);
+    REQUIRE(modifies_attempted > 0);
 }
 
 TEST_CASE("a risk-rejected order never rests in the book", "[invariants]") {
