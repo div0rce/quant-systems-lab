@@ -72,6 +72,7 @@ int main(int argc, char **argv) {
         const std::uint64_t seed = (argc >= 4) ? std::stoull(argv[3]) : 42;
         return publish(port, seed);
     }
-    std::cerr << "usage:\n  qsl-mdfeed subscribe <port> [count]\n  qsl-mdfeed publish <port> [seed]\n";
+    std::cerr
+        << "usage:\n  qsl-mdfeed subscribe <port> [count]\n  qsl-mdfeed publish <port> [seed]\n";
     return 2;
 }

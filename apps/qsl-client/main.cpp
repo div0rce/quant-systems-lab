@@ -47,8 +47,9 @@ void print_responses(std::span<const std::byte> bytes) {
                       << " seq=" << p::decode_ack(one).value.seq << "\n";
             break;
         case p::MsgType::Reject:
-            std::cout << "  Reject order=" << p::decode_reject(one).value.order_id << " reason="
-                      << qsl::core::to_string(p::decode_reject(one).value.reason) << "\n";
+            std::cout << "  Reject order=" << p::decode_reject(one).value.order_id
+                      << " reason=" << qsl::core::to_string(p::decode_reject(one).value.reason)
+                      << "\n";
             break;
         case p::MsgType::Fill: {
             const auto f = p::decode_fill(one).value;
@@ -57,7 +58,8 @@ void print_responses(std::span<const std::byte> bytes) {
             break;
         }
         case p::MsgType::HeartbeatAck:
-            std::cout << "  HeartbeatAck token=" << p::decode_heartbeat_ack(one).value.token << "\n";
+            std::cout << "  HeartbeatAck token=" << p::decode_heartbeat_ack(one).value.token
+                      << "\n";
             break;
         default:
             std::cout << "  <unexpected response>\n";
@@ -71,8 +73,7 @@ void print_responses(std::span<const std::byte> bytes) {
 
 // qsl-client [port]  -> connect to 127.0.0.1:port, send a NewOrder and a Heartbeat, print replies.
 int main(int argc, char **argv) {
-    const std::uint16_t port =
-        (argc >= 2) ? static_cast<std::uint16_t>(std::stoul(argv[1])) : 9009;
+    const std::uint16_t port = (argc >= 2) ? static_cast<std::uint16_t>(std::stoul(argv[1])) : 9009;
 
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -90,9 +91,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    const qsl::protocol::NewOrder order{/*order_id=*/1,        /*symbol=*/0,
-                                        /*price=*/100,         /*quantity=*/5,
-                                        qsl::core::Side::Buy,  qsl::core::OrderType::Limit,
+    const qsl::protocol::NewOrder order{/*order_id=*/1,
+                                        /*symbol=*/0,
+                                        /*price=*/100,
+                                        /*quantity=*/5,
+                                        qsl::core::Side::Buy,
+                                        qsl::core::OrderType::Limit,
                                         qsl::core::TimeInForce::GTC};
     write_all(fd, qsl::protocol::encode(order, /*seq=*/1));
     write_all(fd, qsl::protocol::encode(qsl::protocol::Heartbeat{/*token=*/42}));

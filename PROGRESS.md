@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M10 — Network market data publisher
+- **Active milestone:** M11 — Benchmarks and performance reporting
 - **Status:** ready for PR
-- **Active branch:** `feat/m10-network-market-data`
-- **Last completed milestone:** M9 — TCP binary order gateway (PR #10, squash-merged)
-- **`make check` passing:** yes (131/131 tests)
-- **Last action:** implemented SequenceTracker + decode_market_data + UDP publisher/client + qsl-mdfeed + tests + docs; make check green; UDP demo verified
-- **Next action:** human reviews and squash-merges M10 PR
+- **Active branch:** `feat/m11-benchmarks`
+- **Last completed milestone:** M10 — Network market data publisher (PR #11, squash-merged)
+- **`make check` passing:** yes (133/133 tests)
+- **Last action:** decoupled benchmark builds from test-only Catch2 FetchContent; make check and make bench green
+- **Next action:** human reviews and squash-merges M11 PR
 - **Blockers:** none
 
 ---
@@ -44,8 +44,8 @@ Do not rely on prior chat memory.
 | M7 | Event log | `feat/m07-event-log` | ☑ merged | #8 | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☑ merged | #9 | Rebuild engine state from log |
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☑ merged | #10 | Binary order gateway over TCP |
-| M10 | Network market data | `feat/m10-network-market-data` | ◐ in progress | — | Network feed client/publisher |
-| M11 | Benchmarks | `feat/m11-benchmarks` | ☐ not started | — | Measured performance outputs |
+| M10 | Network market data | `feat/m10-network-market-data` | ☑ merged | #11 | Network feed client/publisher |
+| M11 | Benchmarks | `feat/m11-benchmarks` | ◐ in progress | #12 | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☐ not started | — | Sanitizers and invariant tests |
 | M13 | Docs polish | `feat/m13-docs-polish` | ☐ not started | — | README, diagram, demo, recruiting notes |
 
@@ -126,6 +126,14 @@ Status key:
 - [M10] Wire-level UDP test covers out-of-sequence datagrams and gap detection through the real receive/decode/client path.
 - [M10] Known non-market-data frames decode to no market-data message (`decode_market_data` -> nullopt).
 - [M10] `UdpFeedClient` receive uses a bounded `SO_RCVTIMEO` so demo subscribers do not hang indefinitely.
+- [M11] Custom `qsl-bench` harness (no external benchmark dep); timing uses `steady_clock` at the benchmark layer only, with a `volatile` sink to prevent dead-code elimination.
+- [M11] `make bench` builds the bench preset and runs `scripts/run_benchmarks.sh`, which writes `results/latest.txt` with full metadata; only measured numbers appear anywhere.
+- [M11] Benchmark preset disables test configuration so `make bench` does not depend on Catch2/test-only FetchContent.
+- [M11] Benchmark workloads use the deterministic `generate_flow(seed=42)`; numbers are hardware/compiler/build-dependent (caveat documented in docs/benchmarking.md + docs/linux_performance.md).
+- [M11] Benchmarks avoid degenerate paths: the gateway-session benchmark crosses deep resting liquidity so a real fill is produced each call (not an empty-book no-op); cross-TU calls + a volatile sink prevent dead-code elimination.
+- [M11] `results/latest.txt` records iterations, warmup, seed, units, dirty-tree flag, and an explicit "synthetic microbenchmark, not production throughput" caveat.
+- [M11] README benchmark section leads with methodology/exclusions; no production/low-latency/exchange-grade claims; numbers labelled single-machine.
+- [M11] `make fmt`/`fmt-check` now also cover `apps/` (benchmark and CLI code is formatting-checked).
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
 - [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
@@ -151,13 +159,23 @@ Status key:
 
 - _none yet_
 
+Measured by `make bench` (full metadata + raw output in `results/latest.txt`). Hardware-,
+compiler-, and build-dependent — these are from one machine, not a production-latency claim.
+
+- Run: arm64, Apple clang 17, Release, seed 42, commit fbb8180 (synthetic, in-process; excludes network/disk/kernel path).
+- order book add/modify/cancel: ~126 ns/op
+- protocol NewOrder encode+decode: ~39 ns/op
+- in-process gateway session (crossing order with fill): ~270 ns/op
+- matching-engine flow apply: ~121 ns/command
+- replay from command log: ~132 ns/command
+
 ---
 
 ## Mid-milestone scratch
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M10 complete, PR pending review_
+- _M11 complete, PR pending review_
 
 
 ---

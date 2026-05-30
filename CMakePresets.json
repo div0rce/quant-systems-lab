@@ -22,6 +22,16 @@
       }
     },
     {
+      "name": "bench",
+      "displayName": "Benchmark",
+      "inherits": "release",
+      "binaryDir": "${sourceDir}/build/bench",
+      "cacheVariables": {
+        "QSL_BUILD_TESTS": "OFF",
+        "QSL_BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
       "name": "asan",
       "displayName": "ASan",
       "generator": "Ninja",
@@ -35,6 +45,7 @@
   "buildPresets": [
     { "name": "dev", "configurePreset": "dev" },
     { "name": "release", "configurePreset": "release" },
+    { "name": "bench", "configurePreset": "bench" },
     { "name": "asan", "configurePreset": "asan" }
   ],
   "testPresets": [
