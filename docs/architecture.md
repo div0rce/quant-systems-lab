@@ -1,13 +1,23 @@
 # Architecture
 
-> Placeholder — will be expanded as components are built.
+A deterministic C++20 exchange simulator. Components are layered so that the
+network/replay/feed layers depend on the protocol layer, which depends on the core domain;
+the matching core never depends on wall-clock time or floating point.
 
 ## Overview
 
-Quant Systems Lab is a deterministic C++20 exchange simulator.
-
-```text
-ClientCommand -> Risk -> MatchingEngine -> EngineEvents -> Publisher
+```mermaid
+flowchart LR
+    client[TCP client] -->|binary frames| gw[Order gateway]
+    gw --> risk{Risk checks}
+    risk -->|reject| client
+    risk -->|accept| eng[Matching engine]
+    eng -->|ack / fill| gw
+    gw -->|responses| client
+    eng -->|engine events| pub[Market-data publisher]
+    eng -->|append| log[(Event log)]
+    pub -->|UDP feed| sub[MD subscriber]
+    log -.->|replay rebuilds identical state| rec[Recovered engine]
 ```
 
 ## Components

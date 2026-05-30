@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M12 — Hardening with sanitizers and invariant tests
+- **Active milestone:** M13 — Final architecture, demo, and recruiting polish
 - **Status:** ready for PR
-- **Active branch:** `feat/m12-hardening`
-- **Last completed milestone:** M11 — Benchmarks and performance reporting (PR #12, squash-merged)
-- **`make check` passing:** yes (140/140 tests)
-- **Last action:** added invariant + fuzz + replay-stress tests, CI ASan/UBSan job, invariants doc; make check and make asan both green
-- **Next action:** human reviews and squash-merges M12 PR
+- **Active branch:** `feat/m13-docs-polish`
+- **Last completed milestone:** M12 — Hardening with sanitizers and invariant tests (PR #13, squash-merged)
+- **`make check` passing:** yes (144/144 tests)
+- **Last action:** fixed demo temp-file portability; bash -n, make demo, and make check green
+- **Next action:** human reviews and squash-merges M13 PR
 - **Blockers:** none
 
 ---
@@ -46,8 +46,8 @@ Do not rely on prior chat memory.
 | M9 | TCP gateway | `feat/m09-tcp-gateway` | ☑ merged | #10 | Binary order gateway over TCP |
 | M10 | Network market data | `feat/m10-network-market-data` | ☑ merged | #11 | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☑ merged | #12 | Measured performance outputs |
-| M12 | Hardening | `feat/m12-hardening` | ◐ in progress | — | Sanitizers and invariant tests |
-| M13 | Docs polish | `feat/m13-docs-polish` | ☐ not started | — | README, diagram, demo, recruiting notes |
+| M12 | Hardening | `feat/m12-hardening` | ☑ merged | #13 | Sanitizers and invariant tests |
+| M13 | Docs polish | `feat/m13-docs-polish` | ◐ in progress | #14 | README, diagram, demo, recruiting notes |
 
 Status key:
 
@@ -141,6 +141,10 @@ Status key:
 - [M12] Added structure-aware mutated-frame fuzz tests so malformed-but-plausible inputs reach body decoders, not only header rejection.
 - [M12] Added valid-frame chunking tests for TCP Session reassembly.
 - [M12] Randomized invariant tests include non-vacuity guards so future generator changes cannot silently remove trades/book activity.
+- [M13] README rewritten for a <60s read with a committed mermaid architecture diagram, clean-clone quickstart, demo section, and honest limitations; benchmark table cites results/latest.txt exactly (no new/unmeasured numbers).
+- [M13] Added scripts/demo.sh + `make demo`: deterministic replay/recovery then a loopback TCP gateway round-trip (readiness polling + cleanup trap). Gateway is unauthenticated/loopback-only — flagged in README and the script.
+- [M13] Expanded docs/recruiting_notes.md with conservative SWE + Linux résumé bullets, measured-only benchmark bullets (with exclusions caveat), and interview-defense notes. No production/profitability claims.
+- [M13] Demo script uses a portable `mktemp` template so `make demo` works on GNU/Linux and macOS.
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
 - [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
@@ -182,7 +186,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M12 complete, PR pending review_
+- _M13 complete, PR pending review_
 
 
 ---
