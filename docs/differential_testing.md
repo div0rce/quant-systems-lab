@@ -1,11 +1,26 @@
-# Differential Testing — fixture schema (M15)
+# Differential Testing Architecture
 
-This is the first step of the Phase II differential-testing roadmap (M15–M20). The C++ engine
-is the system under test; the OCaml side (added in M16) will independently replay the command
-stream and compare its computed snapshot against the C++ snapshot exported here (M17).
+The C++ exchange engine is the **system under test**. An independent OCaml engine replays the
+same command streams and must compute the **same** final snapshot; a property generator probes
+the command space across seeds, and a shrinker reduces any disagreement to a minimal
+counterexample. This is cross-language differential testing, **not** formal verification.
 
-M15 only **exports** the data and proves it is deterministic and parseable. It does not add the
-OCaml replay engine, property-based generation, or shrinking.
+```mermaid
+flowchart LR
+    gen[Property generator<br/>seeded, C++] --> cmds[Normalized command stream]
+    cmds --> cpp[C++ engine + risk gateway]
+    cpp --> fx[(Fixture:<br/>commands + C++ snapshot)]
+    fx -->|command stream only| ocaml[Independent OCaml replay]
+    ocaml --> osnap[OCaml snapshot]
+    fx -->|C++ snapshot| diff{snapshot equal?}
+    osnap --> diff
+    diff -->|no| shrink[Shrinker -> minimal fixture]
+```
+
+Pipeline by milestone: **M15** exports normalized command-stream + snapshot fixtures; **M16**
+replays them independently in OCaml; **M17** asserts C++≡OCaml snapshot equality; **M18**
+generates enriched seeded streams; **M19** shrinks failures to minimal fixtures. The sections
+below document each layer; "what this proves / does not prove" is at the end.
 
 ## Producing a fixture
 
@@ -167,3 +182,47 @@ test replays it independently.
   referenced by a surviving order cannot be removed (removing it would renumber ids and break
   the stream) — which is why three registrations remain in `shrunk_seed1.txt`.
 - This is shrinking for differential/property testing, not a proof of minimality or correctness.
+
+
+## Minimized failing fixture (example)
+
+`shrunk_seed1.txt` is a shrinker output (artificial "produces a trade" predicate) reduced from
+a 123-command flow to 5 commands — the minimal stream that still trades:
+
+```text
+# shrink report
+# seed: 1
+# original length: 123
+# minimized length: 5
+cmd reg S0
+cmd reg S1
+cmd reg S2
+cmd limit 2 11 S 97 1 GTC
+cmd limit 2 14 B 97 1 IOC      # crosses -> 1 trade
+snapshot last_seq 3 trades 1
+```
+
+(The three registrations remain because the orders reference symbol id 2 and the shrinker does
+not renumber ids.)
+
+## What this proves / does not prove
+
+**Proves:**
+
+- The independent OCaml replay computes the same final snapshot as the C++ engine — best
+  bid/ask, per-price level aggregates, resting order counts, `last_seq`, and trade count — over
+  the synthetic seed, the IOC scenario, and the seeded property streams (every reject reason and
+  real trades exercised), so the two implementations agree across the tested command space.
+- The comparison genuinely detects divergence (negative fixtures corrupting an ask level,
+  `last_seq`, and `order_count` are caught), and committed fixtures are golden-regenerated in CI
+  so they cannot drift from current C++ output.
+
+**Does not prove:**
+
+- Not formal verification and not a proof of correctness: agreement is over the *tested* seeds
+  and scenarios, not all inputs.
+- Two engines could share the same wrong assumption; the OCaml engine is independently written
+  to reduce that risk, but does not eliminate it (see the oracle-independence backlog item).
+- The shrinker is demonstrated against an artificial predicate (the engines currently agree, so
+  there is no real divergence to shrink); it is greedy and not globally minimal.
+- Nothing here concerns production exchange behavior, latency, or trading profitability.

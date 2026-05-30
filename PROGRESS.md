@@ -19,12 +19,12 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M19 — Shrinker + minimal failing fixture exporter
+- **Active milestone:** M20 — Final differential-testing architecture docs
 - **Status:** ready for PR
-- **Active branch:** `feat/m19-shrinker-minimal-failing-fixtures`
-- **Last completed milestone:** M18 — Property-based command generator (PR #21, squash-merged)
-- **`make check` passing:** yes (152/152 tests); OCaml `dune runtest` passing (verifier + engine + differential incl. shrunk fixture)
-- **Last action:** added deterministic command-stream shrinker + `qsl-export-stream shrink`; committed shrunk_seed1 (123→5 cmds) golden-checked and replayed by OCaml
+- **Active branch:** `feat/m20-differential-testing-docs`
+- **Last completed milestone:** M19 — Shrinker + minimal failing fixture exporter (PR #22, squash-merged)
+- **`make check` passing:** yes (152/152 tests); OCaml `dune runtest` passing
+- **Last action:** finalized differential_testing.md (architecture + diagram + proves/does-not-prove), added property_testing.md, README differential-testing section, and résumé bullets
 - **Next action:** `/finish-milestone`
 - **Blockers:** none
 
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M19 complete, PR pending review_
+- _M20 complete, PR pending review_
 
 
 ---
@@ -242,8 +242,8 @@ Lower priority:
 | M16 | Independent OCaml replay engine | `feat/m16-independent-ocaml-replay-engine` | ☑ merged | #19 | OCaml computes final snapshot independently |
 | M17 | Differential replay tests | `feat/m17-differential-replay-tests` | ☑ merged | #20 | C++ vs OCaml snapshot equality in CI |
 | M18 | Property-based command generator | `feat/m18-property-command-generator` | ☑ merged | #21 | Seeded randomized market command streams |
-| M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ◐ in progress | — | Minimal counterexamples for failed properties |
-| M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☐ not started | — | Final docs for differential/property testing system |
+| M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☑ merged | #22 | Minimal counterexamples for failed properties |
+| M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ◐ in progress | — | Final docs for differential/property testing system |
 | M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☐ not started | — | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☐ not started | — | M13-style final polish/readiness pass after Phase II |
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release` | ☐ not started | — | Conservative GitHub-only release; optional, human-approved |
@@ -312,4 +312,6 @@ Decision log additions:
 - [M19] Added a deterministic, greedy command-stream shrinker (`replay::shrink`): chunk removal, single-command removal, and field simplification (lower quantities), iterated to a fixed point, preserving a pluggable failure predicate; `count_trades` is a gateway-driven predicate helper.
 - [M19] Demonstrated against an artificial "produces a trade" predicate (the engines currently agree, so there is no real divergence to shrink); the shrinker is predicate-agnostic and a divergence predicate plugs in unchanged.
 - [M19] `qsl-export-stream shrink <seed>` writes a minimized differential fixture + shrink report; committed `shrunk_seed1.txt` (123→5 commands) is golden-checked and replayed by the OCaml differential test. Limitations (greedy/not-globally-minimal, qty-only field simplification, no symbol/id renumbering) documented in docs/differential_testing.md.
+- [M20] Finalized docs/differential_testing.md with a top-level architecture overview, a mermaid pipeline diagram, a minimized-fixture example, and an explicit "what this proves / does not prove" section (agreement over tested seeds; not formal verification; shared-assumption risk acknowledged).
+- [M20] Added docs/property_testing.md (generator coverage + delta-debug shrinker + determinism/golden + honest limits); added a README "Differential testing (OCaml)" <60s section + diagram links and conservative differential-testing résumé bullets. Docs-only; no code change.
 - [M17] Snapshot parsing validates per-level symbol ownership so malformed embedded C++ snapshots cannot be normalized into equality.
