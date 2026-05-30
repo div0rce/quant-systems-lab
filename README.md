@@ -7,9 +7,9 @@ and reproducible micro-benchmarks. Built as a systems-engineering portfolio proj
 **In 60 seconds:** clients send fixed-width binary orders over TCP; a gateway runs deterministic
 pre-trade risk checks; a multi-symbol matching engine applies them and emits a
 strictly-increasing event stream; those events drive a market-data feed and an append-only
-log. Replaying the log on a fresh engine reproduces byte-identical state — the core is a
-deterministic state machine with **integer-tick prices** and **no wall-clock dependence**, so
-every run is reproducible and debuggable from the log.
+log. Replaying the log on a fresh engine reproduces identical engine state, verified by
+snapshot equality — the core is a deterministic state machine with **integer-tick prices** and
+**no wall-clock dependence**, so every run is reproducible and debuggable from the log.
 
 **It is not** a production exchange, a trading strategy, or connected to real markets, and it
 makes no profitability claims. See [Limitations](#limitations).
