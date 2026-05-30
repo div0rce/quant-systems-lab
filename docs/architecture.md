@@ -144,3 +144,42 @@ EngineEvents -> MarketDataPublisher -> MarketDataSubscriber(s)
 
 The publisher has no wall-clock dependence; ordering and sequencing are logical, and it
 adds no nondeterminism (top-of-book is read from the deterministic engine).
+
+## Network market data feed (M10)
+
+The in-process `MarketDataPublisher` (M6) is exposed over the network by `UdpPublisher`
+(`include/qsl/feed/udp_feed.hpp`), a `MarketDataSubscriber` that encodes each message with
+the binary protocol and sends it as one UDP datagram:
+
+```text
+engine events -> MarketDataPublisher -> UdpPublisher --UDP--> UdpFeedClient -> SequenceTracker
+```
+
+- **Datagram = message**: each `MdTrade`/`MdTopOfBook` is one self-contained UDP datagram
+  (header + body), decoded on the receiver by `decode_market_data`, which dispatches on the
+  header's message type.
+- **Gap detection**: `SequenceTracker` (`feed/sequence_tracker.hpp`) is pure and socket-free.
+  It compares each message's `md_seq` to the last seen and reports how many were missed; it
+  does not recover them. Duplicates and reordered (lower) sequence numbers are ignored.
+- **Client**: `UdpFeedClient` binds a UDP socket, receives datagrams, decodes them, and runs
+  each `md_seq` through the tracker, accumulating a total gap count.
+
+### Local demo
+
+```bash
+make build
+./build/dev/qsl-mdfeed subscribe 9020 20   # terminal 1: receive 20 messages, report gaps
+./build/dev/qsl-mdfeed publish   9020       # terminal 2: stream a synthetic flow's market data
+```
+
+### Networking limitations (honest)
+
+- **UDP is connectionless and lossy.** There is no retransmit, no flow control, and no
+  ordering guarantee across datagrams. The feed *detects* loss via sequence gaps; it does not
+  recover it (a real venue would offer a snapshot/recovery channel — not implemented here).
+- **Unicast localhost only.** It binds/sends on `127.0.0.1`. There is no multicast, no
+  authentication, and no encryption. Do not expose it on an untrusted network.
+- **No fragmentation handling.** Messages are small (well under the MTU), so each fits in one
+  datagram; large messages are out of scope.
+- This is a credible systems demonstration of a sequenced UDP feed with gap detection, not a
+  production market-data distribution system.

@@ -14,7 +14,8 @@ add_library(qsl_core src/core/types.cpp src/protocol/codec.cpp src/engine/order_
                      src/engine/matching_engine.cpp src/engine/risk.cpp
                      src/gateway/order_gateway.cpp src/feed/market_data.cpp
                      src/feed/publisher.cpp src/replay/event_log.cpp src/replay/command.cpp
-                     src/replay/recovery.cpp src/gateway/session.cpp src/gateway/tcp_server.cpp)
+                     src/replay/recovery.cpp src/gateway/session.cpp src/gateway/tcp_server.cpp
+                     src/feed/udp_feed.cpp)
 target_include_directories(qsl_core PUBLIC include)
 target_link_libraries(qsl_core PRIVATE qsl_warnings)
 
@@ -29,6 +30,9 @@ target_link_libraries(qsl-gateway PRIVATE qsl_core qsl_warnings)
 
 add_executable(qsl-client apps/qsl-client/main.cpp)
 target_link_libraries(qsl-client PRIVATE qsl_core qsl_warnings)
+
+add_executable(qsl-mdfeed apps/qsl-mdfeed/main.cpp)
+target_link_libraries(qsl-mdfeed PRIVATE qsl_core qsl_warnings)
 
 enable_testing()
 add_subdirectory(tests)

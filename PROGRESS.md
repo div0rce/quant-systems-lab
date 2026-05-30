@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M9 — TCP binary order gateway
+- **Active milestone:** M10 — Network market data publisher
 - **Status:** ready for PR
-- **Active branch:** `feat/m09-tcp-gateway`
-- **Last completed milestone:** M8 — Deterministic replay and recovery (PR #9, squash-merged)
-- **`make check` passing:** yes (127/127 tests)
-- **Last action:** fixed TCP bind validation and SIGPIPE-safe writes; added session/socket coverage; make check green
-- **Next action:** human reviews and squash-merges M9 PR
+- **Active branch:** `feat/m10-network-market-data`
+- **Last completed milestone:** M9 — TCP binary order gateway (PR #10, squash-merged)
+- **`make check` passing:** yes (131/131 tests)
+- **Last action:** implemented SequenceTracker + decode_market_data + UDP publisher/client + qsl-mdfeed + tests + docs; make check green; UDP demo verified
+- **Next action:** human reviews and squash-merges M10 PR
 - **Blockers:** none
 
 ---
@@ -43,8 +43,8 @@ Do not rely on prior chat memory.
 | M6 | Market data | `feat/m06-market-data` | ☑ merged | #7 | Trade/top-of-book/delta/snapshot publisher |
 | M7 | Event log | `feat/m07-event-log` | ☑ merged | #8 | Append-only records and reader |
 | M8 | Replay/recovery | `feat/m08-replay-recovery` | ☑ merged | #9 | Rebuild engine state from log |
-| M9 | TCP gateway | `feat/m09-tcp-gateway` | ◐ in progress | #10 | Binary order gateway over TCP |
-| M10 | Network market data | `feat/m10-network-market-data` | ☐ not started | — | Network feed client/publisher |
+| M9 | TCP gateway | `feat/m09-tcp-gateway` | ☑ merged | #10 | Binary order gateway over TCP |
+| M10 | Network market data | `feat/m10-network-market-data` | ◐ in progress | — | Network feed client/publisher |
 | M11 | Benchmarks | `feat/m11-benchmarks` | ☐ not started | — | Measured performance outputs |
 | M12 | Hardening | `feat/m12-hardening` | ☐ not started | — | Sanitizers and invariant tests |
 | M13 | Docs polish | `feat/m13-docs-polish` | ☐ not started | — | README, diagram, demo, recruiting notes |
@@ -119,6 +119,10 @@ Status key:
 - [M9] Single-threaded accept-and-serve loop (one connection at a time); no thread pool / event loop.
 - [M9] The only `reinterpret_cast` in the codebase is the POSIX `sockaddr*` cast; protocol serialization stays shift-based.
 - [M9] No authentication; binds `127.0.0.1` only. Local simulator, not a venue (documented in docs/socket_gateway.md).
+- [M10] Market data is exposed over UDP: one datagram per `MdTrade`/`MdTopOfBook`, encoded with the binary protocol; `decode_market_data` dispatches on header type.
+- [M10] Gap detection is a pure `SequenceTracker` (forward gaps only; duplicates/reorder ignored); UDP loss is detected, not recovered — no retransmit/snapshot channel.
+- [M10] `UdpPublisher` is a `MarketDataSubscriber`, so the network feed reuses the M6 publisher unchanged; `inet_pton` is checked (invalid host -> unusable), applying the M9 bind-validation lesson.
+- [M10] UDP unicast on `127.0.0.1` only; no multicast/auth/encryption (documented honestly).
 - [M9] TCP server rejects invalid numeric IPv4 bind hosts instead of falling back to `0.0.0.0`.
 - [M9] Socket writes avoid process termination from `SIGPIPE` where supported by using `send`/`MSG_NOSIGNAL`.
 - [M9] Session tests cover cancel, malformed body, unexpected message type, and closed-peer write behavior where feasible.
@@ -150,7 +154,7 @@ Status key:
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M9 complete, PR pending review_
+- _M10 complete, PR pending review_
 
 
 ---

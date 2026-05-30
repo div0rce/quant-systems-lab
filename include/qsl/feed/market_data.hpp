@@ -47,4 +47,8 @@ using MarketDataMessage = std::variant<MdTrade, MdTopOfBook>;
 [[nodiscard]] protocol::DecodeResult<MdTopOfBook>
 decode_md_top_of_book(std::span<const std::byte> frame);
 
+/// Decode any market-data frame by dispatching on its header message type. Returns
+/// std::nullopt if the header is malformed or the type is not a market-data message.
+[[nodiscard]] std::optional<MarketDataMessage> decode_market_data(std::span<const std::byte> frame);
+
 } // namespace qsl::feed
