@@ -73,6 +73,10 @@ let () =
   expect_mismatch "fixtures/stream_bad_snapshot.txt"; (* ask-level qty *)
   expect_mismatch "fixtures/stream_bad_lastseq.txt"; (* last_seq *)
   expect_mismatch "fixtures/stream_bad_orders.txt"; (* order_count *)
+  expect_mismatch "fixtures/stream_bad_bestbid.txt"; (* best_bid *)
+  expect_mismatch "fixtures/stream_bad_bestask.txt"; (* best_ask *)
+  expect_mismatch "fixtures/stream_bad_trades.txt"; (* trade_count *)
+  expect_mismatch "fixtures/stream_bad_bidlevel.txt"; (* bid-side level *)
   expect_parse_error "fixtures/bad_snapshot_level_symbol.txt"; (* M17: malformed level ownership *)
   Printf.printf "ocaml differential replay: all tests passed (%d property fixtures)\n"
     (List.length (property_fixtures ()))

@@ -1,0 +1,11 @@
+# deliberate mismatch (test-only): best_ask corrupted (should be 105) -> must be detected.
+version 1
+meta seed 0 symbols 1 orders 3 max_qty 1000 max_notional 1000000
+cmd reg S0
+cmd limit 0 1 S 105 5 GTC
+cmd limit 0 2 B 100 5 GTC
+cmd limit 0 3 S 100 2 GTC
+snapshot last_seq 4 trades 1
+sym 0 bid 100 ask 106 orders 2
+level 0 B 100 3
+level 0 A 105 5
