@@ -2,6 +2,7 @@
 #include "qsl/replay/shrink.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <variant>
 #include <vector>
 
 using namespace qsl;
@@ -34,6 +35,26 @@ TEST_CASE("shrinker reduces a failing stream to a small, predicate-preserving co
         auto candidate = minimized;
         candidate.erase(candidate.begin() + static_cast<std::ptrdiff_t>(i));
         REQUIRE_FALSE(produces_trade(candidate));
+    }
+}
+
+TEST_CASE("shrinker simplifies prices", "[shrink]") {
+    // A crossing pair at a high price; the "produces a trade" predicate is price-agnostic, so the
+    // shrinker should lower both limit prices to 1 while preserving the trade.
+    using namespace replay;
+    const std::vector<Command> flow = {
+        RegisterSymbol{"S0"},
+        NewLimit{0, 1, core::Side::Sell, 500, 1, core::TimeInForce::GTC},
+        NewLimit{0, 2, core::Side::Buy, 500, 1, core::TimeInForce::GTC},
+    };
+    REQUIRE(produces_trade(flow));
+
+    const auto minimized = shrink(flow, produces_trade);
+    REQUIRE(produces_trade(minimized));
+    for (const auto &c : minimized) {
+        if (const auto *nl = std::get_if<NewLimit>(&c)) {
+            REQUIRE(nl->price == 1);
+        }
     }
 }
 

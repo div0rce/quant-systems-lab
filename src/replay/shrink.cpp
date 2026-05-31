@@ -40,6 +40,23 @@ Command with_min_qty(const Command &c) {
     return c;
 }
 
+// Try lowering a limit/modify command's price to 1 (a minimizing simplification; market orders
+// carry no price). Always predicate-guarded by the caller, so a price change that breaks the
+// failure is discarded.
+Command with_min_price(const Command &c) {
+    if (const auto *nl = std::get_if<NewLimit>(&c)) {
+        NewLimit n = *nl;
+        n.price = 1;
+        return n;
+    }
+    if (const auto *md = std::get_if<Modify>(&c)) {
+        Modify n = *md;
+        n.price = 1;
+        return n;
+    }
+    return c;
+}
+
 } // namespace
 
 std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fails,
@@ -75,6 +92,15 @@ std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fai
         for (std::size_t i = 0; i < cur.size(); ++i) {
             auto candidate = cur;
             candidate[i] = with_min_qty(cur[i]);
+            if (candidate[i] != cur[i] && fails(candidate)) {
+                cur = std::move(candidate);
+                changed = true;
+            }
+        }
+        // (4) simplify fields: lower limit/modify prices where the predicate still holds.
+        for (std::size_t i = 0; i < cur.size(); ++i) {
+            auto candidate = cur;
+            candidate[i] = with_min_price(cur[i]);
             if (candidate[i] != cur[i] && fails(candidate)) {
                 cur = std::move(candidate);
                 changed = true;
