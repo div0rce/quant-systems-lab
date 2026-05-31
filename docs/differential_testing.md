@@ -143,7 +143,9 @@ seeds need no committed fixtures, and any divergence uploads the same failure bu
 same C++-vs-OCaml snapshot equality plus a no-crossed-book invariant on each, reporting the
 failing fixture/seed on divergence. Across seeds 1–8 the two engines agree exactly while
 exercising all reject reasons (UnknownSymbol, UnknownOrder, InvalidPrice, InvalidQuantity,
-MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) and real trades.
+MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) and real trades. This reject-reason
+coverage is enforced by `test_reject_coverage` (it tallies the reasons the generator produces
+and fails CI if any reachable reason stops occurring).
 
 ### Oracle hardening
 
