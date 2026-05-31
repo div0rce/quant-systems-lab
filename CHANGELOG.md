@@ -1,9 +1,20 @@
 # Changelog
 
 All notable changes to this project. The format is loosely based on
-[Keep a Changelog](https://keepachangelog.com/); this project has not yet cut a tagged release.
+[Keep a Changelog](https://keepachangelog.com/). The first tagged release is v0.1.0.
 
 ## [Unreleased]
+
+_No unreleased changes._
+
+## [0.1.0] - 2026-05-31
+
+Quant Systems Lab v0.1.0 — a deterministic C++20 exchange simulator and cross-language
+differential-testing harness, built as a systems-engineering portfolio project. It is **not** a
+production exchange, is not connected to real markets, and makes no latency or profitability
+claims; the cross-language differential layer is property-based testing, **not** formal
+verification. Benchmarks are synthetic microbenchmarks recorded in `results/` and are
+hardware/compiler/build-dependent.
 
 ### Post-M22 backlog hardening (GitHub issues #34–#51)
 

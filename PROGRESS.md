@@ -246,7 +246,7 @@ Lower priority:
 | M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☑ merged | #52 | Final docs for differential/property testing system |
 | M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☑ merged | #53 | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☑ merged | #54 | M13-style final polish/readiness pass after Phase II |
-| M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release` | ☐ not started | — | Conservative GitHub-only release; optional, human-approved |
+| M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release-notes` | ◐ in progress | — | Release notes in CHANGELOG; tag/GitHub release pending human go-ahead |
 
 ## Decision log additions
 
