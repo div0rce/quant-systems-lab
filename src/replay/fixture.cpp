@@ -167,12 +167,20 @@ void write_shrunk_fixture(std::ostream &os, std::uint64_t seed) {
         return count_trades(cmds, max_qty, max_notional) > 0;
     };
     const auto original = generate_property_flow(seed, 3, 120);
-    const auto minimized = shrink(original, produces_trade);
+    std::size_t iterations = 0;
+    const auto minimized = shrink(original, produces_trade, &iterations);
+
+    // reduction as a percentage with one decimal, computed with integer math so the golden
+    // fixture is byte-identical across platforms.
+    const auto permille =
+        original.empty() ? 0 : (original.size() - minimized.size()) * 1000 / original.size();
 
     os << "# shrink report\n";
     os << "# seed: " << seed << "\n";
     os << "# original length: " << original.size() << "\n";
     os << "# minimized length: " << minimized.size() << "\n";
+    os << "# reduction: " << permille / 10 << "." << permille % 10 << "%\n";
+    os << "# shrink iterations: " << iterations << "\n";
     os << "# failure reason: produces a trade (artificial differential-test predicate)\n";
 
     FixtureParams p;

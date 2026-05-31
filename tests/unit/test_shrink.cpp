@@ -25,6 +25,10 @@ TEST_CASE("shrinker reduces a failing stream to a small, predicate-preserving co
     REQUIRE(produces_trade(minimized));          // failure predicate preserved
     REQUIRE(minimized.size() < original.size()); // it actually shrank
     REQUIRE(minimized.size() <= 8);              // down to a small counterexample
+
+    std::size_t iterations = 0;
+    REQUIRE(replay::shrink(original, produces_trade, &iterations) == minimized);
+    REQUIRE(iterations >= 1); // a real shrink performs at least one fixed-point pass
     // Removing any single command must break the predicate (1-minimal under removal).
     for (std::size_t i = 0; i < minimized.size(); ++i) {
         auto candidate = minimized;

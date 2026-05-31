@@ -2,6 +2,8 @@
 # seed: 1
 # original length: 123
 # minimized length: 5
+# reduction: 95.9%
+# shrink iterations: 2
 # failure reason: produces a trade (artificial differential-test predicate)
 # qsl differential-testing fixture: command stream + events + rejections + snapshot
 version 1
