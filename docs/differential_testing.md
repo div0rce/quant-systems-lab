@@ -160,8 +160,10 @@ and fails CI if any reachable reason stops occurring).
 - **Reproducibility manifest:** `make check-manifest` (`scripts/fixture_manifest.sh`, also in
   the `build-test` CI job) records the generator version (`replay::kGeneratorVersion`), the
   exporter invocation (seed/scenario), and the SHA-256 of each committed fixture in
-  `ocaml/test/fixtures/MANIFEST.txt`, so a generator change cannot silently alter a fixture
-  without an explicit manifest (and version) bump.
+  `ocaml/test/fixtures/MANIFEST.txt`. The check fails if a committed fixture changes without the
+  manifest being regenerated. The recorded `generator_version` is human-set provenance:
+  bumping it on a semantic generator change is a documented maintainer convention (the check
+  cannot infer intent from bytes), not an automatically enforced invariant.
 
 This is property-based differential testing against the C++ system under test — not formal
 verification or a proof of correctness.
