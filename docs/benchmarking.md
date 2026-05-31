@@ -70,6 +70,13 @@ Scenario / Metric / Result:
 make bench   # configures + builds the bench preset, runs qsl-bench, writes results/latest.txt
 ```
 
+The differential-testing harness has its own benchmark (generation, gateway replay, and
+shrinking of property command streams), kept separate so it does not disturb the core numbers:
+
+```bash
+make bench-diff   # runs qsl-bench diff, writes results/differential.txt
+```
+
 ## What these numbers do and do not prove
 
 - They **do** give a reproducible, order-of-magnitude picture of the core's latency/throughput

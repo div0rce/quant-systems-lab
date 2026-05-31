@@ -1,0 +1,20 @@
+Command:     make bench-diff
+Hardware:    arm64
+OS:          Darwin 25.2.0
+Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
+Build type:  Release
+Git commit:  9f65ddb
+Dirty tree:  no
+Dataset:     property command streams (generate_property_flow, 3 symbols, 120 orders)
+Warmup:      iters/10 (or 1 throughput pass) per benchmark, before timing
+Units:       latency = ns/op + ops/sec; throughput = ns/item + items/sec
+Date:        2026-05-31T04:17:23Z
+
+Caveat: single-process synthetic microbenchmarks (hot cache, no network/disk). These
+measure the differential-testing harness (generation, gateway replay, shrinking), not
+production throughput; hardware/compiler/build dependent.
+
+Scenario / Metric / Result:
+property flow generation         123 items       58.0 ns/item     17242491 items/sec
+differential gateway replay       123 items       60.3 ns/item     16572632 items/sec
+shrink property flow             300 ops      30450.6 ns/op          32840 ops/sec
