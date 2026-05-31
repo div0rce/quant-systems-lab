@@ -5,6 +5,11 @@ All notable changes to this project. The format is loosely based on
 
 ## [Unreleased]
 
+### Post-M22 backlog hardening (GitHub issues)
+
+- Dedicated differential negative fixtures for `best_bid`/`best_ask`/trade-count/bid-side levels (#36).
+- Differential oracle self-test: an injected divergence is detected and shrunk to a minimal reproducer (#34).
+
 ### Phase II — cross-language differential testing (M15–M20)
 
 - Normalized command-stream + final-snapshot fixture export (M15).

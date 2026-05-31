@@ -455,6 +455,12 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ## Backlog — optional after M13 only
 
+> **Execution status:** the backlog below is tracked as GitHub issues #24–#51 (one issue each)
+> and being worked after M22 in priority order — one issue = one branch = one Codex-reviewed PR.
+> The tractable test/tooling/docs items are executed first; **#24–#27** (lock-free queue, memory
+> pool, multithreaded pipeline, ThreadSanitizer) are **deferred** as major-architecture changes.
+> Merged so far: #36 (negative fixtures), #34 (oracle self-test).
+
 Do not pull backlog items into earlier PRs.
 
 - Lock-free queue / ring-buffer internals. (#24)
