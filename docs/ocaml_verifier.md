@@ -83,6 +83,59 @@ equality check (with readable diffs, in CI) is M17; M16 provides the engine and 
 covering matching, partial fills, cancel, modify (in-place and repricing), IOC, market,
 duplicate id, risk rejection, id reuse, and the empty-registered-symbol contract.
 
+## Oracle independence audit (#39)
+
+A differential test is only as strong as the oracle's independence: if the OCaml engine merely
+transcribes C++ logic, agreement proves nothing. This is an honest audit of where
+`replay_engine.ml` is genuinely independent and where it deliberately *mirrors* the C++ system
+(so a shared assumption could hide from the differential).
+
+**Genuinely independent (a behavioural divergence here is caught):**
+
+- **Different language and data model.** The oracle stores each side as an immutable
+  `Map.Make(Int)` from price to a FIFO `order list`, with a separate `id -> (side, price)`
+  location map; the C++ engine uses a mutable intrusive book. Matching is a pure recursive fold
+  (`match_qty`/`apply`), not a translation of C++ pointer manipulation. A data-structure,
+  aliasing, or iterator-invalidation bug on one side surfaces as a final-state difference.
+- **Replays commands, not events.** `stream_parser` feeds the oracle the `meta` + `cmd` lines
+  and *ignores* the C++ `evt`/`snapshot` output; the oracle re-derives state from inputs rather
+  than trusting the engine's emitted events.
+- **Parameterised risk limits.** `max_qty`/`max_notional` come from the fixture `meta`, not
+  hard-coded constants.
+
+**Deliberately mirrored (a *shared* error here would NOT be caught):**
+
+- **Integer notional rule.** `check_limit_values` rejects when `qty > max_notional / price`
+  using truncating integer division — the exact C++ formula. A shared off-by-one in this
+  truncation is invisible to the differential. *(Highest-risk mirror.)*
+- **Modify priority rule.** `modify_book` keeps queue priority only for a same-price reduction
+  (`new_price = price0 && new_qty <= resting_qty`), treats a price change or quantity increase
+  as cancel + re-add (which may cross), and treats `qty = 0` as cancel. This subtle rule is
+  matched to C++ by construction.
+- **Sequence-number accounting.** `put_book` advances `seq` by `1 + #trades` on accept,
+  `1` on cancel, `1 + #trades` on modify, and `0` on reject. `last_seq` is compared, so a
+  divergence is caught — but the *rule itself* was written to match, not re-specified.
+- **Validation gating and snapshot shape.** The check order (unknown symbol → duplicate active
+  id → value checks), the active-lifetime id scoping, and "every registered symbol appears,
+  ordered by id ascending" are all mirrored conventions.
+
+**Out of differential scope by construction:**
+
+- **Reject *reasons*.** Any reject produces no state change and consumes no seq, so the snapshot
+  cannot distinguish `InvalidPrice` from `MaxNotionalExceeded`. Reason coverage lives in the C++
+  unit tests, not the differential.
+- **Snapshot serialization.** `snapshot_to_lines` is hand-matched to the C++ exporter's line
+  format; the comparison is on rendered lines. A pure formatting divergence is guarded
+  separately by the golden regeneration check (`make check-fixtures`), not by the oracle.
+- **The specification itself.** Where both implementations faithfully encode the same documented
+  rule (`docs/matching_rules.md`), an error in that rule is not detectable by agreement.
+
+**Bottom line.** The differential catches transcription, logic, and data-structure bugs that
+make the two engines compute different state from the same commands. It does not, and is not
+claimed to, catch shared-specification errors, serialization-format errors (golden-guarded), or
+reject-reason differences (unit-tested). The mirrored items above are the deliberate cost of a
+snapshot-equality oracle.
+
 ## Scope and limitations
 
 - This checks **invariants over the exported log**, not full book-state re-computation. It does
