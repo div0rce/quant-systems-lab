@@ -11,11 +11,11 @@ meta seed 1 symbols 3 orders 5 max_qty 20 max_notional 1000
 cmd reg S0
 cmd reg S1
 cmd reg S2
-cmd limit 2 11 S 97 1 GTC
+cmd limit 2 11 S 1 1 GTC
 evt accept 1 2 11
-cmd limit 2 14 B 97 1 IOC
+cmd limit 2 14 B 1 1 IOC
 evt accept 2 2 14
-evt trade 3 2 14 11 97 1
+evt trade 3 2 14 11 1 1
 snapshot last_seq 3 trades 1
 sym 0 bid - ask - orders 0
 sym 1 bid - ask - orders 0

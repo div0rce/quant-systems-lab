@@ -190,8 +190,9 @@ test replays it independently.
   plugs in unchanged.
 - **Greedy, not globally minimal.** It finds a 1-minimal stream under removal, not the smallest
   possible counterexample.
-- **Field simplification is limited to lowering quantities.** Prices and symbol/order ids are
-  reduced only indirectly, via command removal.
+- **Field simplification lowers quantities and limit/modify prices** (each toward 1, kept only
+  where the predicate still holds). Symbol and order ids are reduced only indirectly, via command
+  removal.
 - **No symbol/id renumbering.** Symbol ids are assigned by registration order, so a registration
   referenced by a surviving order cannot be removed (removing it would renumber ids and break
   the stream) — which is why three registrations remain in `shrunk_seed1.txt`.
@@ -213,8 +214,8 @@ a 123-command flow to 5 commands — the minimal stream that still trades:
 cmd reg S0
 cmd reg S1
 cmd reg S2
-cmd limit 2 11 S 97 1 GTC
-cmd limit 2 14 B 97 1 IOC      # crosses -> 1 trade
+cmd limit 2 11 S 1 1 GTC
+cmd limit 2 14 B 1 1 IOC       # crosses -> 1 trade
 snapshot last_seq 3 trades 1
 ```
 
