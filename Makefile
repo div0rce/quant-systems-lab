@@ -47,7 +47,7 @@ check-manifest: build
 determinism:
 	bash scripts/determinism_check.sh
 
-divergence-demo:
+divergence-demo: build
 	bash scripts/divergence_demo.sh
 
 clean:
