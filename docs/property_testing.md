@@ -37,6 +37,10 @@ original/minimized length, reduction %, shrink iterations, failure reason); see 
 - Generation is seeded and integer-only; the CI golden check (`make check-fixtures`) regenerates
   the committed fixtures and diffs them against current C++ output, so they cannot silently drift.
 - Both engines are wall-clock independent, so replay and comparison are reproducible.
+- An explicit cross-compiler determinism check (`make determinism`, in the `determinism` CI job)
+  builds the exporter with both gcc and clang and asserts every generated fixture is byte-identical
+  between them and to the committed copies (produced on macOS/AppleClang) — covering compiler and
+  platform reproducibility, not just same-toolchain regeneration.
 
 ## Honest limits
 
