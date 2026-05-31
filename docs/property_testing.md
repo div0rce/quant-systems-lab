@@ -15,7 +15,7 @@ golden-checked in CI. It deliberately spans the command space rather than only v
 - unknown symbols; cancels and modifies of active and inactive orders;
 - multi-symbol interleavings.
 
-Committed fixtures `prop_seed1..8.txt` exercise every reject reason (UnknownSymbol, UnknownOrder,
+Committed fixtures `prop_seed1..50.txt` exercise every reject reason (UnknownSymbol, UnknownOrder,
 InvalidPrice, InvalidQuantity, MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) plus
 real trades; the C++ and OCaml snapshots agree on all of them.
 

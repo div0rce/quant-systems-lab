@@ -33,7 +33,7 @@ generate() {
     }
     emit stream_seed7.txt 7 60
     emit stream_ioc.txt ioc
-    for s in 1 2 3 4 5 6 7 8; do emit "prop_seed$s.txt" prop "$s"; done
+    for s in $(seq 1 50); do emit "prop_seed$s.txt" prop "$s"; done
     emit shrunk_seed1.txt shrink 1
 }
 
