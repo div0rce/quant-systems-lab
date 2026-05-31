@@ -88,7 +88,6 @@ jobs:
 
   differential-sweep:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -115,3 +114,17 @@ jobs:
           name: seed-sweep-divergence-bundle
           path: ocaml/_diff
           if-no-files-found: ignore
+
+  determinism:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc g++ clang
+
+      - name: Fixtures are byte-identical across gcc and clang (and vs committed)
+        run: scripts/determinism_check.sh gcc g++ clang clang++
