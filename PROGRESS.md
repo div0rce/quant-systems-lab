@@ -23,9 +23,9 @@ Do not rely on prior chat memory.
 - **Status:** in progress
 - **Active branch:** per-issue `feat/issue-NN-slug` / `fix/issue-NN-slug`
 - **Last completed milestone:** M22 — Release readiness audit (PR #54, squash-merged); M0–M22 all merged
-- **`make check` passing:** yes (153/153 tests); OCaml `dune runtest` passing
-- **Last action:** executing the prioritized backlog as GitHub issues, one issue = one PR (Codex-reviewed, then merged); #36 negative fixtures (#57) and #34 oracle self-test (#58) merged
-- **Next action:** continue backlog issues in priority order (#40, #35, #38, #39, then Medium/Low); #24–#27 deferred (major architecture)
+- **`make check` passing:** yes (154/154 tests); OCaml `dune runtest` passing
+- **Last action:** executing the prioritized backlog as Codex-reviewed PRs (one issue = one PR). Merged: #36 negative fixtures (#57), #34 oracle self-test (#58), #40 failure artifact bundle (#60), #35 CI seed sweep (#61), #38 coverage matrix (#62), #39 oracle independence audit (#64), #41 shared dispatch helper (#65), #44 reject-reason coverage (#66), #46 shrinker metrics (#67)
+- **Next action:** #47 seed manifest (in progress), then remaining Medium/Low (#42, #43, #45, #48, #37, #49–#51); #24–#27 deferred (major architecture)
 - **Blockers:** none
 
 ---
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _Backlog execution: per-issue PRs (Codex-reviewed, then merged). #36 (#57) and #34 (#58) done; next #40._
+- _Backlog execution: Codex-reviewed PRs, human-merged. Through #46 (#67) merged; #47 seed manifest in progress (PR open). Next: #42/#43/#45/#48/#37/#49–#51._
 
 
 ---
