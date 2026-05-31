@@ -1,7 +1,7 @@
 (* Oracle mutation testing (issue #48). The differential layer detects a divergence iff the two
    snapshots render to different lines (`snapshot_to_lines`, the exact comparison M17 uses). This
    test takes one representative snapshot and applies a single-field mutation for every snapshot
-   field — last_seq, trade count, best bid/ask, order count, and bid/ask levels — asserting each
+   field — last_seq, trade count, symbol id, best bid/ask, order count, and bid/ask levels — asserting each
    mutation changes the rendered lines. If any field stopped contributing to the comparison, a
    real C++/OCaml divergence in it could pass silently; this fails instead.
 
@@ -36,6 +36,7 @@ let mutations =
   [
     ("last_seq", fun s -> { s with last_seq = s.last_seq + 1 });
     ("n_trades", fun s -> { s with n_trades = s.n_trades + 1 });
+    ("sym id", fun s -> map_sym0 s (fun x -> { x with sym = x.sym + 1 }));
     ("best_bid value", fun s -> map_sym0 s (fun x -> { x with best_bid = Some 99 }));
     ("best_bid None", fun s -> map_sym0 s (fun x -> { x with best_bid = None }));
     ("best_ask value", fun s -> map_sym0 s (fun x -> { x with best_ask = Some 106 }));
