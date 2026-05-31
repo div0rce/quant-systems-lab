@@ -456,10 +456,13 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 ## Backlog — optional after M13 only
 
 > **Execution status:** the backlog below is tracked as GitHub issues #24–#51 (one issue each)
-> and being worked after M22 in priority order — one issue = one branch = one Codex-reviewed PR.
-> The tractable test/tooling/docs items are executed first; **#24–#27** (lock-free queue, memory
-> pool, multithreaded pipeline, ThreadSanitizer) are **deferred** as major-architecture changes.
-> Merged so far: #36 (negative fixtures), #34 (oracle self-test).
+> and was worked after M22 in priority order — one issue = one branch = one Codex-reviewed PR.
+> The tractable test/tooling/docs items are **all merged** (#34–#51, including the differential
+> follow-ups, shrinker improvements, oracle hardening, larger corpus, regression archive, and
+> differential-harness benchmarks). Still open: **#28–#33** (generic product items — realistic
+> flow model, FIX adapter, web dashboard, Docker, perf/flamegraph docs, Pages site) and
+> **#24–#27** (lock-free queue, memory pool, multithreaded pipeline, ThreadSanitizer), which are
+> **deferred** as major-architecture changes.
 
 Do not pull backlog items into earlier PRs.
 

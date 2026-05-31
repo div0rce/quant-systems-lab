@@ -81,7 +81,8 @@ allocator tuning — not production throughput or end-to-end latency:
 - **Biggest weaknesses?** Single-threaded, synthetic, minimal networking, no real venue or
   persistence beyond the flat log — see the README Limitations section.
 - **What would you do next?** Lock-free queues / memory-pool internals, a multithreaded
-  pipeline with ThreadSanitizer, a richer order-flow model, and the OCaml replay verifier.
+  pipeline with ThreadSanitizer, and a richer order-flow model (the cross-language differential
+  testing system and OCaml oracle are already built — see the differential-testing docs).
 - **Why OCaml, and what does it actually prove?** It's an independent cross-check: a small
   typed/immutable verifier parses the exported event log and re-derives replay invariants, so
   a bug in a shared C++ assumption is less likely to pass unnoticed. It does not re-implement

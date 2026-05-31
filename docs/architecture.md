@@ -8,29 +8,29 @@ the matching core never depends on wall-clock time or floating point.
 
 ```mermaid
 flowchart LR
-    client[TCP client] -->|binary frames| gw[Order gateway]
-    gw --> risk{Risk checks}
-    risk -->|reject| client
-    risk -->|accept| eng[Matching engine]
-
-    eng -->|ack / fill| gw
-    gw -->|responses| client
-
-    eng -->|engine events| pub[Market-data publisher]
-    pub -->|UDP feed| sub[MD subscriber]
-
-    eng -->|append| log[(Event log)]
-    log -.->|replay rebuilds identical state| rec[Recovered engine]
-
-    gen[Property command generator] -->|seeded streams| fix[Golden / property fixtures]
-    fix -->|replay| cpp[C++ replay]
-    fix -->|independent replay| ocaml[OCaml oracle]
-    cpp -->|snapshots| diff{Snapshot equality}
-    ocaml -->|snapshots| diff
-
-    diff -->|match| ci[CI pass]
-    diff -->|mismatch| shrink[Shrinker]
-    shrink -->|minimal failing fixture| fix
+    subgraph Runtime["Runtime simulator"]
+        client[TCP client] -->|binary frames| gw[Order gateway]
+        gw --> risk{Risk checks}
+        risk -->|reject| client
+        risk -->|accept| eng[Matching engine]
+        eng -->|ack / fill| gw
+        gw -->|responses| client
+        eng -->|engine events| pub[Market-data publisher]
+        pub -->|UDP feed| sub[Market-data subscriber]
+        eng -->|append| log[(Event log)]
+        log -.->|replay rebuilds identical state| rec[Recovered engine]
+    end
+    subgraph Verification["Differential + property testing"]
+        gen[Property command generator] -->|seeded streams| fix[Golden / property fixtures]
+        fix -->|replay| cpp[C++ replay]
+        fix -->|independent replay| ocaml[OCaml oracle]
+        cpp -->|snapshots| diff{Snapshot equality}
+        ocaml -->|snapshots| diff
+        diff -->|match| ci[CI pass]
+        diff -->|mismatch| shrink[Shrinker]
+        shrink -->|minimal failing fixture| fix
+    end
+    eng -.->|same command semantics| cpp
 ```
 
 ## Components
@@ -45,6 +45,13 @@ flowchart LR
 - **Replay/recovery** — rebuild state from log (M8)
 - **TCP gateway** — binary order gateway (M9)
 - **Benchmarks** — reproducible performance measurement (M11)
+- **OCaml replay verifier + oracle** — independent typed-functional replay (M14, M16)
+- **Differential + property testing** — command-stream export, C++≡OCaml snapshot equality,
+  seeded property generator, and a shrinker that minimizes any divergence (M15–M19)
+
+The first block is the runtime simulator; the last two are the cross-language verification
+pipeline (the **Verification** subgraph above). Detailed differential-testing docs are in
+[differential_testing.md](differential_testing.md) and [property_testing.md](property_testing.md).
 
 ## Core domain model (M1)
 

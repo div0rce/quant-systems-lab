@@ -1,5 +1,15 @@
 # Replay and Recovery
 
+```mermaid
+flowchart LR
+    cmds[Accepted commands] --> eng[Matching engine]
+    eng --> events[Engine events]
+    events --> log[(Append-only event log)]
+    log --> replay[Replay reader]
+    replay --> recovered[Recovered engine state]
+    eng -.->|compare final state| recovered
+```
+
 ## Append-only event log (M7)
 
 Accepted commands and emitted engine events are persisted as framed records in an

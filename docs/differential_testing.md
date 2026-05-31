@@ -6,15 +6,20 @@ the command space across seeds, and a shrinker reduces any disagreement to a min
 counterexample. This is cross-language differential testing, **not** formal verification.
 
 ```mermaid
-flowchart LR
-    gen[Property generator<br/>seeded, C++] --> cmds[Normalized command stream]
-    cmds --> cpp[C++ engine + risk gateway]
-    cpp --> fx[(Fixture:<br/>commands + C++ snapshot)]
-    fx -->|command stream only| ocaml[Independent OCaml replay]
-    ocaml --> osnap[OCaml snapshot]
-    fx -->|C++ snapshot| diff{snapshot equal?}
-    osnap --> diff
-    diff -->|no| shrink[Shrinker -> minimal fixture]
+flowchart TD
+    seed[Seed] --> gen[Property command generator]
+    gen --> stream[Command stream fixture]
+    stream --> cpp[C++ engine replay]
+    stream --> ocaml[Independent OCaml replay]
+    cpp --> cppsnap[C++ snapshot lines]
+    ocaml --> osnap[OCaml snapshot lines]
+    cppsnap --> cmp{Byte-for-byte equality?}
+    osnap --> cmp
+    cmp -->|yes| pass[Pass]
+    cmp -->|no| fail[Divergence detected]
+    fail --> shrink[Shrink failing stream]
+    shrink --> min[Minimal failing fixture]
+    min --> regress[Committed regression]
 ```
 
 Pipeline by milestone: **M15** exports normalized command-stream + snapshot fixtures; **M16**

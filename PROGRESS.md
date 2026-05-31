@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Backlog execution (post-M22) — working GitHub issues #24–#51
-- **Status:** in progress
-- **Active branch:** per-issue `feat/issue-NN-slug` / `fix/issue-NN-slug`
+- **Active milestone:** Backlog execution (post-M22) — GitHub issues #24–#51
+- **Status:** tractable backlog complete (test/tooling/docs); remaining items out of scope/deferred
+- **Active branch:** per-issue `feat/issue-NN-slug` / `fix/issue-NN-slug` (docs refresh on `docs/refresh-repository-documentation`)
 - **Last completed milestone:** M22 — Release readiness audit (PR #54, squash-merged); M0–M22 all merged
-- **`make check` passing:** yes (154/154 tests); OCaml `dune runtest` passing
-- **Last action:** executing the prioritized backlog as Codex-reviewed PRs (one issue = one PR). Merged: #36 negative fixtures (#57), #34 oracle self-test (#58), #40 failure artifact bundle (#60), #35 CI seed sweep (#61), #38 coverage matrix (#62), #39 oracle independence audit (#64), #41 shared dispatch helper (#65), #44 reject-reason coverage (#66), #46 shrinker metrics (#67)
-- **Next action:** #47 seed manifest (in progress), then remaining Medium/Low (#42, #43, #45, #48, #37, #49–#51); #24–#27 deferred (major architecture)
+- **`make check` passing:** yes (157/157 tests); OCaml `dune runtest` passing (5 suites)
+- **Last action:** executed the prioritized backlog as Codex-reviewed PRs (one issue = one PR). Merged #34–#51 tractable items: oracle self-test (#34), negative fixtures (#36), divergence demo (#37), coverage matrix (#38), independence audit (#39), failure artifact bundle (#40), shared dispatch helper (#41), price-simplify shrink (#42), symbol/id renumber shrink (#43), reject-reason coverage (#44), cross-compiler determinism (#45), shrinker metrics (#46), seed manifest (#47), oracle mutation testing (#48), corpus prop_seed1..50 (#49), regression archive (#50), differential-harness benchmarks (#51), plus CI seed sweep (#35)
+- **Next action:** tractable backlog done. Open issues: #28–#33 (generic product items, unscoped) and #24–#27 (major architecture, deferred). A docs refresh PR is the only work in flight.
 - **Blockers:** none
 
 ---
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _Backlog execution: Codex-reviewed PRs, human-merged. Through #46 (#67) merged; #47 seed manifest in progress (PR open). Next: #42/#43/#45/#48/#37/#49–#51._
+- _Tractable backlog (#34–#51) complete and merged. Remaining open issues #28–#33 (generic, unscoped) and #24–#27 (major architecture, deferred). Docs refresh PR in flight._
 
 
 ---
@@ -305,7 +305,7 @@ Decision log additions:
 - [M17] Differential test compares the OCaml-computed snapshot against the C++ snapshot embedded in each fixture (best bid/ask, level aggregates, order counts, last_seq, trade count) via canonical `snapshot_to_lines`, printing a readable computed-vs-expected diff on mismatch; runs under the existing `ocaml-verifier` CI job (no new job).
 - [M17] Added a C++ `qsl-export-stream ioc` scenario (hand-built IOC + market + partial-maker) so the differential test covers IOC, which the GTC-only synthetic flow never exercises; OCaml reproduces it exactly (last_seq 9, trades 3).
 - [M17] A deliberately corrupted-snapshot fixture (`stream_bad_snapshot.txt`) is asserted to be detected as a mismatch, proving the check fails on divergence.
-- [M18] Added `generate_property_flow` (C++) + `qsl-export-stream prop <seed>` producing enriched seeded streams (IOC, invalid price/qty, duplicate/reused/unknown ids, cancel/modify active+inactive, market, multi-symbol); committed `prop_seed1..8.txt`. C++ and OCaml snapshots agree on all 8 seeds, exercising every reject reason plus real trades.
+- [M18] Added `generate_property_flow` (C++) + `qsl-export-stream prop <seed>` producing enriched seeded streams (IOC, invalid price/qty, duplicate/reused/unknown ids, cancel/modify active+inactive, market, multi-symbol); committed `prop_seed1..8.txt` (later expanded to `prop_seed1..50` in #49). C++ and OCaml snapshots agree on all 8 seeds, exercising every reject reason plus real trades.
 - [M18] The differential test discovers all `prop_*.txt` via `Sys.readdir` and checks snapshot equality + a no-crossed-book invariant per fixture, reporting the failing seed.
 - [M18] Restored the M17 parser-rejection check (`bad_snapshot_level_symbol.txt` / `expect_parse_error`) that the M18 differential-test rewrite had dropped; this also cleared a warning-as-error (unused value) that had broken the OCaml build.
 - [M18] Broadened negative coverage (`stream_bad_lastseq.txt`, `stream_bad_orders.txt`) and added a golden fixture-regeneration guard (`scripts/check_fixtures.sh`, `make check-fixtures`, CI `build-test` step) so committed fixtures must match current C++ output — closing the M17-review gap where the differential could compare OCaml against a stale C++ snapshot.

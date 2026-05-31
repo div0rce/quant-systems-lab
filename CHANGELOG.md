@@ -5,10 +5,23 @@ All notable changes to this project. The format is loosely based on
 
 ## [Unreleased]
 
-### Post-M22 backlog hardening (GitHub issues)
+### Post-M22 backlog hardening (GitHub issues #34–#51)
 
-- Dedicated differential negative fixtures for `best_bid`/`best_ask`/trade-count/bid-side levels (#36).
-- Differential oracle self-test: an injected divergence is detected and shrunk to a minimal reproducer (#34).
+Differential/property-testing follow-ups, each merged as an individual Codex-reviewed PR:
+
+- Oracle self-test that injects a divergence and shrinks it to a minimal reproducer (#34).
+- Dynamic CI seed sweep beyond the committed fixtures (#35).
+- Dedicated negative fixtures for `best_bid`/`best_ask`/trade-count/bid-side levels (#36).
+- Synthetic divergence demonstration: the shrinker reducing a real C++/OCaml mismatch (#37).
+- Differential fixture coverage matrix (#38) and an oracle-independence audit (#39).
+- CI failure artifact bundle uploaded on divergence (#40).
+- Shared gateway-dispatch helper (#41); price (#42) and symbol/order-id (#43) shrink passes.
+- Generator reject-reason coverage test (#44); cross-compiler determinism check (#45).
+- Shrinker effectiveness metrics (#46) and a seed-reproducibility manifest (#47).
+- Oracle mutation testing across every snapshot field (#48).
+- Larger committed property corpus, `prop_seed1..50` (#49).
+- Differential regression archive (#50).
+- Differential-harness performance benchmarks, `results/differential.txt` (#51).
 
 ### Phase II — cross-language differential testing (M15–M20)
 
