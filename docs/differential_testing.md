@@ -210,6 +210,38 @@ snapshot last_seq 3 trades 1
 (The three registrations remain because the orders reference symbol id 2 and the shrinker does
 not renumber ids.)
 
+## Coverage matrix
+
+Each snapshot field crossed with the kind of differential coverage that exercises it. The
+snapshot is rendered by `snapshot_to_lines`, so every field is compared on every *positive*
+(`expect_match`) fixture; the table records which fields additionally have a *dedicated*
+negative fixture, are driven by the generator, and are reduced by the shrinker.
+
+| Snapshot field      | Positive | Negative (dedicated)            | Property + sweep | Shrink |
+| ------------------- | :------: | ------------------------------- | :--------------: | :----: |
+| `last_seq`          |    ✓     | `stream_bad_lastseq`            |        ✓         |   ◻    |
+| `trades` (count)    |    ✓     | `stream_bad_trades`             |        ✓         |   ◻    |
+| `sym` (id / order)  |    ✓     | `bad_snapshot_level_symbol` †   |        ✓         |   ◻    |
+| `best_bid`          |    ✓     | `stream_bad_bestbid`            |        ✓         |   ✓    |
+| `best_ask`          |    ✓     | `stream_bad_bestask`            |        ✓         |   ✓    |
+| `order_count`       |    ✓     | `stream_bad_orders`             |        ✓         |   ✓    |
+| `bid_levels`        |    ✓     | `stream_bad_bidlevel`           |        ✓         |   ✓    |
+| `ask_levels`        |    ✓     | `stream_bad_snapshot` (ask qty) |        ✓         |   ✓    |
+
+Legend: ✓ covered · ◻ not specifically exercised.
+
+- **Positive** — `expect_match` on `stream_seed7`, `stream_ioc`, `shrunk_seed1`, `prop_seed1..8`;
+  snapshot-line equality compares all fields, so every field is positively covered.
+- **Negative** — a hand-corrupted fixture that perturbs exactly one field; the test asserts the
+  divergence is detected (`expect_mismatch`), proving the comparison is not blind to that field.
+- **Property + sweep** — the generator (`generate_property_flow`) and the `differential-sweep`
+  CI job (seeds 1..64) populate all fields across randomized flows.
+- **Shrink** — the shrinker is field-agnostic (it reduces any failing command stream); ✓ marks
+  the fields exercised by the demonstrated injected divergence in the oracle self-test (#34), a
+  cancel-dropping mutant whose disagreement surfaces in the resting-book fields.
+- † `sym` has no value-mismatch fixture; instead `bad_snapshot_level_symbol` is a parse-error
+  guard asserting a level line cannot claim a symbol other than its `sym` block.
+
 ## What this proves / does not prove
 
 **Proves:**
