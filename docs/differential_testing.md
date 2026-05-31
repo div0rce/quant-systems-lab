@@ -226,3 +226,14 @@ not renumber ids.)
 - The shrinker is demonstrated against an artificial predicate (the engines currently agree, so
   there is no real divergence to shrink); it is greedy and not globally minimal.
 - Nothing here concerns production exchange behavior, latency, or trading profitability.
+
+
+## Failure artifacts (CI)
+
+When the differential check fails in CI, the `ocaml-verifier` job runs `diff_report` over the
+positive fixtures and uploads a `differential-failure-bundle` artifact. For each diverging
+fixture it contains `<base>.original` (the fixture), `<base>.computed` (OCaml snapshot),
+`<base>.expected` (C++ snapshot), and `<base>.diff` (a line diff) — so a divergence can be
+debugged from the CI run without reproducing locally. The minimal-counterexample form of a
+failing *generated* stream is produced separately by the C++ shrinker (`qsl-export-stream
+shrink`, M19).
