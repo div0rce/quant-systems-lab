@@ -25,8 +25,8 @@ flowchart LR
     eng -->|ack / fill| gw
     gw -->|responses| client
     eng -->|engine events| pub[Market-data publisher]
+    eng -->|engine events| log[(Append-only event log)]
     pub -->|UDP feed| sub[Market-data subscriber]
-    eng -->|append| log[(Event log)]
     log -.->|replay rebuilds identical state| rec[Recovered engine]
 ```
 
