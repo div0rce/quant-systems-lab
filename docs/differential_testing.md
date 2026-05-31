@@ -219,14 +219,14 @@ negative fixture, are driven by the generator, and are reduced by the shrinker.
 
 | Snapshot field      | Positive | Negative (dedicated)            | Property + sweep | Shrink |
 | ------------------- | :------: | ------------------------------- | :--------------: | :----: |
-| `last_seq`          |    ✓     | `stream_bad_lastseq`            |        ✓         |   ◻    |
+| `last_seq`          |    ✓     | `stream_bad_lastseq`            |        ✓         |   ✓    |
 | `trades` (count)    |    ✓     | `stream_bad_trades`             |        ✓         |   ◻    |
 | `sym` (id / order)  |    ✓     | `bad_snapshot_level_symbol` †   |        ✓         |   ◻    |
 | `best_bid`          |    ✓     | `stream_bad_bestbid`            |        ✓         |   ✓    |
-| `best_ask`          |    ✓     | `stream_bad_bestask`            |        ✓         |   ✓    |
+| `best_ask`          |    ✓     | `stream_bad_bestask`            |        ✓         |   ◻    |
 | `order_count`       |    ✓     | `stream_bad_orders`             |        ✓         |   ✓    |
 | `bid_levels`        |    ✓     | `stream_bad_bidlevel`           |        ✓         |   ✓    |
-| `ask_levels`        |    ✓     | `stream_bad_snapshot` (ask qty) |        ✓         |   ✓    |
+| `ask_levels`        |    ✓     | `stream_bad_snapshot` (ask qty) |        ✓         |   ◻    |
 
 Legend: ✓ covered · ◻ not specifically exercised.
 
@@ -237,8 +237,10 @@ Legend: ✓ covered · ◻ not specifically exercised.
 - **Property + sweep** — the generator (`generate_property_flow`) and the `differential-sweep`
   CI job (seeds 1..64) populate all fields across randomized flows.
 - **Shrink** — the shrinker is field-agnostic (it reduces any failing command stream); ✓ marks
-  the fields exercised by the demonstrated injected divergence in the oracle self-test (#34), a
-  cancel-dropping mutant whose disagreement surfaces in the resting-book fields.
+  the fields that actually diverge in the demonstrated minimal counterexample from the oracle
+  self-test (#34). That case shrinks to a registered symbol, a resting **bid** limit, and a
+  cancel of it, so the cancel-dropping mutant differs only on `last_seq`, `best_bid`,
+  `bid_levels`, and `order_count`; the ask side, `trades`, and `sym` are not exercised by it.
 - † `sym` has no value-mismatch fixture; instead `bad_snapshot_level_symbol` is a parse-error
   guard asserting a level line cannot claim a symbol other than its `sym` block.
 
