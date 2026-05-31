@@ -8,7 +8,7 @@ predicate, the shrinker reduces it to a minimal counterexample.
 flowchart TD
     params[Seed + generator parameters] --> generate[Generate command stream]
     generate --> execute[Replay through gateway + engine]
-    execute --> predicate{Predicate holds?}
+    execute --> predicate{Failure predicate holds? <br/> stream still fails?}
     predicate -->|no| keep[No failing fixture]
     predicate -->|yes| shrink[Shrink]
     shrink --> remove[Remove chunks / commands]
