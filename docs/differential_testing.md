@@ -132,7 +132,7 @@ It is differential testing against the C++ system under test, not formal verific
 that deliberately exercises the full command space: valid limit/market orders, IOC, invalid
 prices and quantities, duplicate active ids, reused inactive ids, unknown symbols, cancels and
 modifies of active and inactive orders, and multi-symbol interleavings. `qsl-export-stream prop
-<seed>` exports one fixture per seed; `prop_seed1..8.txt` are committed.
+<seed>` exports one fixture per seed; `prop_seed1..50.txt` are committed.
 
 The committed eight are the regression floor; the `differential-sweep` CI job widens coverage
 per run by generating seeds `1..64` on the fly (`scripts/seed_sweep.sh`) — exporting each with
@@ -141,11 +141,12 @@ seeds need no committed fixtures, and any divergence uploads the same failure bu
 
 `test_differential.ml` discovers every `prop_*.txt` fixture (via `Sys.readdir`) and runs the
 same C++-vs-OCaml snapshot equality plus a no-crossed-book invariant on each, reporting the
-failing fixture/seed on divergence. Across seeds 1–8 the two engines agree exactly while
-exercising all reject reasons (UnknownSymbol, UnknownOrder, InvalidPrice, InvalidQuantity,
-MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) and real trades. This reject-reason
-coverage is enforced by `test_reject_coverage` (it tallies the reasons the generator produces
-and fails CI if any reachable reason stops occurring).
+failing fixture/seed on divergence. The two engines agree exactly across all committed seeds
+(`prop_seed1..50`); seeds 1–8 alone already exercise every reject reason (UnknownSymbol,
+UnknownOrder, InvalidPrice, InvalidQuantity, MaxQuantityExceeded, MaxNotionalExceeded,
+DuplicateOrderId) and real trades. This reject-reason coverage is enforced by
+`test_reject_coverage` (it tallies the reasons the generator produces and fails CI if any
+reachable reason stops occurring).
 
 ### Oracle hardening
 
@@ -274,7 +275,7 @@ negative fixture, are driven by the generator, and are reduced by the shrinker.
 
 Legend: ✓ covered · ◻ not specifically exercised.
 
-- **Positive** — `expect_match` on `stream_seed7`, `stream_ioc`, `shrunk_seed1`, `prop_seed1..8`;
+- **Positive** — `expect_match` on `stream_seed7`, `stream_ioc`, `shrunk_seed1`, `prop_seed1..50`;
   snapshot-line equality compares all fields, so every field is positively covered.
 - **Negative** — a hand-corrupted fixture that perturbs exactly one field; the test asserts the
   divergence is detected (`expect_mismatch`), proving the comparison is not blind to that field.

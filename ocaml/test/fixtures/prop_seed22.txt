@@ -1,0 +1,267 @@
+# qsl differential-testing fixture: command stream + events + rejections + snapshot
+version 1
+meta seed 22 symbols 3 orders 120 max_qty 20 max_notional 1000
+cmd reg S0
+cmd reg S1
+cmd reg S2
+cmd limit 1 1 S 0 7 GTC
+reject new_limit 1 InvalidPrice
+cmd cancel 1 2
+reject cancel 2 UnknownOrder
+cmd market 1 2 S 4
+evt accept 1 1 2
+cmd cancel 1 2
+reject cancel 2 UnknownOrder
+cmd limit 2 1 S 103 2 GTC
+evt accept 2 2 1
+cmd modify 1 3 95 4
+reject modify 3 UnknownOrder
+cmd cancel 2 1
+evt cancel 3 2 1
+cmd limit 3 3 B 103 1 GTC
+reject new_limit 3 UnknownSymbol
+cmd limit 0 4 S 105 0 IOC
+reject new_limit 4 InvalidQuantity
+cmd modify 0 2 96 50
+reject modify 2 UnknownOrder
+cmd cancel 3 5
+reject cancel 5 UnknownSymbol
+cmd modify 3 2 0 50
+reject modify 2 UnknownSymbol
+cmd cancel 3 2
+reject cancel 2 UnknownSymbol
+cmd limit 1 5 S 100 0 IOC
+reject new_limit 5 InvalidQuantity
+cmd cancel 3 2
+reject cancel 2 UnknownSymbol
+cmd modify 1 2 104 3
+reject modify 2 UnknownOrder
+cmd limit 0 6 B 95 3 GTC
+evt accept 4 0 6
+cmd cancel 1 7
+reject cancel 7 UnknownOrder
+cmd limit 1 7 S 96 5 GTC
+evt accept 5 1 7
+cmd limit 1 8 B 101 7 GTC
+evt accept 6 1 8
+evt trade 7 1 8 7 96 5
+cmd modify 2 3 0 1
+reject modify 3 UnknownOrder
+cmd limit 3 9 S 99 6 GTC
+reject new_limit 9 UnknownSymbol
+cmd limit 3 10 B 104 7 GTC
+reject new_limit 10 UnknownSymbol
+cmd modify 2 1 104 1
+reject modify 1 UnknownOrder
+cmd limit 3 11 B 99 2 GTC
+reject new_limit 11 UnknownSymbol
+cmd modify 0 1 95 1
+reject modify 1 UnknownOrder
+cmd cancel 0 8
+reject cancel 8 UnknownOrder
+cmd limit 0 12 S 102 2 GTC
+evt accept 8 0 12
+cmd limit 2 13 B 102 10 GTC
+reject new_limit 13 MaxNotionalExceeded
+cmd market 3 14 S 6
+reject new_market 14 UnknownSymbol
+cmd limit 3 15 S 103 10 GTC
+reject new_limit 15 UnknownSymbol
+cmd cancel 3 9
+reject cancel 9 UnknownSymbol
+cmd modify 2 10 100 3
+reject modify 10 UnknownOrder
+cmd modify 1 14 95 10
+reject modify 14 UnknownOrder
+cmd limit 1 6 B 103 3 GTC
+evt accept 9 1 6
+cmd limit 1 16 B 103 8 IOC
+evt accept 10 1 16
+cmd limit 2 17 B 97 1 IOC
+evt accept 11 2 17
+cmd market 0 18 S 3
+evt accept 12 0 18
+evt trade 13 0 18 6 95 3
+cmd modify 1 8 103 1
+evt modify 14 1 8
+cmd limit 1 19 B 99 4 GTC
+evt accept 15 1 19
+cmd cancel 3 9
+reject cancel 9 UnknownSymbol
+cmd modify 2 19 97 0
+reject modify 19 UnknownOrder
+cmd modify 2 18 105 1
+reject modify 18 UnknownOrder
+cmd cancel 2 20
+reject cancel 20 UnknownOrder
+cmd limit 0 1 B 103 2 IOC
+evt accept 16 0 1
+evt trade 17 0 1 12 102 2
+cmd limit 0 20 S 0 6 GTC
+reject new_limit 20 InvalidPrice
+cmd modify 1 2 104 5
+reject modify 2 UnknownOrder
+cmd market 3 21 B 3
+reject new_market 21 UnknownSymbol
+cmd cancel 3 15
+reject cancel 15 UnknownSymbol
+cmd modify 3 2 102 5
+reject modify 2 UnknownSymbol
+cmd limit 0 12 S 101 8 GTC
+evt accept 18 0 12
+cmd modify 3 9 95 10
+reject modify 9 UnknownSymbol
+cmd cancel 3 10
+reject cancel 10 UnknownSymbol
+cmd limit 0 10 B 95 3 IOC
+evt accept 19 0 10
+cmd limit 1 12 S 101 3 GTC
+evt accept 20 1 12
+evt trade 21 1 12 6 103 3
+cmd modify 0 14 98 0
+reject modify 14 UnknownOrder
+cmd limit 1 22 B 104 1 GTC
+evt accept 22 1 22
+cmd limit 3 23 S 105 0 GTC
+reject new_limit 23 UnknownSymbol
+cmd limit 2 24 S 95 50 IOC
+reject new_limit 24 MaxQuantityExceeded
+cmd limit 2 25 B 102 2 GTC
+evt accept 23 2 25
+cmd cancel 2 4
+reject cancel 4 UnknownOrder
+cmd limit 0 26 B 101 8 IOC
+evt accept 24 0 26
+evt trade 25 0 26 12 101 8
+cmd limit 3 4 S 96 8 GTC
+reject new_limit 4 UnknownSymbol
+cmd cancel 0 3
+reject cancel 3 UnknownOrder
+cmd modify 0 13 103 8
+reject modify 13 UnknownOrder
+cmd cancel 3 23
+reject cancel 23 UnknownSymbol
+cmd limit 1 10 S 100 8 IOC
+evt accept 26 1 10
+evt trade 27 1 10 22 104 1
+evt trade 28 1 10 8 103 1
+cmd modify 1 10 101 7
+reject modify 10 UnknownOrder
+cmd limit 1 27 S 102 5 IOC
+evt accept 29 1 27
+cmd modify 3 10 99 5
+reject modify 10 UnknownSymbol
+cmd cancel 3 14
+reject cancel 14 UnknownSymbol
+cmd limit 2 28 B 103 0 GTC
+reject new_limit 28 InvalidQuantity
+cmd market 1 29 S 6
+evt accept 30 1 29
+evt trade 31 1 29 19 99 4
+cmd limit 2 30 S 98 10 GTC
+evt accept 32 2 30
+evt trade 33 2 30 25 102 2
+cmd modify 1 1 98 5
+reject modify 1 UnknownOrder
+cmd limit 0 31 S 100 7 IOC
+evt accept 34 0 31
+cmd limit 1 32 B 95 9 GTC
+evt accept 35 1 32
+cmd limit 0 33 B 98 0 IOC
+reject new_limit 33 InvalidQuantity
+cmd limit 1 34 B 97 7 IOC
+evt accept 36 1 34
+cmd cancel 2 33
+reject cancel 33 UnknownOrder
+cmd limit 0 35 B 95 4 GTC
+evt accept 37 0 35
+cmd limit 3 36 S 98 7 GTC
+reject new_limit 36 UnknownSymbol
+cmd cancel 2 29
+reject cancel 29 UnknownOrder
+cmd limit 1 29 S 100 0 IOC
+reject new_limit 29 InvalidQuantity
+cmd cancel 1 12
+reject cancel 12 UnknownOrder
+cmd limit 3 17 S 101 3 GTC
+reject new_limit 17 UnknownSymbol
+cmd limit 2 37 B 99 9 IOC
+evt accept 38 2 37
+evt trade 39 2 37 30 98 8
+cmd modify 3 2 99 3
+reject modify 2 UnknownSymbol
+cmd limit 3 38 S 95 5 GTC
+reject new_limit 38 UnknownSymbol
+cmd limit 3 39 B 100 2 GTC
+reject new_limit 39 UnknownSymbol
+cmd limit 1 40 B 104 10 GTC
+reject new_limit 40 MaxNotionalExceeded
+cmd limit 2 41 B 100 0 IOC
+reject new_limit 41 InvalidQuantity
+cmd modify 1 27 101 7
+reject modify 27 UnknownOrder
+cmd limit 3 42 S 97 50 GTC
+reject new_limit 42 UnknownSymbol
+cmd limit 2 43 B 97 0 GTC
+reject new_limit 43 InvalidQuantity
+cmd market 0 44 S 4
+evt accept 40 0 44
+evt trade 41 0 44 35 95 4
+cmd limit 3 45 S 0 4 IOC
+reject new_limit 45 UnknownSymbol
+cmd modify 2 8 0 2
+reject modify 8 UnknownOrder
+cmd modify 2 9 0 3
+reject modify 9 UnknownOrder
+cmd limit 3 46 B 101 10 IOC
+reject new_limit 46 UnknownSymbol
+cmd cancel 2 16
+reject cancel 16 UnknownOrder
+cmd limit 1 47 B 100 8 IOC
+evt accept 42 1 47
+cmd modify 1 11 103 5
+reject modify 11 UnknownOrder
+cmd limit 2 26 S 101 6 GTC
+evt accept 43 2 26
+cmd limit 2 48 S 0 9 GTC
+reject new_limit 48 InvalidPrice
+cmd market 2 49 S 6
+evt accept 44 2 49
+cmd modify 3 14 97 3
+reject modify 14 UnknownSymbol
+cmd market 0 50 S 5
+evt accept 45 0 50
+cmd limit 3 51 S 99 7 GTC
+reject new_limit 51 UnknownSymbol
+cmd limit 1 52 S 96 3 GTC
+evt accept 46 1 52
+cmd market 2 53 B 3
+evt accept 47 2 53
+evt trade 48 2 53 26 101 3
+cmd cancel 1 47
+reject cancel 47 UnknownOrder
+cmd limit 3 54 B 99 3 IOC
+reject new_limit 54 UnknownSymbol
+cmd market 3 55 B 8
+reject new_market 55 UnknownSymbol
+cmd limit 3 56 B 99 5 GTC
+reject new_limit 56 UnknownSymbol
+cmd limit 2 57 B 95 1 GTC
+evt accept 49 2 57
+cmd limit 0 58 S 101 5 GTC
+evt accept 50 0 58
+cmd limit 3 59 S 99 3 GTC
+reject new_limit 59 UnknownSymbol
+cmd cancel 2 55
+reject cancel 55 UnknownOrder
+cmd modify 3 37 101 10
+reject modify 37 UnknownSymbol
+snapshot last_seq 50 trades 12
+sym 0 bid - ask 101 orders 1
+level 0 A 101 5
+sym 1 bid 95 ask 96 orders 2
+level 1 B 95 9
+level 1 A 96 3
+sym 2 bid 95 ask 101 orders 2
+level 2 B 95 1
+level 2 A 101 3
