@@ -173,13 +173,14 @@ verification or a proof of correctness.
 
 `replay::shrink(commands, predicate)` (C++) reduces a failing command stream to a small,
 reviewable counterexample while preserving a failure predicate. It is greedy and deterministic,
-iterating three strategies to a fixed point: remove contiguous chunks (decreasing size), remove
-single commands, and simplify fields (lower quantities). `qsl-export-stream shrink <seed>`
+iterating to a fixed point: remove contiguous chunks (decreasing size), remove single commands,
+simplify fields (lower quantities and limit/modify prices), and renumber (drop unreferenced
+symbol registrations and compact symbol/order ids). `qsl-export-stream shrink <seed>`
 shrinks the property flow for a seed and writes the minimized differential fixture prefixed
 with a shrink report (seed, original/minimized length, reduction %, shrink iterations, failure reason).
 
-The committed `shrunk_seed1.txt` reduces a 123-command flow to **5** commands (three symbol
-registrations + a resting sell + a crossing IOC buy that trades), and the OCaml differential
+The committed `shrunk_seed1.txt` reduces a 123-command flow to **3** commands (one symbol
+registration + a resting sell + a crossing IOC buy that trades), and the OCaml differential
 test replays it independently.
 
 ### Limitations (honest)
@@ -191,36 +192,34 @@ test replays it independently.
 - **Greedy, not globally minimal.** It finds a 1-minimal stream under removal, not the smallest
   possible counterexample.
 - **Field simplification lowers quantities and limit/modify prices** (each toward 1, kept only
-  where the predicate still holds). Symbol and order ids are reduced only indirectly, via command
-  removal.
-- **No symbol/id renumbering.** Symbol ids are assigned by registration order, so a registration
-  referenced by a surviving order cannot be removed (removing it would renumber ids and break
-  the stream) — which is why three registrations remain in `shrunk_seed1.txt`.
+  where the predicate still holds); a renumber pass then drops registrations for unreferenced
+  symbols and compacts symbol and order ids (bijective, so engine semantics are preserved).
+- **Renumbering does not merge or reorder.** It compacts ids and drops unused registrations but
+  does not coalesce distinct symbols/orders or reorder commands, so the result is still only
+  1-minimal under removal, not globally minimal.
 - This is shrinking for differential/property testing, not a proof of minimality or correctness.
 
 
 ## Minimized failing fixture (example)
 
 `shrunk_seed1.txt` is a shrinker output (artificial "produces a trade" predicate) reduced from
-a 123-command flow to 5 commands — the minimal stream that still trades:
+a 123-command flow to 3 commands — the minimal stream that still trades:
 
 ```text
 # shrink report
 # seed: 1
 # original length: 123
-# minimized length: 5
-# reduction: 95.9%
+# minimized length: 3
+# reduction: 97.5%
 # shrink iterations: 2
 cmd reg S0
-cmd reg S1
-cmd reg S2
-cmd limit 2 11 S 1 1 GTC
-cmd limit 2 14 B 1 1 IOC       # crosses -> 1 trade
+cmd limit 0 0 S 1 1 GTC
+cmd limit 0 1 B 1 1 IOC        # crosses -> 1 trade
 snapshot last_seq 3 trades 1
 ```
 
-(The three registrations remain because the orders reference symbol id 2 and the shrinker does
-not renumber ids.)
+(The renumber pass dropped the two unused registrations and renumbered the surviving symbol to 0
+and the order ids to 0/1.)
 
 ## Coverage matrix
 

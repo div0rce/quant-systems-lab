@@ -27,4 +27,12 @@ using ShrinkPredicate = std::function<bool(const std::vector<Command> &)>;
 [[nodiscard]] std::size_t count_trades(const std::vector<Command> &commands, core::Quantity max_qty,
                                        core::QuantityTotal max_notional);
 
+// Canonicalize symbol and order ids to shrink a fixture further: drop RegisterSymbol commands for
+// symbols no other command references, renumber the survivors to 0..k-1 (renamed S0..), and
+// compact order ids to first-appearance order (both bijective, so engine semantics are preserved).
+// Returns the input unchanged if any symbol name is registered more than once, since idempotent
+// registration would break the positional id model. Exposed for testing; `shrink` applies it
+// predicate-guarded.
+[[nodiscard]] std::vector<Command> renumber(const std::vector<Command> &commands);
+
 } // namespace qsl::replay

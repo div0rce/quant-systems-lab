@@ -5,8 +5,12 @@
 #include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/recovery.hpp"
 
+#include <map>
+#include <set>
+#include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace qsl::replay {
 namespace {
@@ -59,6 +63,89 @@ Command with_min_price(const Command &c) {
 
 } // namespace
 
+std::vector<Command> renumber(const std::vector<Command> &cmds) {
+    // The positional id model below (the i-th RegisterSymbol owns symbol id i) only holds when
+    // every symbol name is distinct. Registration is idempotent, so a repeated name does NOT
+    // allocate a new id; renumbering such a stream could turn an UnknownSymbol reject into an
+    // accepted order and misrepresent the original replay. Bail in that case (the removal passes
+    // still drop idempotent duplicate registrations).
+    {
+        std::set<std::string> names;
+        for (const auto &c : cmds) {
+            if (const auto *rs = std::get_if<RegisterSymbol>(&c)) {
+                if (!names.insert(rs->name).second) {
+                    return cmds;
+                }
+            }
+        }
+    }
+    // Symbols referenced by non-register commands (the i-th RegisterSymbol owns symbol id i).
+    std::set<core::SymbolId> referenced;
+    for (const auto &c : cmds) {
+        if (const auto *nl = std::get_if<NewLimit>(&c)) {
+            referenced.insert(nl->symbol);
+        } else if (const auto *nm = std::get_if<NewMarket>(&c)) {
+            referenced.insert(nm->symbol);
+        } else if (const auto *cn = std::get_if<Cancel>(&c)) {
+            referenced.insert(cn->symbol);
+        } else if (const auto *md = std::get_if<Modify>(&c)) {
+            referenced.insert(md->symbol);
+        }
+    }
+    std::map<core::SymbolId, core::SymbolId> sym_remap;
+    core::SymbolId old_sym = 0;
+    core::SymbolId new_sym = 0;
+    for (const auto &c : cmds) {
+        if (std::holds_alternative<RegisterSymbol>(c)) {
+            if (referenced.count(old_sym) != 0) {
+                sym_remap[old_sym] = new_sym++;
+            }
+            ++old_sym;
+        }
+    }
+    const auto map_sym = [&](core::SymbolId s) {
+        const auto it = sym_remap.find(s);
+        return it == sym_remap.end() ? s : it->second; // unregistered refs keep their id
+    };
+
+    // Order ids compacted in first-appearance order (a bijection preserves duplicate/cancel/modify
+    // matching).
+    std::map<core::OrderId, core::OrderId> id_remap;
+    core::OrderId next_id = 0;
+    const auto map_id = [&](core::OrderId id) {
+        const auto [it, inserted] = id_remap.try_emplace(id, next_id);
+        if (inserted) {
+            ++next_id;
+        }
+        return it->second;
+    };
+
+    std::vector<Command> out;
+    out.reserve(cmds.size());
+    old_sym = 0;
+    for (const auto &c : cmds) {
+        if (std::holds_alternative<RegisterSymbol>(c)) {
+            const bool keep = referenced.count(old_sym) != 0;
+            const core::SymbolId ns = keep ? sym_remap[old_sym] : 0;
+            ++old_sym;
+            if (keep) {
+                out.push_back(RegisterSymbol{"S" + std::to_string(ns)});
+            }
+        } else if (const auto *nl = std::get_if<NewLimit>(&c)) {
+            out.push_back(NewLimit{map_sym(nl->symbol), map_id(nl->id), nl->side, nl->price,
+                                   nl->quantity, nl->tif});
+        } else if (const auto *nm = std::get_if<NewMarket>(&c)) {
+            out.push_back(NewMarket{map_sym(nm->symbol), map_id(nm->id), nm->side, nm->quantity});
+        } else if (const auto *cn = std::get_if<Cancel>(&c)) {
+            out.push_back(Cancel{map_sym(cn->symbol), map_id(cn->id)});
+        } else {
+            const auto &md = std::get<Modify>(c);
+            out.push_back(Modify{map_sym(md.symbol), map_id(md.id), md.price, md.quantity});
+        }
+    }
+    return out;
+}
+
 std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fails,
                             std::size_t *iterations) {
     if (!fails(cur)) {
@@ -102,6 +189,14 @@ std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fai
             auto candidate = cur;
             candidate[i] = with_min_price(cur[i]);
             if (candidate[i] != cur[i] && fails(candidate)) {
+                cur = std::move(candidate);
+                changed = true;
+            }
+        }
+        // (5) renumber: drop unreferenced symbol registrations and compact symbol/order ids.
+        {
+            auto candidate = renumber(cur);
+            if (candidate != cur && fails(candidate)) {
                 cur = std::move(candidate);
                 changed = true;
             }
