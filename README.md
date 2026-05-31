@@ -122,8 +122,10 @@ duplicate/reused ids, unknown symbols, IOC/market, cancel/modify, multi-symbol);
 exports a fixture (commands + its snapshot); OCaml replays the **commands only** and the
 **differential test** asserts its snapshot equals the C++ snapshot (best bid/ask, level
 aggregates, order counts, last_seq, trade count); a **shrinker** reduces any disagreement to a
-minimal counterexample. Fifty committed property fixtures (`prop_seed1..50`) plus a dynamic CI
-seed sweep are golden-regenerated and provenance-checked (a hash manifest) so they cannot drift.
+minimal counterexample. The fifty committed property fixtures (`prop_seed1..50`) are
+golden-regenerated and provenance-checked (a hash manifest) so they cannot drift; a dynamic CI
+seed sweep additionally replays further seeds on the fly (the swept fixtures are ephemeral, not
+committed).
 
 This is cross-language differential + property testing — **not** formal verification or a
 correctness proof. An earlier OCaml layer also checks log invariants directly

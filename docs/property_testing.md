@@ -10,12 +10,15 @@ flowchart TD
     generate --> execute[Replay through gateway + engine]
     execute --> predicate{Failure predicate holds? <br/> stream still fails?}
     predicate -->|no| keep[No failing fixture]
-    predicate -->|yes| shrink[Shrink]
-    shrink --> remove[Remove chunks / commands]
-    remove --> simplify[Simplify fields]
-    simplify --> check{Still fails?}
-    check -->|yes| shrink
-    check -->|no| minimal[1-minimal fixture]
+    predicate -->|yes| pass[Shrink pass: try chunk/command removal,<br/>field simplification, renumbering]
+    pass --> cand{Candidate still fails?}
+    cand -->|yes| adopt[Keep the smaller candidate]
+    cand -->|no| discard[Discard candidate, try the next]
+    adopt --> pass
+    discard --> pass
+    pass --> fixed{Full pass kept nothing?}
+    fixed -->|no| pass
+    fixed -->|yes| minimal[1-minimal fixture]
     minimal --> golden[Golden fixture + CI replay]
 ```
 
