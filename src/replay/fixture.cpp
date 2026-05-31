@@ -87,6 +87,21 @@ void emit_command_reject(std::ostream &os, const Command &command, core::RejectR
     }
 }
 
+// Replay commands through the engine and return the final snapshot. When `drop_cancels` is set
+// this is a deliberately buggy oracle (it ignores cancels) — used to inject a divergence for the
+// shrinker demonstration (issue #37). Risk limits match the property flow.
+engine::EngineSnapshot replay_for_divergence(const std::vector<Command> &cmds, bool drop_cancels) {
+    engine::MatchingEngine eng;
+    gateway::OrderGateway gw{eng, gateway::RiskConfig{20, 1000}};
+    for (const auto &c : cmds) {
+        if (drop_cancels && std::holds_alternative<Cancel>(c)) {
+            continue;
+        }
+        static_cast<void>(apply_command(eng, gw, c));
+    }
+    return eng.snapshot();
+}
+
 } // namespace
 
 static void run_and_emit(std::ostream &os, const FixtureParams &p,
@@ -189,6 +204,42 @@ void write_shrunk_fixture(std::ostream &os, std::uint64_t seed) {
     p.orders = minimized.size();
     p.max_qty = max_qty;
     p.max_notional = max_notional;
+    run_and_emit(os, p, minimized);
+}
+
+void write_divergence_fixture(std::ostream &os, std::uint64_t seed_hint) {
+    // Predicate: the correct replay and the cancel-dropping oracle disagree. This is a *real*
+    // cross-language divergence once the buggy oracle is the OCaml `replay_snapshot --drop-cancels`
+    // (the embedded snapshot below is the correct C++ one, which the honest OCaml replay matches).
+    const ShrinkPredicate diverges = [](const std::vector<Command> &cmds) {
+        return !(replay_for_divergence(cmds, false) == replay_for_divergence(cmds, true));
+    };
+
+    std::vector<Command> original;
+    std::uint64_t seed = seed_hint;
+    for (std::uint64_t s = seed_hint; s < seed_hint + 50 && original.empty(); ++s) {
+        auto flow = generate_property_flow(s, 3, 120);
+        if (diverges(flow)) {
+            original = std::move(flow);
+            seed = s;
+        }
+    }
+    std::size_t iterations = 0;
+    const auto minimized = original.empty() ? original : shrink(original, diverges, &iterations);
+
+    os << "# divergence demo: the shrinker reducing a real C++/OCaml divergence (issue #37)\n";
+    os << "# injected bug: an oracle that drops Cancel commands (replay_snapshot --drop-cancels)\n";
+    os << "# seed: " << seed << "\n";
+    os << "# original length: " << original.size() << "\n";
+    os << "# minimized length: " << minimized.size() << "\n";
+    os << "# shrink iterations: " << iterations << "\n";
+
+    FixtureParams p;
+    p.seed = seed;
+    p.symbols = 3;
+    p.orders = minimized.size();
+    p.max_qty = 20;
+    p.max_notional = 1000;
     run_and_emit(os, p, minimized);
 }
 

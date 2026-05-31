@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench asan demo check-fixtures check-manifest determinism clean
+.PHONY: configure build test check fmt fmt-check tidy bench asan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -46,6 +46,9 @@ check-manifest: build
 
 determinism:
 	bash scripts/determinism_check.sh
+
+divergence-demo: build
+	bash scripts/divergence_demo.sh
 
 clean:
 	rm -rf build

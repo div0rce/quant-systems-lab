@@ -107,6 +107,9 @@ jobs:
       - name: Differential seed sweep (seeds 1..64)
         run: scripts/seed_sweep.sh 64
 
+      - name: Divergence demonstration (shrinker reduces a real C++/OCaml mismatch)
+        run: scripts/divergence_demo.sh
+
       - name: Upload seed-sweep divergence bundle
         if: failure()
         uses: actions/upload-artifact@v4

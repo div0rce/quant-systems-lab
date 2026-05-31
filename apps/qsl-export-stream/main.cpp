@@ -27,6 +27,10 @@ int main(int argc, char **argv) {
         qsl::replay::write_shrunk_fixture(std::cout, std::stoull(argv[2]));
         return 0;
     }
+    if (argc >= 3 && std::string(argv[1]) == "divergence") {
+        qsl::replay::write_divergence_fixture(std::cout, std::stoull(argv[2]));
+        return 0;
+    }
     qsl::replay::FixtureParams params;
     if (argc >= 2) {
         params.seed = std::stoull(argv[1]);

@@ -37,4 +37,10 @@ void write_property_fixture(std::ostream &os, std::uint64_t seed);
 // minimized lengths, failure reason).
 void write_shrunk_fixture(std::ostream &os, std::uint64_t seed);
 
+// Demonstrate the shrinker reducing a real C++/OCaml divergence (issue #37): search seeds from
+// `seed_hint` for a flow on which a cancel-dropping oracle diverges from the correct engine,
+// shrink it to a minimal counterexample, and write that fixture (with the correct C++ snapshot
+// embedded, so the honest OCaml replay matches it and `replay_snapshot --drop-cancels` diverges).
+void write_divergence_fixture(std::ostream &os, std::uint64_t seed_hint);
+
 } // namespace qsl::replay

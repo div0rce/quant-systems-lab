@@ -226,6 +226,33 @@ snapshot last_seq 3 trades 1
 (The renumber pass dropped the two unused registrations and renumbered the surviving symbol to 0
 and the order ids to 0/1.)
 
+## Divergence demonstration (issue #37)
+
+The shrinker above is exercised against the artificial "produces a trade" predicate because the
+C++ engine and the OCaml oracle agree on every tested stream — there is no real divergence to
+reduce. To show the machinery on a genuine cross-language failure, we inject one: the OCaml
+oracle gains a deliberately buggy mode, `replay_snapshot --drop-cancels`, that ignores cancels.
+
+`qsl-export-stream divergence <seed>` then shrinks a property flow against the predicate "the
+correct engine and a cancel-dropping oracle disagree", emitting a minimal fixture whose embedded
+snapshot is the *correct* C++ result. `make divergence-demo` (`scripts/divergence_demo.sh`, run
+in CI) replays that minimal fixture with both oracles and asserts the honest one agrees while the
+buggy one diverges:
+
+```text
+cmd reg S0
+cmd limit 0 0 B 1 1 GTC
+cmd cancel 0 0
+snapshot last_seq 2 trades 0      # correct C++; honest OCaml replay matches this
+sym 0 bid - ask - orders 0
+# replay_snapshot --drop-cancels diverges: last_seq 1, sym 0 bid 1 orders 1, level 0 B 1 1
+```
+
+So a 123-command flow shrinks to a 3-command counterexample that reproduces a real C++-vs-OCaml
+snapshot mismatch — the shrinker working on an actual differential failure, not just the
+artificial predicate. The bug is confined to the opt-in `--drop-cancels` flag; the normal
+differential tests are unaffected.
+
 ## Coverage matrix
 
 Each snapshot field crossed with the kind of differential coverage that exercises it. The
