@@ -26,6 +26,12 @@ jobs:
       - name: Test
         run: ctest --preset dev
 
+      - name: Build benchmarks (compile check + smoke run)
+        run: |
+          cmake --preset bench
+          cmake --build --preset bench --target qsl-bench
+          build/bench/qsl-bench diff >/dev/null
+
       - name: Differential fixture golden check
         run: make check-fixtures
 
