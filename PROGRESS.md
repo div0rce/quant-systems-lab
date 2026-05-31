@@ -25,7 +25,7 @@ Do not rely on prior chat memory.
 - **Last completed milestone:** M23 — v0.1.0 release
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** yes as of the release gate (157/157; OCaml `dune runtest` 5 suites); verify again before M24 implementation
-- **Last action:** cut the GitHub-only `v0.1.0` release after the release-readiness gate; planning files updated to promote #24–#27 into Phase III (M24–M27) and add Phase IV Linux/profiling/review milestones (M28–M31)
+- **Last action:** cut the GitHub-only `v0.1.0` release after the release-readiness gate; planning files updated to promote the concurrency/memory/profiling issues (#24→M24, #26→M26, #27→M27, #25→M28, #32→M29) into the Phase III/IV roadmap (M24–M31) and keep #28–#31/#33 deferred
 - **Next action:** run `/start-milestone 24`
 - **Blockers:** none
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _v0.1.0 released (tag on 9857e1a). Phase III/IV roadmap prepared: #24–#27 promoted to M24–M27, M28–M31 added, #28–#33 deferred. Next: `/start-milestone 24` (`feat/m24-spsc-ring-buffer`)._
+- _v0.1.0 released (tag on 9857e1a). Phase III/IV roadmap prepared: #24→M24, #26→M26, #27→M27, #25→M28, #32→M29; #28–#31 and #33 deferred. Next: `/start-milestone 24` (`feat/m24-spsc-ring-buffer`)._
 
 
 ---
@@ -260,9 +260,9 @@ Lower priority:
 ## Decision log additions
 
 - [2026-05-31] Cut GitHub-only `v0.1.0` release after the release-readiness gate; no packages published.
-- [2026-05-31] Promoted old deferred issues #24–#27 into Phase III milestones M24–M27 instead of leaving them as loose backlog.
+- [2026-05-31] Promoted old issues into the Phase III/IV roadmap (issue → milestone): #24 → M24, #26 → M26, #27 → M27, #25 → M28, #32 → M29 — instead of leaving them as loose backlog.
 - [2026-05-31] Added Phase IV milestones M29–M31 for Linux perf/socket profiling and external review signal (with M28 memory-pool experiment closing Phase III).
-- [2026-05-31] Deferred generic product items #28–#33 until after the systems-credibility arc; dashboards/FIX/Docker/Pages remain lower priority.
+- [2026-05-31] Deferred generic product items #28–#31 and #33 (realistic flow model, FIX adapter, dashboard, Docker, Pages) until after the systems-credibility arc; #32 (perf/flamegraph) is promoted to M29.
 - [2026-05-29] Target Jane Street SWE first and Linux Engineering second; avoid optimizing for IT Operations because it weakens software-engineering signal.
 - [2026-05-29] Preserve the C++20 exchange simulator as the core project; add OCaml only as a replay-verifier subproject, not as a replacement for the engine.
 - [2026-05-29] Add Linux performance and socket gateway documentation requirements to strengthen Linux Engineering fit.

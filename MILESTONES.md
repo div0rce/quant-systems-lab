@@ -458,10 +458,14 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 > **Execution status (historical).** This backlog was tracked as GitHub issues #24–#51. Items
 > **#34–#51 were completed and merged before v0.1.0** (differential follow-ups, shrinker
 > improvements, oracle hardening, larger property corpus, regression archive, and
-> differential-harness benchmarks). Items **#24–#27 are no longer treated as loose deferred
-> backlog** — they are **promoted into Phase III milestones M24–M27** (see the Phase III/IV
-> roadmap below). Generic product items **#28–#33 remain deferred** and should not be started
-> before the Phase III/IV systems roadmap unless the human explicitly reprioritizes.
+> differential-harness benchmarks). Several remaining issues are **promoted into the Phase III/IV
+> roadmap** (issue → milestone): **#24 → M24** (ring buffer), **#26 → M26** (threaded pipeline),
+> **#27 → M27** (ThreadSanitizer), **#25 → M28** (memory-pool allocator), **#32 → M29** (Linux
+> perf/flamegraph). M25 (memory-ordering evidence), M30 (socket profiling/hardening), and M31
+> (external review) are new milestones with no prior issue. The genuinely **deferred** items are
+> **#28** (realistic order-flow model), **#29** (FIX adapter), **#30** (web dashboard),
+> **#31** (Docker packaging), and **#33** (Pages site) — do not start them before the Phase III/IV
+> systems roadmap unless the human explicitly reprioritizes.
 
 Do not pull backlog items into earlier PRs.
 
@@ -1030,7 +1034,7 @@ review.
 
 Forbidden throughout: production-grade/HFT/real-exchange/formally-verified/profitable/guaranteed-
 low-latency/production-networking claims; and dashboards, trading strategies, market-data APIs,
-FIX adapters, Docker packaging, or Pages sites (the deferred #28–#33) before this arc completes.
+FIX adapters, Docker packaging, or Pages sites (the deferred #28–#31 and #33) before this arc completes.
 
 ---
 
