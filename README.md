@@ -22,26 +22,16 @@ flowchart LR
     gw --> risk{Risk checks}
     risk -->|reject| client
     risk -->|accept| eng[Matching engine]
-
     eng -->|ack / fill| gw
     gw -->|responses| client
-
     eng -->|engine events| pub[Market-data publisher]
-    pub -->|UDP feed| sub[MD subscriber]
-
+    pub -->|UDP feed| sub[Market-data subscriber]
     eng -->|append| log[(Event log)]
     log -.->|replay rebuilds identical state| rec[Recovered engine]
-
-    gen[Property command generator] -->|seeded streams| fix[Golden / property fixtures]
-    fix -->|replay| cpp[C++ replay]
-    fix -->|independent replay| ocaml[OCaml oracle]
-    cpp -->|snapshots| diff{Snapshot equality}
-    ocaml -->|snapshots| diff
-
-    diff -->|match| ci[CI pass]
-    diff -->|mismatch| shrink[Shrinker]
-    shrink -->|minimal failing fixture| fix
 ```
+
+The full architecture, including the cross-language verification pipeline, is in
+[docs/architecture.md](docs/architecture.md).
 
 | Layer | Namespace | What it does |
 |---|---|---|
@@ -68,9 +58,11 @@ make demo      # end-to-end local demo (see below)
 ```
 
 Other targets: `make check` (format-check + build + test), `make fmt`, `make asan`
-(AddressSanitizer + UBSan), `make bench` (build the bench preset and write
-`results/latest.txt`), `make check-fixtures` (regenerate the differential fixtures and verify
-they match current C++ output).
+(AddressSanitizer + UBSan), `make bench` / `make bench-diff` (build the bench preset and write
+`results/latest.txt` / `results/differential.txt`), `make check-fixtures` (regenerate the
+differential fixtures and verify they match current C++ output), `make check-manifest` (verify
+the fixture provenance manifest), and `make determinism` (assert fixtures are byte-identical
+across compilers).
 
 ## Demo
 
@@ -105,7 +97,10 @@ and metadata are in [`results/latest.txt`](results/latest.txt); methodology and 
 | Matching-engine flow (apply) | ~121 ns/command |
 | Replay from command log | ~132 ns/command |
 
-Reproduce with `make bench` (numbers will differ by machine).
+Reproduce with `make bench` (numbers will differ by machine). The differential-testing harness
+(generation, replay, shrinking) has its own benchmark — `make bench-diff`, written to
+[`results/differential.txt`](results/differential.txt) — kept separate so it does not disturb
+the core numbers above.
 
 ## Limitations
 
@@ -127,22 +122,29 @@ duplicate/reused ids, unknown symbols, IOC/market, cancel/modify, multi-symbol);
 exports a fixture (commands + its snapshot); OCaml replays the **commands only** and the
 **differential test** asserts its snapshot equals the C++ snapshot (best bid/ask, level
 aggregates, order counts, last_seq, trade count); a **shrinker** reduces any disagreement to a
-minimal counterexample. Committed fixtures are golden-regenerated in CI so they cannot drift.
+minimal counterexample. The fifty committed property fixtures (`prop_seed1..50`) are
+golden-regenerated and provenance-checked (a hash manifest) so they cannot drift; a dynamic CI
+seed sweep additionally replays further seeds on the fly (the swept fixtures are ephemeral, not
+committed).
 
 This is cross-language differential + property testing — **not** formal verification or a
 correctness proof. An earlier OCaml layer also checks log invariants directly
 ([docs/ocaml_verifier.md](docs/ocaml_verifier.md)). Architecture and exact "what this proves /
 does not prove" are in [docs/differential_testing.md](docs/differential_testing.md) and
-[docs/property_testing.md](docs/property_testing.md); build/test with `cd ocaml && dune runtest`.
+[docs/property_testing.md](docs/property_testing.md) (which also covers the oracle-independence
+audit and the [regression archive](regressions/README.md)); build/test with
+`cd ocaml && dune runtest`.
 
 ## Repository layout
 
 ```text
 include/qsl/   public headers          src/          implementation
-apps/          CLI tools (gateway,     tests/        unit + invariant + fuzz tests
+apps/          8 CLI tools (gateway,   tests/        unit + invariant + fuzz tests
                client, replay, feed,   docs/         design docs + ADRs
-               fixture exporter)       ocaml/        independent replay verifier
-scripts/       demo + benchmark        results/      benchmark outputs
+               log inspect, bench,     ocaml/        independent replay verifier + oracle
+               fixture + stream        regressions/  archived minimal failing fixtures
+               exporters)              results/      benchmark outputs (latest, differential)
+scripts/       demo + benchmark + fixture/determinism checks
 ```
 
 ## Positioning

@@ -4,6 +4,24 @@ The property layer probes the C++ engine with seeded, deterministic command stre
 each through the differential oracle (`docs/differential_testing.md`). When a stream "fails" a
 predicate, the shrinker reduces it to a minimal counterexample.
 
+```mermaid
+flowchart TD
+    params[Seed + generator parameters] --> generate[Generate command stream]
+    generate --> execute[Replay through gateway + engine]
+    execute --> predicate{Failure predicate holds? <br/> stream still fails?}
+    predicate -->|no| keep[No failing fixture]
+    predicate -->|yes| pass[Shrink pass: try chunk/command removal,<br/>field simplification, renumbering]
+    pass --> cand{Candidate still fails?}
+    cand -->|yes| adopt[Keep the smaller candidate]
+    cand -->|no| discard[Discard candidate, try the next]
+    adopt --> pass
+    discard --> pass
+    pass --> fixed{Full pass kept nothing?}
+    fixed -->|no| pass
+    fixed -->|yes| minimal[1-minimal fixture]
+    minimal --> golden[Golden fixture + CI replay]
+```
+
 ## Generator (`generate_property_flow(seed, symbols, orders)`)
 
 Deterministic by seed (`std::mt19937_64`, integer-only), so fixtures are byte-reproducible and

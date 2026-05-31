@@ -4,6 +4,16 @@ Reproducible latency and throughput measurements for the deterministic core. All
 produced by the committed harness (`apps/qsl-bench`) and written to `results/`; none are
 hand-written.
 
+```mermaid
+flowchart LR
+    bench[qsl-bench] --> core[Core microbenchmarks]
+    bench --> diff[Differential harness benchmarks]
+    core --> latest[results/latest.txt]
+    diff --> diffout[results/differential.txt]
+    latest --> docs[Benchmark docs]
+    diffout --> docs
+```
+
 ## Policy
 
 No performance number appears in the README, PROGRESS, résumé bullets, or any doc unless it

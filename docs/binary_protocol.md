@@ -16,11 +16,15 @@ Internal engine structs are independent of this wire layout.
 
 ## Frame
 
-```text
-+------------------- header (16 bytes) -------------------+----- body -----+
-| type (u16) | version (u16) | body_len (u32) | seq (u64) | body (body_len)|
-+---------------------------------------------------------+----------------+
-```
+A frame is a fixed **16-byte header** followed by a variable-length body:
+
+| Offset | Size | Field      | Type         | Notes                                   |
+| -----: | ---: | ---------- | ------------ | --------------------------------------- |
+|      0 |    2 | `type`     | u16          | message type (`MsgType`)                |
+|      2 |    2 | `version`  | u16          | protocol version (`= 1`)                |
+|      4 |    4 | `body_len` | u32          | body byte count (header excluded)       |
+|      8 |    8 | `seq`      | u64          | sequence number                         |
+|     16 | `body_len` | `body` | bytes        | message payload                         |
 
 All multi-byte integers are big-endian. `body_len` counts body bytes only (the header
 is fixed at 16 bytes). Signed `Price` is transported as its 64-bit two's-complement
