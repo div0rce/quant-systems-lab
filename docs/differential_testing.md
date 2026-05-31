@@ -134,6 +134,11 @@ prices and quantities, duplicate active ids, reused inactive ids, unknown symbol
 modifies of active and inactive orders, and multi-symbol interleavings. `qsl-export-stream prop
 <seed>` exports one fixture per seed; `prop_seed1..8.txt` are committed.
 
+The committed eight are the regression floor; the `differential-sweep` CI job widens coverage
+per run by generating seeds `1..64` on the fly (`scripts/seed_sweep.sh`) — exporting each with
+the C++ exporter and checking it against the independent OCaml replay via `diff_report`. New
+seeds need no committed fixtures, and any divergence uploads the same failure bundle.
+
 `test_differential.ml` discovers every `prop_*.txt` fixture (via `Sys.readdir`) and runs the
 same C++-vs-OCaml snapshot equality plus a no-crossed-book invariant on each, reporting the
 failing fixture/seed on divergence. Across seeds 1–8 the two engines agree exactly while
