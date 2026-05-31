@@ -4,13 +4,16 @@
 #include "qsl/gateway/session.hpp"
 #include "qsl/protocol/codec.hpp"
 #include "qsl/replay/command.hpp"
+#include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/event_log.hpp"
 #include "qsl/replay/recovery.hpp"
+#include "qsl/replay/shrink.hpp"
 
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <string>
 #include <vector>
 
 namespace {
@@ -50,9 +53,54 @@ template <class F> void throughput(const char *name, std::size_t items, std::siz
                 (sec * 1e9) / total, total / sec);
 }
 
+// Differential-testing harness benchmarks: the cost of generating, replaying (through the risk
+// gateway, as the differential does), and shrinking property command streams.
+void run_diff_benchmarks() {
+    using namespace qsl;
+
+    // 1. Property command-stream generation (generate_property_flow, varied seeds).
+    {
+        std::uint64_t seed = 1;
+        throughput("property flow generation", 120, 200, [&] {
+            const auto flow = replay::generate_property_flow(seed++, 3, 120);
+            g_sink += flow.size();
+        });
+    }
+
+    // 2. Differential replay: apply a property flow through the risk gateway + engine (the
+    //    path the C++ side of the differential exercises), including risk rejections.
+    {
+        const auto flow = replay::generate_property_flow(1, 3, 120);
+        throughput("differential gateway replay", flow.size(), 200, [&] {
+            engine::MatchingEngine eng;
+            gateway::OrderGateway gw{eng, gateway::RiskConfig{20, 1000}};
+            for (const auto &cmd : flow) {
+                g_sink += replay::apply_command(eng, gw, cmd).events.size();
+            }
+            g_sink += eng.last_seq();
+        });
+    }
+
+    // 3. Shrink: delta-debug a failing property flow to a fixed point (re-running the predicate
+    //    on each candidate). Reported as latency per full shrink.
+    {
+        const auto flow = replay::generate_property_flow(1, 3, 120);
+        const replay::ShrinkPredicate produces_trade =
+            [](const std::vector<replay::Command> &cmds) {
+                return replay::count_trades(cmds, 20, 1000) > 0;
+            };
+        latency("shrink property flow", 300,
+                [&] { g_sink += replay::shrink(flow, produces_trade).size(); });
+    }
+}
+
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc >= 2 && std::string(argv[1]) == "diff") {
+        run_diff_benchmarks();
+        return 0;
+    }
     using namespace qsl;
     using core::OrderType;
     using core::Side;

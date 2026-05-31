@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench asan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff asan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -29,6 +29,11 @@ bench:
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/run_benchmarks.sh
+
+bench-diff:
+	cmake --preset bench
+	cmake --build --preset bench --target qsl-bench
+	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/run_diff_benchmarks.sh
 
 asan:
 	cmake --preset asan

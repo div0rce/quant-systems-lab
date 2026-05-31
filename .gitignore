@@ -10,3 +10,7 @@ compile_commands.json
 .DS_Store
 results/*.json
 results/*.csv
+
+# Agent working files — never committed
+.agents/
+AGENTS.md
