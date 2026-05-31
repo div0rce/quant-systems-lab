@@ -84,6 +84,19 @@ TEST_CASE("shrinker renumbers symbols, dropping unreferenced registrations", "[s
     REQUIRE(registrations == 1);
 }
 
+TEST_CASE("renumber leaves idempotent duplicate registrations unchanged", "[shrink]") {
+    // `reg X; reg X` allocates only symbol id 0 (registration is idempotent), so id 1 is never
+    // registered and `limit 1 ...` is an UnknownSymbol reject. renumber must not assume the second
+    // registration owns id 1 and "fix up" that order into an accepted one — it must bail.
+    using namespace replay;
+    const std::vector<Command> flow = {
+        RegisterSymbol{"X"},
+        RegisterSymbol{"X"},
+        NewLimit{1, 5, core::Side::Sell, 100, 1, core::TimeInForce::GTC},
+    };
+    REQUIRE(renumber(flow) == flow); // unchanged: positional id model is unsafe here
+}
+
 TEST_CASE("shrinker is deterministic", "[shrink]") {
     const auto original = replay::generate_property_flow(2, 3, 120);
     REQUIRE(produces_trade(original));

@@ -61,12 +61,24 @@ Command with_min_price(const Command &c) {
     return c;
 }
 
-// Canonicalize symbol and order ids to shrink a fixture further: drop RegisterSymbol commands
-// for symbols no other command references, renumber the surviving registrations to 0..k-1 (and
-// rename them S0..), and compact order ids to first-appearance order. Both remaps are bijective
-// over the values that survive, so engine semantics are preserved; the caller predicate-guards
-// the result, so any stream this would alter into a non-failure is discarded.
+} // namespace
+
 std::vector<Command> renumber(const std::vector<Command> &cmds) {
+    // The positional id model below (the i-th RegisterSymbol owns symbol id i) only holds when
+    // every symbol name is distinct. Registration is idempotent, so a repeated name does NOT
+    // allocate a new id; renumbering such a stream could turn an UnknownSymbol reject into an
+    // accepted order and misrepresent the original replay. Bail in that case (the removal passes
+    // still drop idempotent duplicate registrations).
+    {
+        std::set<std::string> names;
+        for (const auto &c : cmds) {
+            if (const auto *rs = std::get_if<RegisterSymbol>(&c)) {
+                if (!names.insert(rs->name).second) {
+                    return cmds;
+                }
+            }
+        }
+    }
     // Symbols referenced by non-register commands (the i-th RegisterSymbol owns symbol id i).
     std::set<core::SymbolId> referenced;
     for (const auto &c : cmds) {
@@ -133,8 +145,6 @@ std::vector<Command> renumber(const std::vector<Command> &cmds) {
     }
     return out;
 }
-
-} // namespace
 
 std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fails,
                             std::size_t *iterations) {
