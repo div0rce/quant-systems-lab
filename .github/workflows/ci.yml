@@ -65,3 +65,20 @@ jobs:
           cd ocaml
           dune build
           dune runtest
+
+      - name: Differential failure artifact bundle
+        if: failure()
+        run: |
+          cd ocaml
+          mkdir -p _diff
+          dune exec bin/diff_report.exe -- _diff \
+            test/fixtures/stream_seed7.txt test/fixtures/stream_ioc.txt \
+            test/fixtures/shrunk_seed1.txt test/fixtures/prop_seed*.txt || true
+
+      - name: Upload differential failure bundle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: differential-failure-bundle
+          path: ocaml/_diff
+          if-no-files-found: ignore
