@@ -5,8 +5,12 @@
 #include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/recovery.hpp"
 
+#include <map>
+#include <set>
+#include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace qsl::replay {
 namespace {
@@ -57,6 +61,79 @@ Command with_min_price(const Command &c) {
     return c;
 }
 
+// Canonicalize symbol and order ids to shrink a fixture further: drop RegisterSymbol commands
+// for symbols no other command references, renumber the surviving registrations to 0..k-1 (and
+// rename them S0..), and compact order ids to first-appearance order. Both remaps are bijective
+// over the values that survive, so engine semantics are preserved; the caller predicate-guards
+// the result, so any stream this would alter into a non-failure is discarded.
+std::vector<Command> renumber(const std::vector<Command> &cmds) {
+    // Symbols referenced by non-register commands (the i-th RegisterSymbol owns symbol id i).
+    std::set<core::SymbolId> referenced;
+    for (const auto &c : cmds) {
+        if (const auto *nl = std::get_if<NewLimit>(&c)) {
+            referenced.insert(nl->symbol);
+        } else if (const auto *nm = std::get_if<NewMarket>(&c)) {
+            referenced.insert(nm->symbol);
+        } else if (const auto *cn = std::get_if<Cancel>(&c)) {
+            referenced.insert(cn->symbol);
+        } else if (const auto *md = std::get_if<Modify>(&c)) {
+            referenced.insert(md->symbol);
+        }
+    }
+    std::map<core::SymbolId, core::SymbolId> sym_remap;
+    core::SymbolId old_sym = 0;
+    core::SymbolId new_sym = 0;
+    for (const auto &c : cmds) {
+        if (std::holds_alternative<RegisterSymbol>(c)) {
+            if (referenced.count(old_sym) != 0) {
+                sym_remap[old_sym] = new_sym++;
+            }
+            ++old_sym;
+        }
+    }
+    const auto map_sym = [&](core::SymbolId s) {
+        const auto it = sym_remap.find(s);
+        return it == sym_remap.end() ? s : it->second; // unregistered refs keep their id
+    };
+
+    // Order ids compacted in first-appearance order (a bijection preserves duplicate/cancel/modify
+    // matching).
+    std::map<core::OrderId, core::OrderId> id_remap;
+    core::OrderId next_id = 0;
+    const auto map_id = [&](core::OrderId id) {
+        const auto [it, inserted] = id_remap.try_emplace(id, next_id);
+        if (inserted) {
+            ++next_id;
+        }
+        return it->second;
+    };
+
+    std::vector<Command> out;
+    out.reserve(cmds.size());
+    old_sym = 0;
+    for (const auto &c : cmds) {
+        if (std::holds_alternative<RegisterSymbol>(c)) {
+            const bool keep = referenced.count(old_sym) != 0;
+            const core::SymbolId ns = keep ? sym_remap[old_sym] : 0;
+            ++old_sym;
+            if (keep) {
+                out.push_back(RegisterSymbol{"S" + std::to_string(ns)});
+            }
+        } else if (const auto *nl = std::get_if<NewLimit>(&c)) {
+            out.push_back(NewLimit{map_sym(nl->symbol), map_id(nl->id), nl->side, nl->price,
+                                   nl->quantity, nl->tif});
+        } else if (const auto *nm = std::get_if<NewMarket>(&c)) {
+            out.push_back(NewMarket{map_sym(nm->symbol), map_id(nm->id), nm->side, nm->quantity});
+        } else if (const auto *cn = std::get_if<Cancel>(&c)) {
+            out.push_back(Cancel{map_sym(cn->symbol), map_id(cn->id)});
+        } else {
+            const auto &md = std::get<Modify>(c);
+            out.push_back(Modify{map_sym(md.symbol), map_id(md.id), md.price, md.quantity});
+        }
+    }
+    return out;
+}
+
 } // namespace
 
 std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fails,
@@ -102,6 +179,14 @@ std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fai
             auto candidate = cur;
             candidate[i] = with_min_price(cur[i]);
             if (candidate[i] != cur[i] && fails(candidate)) {
+                cur = std::move(candidate);
+                changed = true;
+            }
+        }
+        // (5) renumber: drop unreferenced symbol registrations and compact symbol/order ids.
+        {
+            auto candidate = renumber(cur);
+            if (candidate != cur && fails(candidate)) {
                 cur = std::move(candidate);
                 changed = true;
             }

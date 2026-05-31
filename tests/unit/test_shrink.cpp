@@ -58,6 +58,32 @@ TEST_CASE("shrinker simplifies prices", "[shrink]") {
     }
 }
 
+TEST_CASE("shrinker renumbers symbols, dropping unreferenced registrations", "[shrink]") {
+    // Only symbol 2 is used; the shrinker should drop the S0/S1 registrations and renumber the
+    // surviving symbol to 0 so the minimal fixture carries a single registration.
+    using namespace replay;
+    const std::vector<Command> flow = {
+        RegisterSymbol{"S0"},
+        RegisterSymbol{"S1"},
+        RegisterSymbol{"S2"},
+        NewLimit{2, 7, core::Side::Sell, 100, 1, core::TimeInForce::GTC},
+        NewLimit{2, 9, core::Side::Buy, 100, 1, core::TimeInForce::GTC},
+    };
+    REQUIRE(produces_trade(flow));
+
+    const auto minimized = shrink(flow, produces_trade);
+    REQUIRE(produces_trade(minimized));
+    std::size_t registrations = 0;
+    for (const auto &c : minimized) {
+        if (std::holds_alternative<RegisterSymbol>(c)) {
+            ++registrations;
+        } else if (const auto *nl = std::get_if<NewLimit>(&c)) {
+            REQUIRE(nl->symbol == 0); // the surviving symbol is renumbered to 0
+        }
+    }
+    REQUIRE(registrations == 1);
+}
+
 TEST_CASE("shrinker is deterministic", "[shrink]") {
     const auto original = replay::generate_property_flow(2, 3, 120);
     REQUIRE(produces_trade(original));

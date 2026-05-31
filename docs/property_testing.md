@@ -25,11 +25,12 @@ Greedy, deterministic delta-debugging that preserves a pluggable failure predica
 
 1. remove contiguous chunks (decreasing size);
 2. remove single commands;
-3. simplify fields (lower quantities);
+3. simplify fields (lower quantities and limit/modify prices);
+4. renumber (drop unreferenced symbol registrations, compact symbol/order ids);
 
 iterated to a fixed point. The result is 1-minimal under single-command removal. The fixture
 exporter (`qsl-export-stream shrink <seed>`) writes the minimized stream plus a report (seed,
-original/minimized length, reduction %, shrink iterations, failure reason); see `shrunk_seed1.txt` (123 → 5 commands).
+original/minimized length, reduction %, shrink iterations, failure reason); see `shrunk_seed1.txt` (123 → 3 commands).
 
 ## Determinism and reproducibility
 
@@ -41,6 +42,6 @@ original/minimized length, reduction %, shrink iterations, failure reason); see 
 
 - The shrinker is demonstrated against an artificial "produces a trade" predicate, since the
   engines currently agree (no real divergence to shrink); it is predicate-agnostic.
-- Greedy, not globally minimal; field simplification is quantity-only; no symbol/id renumbering.
+- Greedy, not globally minimal; field simplification covers quantities and prices; a renumber pass compacts symbol/order ids and drops unused registrations.
 - Coverage is over the committed seeds; a dynamic CI seed sweep is tracked in the backlog.
 - This is property-based differential testing, not formal verification or a correctness proof.
