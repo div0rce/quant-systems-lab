@@ -29,7 +29,7 @@ Greedy, deterministic delta-debugging that preserves a pluggable failure predica
 
 iterated to a fixed point. The result is 1-minimal under single-command removal. The fixture
 exporter (`qsl-export-stream shrink <seed>`) writes the minimized stream plus a report (seed,
-original length, minimized length, failure reason); see `shrunk_seed1.txt` (123 → 5 commands).
+original/minimized length, reduction %, shrink iterations, failure reason); see `shrunk_seed1.txt` (123 → 5 commands).
 
 ## Determinism and reproducibility
 

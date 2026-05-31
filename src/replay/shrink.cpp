@@ -42,12 +42,18 @@ Command with_min_qty(const Command &c) {
 
 } // namespace
 
-std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fails) {
+std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fails,
+                            std::size_t *iterations) {
     if (!fails(cur)) {
+        if (iterations != nullptr) {
+            *iterations = 0;
+        }
         return cur; // predicate does not hold; nothing to shrink
     }
+    std::size_t passes = 0;
     bool changed = true;
     while (changed) {
+        ++passes;
         changed = false;
         // (1)+(2) remove contiguous chunks of decreasing size (n==1 is single-command removal).
         for (std::size_t n = (cur.size() > 1 ? cur.size() / 2 : 1); n >= 1; n /= 2) {
@@ -74,6 +80,9 @@ std::vector<Command> shrink(std::vector<Command> cur, const ShrinkPredicate &fai
                 changed = true;
             }
         }
+    }
+    if (iterations != nullptr) {
+        *iterations = passes;
     }
     return cur;
 }

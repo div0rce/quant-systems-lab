@@ -16,9 +16,11 @@ using ShrinkPredicate = std::function<bool(const std::vector<Command> &)>;
 
 // Greedy, deterministic shrink: returns a reduced command stream for which `fails` still holds.
 // Strategies (iterated to a fixed point): remove contiguous chunks, remove single commands,
-// and simplify command fields (lower quantities). Not guaranteed globally minimal.
+// and simplify command fields (lower quantities). Not guaranteed globally minimal. If
+// `iterations` is non-null, it receives the number of fixed-point passes performed.
 [[nodiscard]] std::vector<Command> shrink(std::vector<Command> commands,
-                                          const ShrinkPredicate &fails);
+                                          const ShrinkPredicate &fails,
+                                          std::size_t *iterations = nullptr);
 
 // Replay `commands` through the risk gateway and return the number of trades produced.
 // A convenient building block for predicates.

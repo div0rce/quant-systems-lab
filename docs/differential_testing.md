@@ -169,7 +169,7 @@ reviewable counterexample while preserving a failure predicate. It is greedy and
 iterating three strategies to a fixed point: remove contiguous chunks (decreasing size), remove
 single commands, and simplify fields (lower quantities). `qsl-export-stream shrink <seed>`
 shrinks the property flow for a seed and writes the minimized differential fixture prefixed
-with a shrink report (seed, original length, minimized length, failure reason).
+with a shrink report (seed, original/minimized length, reduction %, shrink iterations, failure reason).
 
 The committed `shrunk_seed1.txt` reduces a 123-command flow to **5** commands (three symbol
 registrations + a resting sell + a crossing IOC buy that trades), and the OCaml differential
@@ -201,6 +201,8 @@ a 123-command flow to 5 commands — the minimal stream that still trades:
 # seed: 1
 # original length: 123
 # minimized length: 5
+# reduction: 95.9%
+# shrink iterations: 2
 cmd reg S0
 cmd reg S1
 cmd reg S2
