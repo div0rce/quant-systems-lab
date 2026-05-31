@@ -255,6 +255,10 @@ snapshot mismatch — the shrinker working on an actual differential failure, no
 artificial predicate. The bug is confined to the opt-in `--drop-cancels` flag; the normal
 differential tests are unaffected.
 
+This minimized counterexample is also kept in the differential regression archive
+(`regressions/`), which preserves notable shrunk failures over time (currently only this
+synthetic one, since the real engines agree).
+
 ## Coverage matrix
 
 Each snapshot field crossed with the kind of differential coverage that exercises it. The

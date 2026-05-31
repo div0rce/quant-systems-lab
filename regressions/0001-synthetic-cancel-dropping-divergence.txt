@@ -1,0 +1,16 @@
+# divergence demo: the shrinker reducing a real C++/OCaml divergence (issue #37)
+# injected bug: an oracle that drops Cancel commands (replay_snapshot --drop-cancels)
+# seed: 3
+# original length: 123
+# minimized length: 3
+# shrink iterations: 2
+# qsl differential-testing fixture: command stream + events + rejections + snapshot
+version 1
+meta seed 3 symbols 3 orders 3 max_qty 20 max_notional 1000
+cmd reg S0
+cmd limit 0 0 B 1 1 GTC
+evt accept 1 0 0
+cmd cancel 0 0
+evt cancel 2 0 0
+snapshot last_seq 2 trades 0
+sym 0 bid - ask - orders 0
