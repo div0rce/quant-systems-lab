@@ -2,6 +2,7 @@
 
 #include "qsl/engine/matching_engine.hpp"
 #include "qsl/gateway/order_gateway.hpp"
+#include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/recovery.hpp"
 
 #include <utility>
@@ -83,22 +84,7 @@ std::size_t count_trades(const std::vector<Command> &commands, core::Quantity ma
     gateway::OrderGateway gw{engine, gateway::RiskConfig{max_qty, max_notional}};
     std::size_t trades = 0;
     for (const auto &command : commands) {
-        if (const auto *rs = std::get_if<RegisterSymbol>(&command)) {
-            engine.register_symbol(rs->name);
-            continue;
-        }
-        gateway::GatewayResult r{true, core::RejectReason::None, {}};
-        if (const auto *nl = std::get_if<NewLimit>(&command)) {
-            r = gw.new_limit(nl->symbol, nl->id, nl->side, nl->price, nl->quantity, nl->tif);
-        } else if (const auto *nm = std::get_if<NewMarket>(&command)) {
-            r = gw.new_market(nm->symbol, nm->id, nm->side, nm->quantity);
-        } else if (const auto *cn = std::get_if<Cancel>(&command)) {
-            r = gw.cancel(cn->symbol, cn->id);
-        } else {
-            const auto &md = std::get<Modify>(command);
-            r = gw.modify(md.symbol, md.id, md.price, md.quantity);
-        }
-        for (const auto &event : r.events) {
+        for (const auto &event : apply_command(engine, gw, command).events) {
             if (std::holds_alternative<engine::TradeEvent>(event)) {
                 ++trades;
             }

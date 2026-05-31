@@ -1,6 +1,7 @@
 #include "qsl/engine/matching_engine.hpp"
 #include "qsl/gateway/order_gateway.hpp"
 #include "qsl/replay/command.hpp"
+#include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/recovery.hpp"
 
 #include <cstddef>
@@ -73,20 +74,17 @@ int main(int argc, char **argv) {
     };
 
     for (const auto &command : flow) {
-        if (const auto *rs = std::get_if<replay::RegisterSymbol>(&command)) {
-            engine.register_symbol(rs->name);
-        } else if (const auto *nl = std::get_if<replay::NewLimit>(&command)) {
-            record(
-                nl->id, true,
-                gateway.new_limit(nl->symbol, nl->id, nl->side, nl->price, nl->quantity, nl->tif));
+        const auto r = replay::apply_command(engine, gateway, command);
+        if (const auto *nl = std::get_if<replay::NewLimit>(&command)) {
+            record(nl->id, true, r);
         } else if (const auto *nm = std::get_if<replay::NewMarket>(&command)) {
-            record(nm->id, true, gateway.new_market(nm->symbol, nm->id, nm->side, nm->quantity));
+            record(nm->id, true, r);
         } else if (const auto *cn = std::get_if<replay::Cancel>(&command)) {
-            record(cn->id, false, gateway.cancel(cn->symbol, cn->id));
-        } else {
-            const auto &md = std::get<replay::Modify>(command);
-            record(md.id, false, gateway.modify(md.symbol, md.id, md.price, md.quantity));
+            record(cn->id, false, r);
+        } else if (const auto *md = std::get_if<replay::Modify>(&command)) {
+            record(md->id, false, r);
         }
+        // RegisterSymbol: apply_command already registered it; it produces no log line.
     }
 
     os << "summary last_seq " << engine.snapshot().last_seq << " trades " << trades << "\n";

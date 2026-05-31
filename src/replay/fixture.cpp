@@ -3,6 +3,7 @@
 #include "qsl/engine/matching_engine.hpp"
 #include "qsl/gateway/order_gateway.hpp"
 #include "qsl/replay/command.hpp"
+#include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/recovery.hpp"
 #include "qsl/replay/shrink.hpp"
 
@@ -54,6 +55,38 @@ void emit_reject(std::ostream &os, const char *kind, core::OrderId id, core::Rej
     os << "reject " << kind << " " << id << " " << core::to_string(reason) << "\n";
 }
 
+// Emit the `cmd` line for one command (input echo, independent of the engine outcome).
+void emit_cmd(std::ostream &os, const Command &command) {
+    if (const auto *rs = std::get_if<RegisterSymbol>(&command)) {
+        os << "cmd reg " << rs->name << "\n";
+    } else if (const auto *nl = std::get_if<NewLimit>(&command)) {
+        os << "cmd limit " << nl->symbol << " " << nl->id << " " << side_ch(nl->side) << " "
+           << px(nl->price) << " " << nl->quantity << " " << tif_str(nl->tif) << "\n";
+    } else if (const auto *nm = std::get_if<NewMarket>(&command)) {
+        os << "cmd market " << nm->symbol << " " << nm->id << " " << side_ch(nm->side) << " "
+           << nm->quantity << "\n";
+    } else if (const auto *cn = std::get_if<Cancel>(&command)) {
+        os << "cmd cancel " << cn->symbol << " " << cn->id << "\n";
+    } else {
+        const auto &md = std::get<Modify>(command);
+        os << "cmd modify " << md.symbol << " " << md.id << " " << px(md.price) << " "
+           << md.quantity << "\n";
+    }
+}
+
+// Emit the `reject` line for a command the gateway rejected (RegisterSymbol never rejects).
+void emit_command_reject(std::ostream &os, const Command &command, core::RejectReason reason) {
+    if (const auto *nl = std::get_if<NewLimit>(&command)) {
+        emit_reject(os, "new_limit", nl->id, reason);
+    } else if (const auto *nm = std::get_if<NewMarket>(&command)) {
+        emit_reject(os, "new_market", nm->id, reason);
+    } else if (const auto *cn = std::get_if<Cancel>(&command)) {
+        emit_reject(os, "cancel", cn->id, reason);
+    } else if (const auto *md = std::get_if<Modify>(&command)) {
+        emit_reject(os, "modify", md->id, reason);
+    }
+}
+
 } // namespace
 
 static void run_and_emit(std::ostream &os, const FixtureParams &p,
@@ -68,46 +101,12 @@ static void run_and_emit(std::ostream &os, const FixtureParams &p,
 
     std::size_t trades = 0;
     for (const auto &command : flow) {
-        if (const auto *rs = std::get_if<RegisterSymbol>(&command)) {
-            os << "cmd reg " << rs->name << "\n";
-            engine.register_symbol(rs->name);
-        } else if (const auto *nl = std::get_if<NewLimit>(&command)) {
-            os << "cmd limit " << nl->symbol << " " << nl->id << " " << side_ch(nl->side) << " "
-               << px(nl->price) << " " << nl->quantity << " " << tif_str(nl->tif) << "\n";
-            const auto r =
-                gw.new_limit(nl->symbol, nl->id, nl->side, nl->price, nl->quantity, nl->tif);
-            if (!r.accepted) {
-                emit_reject(os, "new_limit", nl->id, r.reason);
-            } else {
-                emit_events(os, r.events, trades);
-            }
-        } else if (const auto *nm = std::get_if<NewMarket>(&command)) {
-            os << "cmd market " << nm->symbol << " " << nm->id << " " << side_ch(nm->side) << " "
-               << nm->quantity << "\n";
-            const auto r = gw.new_market(nm->symbol, nm->id, nm->side, nm->quantity);
-            if (!r.accepted) {
-                emit_reject(os, "new_market", nm->id, r.reason);
-            } else {
-                emit_events(os, r.events, trades);
-            }
-        } else if (const auto *cn = std::get_if<Cancel>(&command)) {
-            os << "cmd cancel " << cn->symbol << " " << cn->id << "\n";
-            const auto r = gw.cancel(cn->symbol, cn->id);
-            if (!r.accepted) {
-                emit_reject(os, "cancel", cn->id, r.reason);
-            } else {
-                emit_events(os, r.events, trades);
-            }
+        emit_cmd(os, command);
+        const auto r = apply_command(engine, gw, command);
+        if (!r.accepted) {
+            emit_command_reject(os, command, r.reason);
         } else {
-            const auto &md = std::get<Modify>(command);
-            os << "cmd modify " << md.symbol << " " << md.id << " " << px(md.price) << " "
-               << md.quantity << "\n";
-            const auto r = gw.modify(md.symbol, md.id, md.price, md.quantity);
-            if (!r.accepted) {
-                emit_reject(os, "modify", md.id, r.reason);
-            } else {
-                emit_events(os, r.events, trades);
-            }
+            emit_events(os, r.events, trades);
         }
     }
 

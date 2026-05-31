@@ -7,6 +7,7 @@
 
 #include "qsl/engine/matching_engine.hpp"
 #include "qsl/gateway/order_gateway.hpp"
+#include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/recovery.hpp"
 #include "qsl/replay/shrink.hpp"
 
@@ -25,21 +26,10 @@ engine::EngineSnapshot run(const std::vector<replay::Command> &cmds, bool drop_c
     engine::MatchingEngine eng;
     gateway::OrderGateway gw{eng, gateway::RiskConfig{/*max_qty=*/20, /*max_notional=*/1000}};
     for (const auto &c : cmds) {
-        if (const auto *rs = std::get_if<replay::RegisterSymbol>(&c)) {
-            eng.register_symbol(rs->name);
-        } else if (const auto *nl = std::get_if<replay::NewLimit>(&c)) {
-            static_cast<void>(
-                gw.new_limit(nl->symbol, nl->id, nl->side, nl->price, nl->quantity, nl->tif));
-        } else if (const auto *nm = std::get_if<replay::NewMarket>(&c)) {
-            static_cast<void>(gw.new_market(nm->symbol, nm->id, nm->side, nm->quantity));
-        } else if (const auto *cn = std::get_if<replay::Cancel>(&c)) {
-            if (!drop_cancels) {
-                static_cast<void>(gw.cancel(cn->symbol, cn->id));
-            }
-        } else {
-            const auto &md = std::get<replay::Modify>(c);
-            static_cast<void>(gw.modify(md.symbol, md.id, md.price, md.quantity));
+        if (drop_cancels && std::holds_alternative<replay::Cancel>(c)) {
+            continue; // the injected bug: silently ignore cancels
         }
+        static_cast<void>(replay::apply_command(eng, gw, c));
     }
     return eng.snapshot();
 }
