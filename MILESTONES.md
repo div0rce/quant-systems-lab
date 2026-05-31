@@ -455,14 +455,13 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ## Backlog — optional after M13 only
 
-> **Execution status:** the backlog below is tracked as GitHub issues #24–#51 (one issue each)
-> and was worked after M22 in priority order — one issue = one branch = one Codex-reviewed PR.
-> The tractable test/tooling/docs items are **all merged** (#34–#51, including the differential
-> follow-ups, shrinker improvements, oracle hardening, larger corpus, regression archive, and
-> differential-harness benchmarks). Still open: **#28–#33** (generic product items — realistic
-> flow model, FIX adapter, web dashboard, Docker, perf/flamegraph docs, Pages site) and
-> **#24–#27** (lock-free queue, memory pool, multithreaded pipeline, ThreadSanitizer), which are
-> **deferred** as major-architecture changes.
+> **Execution status (historical).** This backlog was tracked as GitHub issues #24–#51. Items
+> **#34–#51 were completed and merged before v0.1.0** (differential follow-ups, shrinker
+> improvements, oracle hardening, larger property corpus, regression archive, and
+> differential-harness benchmarks). Items **#24–#27 are no longer treated as loose deferred
+> backlog** — they are **promoted into Phase III milestones M24–M27** (see the Phase III/IV
+> roadmap below). Generic product items **#28–#33 remain deferred** and should not be started
+> before the Phase III/IV systems roadmap unless the human explicitly reprioritizes.
 
 Do not pull backlog items into earlier PRs.
 
@@ -1004,3 +1003,223 @@ The project is strong enough when a reviewer can quickly infer:
 6. The user can write basic OCaml and reason functionally.
 7. The user can discuss Linux/networking/performance tradeoffs honestly.
 8. The user does not lie about trading, production use, or benchmark results.
+
+
+---
+
+# Phase III / IV roadmap (post-v0.1.0)
+
+v0.1.0 proved a correctness-first deterministic exchange-systems lab. Phase III/IV is the next
+deliberate credibility arc: real concurrency, memory discipline, Linux profiling, socket
+hardening, and external review signal — not more product surface area.
+
+## Phase III / IV execution rule
+
+Do M24–M31 **in order**. Do not skip to Linux perf/socket work before the concurrency primitive
+and threaded pipeline exist. Do not start external review before there is enough evidence to
+review.
+
+1. M24 ring buffer
+2. M25 memory-ordering evidence
+3. M26 threaded pipeline
+4. M27 ThreadSanitizer
+5. M28 memory pool allocator
+6. M29 Linux perf/flamegraph profiling
+7. M30 kernel/socket profiling and socket hardening
+8. M31 external review package
+
+Forbidden throughout: production-grade/HFT/real-exchange/formally-verified/profitable/guaranteed-
+low-latency/production-networking claims; and dashboards, trading strategies, market-data APIs,
+FIX adapters, Docker packaging, or Pages sites (the deferred #28–#33) before this arc completes.
+
+---
+
+## M24 — Bounded SPSC ring buffer
+
+- **Branch:** `feat/m24-spsc-ring-buffer`
+- **PR title:** `feat: add bounded SPSC ring buffer`
+- **Goal:** A small bounded single-producer/single-consumer queue as the concurrency primitive
+  for later threaded pipeline work.
+
+### Scope
+
+- `include/qsl/concurrency/spsc_ring.hpp`
+- `tests/unit/test_spsc_ring.cpp`
+- `docs/concurrency_model.md` (or `docs/memory_ordering.md`) initial section
+
+### Definition of Done
+
+- [ ] Fixed-capacity bounded queue; no dynamic allocation in `try_push`/`try_pop`.
+- [ ] `try_push`, `try_pop`, `empty` (and `full` if useful); deterministic full-queue behavior.
+- [ ] Acquire/release memory ordering documented (why, per operation).
+- [ ] Tests: empty pop fails; single push/pop; FIFO preservation; wraparound; full queue rejects;
+      capacity boundary; single-producer/single-consumer stress.
+- [ ] `make check` + `make asan` pass; docs explain why SPSC (not MPMC) and the ordering choices.
+- [ ] `PROGRESS.md` updated.
+
+### Non-goals
+
+No MPMC, no thread pool, no premature integration into gateway/engine/feed, no lock-free
+marketing language unless the implementation actually qualifies, no benchmark claims unless measured.
+
+---
+
+## M25 — Memory-ordering and concurrency evidence package
+
+- **Branch:** `feat/m25-memory-ordering-evidence`
+- **PR title:** `docs: document concurrency ownership and memory ordering`
+- **Goal:** Turn M24 from "I wrote a queue" into "I understand the queue."
+
+### Scope
+
+- `docs/concurrency_model.md`, `docs/memory_ordering.md`
+- `tests/concurrency/test_spsc_stress.cpp`, `tests/concurrency/test_backpressure.cpp`
+
+### Definition of Done
+
+- [ ] Ownership-model table; SPSC memory-ordering table (producer: load tail acquire/justified,
+      write slot normal, publish head release; consumer: load head acquire, read slot normal,
+      publish tail release/justified).
+- [ ] Producer/consumer visibility explanation; backpressure semantics; shutdown assumptions for
+      the later pipeline; false-sharing/cache-line discussion if padding is used.
+- [ ] Explicit limits: SPSC only, not a general concurrent container; no "wait-free/lock-free"
+      claim unless proven.
+- [ ] Docs and tests agree; `make check` + `make asan` pass; `PROGRESS.md` updated.
+
+---
+
+## M26 — Multithreaded gateway-engine-feed pipeline prototype
+
+- **Branch:** `feat/m26-threaded-pipeline`
+- **PR title:** `feat: add threaded gateway-engine-feed pipeline prototype`
+- **Goal:** A real concurrency boundary without corrupting deterministic engine semantics.
+  Architecture: input thread → bounded inbound SPSC queue → engine thread → bounded outbound
+  event queue → publisher/log thread.
+
+### Definition of Done
+
+- [ ] Explicit ownership transfer between threads; bounded queues; deterministic full-inbound-queue
+      handling; event-log integrity never silently dropped; clean startup/shutdown, all threads joined.
+- [ ] Tests: processes commands in order; publisher lag does not corrupt engine state; full inbound
+      queue → deterministic backpressure; `shutdown_empty`, `shutdown_with_pending_commands`,
+      `shutdown_with_full_queue`; event-log records not silently dropped.
+- [ ] `make check` + `make asan` pass; replay/differential tests still pass; architecture docs
+      updated; `PROGRESS.md` updated.
+
+### Non-goals
+
+No production matching-latency attempt, no MPMC queue, no kernel bypass, no real-exchange claim.
+
+---
+
+## M27 — ThreadSanitizer coverage
+
+- **Branch:** `feat/m27-thread-sanitizer`
+- **PR title:** `test: add ThreadSanitizer coverage for concurrent pipeline`
+- **Goal:** TSan as a correctness gate for concurrent code.
+
+### Scope
+
+- `CMakePresets.json`, `cmake/Sanitizers.cmake`, `Makefile`, `.github/workflows/ci.yml`,
+  `docs/concurrency_model.md`. Adds `make tsan` / `ctest --preset tsan`.
+
+### Definition of Done
+
+- [ ] TSan preset builds the threaded tests; CI runs a TSan job if feasible (clearly documented if
+      unsupported on the local/macOS toolchain).
+- [ ] Docs state TSan is for data-race detection, not performance; no benchmark numbers collected
+      under TSan.
+- [ ] `make tsan` passes where supported; `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M28 — Memory pool allocator experiment
+
+- **Branch:** `feat/m28-memory-pool-allocator`
+- **PR title:** `perf: add memory pool allocator experiment`
+- **Goal:** Measure whether controlling hot-path order allocation improves latency/determinism.
+
+### Scope
+
+- `include/qsl/memory/order_pool.hpp` (+ `src/memory/order_pool.cpp` if needed),
+  `benchmarks/bench_order_pool.cpp`, `docs/allocator_experiment.md`,
+  `results/allocator_experiment.txt` (if script-generated).
+
+### Definition of Done
+
+- [ ] Pool/object allocator for hot-path order-like objects; deterministic capacity/failure
+      behavior; no silent fallback unless documented.
+- [ ] Benchmark baseline vs pool path; results carry hardware/compiler/build/commit/dirty-tree
+      metadata; a negative (honest) result is acceptable.
+- [ ] No README number unless generated and committed intentionally; `make check` + the allocator
+      benchmark run; `PROGRESS.md` updated.
+
+---
+
+## M29 — Linux perf and flamegraph profiling artifacts
+
+- **Branch:** `feat/m29-linux-perf-profiling`
+- **PR title:** `perf: add Linux perf profiling artifacts`
+- **Goal:** Real performance-investigation evidence, not just benchmark timing.
+
+### Scope
+
+- `scripts/perf_stat.sh`, `scripts/perf_record.sh`, `docs/perf_analysis.md`,
+  `results/perf_stat_linux.txt`, `results/perf_report_linux.txt`, `results/flamegraph.svg` (optional).
+
+### Definition of Done
+
+- [ ] Linux-only scripts fail clearly on non-Linux; record CPU/kernel/compiler/build metadata.
+- [ ] `perf stat` captures cycles, instructions, branches, branch-misses, cache-references,
+      cache-misses, context-switches, page-faults; `perf record/report` identifies hot-path symbols;
+      flamegraph optional and only if reproducible.
+- [ ] Docs explain what was hot and what was not optimized, and that results are
+      hardware/kernel/compiler dependent; artifacts committed with caveats or regeneration documented.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M30 — Kernel/socket path profiling and Linux socket hardening
+
+- **Branch:** `feat/m30-socket-profiling-hardening`
+- **PR title:** `perf: profile and harden Linux socket path`
+- **Goal:** Linux/socket competence beyond "TCP/UDP demo compiles."
+
+### Scope
+
+- `scripts/profile_gateway_io.sh`, `scripts/socket_stress.sh`, `docs/socket_profiling.md`,
+  `docs/socket_hardening.md`, `results/socket_profile_loopback.txt`, `results/socket_stress_summary.txt`.
+
+### Definition of Done
+
+- [ ] Syscall summary for the gateway/feed path; context-switch/page-fault profile; UDP burst/gap
+      experiment; socket-buffer experiment (default / small / larger receive buffer); user-space
+      engine cost distinguished from kernel/socket overhead; loopback limitations documented.
+- [ ] Optional `epoll` adapter only if cleanly scoped (nonblocking accept/recv/send,
+      EAGAIN/EWOULDBLOCK handling, bounded event batch, clean shutdown); `io_uring` may be discussed
+      but not implemented unless justified.
+- [ ] Scripts run on Linux or skip clearly elsewhere; no production-networking or kernel-bypass
+      claim; `make check` + relevant socket tests pass; `PROGRESS.md` updated.
+
+---
+
+## M31 — External review / maintainer signal
+
+- **Branch:** `docs/m31-external-review`
+- **PR title:** `docs: prepare external review package`
+- **Goal:** A credible external-review surface after the technical evidence exists.
+
+### Scope
+
+- `docs/review_request.md`, `docs/review_feedback.md`,
+  `.github/ISSUE_TEMPLATE/review_request.md` (optional), small README link (optional).
+
+### Definition of Done
+
+- [ ] Public review checklist explicitly asking for criticism on: SPSC memory ordering;
+      backpressure semantics; threaded ownership model; event-log integrity under concurrency;
+      benchmark/profiling methodology; Linux/socket profiling methodology.
+- [ ] No fake endorsement language; no claim that review has happened until it has; if feedback
+      exists, summarize reviewer / criticism / accepted-rejected / rationale / follow-up.
+- [ ] Docs clearly distinguish self-certified vs externally reviewed claims; review request issue
+      opened or template prepared; `make check` passes; `PROGRESS.md` updated.
