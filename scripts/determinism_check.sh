@@ -22,7 +22,7 @@ emit() { # $1=binary  $2=outdir
     mkdir -p "$out"
     "$bin" 7 60 >"$out/stream_seed7.txt"
     "$bin" ioc >"$out/stream_ioc.txt"
-    for s in 1 2 3 4 5 6 7 8; do "$bin" prop "$s" >"$out/prop_seed$s.txt"; done
+    for s in $(seq 1 50); do "$bin" prop "$s" >"$out/prop_seed$s.txt"; done
     "$bin" shrink 1 >"$out/shrunk_seed1.txt"
 }
 
