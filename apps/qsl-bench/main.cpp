@@ -61,7 +61,8 @@ void run_diff_benchmarks() {
     // 1. Property command-stream generation (generate_property_flow, varied seeds).
     {
         std::uint64_t seed = 1;
-        throughput("property flow generation", 120, 200, [&] {
+        const std::size_t items = replay::generate_property_flow(1, 3, 120).size();
+        throughput("property flow generation", items, 200, [&] {
             const auto flow = replay::generate_property_flow(seed++, 3, 120);
             g_sink += flow.size();
         });
