@@ -19,13 +19,13 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M22 — Release readiness audit
-- **Status:** ready for PR
-- **Active branch:** `feat/m22-release-readiness-audit`
-- **Last completed milestone:** M21 — Repository license and maintainer docs (PR #53, squash-merged)
-- **`make check` passing:** yes (152/152 tests); OCaml `dune runtest` passing
-- **Last action:** ran the full audit (check/asan/check-fixtures/dune/demo/bench all green, links resolve, no overclaiming) and recorded docs/release_readiness.md
-- **Next action:** `/finish-milestone`
+- **Active milestone:** Backlog execution (post-M22) — working GitHub issues #24–#51
+- **Status:** in progress
+- **Active branch:** per-issue `feat/issue-NN-slug` / `fix/issue-NN-slug`
+- **Last completed milestone:** M22 — Release readiness audit (PR #54, squash-merged); M0–M22 all merged
+- **`make check` passing:** yes (153/153 tests); OCaml `dune runtest` passing
+- **Last action:** executing the prioritized backlog as GitHub issues, one issue = one PR (Codex-reviewed, then merged); #36 negative fixtures (#57) and #34 oracle self-test (#58) merged
+- **Next action:** continue backlog issues in priority order (#40, #35, #38, #39, then Medium/Low); #24–#27 deferred (major architecture)
 - **Blockers:** none
 
 ---
@@ -201,7 +201,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M22 complete, PR pending review_
+- _Backlog execution: per-issue PRs (Codex-reviewed, then merged). #36 (#57) and #34 (#58) done; next #40._
 
 
 ---
@@ -245,7 +245,7 @@ Lower priority:
 | M19 | Shrinker + minimal failing fixture exporter | `feat/m19-shrinker-minimal-failing-fixtures` | ☑ merged | #22 | Minimal counterexamples for failed properties |
 | M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☑ merged | #52 | Final docs for differential/property testing system |
 | M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☑ merged | #53 | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
-| M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ◐ in progress | — | M13-style final polish/readiness pass after Phase II |
+| M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☑ merged | #54 | M13-style final polish/readiness pass after Phase II |
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release` | ☐ not started | — | Conservative GitHub-only release; optional, human-approved |
 
 ## Decision log additions
