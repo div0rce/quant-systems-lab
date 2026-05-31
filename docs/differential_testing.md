@@ -154,7 +154,8 @@ and fails CI if any reachable reason stops occurring).
   `last_seq`, and `order_count`); the test asserts each is detected, proving the comparison
   is not blind to those fields.
 - **Mutation testing:** `test_mutation.ml` takes one representative snapshot and applies a
-  single-field mutation for every field (last_seq, trade count, best bid/ask, order count, bid
+  single-field mutation for every field (last_seq, trade count, symbol id, best bid/ask, order
+  count, bid
   and ask levels), asserting each changes `snapshot_to_lines` — so no field can silently drop
   out of the comparison. This covers every field programmatically, complementing the
   hand-authored negative fixtures above.
