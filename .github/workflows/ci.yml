@@ -29,6 +29,9 @@ jobs:
       - name: Differential fixture golden check
         run: make check-fixtures
 
+      - name: Fixture reproducibility manifest check
+        run: make check-manifest
+
       - name: Format check
         run: make fmt-check
 

@@ -16,6 +16,11 @@ using core::SymbolId;
 using engine::EngineEvent;
 using engine::MatchingEngine;
 
+/// Version of the deterministic command generators below. Bump it whenever a change alters the
+/// generated command streams, then regenerate the fixtures and the reproducibility manifest, so
+/// fixture provenance (seed + version + hash) stays honest.
+inline constexpr int kGeneratorVersion = 1;
+
 /// Apply one recorded command to the engine, returning the emitted events.
 [[nodiscard]] std::vector<EngineEvent> apply(MatchingEngine &engine, const Command &command);
 

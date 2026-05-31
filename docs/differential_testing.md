@@ -157,6 +157,11 @@ and fails CI if any reachable reason stops occurring).
   `build-test` CI job) regenerates every C++-produced fixture and diffs it against the
   committed copy, so the differential tests can never silently compare OCaml against a stale
   C++ snapshot. Hand-authored `stream_bad_*` fixtures are intentionally not regenerated.
+- **Reproducibility manifest:** `make check-manifest` (`scripts/fixture_manifest.sh`, also in
+  the `build-test` CI job) records the generator version (`replay::kGeneratorVersion`), the
+  exporter invocation (seed/scenario), and the SHA-256 of each committed fixture in
+  `ocaml/test/fixtures/MANIFEST.txt`, so a generator change cannot silently alter a fixture
+  without an explicit manifest (and version) bump.
 
 This is property-based differential testing against the C++ system under test — not formal
 verification or a proof of correctness.
