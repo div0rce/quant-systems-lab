@@ -16,9 +16,9 @@ flowchart LR
         eng -->|ack / fill| gw
         gw -->|responses| client
         eng -->|engine events| pub[Market-data publisher]
+        eng -->|append| log[(Append-only event log)]
         pub -->|UDP feed| sub[Market-data subscriber]
-        eng -->|append| log[(Event log)]
-        log -.->|replay rebuilds identical state| rec[Recovered engine]
+        log -.->|replay re-applies commands, rebuilding identical state| rec[Recovered engine]
     end
     subgraph Verification["Differential + property testing"]
         gen[Property command generator] -->|seeded streams| fix[Golden / property fixtures]

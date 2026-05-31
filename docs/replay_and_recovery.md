@@ -19,13 +19,17 @@ rewrites existing records.
 
 ### Record format
 
-All integers are big-endian (reusing the M2 protocol byte helpers).
+All integers are big-endian (reusing the M2 protocol byte helpers). A record is a fixed
+**22-byte header**, then the payload, then a trailing checksum:
 
-```text
-+--------------------- header (22 bytes) ----------------------+--- payload ---+--checksum--+
-| seq_no u64 | record_type u16 | logical_timestamp u64 | size u32 | payload (size) | u32 |
-+--------------------------------------------------------------+---------------+------------+
-```
+| Offset      | Size   | Field               | Type  | Notes                              |
+| ----------: | -----: | ------------------- | ----- | ---------------------------------- |
+|           0 |      8 | `seq_no`            | u64   | record sequence number             |
+|           8 |      2 | `record_type`       | u16   | `Command` (1) or `Event` (2)       |
+|          10 |      8 | `logical_timestamp` | u64   | deterministic logical time         |
+|          18 |      4 | `size`              | u32   | payload byte count                 |
+|          22 | `size` | `payload`           | bytes | serialized command/event           |
+| 22 + `size` |      4 | `checksum`          | u32   | FNV-1a over the header + payload   |
 
 - `record_type`: `Command` (1) or `Event` (2).
 - `payload`: the message's serialized bytes, opaque to the log (e.g. a binary-protocol
