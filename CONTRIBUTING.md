@@ -6,8 +6,9 @@ reviewable.
 
 ## Workflow
 
-- **Never work on `main`.** All work happens on a feature branch (`feat/mNN-slug`), one scoped
-  change per branch, merged via a single squash-merge PR.
+- **Never work on `main`.** All work happens on a feature branch — `feat/mNN-slug` for
+  milestones, `feat/issue-NN-slug` / `fix/issue-NN-slug` for backlog issues — one scoped change
+  per branch, merged via a single squash-merge PR.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `test:`,
   `docs:`, `chore:`, `perf:`, `ci:`, `refactor:`).
 - Keep PRs small, scoped, and reviewable. Move follow-ups to the backlog in `MILESTONES.md`
@@ -18,11 +19,14 @@ reviewable.
 ```bash
 make check                 # clang-format check + build + tests
 make asan                  # AddressSanitizer + UBSan build and tests
-dune runtest --root ocaml  # OCaml verifier + independent replay + differential tests
+dune runtest --root ocaml  # OCaml log verifier + independent replay + differential + mutation tests
 ```
 
 If you change the C++-generated differential fixtures, also run `make check-fixtures` (it
-regenerates them and fails on drift).
+regenerates them and fails on drift) and `make check-manifest` (it verifies the provenance
+manifest). `make determinism` asserts the fixtures are byte-identical across gcc and clang.
+Benchmarks are reproduced with `make bench` (core) and `make bench-diff` (differential harness);
+`make divergence-demo` exercises the shrinker on an injected divergence.
 
 ## Determinism and benchmarks
 
