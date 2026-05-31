@@ -42,7 +42,9 @@ let mutations =
     ("best_ask None", fun s -> map_sym0 s (fun x -> { x with best_ask = None }));
     ("order_count", fun s -> map_sym0 s (fun x -> { x with order_count = x.order_count + 1 }));
     ("bid_levels qty", fun s -> map_sym0 s (fun x -> { x with bid_levels = [ { price = 100; qty = 9 } ] }));
+    ("bid_levels price", fun s -> map_sym0 s (fun x -> { x with bid_levels = [ { price = 99; qty = 4 } ] }));
     ("ask_levels qty", fun s -> map_sym0 s (fun x -> { x with ask_levels = [ { price = 105; qty = 9 } ] }));
+    ("ask_levels price", fun s -> map_sym0 s (fun x -> { x with ask_levels = [ { price = 104; qty = 2 } ] }));
   ]
 
 let () =
