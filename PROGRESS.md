@@ -19,21 +19,21 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M26 — Multithreaded gateway-engine-feed pipeline prototype
-- **Status:** implemented and verified (`make check` 181/181 + `make asan` 181/181 sanitizer-clean); ready for PR
-- **Active branch:** `claude/serene-fermi-rhuFJ` (environment-designated; holds M26 only — see branch note)
-- **Last completed milestone:** M25 — Memory-ordering and concurrency evidence package (squash-merged, PR #85)
+- **Active milestone:** M27 — ThreadSanitizer coverage
+- **Status:** implemented and verified (`make tsan` 18/18 race-clean; `make check` 182/182); ready for PR
+- **Active branch:** `claude/serene-fermi-rhuFJ` (environment-designated; reset to `main`, holds M27 only — see branch note)
+- **Last completed milestone:** M26 — Multithreaded gateway-engine-feed pipeline prototype (squash-merged, PR #86, commit 8ec4967)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes (182/182; 10 pipeline cases under `tests/concurrency/test_pipeline.cpp`); `make asan` 182/182 sanitizer-clean; `check-fixtures`/`check-manifest` clean. OCaml `dune runtest` not runnable here (no toolchain in this environment) — OCaml/exporter/fixture code is untouched, so it is unaffected and runs in the CI `ocaml-verifier` job.
-- **Last action:** addressed a Codex review on PR #86 — replaced timing-dependent backpressure spin assertions with a deterministic `PipelineProbe`-gated barrier (lag/saturation tests are now correctness-only; one gated-consumer test provably forces both queues full and stays lossless). `make check` 182/182, `make asan` 182/182 sanitizer-clean, and the pipeline tests pass 50/50 repeated runs (no flakiness/deadlock).
-- **Next action:** commit + push `claude/serene-fermi-rhuFJ`, open the M26 PR as a draft (do not merge). After human squash-merge, `/start-milestone 27` (ThreadSanitizer).
+- **`make check` passing:** yes (182/182); `make tsan` runs the 18 `concurrency`-labelled tests under ThreadSanitizer with **0 data races**; TSan verified working on this Linux/clang toolchain. `make asan` unaffected.
+- **Last action:** implemented M27 — `QSL_ENABLE_TSAN` (mutually exclusive with ASan; guard verified to error) + `tsan` configure/build/test presets + `make tsan` + a `concurrency` ctest label (so TSan targets only the threaded tests) + a CI `thread-sanitizer` job + a ThreadSanitizer section in `docs/concurrency_model.md`. `make tsan` 18/18 race-clean, `make check` 182/182.
+- **Next action:** commit + push `claude/serene-fermi-rhuFJ`; open the M27 PR as a draft (do not merge). After human squash-merge, `/start-milestone 28` (memory-pool allocator).
 - **Blockers:** none
 
 > **Branch note:** the managed remote environment mandates development on `claude/serene-fermi-rhuFJ`
-> and forbids pushing to a different branch without explicit permission, so M26 deviates from the
-> `feat/mNN-slug` convention on branch *name* only. The milestone intent is preserved: this branch
-> carries only M26 work and its PR uses the M26 title `feat: add threaded gateway-engine-feed
-> pipeline prototype`.
+> and forbids pushing to a different branch without explicit permission. M26 was squash-merged from
+> this branch; for M27 the branch was reset to `origin/main` (8ec4967) and carries only M27 work.
+> Branch *name* deviates from the `feat/mNN-slug` convention; the milestone intent (one branch, one
+> squash-merge PR titled `test: add ThreadSanitizer coverage for concurrent pipeline`) is preserved.
 
 ---
 
@@ -208,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M26 implemented on `claude/serene-fermi-rhuFJ` and ready for PR. New header-only `include/qsl/concurrency/pipeline.hpp` (`ThreadedPipeline<InboundCapacity, OutboundCapacity>`: input thread → inbound `SpscRing<replay::Command>` → engine thread (sole owner of `MatchingEngine`+`OrderGateway`) → outbound `SpscRing<ProcessedCommand>` → publisher/log thread (sole owner of an `OutputSink`)). Lossless spin/yield on both queues; drain-then-stop via two `atomic<bool>` done-flags; rings joined before `run()` returns. Tests in `tests/concurrency/test_pipeline.cpp` (wired into `tests/CMakeLists.txt`): threaded ≡ single-threaded reference over 8 GTC + 8 property seeds × {tiny, large} capacities; in-order event stream; publisher-lag + saturated-queue correctness, plus a deterministic gated-consumer backpressure proof via `PipelineProbe`; `shutdown_empty`/`shutdown_with_pending_commands`/`shutdown_with_full_queue`; event-log integrity (in-memory `encode_record`→`read_log`→`recovery::replay` reproduces the snapshot). Docs: `docs/concurrency_model.md` (Realized pipeline (M26)) + `docs/architecture.md`. `make check` 182/182, `make asan` 182/182 clean. Draft PR #86 open; Codex review on backpressure determinism addressed. Next precise step: await human squash-merge, then `/start-milestone 27`._
+- _M27 implemented on `claude/serene-fermi-rhuFJ` and ready for PR. ThreadSanitizer data-race gate, no engine/pipeline source changed: `QSL_ENABLE_TSAN` in `cmake/Sanitizers.cmake` (errors if combined with ASan — verified), `tsan` configure/build/test presets in `CMakePresets.json`, a `make tsan` target (`ctest --preset tsan -L concurrency`), a `concurrency` ctest label on the three `tests/concurrency/` executables, a CI `thread-sanitizer` job, and a ThreadSanitizer section in `docs/concurrency_model.md` (data-race detection only; never used for perf numbers). Verified on this Linux/clang toolchain: `make tsan` builds with `-fsanitize=thread` and runs all 18 concurrency tests with 0 races (~3.4s); `make check` 182/182. Next precise step: commit, push, open draft PR; after squash-merge `/start-milestone 28`._
 
 
 ---
@@ -256,8 +256,8 @@ Lower priority:
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release-notes` | ☑ released | #82 / tag `v0.1.0` | GitHub-only release; no packages |
 | M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ☑ merged | #84 | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
 | M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ☑ merged | #85 | Ownership model, acquire/release documentation, stress/backpressure tests |
-| M26 | Multithreaded gateway-engine-feed pipeline prototype | `claude/serene-fermi-rhuFJ` (env-designated) | ◐ in progress | — | Explicit thread boundaries and deterministic shutdown |
-| M27 | ThreadSanitizer coverage | `feat/m27-thread-sanitizer` | ☐ not started | — | TSan preset/CI for concurrent tests |
+| M26 | Multithreaded gateway-engine-feed pipeline prototype | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #86 | Explicit thread boundaries and deterministic shutdown |
+| M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ◐ in progress | — | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☐ not started | — | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ☐ not started | — | perf stat/record/report artifacts; flamegraph optional |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☐ not started | — | syscall/socket-buffer/UDP pressure evidence; epoll optional if scoped |
@@ -265,6 +265,8 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-01] M27: started after M26 merged (PR #86, squash commit 8ec4967). Reset the env-designated branch to `origin/main` rather than create a `feat/m27-*` branch (the environment forbids pushing to a different branch); the branch now carries only M27.
+- [2026-06-01] M27: ThreadSanitizer is a *separate* sanitizer preset because `-fsanitize=thread` is incompatible with the ASan preset's `-fsanitize=address`; `cmake/Sanitizers.cmake` errors if both are enabled at once. Labeled the three `tests/concurrency/` executables `concurrency` so `make tsan` runs only the genuinely multithreaded tests (TSan on single-threaded tests adds nothing). TSan is a data-race *correctness* gate, not a performance tool — no benchmark numbers are collected under it.
 - [2026-06-01] M26: addressed a Codex review on PR #86 — the "backpressure occurred (spins >= 1)" assertions were timing-dependent (`std::this_thread::yield()` can let the consumer keep pace, so a spin count of 0 is legitimately possible on a fast/lightly-loaded run). Replaced them with a deterministic barrier: added an optional `PipelineProbe` (live spin counters the pipeline bumps as backpressure happens) and a gated-consumer test that blocks the downstream stage, waits on the probe until BOTH queues have provably back-pressured, then releases — and made the lag/saturation tests correctness-only. Confirmed non-flaky over 50 repeated runs; `make check` 182/182, `make asan` 182/182.
 - [2026-06-01] M26: reconciled stale PROGRESS state — M25 was already merged (PR #85, commit 9360364 on main), not "ready for PR"; M24 (#84) + M25 (#85) confirmed merged, satisfying the M26 prerequisites.
 - [2026-06-01] M26: the threaded pipeline is a new header-only `qsl::concurrency::ThreadedPipeline<InboundCapacity, OutboundCapacity>` (`include/qsl/concurrency/pipeline.hpp`). The engine thread is the **sole owner** of `MatchingEngine`+`OrderGateway`, so the concurrency boundary is a value hand-off and deterministic matching semantics are unchanged (no engine code modified).

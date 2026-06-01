@@ -58,6 +58,23 @@ jobs:
           cmake --build --preset asan
           ctest --preset asan
 
+  thread-sanitizer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang
+
+      - name: Build and run concurrency tests under ThreadSanitizer
+        run: |
+          cmake --preset tsan
+          cmake --build --preset tsan
+          ctest --preset tsan -L concurrency
+
   ocaml-verifier:
     runs-on: ubuntu-latest
 

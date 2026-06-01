@@ -20,10 +20,12 @@ foreach(t test_smoke test_types test_clock test_protocol test_order_book test_ma
   catch_discover_tests(${t})
 endforeach()
 
+# Labelled "concurrency" so the ThreadSanitizer run (`make tsan` / `ctest -L concurrency`) targets
+# just the genuinely multithreaded tests.
 foreach(t test_spsc_stress test_backpressure test_pipeline)
   add_executable(${t} concurrency/${t}.cpp)
   target_link_libraries(${t} PRIVATE qsl_core qsl_warnings Catch2::Catch2WithMain Threads::Threads)
-  catch_discover_tests(${t})
+  catch_discover_tests(${t} PROPERTIES LABELS concurrency)
 endforeach()
 
 set(QSL_REPLAY_MISSING_PATH "${CMAKE_CURRENT_BINARY_DIR}/qsl-replay-definitely-missing.log")
