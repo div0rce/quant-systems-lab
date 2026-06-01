@@ -5,6 +5,8 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `latest.txt` — core microbenchmarks (`make bench`, `apps/qsl-bench`).
 - `differential.txt` — differential-testing harness benchmarks: command-stream generation,
   gateway replay, and shrinking (`make bench-diff`, `qsl-bench diff`).
+- `allocator_experiment.txt` — isolated M28 allocation experiment comparing `engine::Order`
+  `new/delete` with fixed-pool acquire/release (`make bench-allocator`, `qsl-bench pool`).
 
 ## Policy
 

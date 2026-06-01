@@ -16,6 +16,10 @@
 #include <string>
 #include <vector>
 
+namespace qsl::bench {
+void run_order_pool_benchmarks();
+} // namespace qsl::bench
+
 namespace {
 
 // Sink to stop the optimizer from discarding benchmarked work. Wall-clock timing is fine at
@@ -100,6 +104,10 @@ void run_diff_benchmarks() {
 int main(int argc, char **argv) {
     if (argc >= 2 && std::string(argv[1]) == "diff") {
         run_diff_benchmarks();
+        return 0;
+    }
+    if (argc >= 2 && std::string(argv[1]) == "pool") {
+        qsl::bench::run_order_pool_benchmarks();
         return 0;
     }
     using namespace qsl;

@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -16,10 +16,10 @@ test: build
 check: fmt-check build test
 
 fmt:
-	@find include src tests apps -name '*.hpp' -o -name '*.cpp' | xargs clang-format -i
+	@find include src tests apps benchmarks -name '*.hpp' -o -name '*.cpp' | xargs clang-format -i
 
 fmt-check:
-	@find include src tests apps -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run --Werror
+	@find include src tests apps benchmarks -name '*.hpp' -o -name '*.cpp' | xargs clang-format --dry-run --Werror
 
 tidy:
 	@echo "clang-tidy: run manually with compile_commands.json from build/dev"
@@ -34,6 +34,11 @@ bench-diff:
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/run_diff_benchmarks.sh
+
+bench-allocator:
+	cmake --preset bench
+	cmake --build --preset bench --target qsl-bench
+	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/run_allocator_experiment.sh
 
 asan:
 	cmake --preset asan
