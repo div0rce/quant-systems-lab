@@ -6,7 +6,7 @@
 > later pipeline depends on, and the honest limits. The C++ memory-model details (per-step
 > acquire/release reasoning and the happens-before proof) live in
 > [`memory_ordering.md`](memory_ordering.md). The threaded pipeline that consumes this queue is
-> M26.
+> realized in M26 — see [Realized pipeline (M26)](#realized-pipeline-m26).
 >
 > The behavioral claims here are exercised by
 > [`tests/concurrency/test_spsc_stress.cpp`](../tests/concurrency/test_spsc_stress.cpp) and
@@ -14,8 +14,8 @@
 
 ## Why SPSC, not MPMC
 
-The planned threaded pipeline (M26) is a chain of single-threaded stages connected by
-hand-off queues:
+The threaded pipeline (M26, realized in `include/qsl/concurrency/pipeline.hpp`) is a chain of
+single-threaded stages connected by hand-off queues:
 
 ```text
 input thread  --[inbound queue]-->  engine thread  --[outbound queue]-->  publisher/log thread
@@ -96,9 +96,11 @@ sane policies for a producer that hits a full queue are:
 | **Drop**          | discard the item, count the drop           | stale-tolerant data (e.g. throwaway market-data ticks)  |
 | **Block upstream**| stop reading its own input until space     | end-to-end flow control back to the source              |
 
-The M26 pipeline will use the **spin/yield (lossless)** policy on the inbound command queue —
-orders must not be dropped — and may use **drop-with-counter** on a market-data fan-out where
-freshness beats completeness. Capacity sizing is the tuning knob: a larger `Capacity` absorbs
+The realized M26 pipeline uses the **spin/yield (lossless)** policy on **both** hand-off queues:
+orders must not be dropped on the inbound command queue, and event-log/feed records must not be
+silently dropped on the outbound queue. The **drop-with-counter** policy remains available for a
+stale-tolerant market-data fan-out (where freshness beats completeness) but the prototype does not
+use it. Capacity sizing is the tuning knob: a larger `Capacity` absorbs
 bigger bursts at the cost of memory and worse cache behavior; it does not change correctness.
 Because the queue op itself is wait-free for payload types with bounded, non-blocking
 copy/move assignment, any spinning is strictly application-level and is measured/bounded by the
@@ -122,7 +124,8 @@ it, and the M26 pipeline must honor these assumptions:
    the pipeline. It is not reset and reused across runs; a fresh pipeline constructs fresh rings.
 
 These are assumptions the *pipeline* enforces; the M25 deliverable is the documented contract plus
-the tests that demonstrate lossless drain and backpressure. The pipeline wiring itself is M26.
+the tests that demonstrate lossless drain and backpressure. The pipeline wiring that enforces them
+is realized in M26 (see *Realized pipeline* below).
 
 ## False sharing
 
@@ -153,3 +156,66 @@ latency delta is *claimed* here — see Limits.)
   dedicated milestone (M27).
 - This is a correctness-first primitive; **no latency/throughput numbers are claimed here.** Any
   such numbers will come only from the committed benchmark harness with full metadata.
+
+## Realized pipeline (M26)
+
+M26 wires the SPSC ring into the prototype it was designed for: the header-only
+`ThreadedPipeline<InboundCapacity, OutboundCapacity>` in
+[`include/qsl/concurrency/pipeline.hpp`](../include/qsl/concurrency/pipeline.hpp). The behavioral
+evidence is [`tests/concurrency/test_pipeline.cpp`](../tests/concurrency/test_pipeline.cpp).
+
+```text
+input thread --[inbound SpscRing<Command>]--> engine thread --[outbound SpscRing<ProcessedCommand>]--> publisher/log thread
+```
+
+### Stages and ownership transfer
+
+| Stage         | Thread owns exclusively              | Consumes                     | Produces                              |
+| ------------- | ------------------------------------ | ---------------------------- | ------------------------------------- |
+| Input         | the command source (`vector<Command>`) | —                            | pushes `Command`s onto inbound        |
+| Engine        | the `MatchingEngine` + `OrderGateway`  | pops `Command`s from inbound | pushes `ProcessedCommand`s onto outbound |
+| Publisher/log | the downstream `OutputSink`            | pops from outbound           | side effects (log append, feed, counters) |
+
+Ownership transfers *with the value*: once the engine thread pushes a `ProcessedCommand` it never
+touches it again, and the publisher/log thread owns it until the next pop. Crucially, the **engine
+thread is the only thread that ever touches the engine**, so the deterministic single-threaded
+matching semantics are unchanged — the boundary is a value hand-off, never shared mutable state.
+
+### Why the downstream stage is engine-independent
+
+The M6 `MarketDataPublisher` derives top-of-book by *reading the engine*. Running it on the
+publisher/log thread would read the engine concurrently with the engine thread mutating it — a data
+race. The prototype therefore has the downstream `OutputSink` consume only self-contained
+`ProcessedCommand` records (the command, its accept/reject outcome, and the events it produced) and
+never touch the engine. A downstream consumer that genuinely needs top-of-book would read it from
+the events, or from a snapshot captured on the engine thread and shipped in the record. This is what
+makes "a lagging publisher cannot corrupt engine state" *structurally* true, not merely tested.
+
+### Backpressure and shutdown
+
+- **Lossless both directions.** Both queues use the spin/yield policy: the input thread spins on a
+  full inbound queue (an order is never dropped) and the engine thread spins on a full outbound
+  queue (an event-log/feed record is never silently dropped). The run reports how many times each
+  side spun (`inbound_backpressure_spins` / `outbound_backpressure_spins`).
+- **Drain-then-stop.** Each upstream stage publishes an `atomic<bool>` done-flag with `release`
+  after its last push; the downstream stage, on an empty queue, checks the flag with `acquire` and
+  if set performs one final drain before exiting. Nothing queued at shutdown is lost.
+- **Lifetime bracket.** The two rings live on `run()`'s stack; `run()` joins all three threads
+  before returning, so each ring outlives both its producer and its consumer (the SPSC contract).
+
+### What the tests prove
+
+For GTC synthetic flows, enriched property flows, several seeds, and queue capacities from `2` up to
+`4096`, the threaded run produces the **same final snapshot and the same ordered event stream as a
+single-threaded reference** — capacity and thread timing change only backpressure, never the result.
+The event-log integrity test additionally replays the *concurrently written* command log into a
+fresh engine and shows it reconstructs the identical snapshot (`pipeline state == log replay ==
+single-threaded reference`). Backpressure tests confirm a full inbound queue and a lagging publisher
+each apply real backpressure (spin counts > 0) while staying lossless.
+
+### Limits (honest)
+
+This is a **correctness-first prototype of a concurrency boundary**, not a latency exercise: no
+matching-latency or throughput number is claimed (none is measured here). It is SPSC point-to-point,
+not MPMC and not a fan-out/fan-in topology. `make check` and `make asan` exercise the threaded paths,
+but ASan/UBSan do not detect data races — dynamic race detection (ThreadSanitizer) is M27.

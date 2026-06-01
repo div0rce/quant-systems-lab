@@ -48,6 +48,8 @@ flowchart LR
 - **OCaml replay verifier + oracle** — independent typed-functional replay (M14, M16)
 - **Differential + property testing** — command-stream export, C++≡OCaml snapshot equality,
   seeded property generator, and a shrinker that minimizes any divergence (M15–M19)
+- **Concurrency primitive + threaded pipeline** — a bounded SPSC ring buffer and an optional
+  three-thread gateway→engine→publisher/log pipeline prototype (M24–M26)
 
 The first block is the runtime simulator; the last two are the cross-language verification
 pipeline (the **Verification** subgraph above). Detailed differential-testing docs are in
@@ -220,3 +222,23 @@ make build
   datagram; large messages are out of scope.
 - This is a credible systems demonstration of a sequenced UDP feed with gap detection, not a
   production market-data distribution system.
+
+## Concurrency: SPSC queues and the threaded pipeline (M24–M26)
+
+Phase III adds a concurrency boundary on top of the deterministic core without changing its
+semantics. `SpscRing<T, Capacity>` (`include/qsl/concurrency/spsc_ring.hpp`) is a bounded
+single-producer/single-consumer queue, and `ThreadedPipeline<InboundCapacity, OutboundCapacity>`
+(`include/qsl/concurrency/pipeline.hpp`) wires three single-threaded stages through two such queues:
+
+```text
+input thread -> inbound SpscRing<Command> -> engine thread -> outbound SpscRing<ProcessedCommand> -> publisher/log thread
+```
+
+The engine thread is the sole owner of the `MatchingEngine` + `OrderGateway`, so matching stays
+deterministic; the boundary is a value hand-off, not shared engine state. Both queues are lossless
+(spin/yield on full), shutdown is drain-then-stop via per-stage done-flags, and the rings outlive
+both threads (joined before the run returns). The threaded run is verified to produce the identical
+final snapshot and ordered event stream as the single-threaded path, and the concurrently written
+command log replays to the same state. Design, memory ordering, and honest limits (SPSC only, no
+latency claims, ASan ≠ race detection, ThreadSanitizer is M27) are documented in
+[concurrency_model.md](concurrency_model.md) and [memory_ordering.md](memory_ordering.md).
