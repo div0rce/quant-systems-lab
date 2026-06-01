@@ -7,16 +7,22 @@ ordinary heap allocation.
 
 ## Pool Contract
 
-`qsl::memory::OrderPool<Capacity>` stores `engine::Order` slots inline:
+`qsl::memory::OrderPool<Capacity>` stores raw, aligned bytes for `engine::Order` slots:
 
 - capacity is fixed at compile time;
+- slots are not default-constructed when the pool is created;
+- `try_acquire(...)` constructs a fresh `engine::Order` in the selected slot;
 - `try_acquire(...)` returns `nullptr` when the pool is exhausted;
+- `release(ptr)` destroys the live object before returning the slot to the free list;
+- `reset()` destroys every live object before rebuilding the free list;
+- the pool destructor destroys any still-live objects;
 - there is no heap fallback and no growth path;
-- `release(ptr)` returns `false` for null, non-owned, or already-released pointers;
-- `reset()` deterministically marks every slot free.
+- `release(ptr)` returns `false` for null, non-owned, interior/misaligned, or
+  already-released pointers.
 
 This makes failure explicit. A caller must size the pool and handle exhaustion; silently falling
-back to the heap would invalidate the experiment.
+back to the heap would invalidate the experiment. The pool is deliberately still isolated from the
+order book; it is allocator evidence, not an order-book storage refactor.
 
 ## Benchmark
 

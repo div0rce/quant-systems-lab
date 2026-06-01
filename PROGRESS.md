@@ -20,12 +20,12 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M28 — Memory pool allocator experiment
-- **Status:** implemented and verified (`make check` 185/185; `make bench-allocator` wrote `results/allocator_experiment.txt`); ready for PR
+- **Status:** implemented and verified (`make check` 186/186; `make asan` 186/186; `make bench-allocator` wrote `results/allocator_experiment.txt`); ready for PR
 - **Active branch:** `feat/m28-memory-pool-allocator`
 - **Last completed milestone:** M27 — ThreadSanitizer coverage (squash-merged, PR #87, commit 5ceb19c)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes (185/185); allocator benchmark completed with full metadata in `results/allocator_experiment.txt`. `make tsan` remains the M27 race gate for the concurrency tests.
-- **Last action:** implemented M28 — fixed-capacity `OrderPool<Capacity>` for `engine::Order`, focused unit tests, `qsl-bench pool`, `make bench-allocator`, docs, and committed benchmark output.
+- **`make check` passing:** yes (186/186); `make asan` passing (186/186); allocator benchmark completed with full metadata in `results/allocator_experiment.txt`. `make tsan` remains the M27 race gate for the concurrency tests.
+- **Last action:** addressed PR #88 review: `OrderPool<Capacity>` now uses raw aligned storage with explicit `construct_at`/`destroy_at` lifetime; focused tests cover interior pointer rejection and reset stale-pointer rejection.
 - **Next action:** commit + push `feat/m28-memory-pool-allocator`; open the M28 PR as a draft (do not merge). After human squash-merge, `/start-milestone 29`.
 - **Blockers:** none
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M28 implemented on `feat/m28-memory-pool-allocator` and ready for PR. Added fixed-capacity `OrderPool<Capacity>` for `engine::Order` with explicit exhaustion (`nullptr`) and no heap fallback; added unit tests for capacity, reuse, invalid release, duplicate release, and reset; added `qsl-bench pool`, `make bench-allocator`, docs, and `results/allocator_experiment.txt` with hardware/compiler/build/commit/dirty-tree metadata. Verified `make check` 185/185 and `make bench-allocator`. Next precise step: commit, push, open draft PR; after squash-merge `/start-milestone 29`._
+- _M28 implemented on `feat/m28-memory-pool-allocator` and ready for PR. PR #88 review fix applied: `OrderPool<Capacity>` now uses raw aligned storage, constructs `engine::Order` on acquire, destroys on release/reset/destructor, rejects null/non-owned/interior/already-released pointers, and still has no heap fallback. Added unit coverage for interior pointer rejection and reset stale-pointer rejection; updated docs and regenerated `results/allocator_experiment.txt`. Verified `make check` 186/186, `make asan` 186/186, and `make bench-allocator`. Next precise step: commit, push, comment `@codex review`; after squash-merge `/start-milestone 29`._
 
 
 ---
@@ -262,6 +262,7 @@ Lower priority:
 - [2026-06-01] M28: added a fixed-capacity `OrderPool<Capacity>` for `engine::Order`; exhaustion returns `nullptr`, releases are validated, and there is no silent heap fallback.
 - [2026-06-01] M28: added an isolated allocator benchmark path (`qsl-bench pool` / `make bench-allocator`) comparing raw `operator new`/placement construction against pool acquire/release, with full hardware/compiler/build/commit/dirty-tree metadata in `results/allocator_experiment.txt`.
 - [2026-06-01] M28: kept order-book storage unchanged; the pool is an allocation experiment for future storage decisions, not a semantic refactor or an end-to-end engine latency claim.
+- [2026-06-01] M28 review fix: changed `OrderPool<Capacity>` from default-constructed `std::array<engine::Order>` slots to raw aligned storage with explicit `std::construct_at` on acquire and `std::destroy_at` on release/reset/destructor, preserving per-acquire object lifetime while keeping exhaustion explicit and avoiding heap fallback.
 - [2026-06-01] M27: started after M26 merged (PR #86, squash commit 8ec4967). Reset the env-designated branch to `origin/main` rather than create a `feat/m27-*` branch (the environment forbids pushing to a different branch); the branch now carries only M27.
 - [2026-06-01] M27: ThreadSanitizer is a *separate* sanitizer preset because `-fsanitize=thread` is incompatible with the ASan preset's `-fsanitize=address`; `cmake/Sanitizers.cmake` errors if both are enabled at once. Labeled the three `tests/concurrency/` executables `concurrency` so `make tsan` runs only the genuinely multithreaded tests (TSan on single-threaded tests adds nothing). TSan is a data-race *correctness* gate, not a performance tool — no benchmark numbers are collected under it.
 - [2026-06-01] M26: addressed a Codex review on PR #86 — the "backpressure occurred (spins >= 1)" assertions were timing-dependent (`std::this_thread::yield()` can let the consumer keep pace, so a spin count of 0 is legitimately possible on a fast/lightly-loaded run). Replaced them with a deterministic barrier: added an optional `PipelineProbe` (live spin counters the pipeline bumps as backpressure happens) and a gated-consumer test that blocks the downstream stage, waits on the probe until BOTH queues have provably back-pressured, then releases — and made the lag/saturation tests correctness-only. Confirmed non-flaky over 50 repeated runs; `make check` 182/182, `make asan` 182/182.
