@@ -19,21 +19,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M27 — ThreadSanitizer coverage
-- **Status:** implemented and verified (`make tsan` 18/18 race-clean; `make check` 182/182); ready for PR
-- **Active branch:** `claude/serene-fermi-rhuFJ` (environment-designated; reset to `main`, holds M27 only — see branch note)
-- **Last completed milestone:** M26 — Multithreaded gateway-engine-feed pipeline prototype (squash-merged, PR #86, commit 8ec4967)
+- **Active milestone:** M28 — Memory pool allocator experiment
+- **Status:** implemented and verified (`make check` 186/186; `make asan` 186/186; `make bench-allocator` wrote `results/allocator_experiment.txt`); ready for PR
+- **Active branch:** `feat/m28-memory-pool-allocator`
+- **Last completed milestone:** M27 — ThreadSanitizer coverage (squash-merged, PR #87, commit 5ceb19c)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes (182/182); `make tsan` runs the 18 `concurrency`-labelled tests under ThreadSanitizer with **0 data races**; TSan verified working on this Linux/clang toolchain. `make asan` unaffected.
-- **Last action:** implemented M27 — `QSL_ENABLE_TSAN` (mutually exclusive with ASan; guard verified to error) + `tsan` configure/build/test presets + `make tsan` + a `concurrency` ctest label (so TSan targets only the threaded tests) + a CI `thread-sanitizer` job + a ThreadSanitizer section in `docs/concurrency_model.md`. `make tsan` 18/18 race-clean, `make check` 182/182.
-- **Next action:** commit + push `claude/serene-fermi-rhuFJ`; open the M27 PR as a draft (do not merge). After human squash-merge, `/start-milestone 28` (memory-pool allocator).
+- **`make check` passing:** yes (186/186); `make asan` passing (186/186); allocator benchmark completed with full metadata in `results/allocator_experiment.txt`. `make tsan` remains the M27 race gate for the concurrency tests.
+- **Last action:** addressed PR #88 review: `OrderPool<Capacity>` now uses raw aligned storage with explicit `construct_at`/`destroy_at` lifetime; focused tests cover interior pointer rejection and reset stale-pointer rejection.
+- **Next action:** commit + push `feat/m28-memory-pool-allocator`; open the M28 PR as a draft (do not merge). After human squash-merge, `/start-milestone 29`.
 - **Blockers:** none
-
-> **Branch note:** the managed remote environment mandates development on `claude/serene-fermi-rhuFJ`
-> and forbids pushing to a different branch without explicit permission. M26 was squash-merged from
-> this branch; for M27 the branch was reset to `origin/main` (8ec4967) and carries only M27 work.
-> Branch *name* deviates from the `feat/mNN-slug` convention; the milestone intent (one branch, one
-> squash-merge PR titled `test: add ThreadSanitizer coverage for concurrent pipeline`) is preserved.
 
 ---
 
@@ -208,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M27 implemented on `claude/serene-fermi-rhuFJ` and ready for PR. ThreadSanitizer data-race gate, no engine/pipeline source changed: `QSL_ENABLE_TSAN` in `cmake/Sanitizers.cmake` (errors if combined with ASan — verified), `tsan` configure/build/test presets in `CMakePresets.json`, a `make tsan` target (`ctest --preset tsan -L concurrency`), a `concurrency` ctest label on the three `tests/concurrency/` executables, a CI `thread-sanitizer` job, and a ThreadSanitizer section in `docs/concurrency_model.md` (data-race detection only; never used for perf numbers). Verified on this Linux/clang toolchain: `make tsan` builds with `-fsanitize=thread` and runs all 18 concurrency tests with 0 races (~3.4s); `make check` 182/182. Next precise step: commit, push, open draft PR; after squash-merge `/start-milestone 28`._
+- _M28 implemented on `feat/m28-memory-pool-allocator` and ready for PR. PR #88 review fix applied: `OrderPool<Capacity>` now uses raw aligned storage, constructs `engine::Order` on acquire, destroys on release/reset/destructor, rejects null/non-owned/interior/already-released pointers, and still has no heap fallback. Added unit coverage for interior pointer rejection and reset stale-pointer rejection; updated docs and regenerated `results/allocator_experiment.txt`. Verified `make check` 186/186, `make asan` 186/186, and `make bench-allocator`. Next precise step: commit, push, comment `@codex review`; after squash-merge `/start-milestone 29`._
 
 
 ---
@@ -257,14 +251,18 @@ Lower priority:
 | M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ☑ merged | #84 | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
 | M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ☑ merged | #85 | Ownership model, acquire/release documentation, stress/backpressure tests |
 | M26 | Multithreaded gateway-engine-feed pipeline prototype | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #86 | Explicit thread boundaries and deterministic shutdown |
-| M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ◐ in progress | — | TSan preset/CI for concurrent tests |
-| M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☐ not started | — | Hot-path allocation experiment with benchmark evidence |
+| M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #87 | TSan preset/CI for concurrent tests |
+| M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ◐ in progress | — | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ☐ not started | — | perf stat/record/report artifacts; flamegraph optional |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☐ not started | — | syscall/socket-buffer/UDP pressure evidence; epoll optional if scoped |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
 
 ## Decision log additions
 
+- [2026-06-01] M28: added a fixed-capacity `OrderPool<Capacity>` for `engine::Order`; exhaustion returns `nullptr`, releases are validated, and there is no silent heap fallback.
+- [2026-06-01] M28: added an isolated allocator benchmark path (`qsl-bench pool` / `make bench-allocator`) comparing raw `operator new`/placement construction against pool acquire/release, with full hardware/compiler/build/commit/dirty-tree metadata in `results/allocator_experiment.txt`.
+- [2026-06-01] M28: kept order-book storage unchanged; the pool is an allocation experiment for future storage decisions, not a semantic refactor or an end-to-end engine latency claim.
+- [2026-06-01] M28 review fix: changed `OrderPool<Capacity>` from default-constructed `std::array<engine::Order>` slots to raw aligned storage with explicit `std::construct_at` on acquire and `std::destroy_at` on release/reset/destructor, preserving per-acquire object lifetime while keeping exhaustion explicit and avoiding heap fallback.
 - [2026-06-01] M27: started after M26 merged (PR #86, squash commit 8ec4967). Reset the env-designated branch to `origin/main` rather than create a `feat/m27-*` branch (the environment forbids pushing to a different branch); the branch now carries only M27.
 - [2026-06-01] M27: ThreadSanitizer is a *separate* sanitizer preset because `-fsanitize=thread` is incompatible with the ASan preset's `-fsanitize=address`; `cmake/Sanitizers.cmake` errors if both are enabled at once. Labeled the three `tests/concurrency/` executables `concurrency` so `make tsan` runs only the genuinely multithreaded tests (TSan on single-threaded tests adds nothing). TSan is a data-race *correctness* gate, not a performance tool — no benchmark numbers are collected under it.
 - [2026-06-01] M26: addressed a Codex review on PR #86 — the "backpressure occurred (spins >= 1)" assertions were timing-dependent (`std::this_thread::yield()` can let the consumer keep pace, so a spin count of 0 is legitimately possible on a fast/lightly-loaded run). Replaced them with a deterministic barrier: added an optional `PipelineProbe` (live spin counters the pipeline bumps as backpressure happens) and a gated-consumer test that blocks the downstream stage, waits on the probe until BOTH queues have provably back-pressured, then releases — and made the lag/saturation tests correctness-only. Confirmed non-flaky over 50 repeated runs; `make check` 182/182, `make asan` 182/182.
@@ -301,13 +299,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Continue Phase III (M24 and M25 done):
+Continue Phase III/IV after M28 review:
 
 ```text
-/start-milestone 26
+/start-milestone 29
 ```
 
-Expected branch: `feat/m26-threaded-pipeline` (after the M25 PR squash-merges).
+Expected branch: `feat/m29-linux-perf-profiling` (after the M28 PR squash-merges).
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 

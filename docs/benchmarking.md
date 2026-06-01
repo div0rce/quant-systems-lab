@@ -8,10 +8,13 @@ hand-written.
 flowchart LR
     bench[qsl-bench] --> core[Core microbenchmarks]
     bench --> diff[Differential harness benchmarks]
+    bench --> pool[Allocator experiment]
     core --> latest[results/latest.txt]
     diff --> diffout[results/differential.txt]
+    pool --> poolout[results/allocator_experiment.txt]
     latest --> docs[Benchmark docs]
     diffout --> docs
+    poolout --> docs
 ```
 
 ## Policy
@@ -85,6 +88,13 @@ shrinking of property command streams), kept separate so it does not disturb the
 
 ```bash
 make bench-diff   # runs qsl-bench diff, writes results/differential.txt
+```
+
+The allocator experiment is also separate. It compares baseline `new/delete` for `engine::Order`
+against a fixed-capacity `OrderPool` acquire/release path and writes full metadata:
+
+```bash
+make bench-allocator   # runs qsl-bench pool, writes results/allocator_experiment.txt
 ```
 
 ## What these numbers do and do not prove
