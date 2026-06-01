@@ -150,10 +150,10 @@ latency delta is *claimed* here — see Limits.)
   *system* is not claimed to be wait-free.
 - `T` must be default-constructible (slots are default-initialized); a move-only `T` is not a goal
   for this primitive.
-- **Statically reasoned, dynamically spot-checked.** Correctness is argued against the C++ memory
+- **Statically reasoned, dynamically checked.** Correctness is argued against the C++ memory
   model and exercised by sustained stress/backpressure tests under `make check` and `make asan`.
-  ASan/UBSan do not detect data races; ThreadSanitizer coverage for the concurrent tests is a
-  dedicated milestone (M27).
+  ASan/UBSan do not detect data races, so the concurrent tests are also run under ThreadSanitizer
+  (`make tsan`, M27 — see *ThreadSanitizer* below).
 - This is a correctness-first primitive; **no latency/throughput numbers are claimed here.** Any
   such numbers will come only from the committed benchmark harness with full metadata.
 
@@ -218,4 +218,34 @@ each apply real backpressure (spin counts > 0) while staying lossless.
 This is a **correctness-first prototype of a concurrency boundary**, not a latency exercise: no
 matching-latency or throughput number is claimed (none is measured here). It is SPSC point-to-point,
 not MPMC and not a fan-out/fan-in topology. `make check` and `make asan` exercise the threaded paths,
-but ASan/UBSan do not detect data races — dynamic race detection (ThreadSanitizer) is M27.
+but ASan/UBSan do not detect data races — dynamic race detection runs under ThreadSanitizer
+(`make tsan`, M27 — see below).
+
+## ThreadSanitizer (M27)
+
+ThreadSanitizer (TSan) is the dynamic complement to the static memory-ordering argument and the
+ASan/UBSan build: it instruments memory accesses and synchronization at run time and reports any
+**data race** — two threads touching the same location with no happens-before edge between them and
+at least one write. ASan/UBSan cannot see races, so TSan is the tool that actually exercises the
+acquire/release reasoning in [`memory_ordering.md`](memory_ordering.md) on real schedules.
+
+Run it with:
+
+```bash
+make tsan            # equivalently: ctest --preset tsan -L concurrency
+```
+
+The `tsan` preset builds with `-fsanitize=thread` — a *separate* build from `asan`, because the two
+sanitizers instrument memory incompatibly and cannot be combined (`cmake/Sanitizers.cmake` errors if
+both are enabled). It runs the `concurrency`-labelled tests: the SPSC stress and backpressure suites
+and the threaded-pipeline suite. Those are the only genuinely multithreaded tests; running TSan over
+single-threaded tests would add nothing.
+
+**TSan is a correctness gate, not a performance tool.** It imposes large time/memory overhead and
+perturbs scheduling, so **no benchmark or latency number is ever collected under TSan** — measured
+numbers come only from the committed benchmark harness. A green TSan run means "no data race was
+observed on the schedules that executed": it is dynamic evidence that *strengthens* the static
+happens-before proof, not an exhaustive proof over all possible interleavings.
+
+CI runs a dedicated `thread-sanitizer` job on every PR (where the toolchain supports it), so the
+concurrent code is race-checked continuously rather than only locally.

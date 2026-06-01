@@ -40,13 +40,24 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "QSL_ENABLE_ASAN": "ON"
       }
+    },
+    {
+      "name": "tsan",
+      "displayName": "TSan",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "QSL_ENABLE_TSAN": "ON"
+      }
     }
   ],
   "buildPresets": [
     { "name": "dev", "configurePreset": "dev" },
     { "name": "release", "configurePreset": "release" },
     { "name": "bench", "configurePreset": "bench" },
-    { "name": "asan", "configurePreset": "asan" }
+    { "name": "asan", "configurePreset": "asan" },
+    { "name": "tsan", "configurePreset": "tsan" }
   ],
   "testPresets": [
     {
@@ -57,6 +68,11 @@
     {
       "name": "asan",
       "configurePreset": "asan",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "tsan",
+      "configurePreset": "tsan",
       "output": { "outputOnFailure": true }
     }
   ]

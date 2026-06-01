@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff asan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -39,6 +39,13 @@ asan:
 	cmake --preset asan
 	cmake --build --preset asan
 	ctest --preset asan
+
+# ThreadSanitizer: data-race gate for the concurrent pipeline (M27). Runs only the
+# concurrency-labelled tests; never used for performance measurement.
+tsan:
+	cmake --preset tsan
+	cmake --build --preset tsan
+	ctest --preset tsan -L concurrency
 
 demo: build
 	bash scripts/demo.sh
