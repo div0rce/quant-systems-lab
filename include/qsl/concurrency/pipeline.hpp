@@ -79,6 +79,15 @@ struct PipelineResult {
         0; // times the engine thread spun on a full outbound queue
 };
 
+/// Optional live observation hook. The pipeline increments these counters *as backpressure happens*
+/// (not only at the end), so a test can deterministically wait until backpressure has provably
+/// occurred — e.g. before releasing a gated consumer — instead of asserting on a timing-dependent
+/// final spin count. Production callers pass `nullptr`.
+struct PipelineProbe {
+    std::atomic<std::uint64_t> inbound_spins{0};
+    std::atomic<std::uint64_t> outbound_spins{0};
+};
+
 /// Bounded three-thread pipeline. `InboundCapacity`/`OutboundCapacity` are the SPSC queue
 /// capacities (compile-time); small values force backpressure in tests, larger values absorb
 /// bursts. Capacity affects only timing/backpressure, never the result.
@@ -90,7 +99,7 @@ class ThreadedPipeline {
     /// stack frame, outlive both the producer and the consumer of each — the lifetime bracket the
     /// SPSC contract requires). Deterministic given `commands` and `risk`.
     static PipelineResult run(const std::vector<replay::Command> &commands, engine::RiskConfig risk,
-                              OutputSink &sink) {
+                              OutputSink &sink, PipelineProbe *probe = nullptr) {
         SpscRing<replay::Command, InboundCapacity> inbound;
         SpscRing<ProcessedCommand, OutboundCapacity> outbound;
 
@@ -99,8 +108,12 @@ class ThreadedPipeline {
         // last push, and the downstream stage drains-then-stops on acquire.
         std::atomic<bool> input_done{false};
         std::atomic<bool> engine_done{false};
-        std::atomic<std::uint64_t> inbound_spins{0};
-        std::atomic<std::uint64_t> outbound_spins{0};
+
+        // Backpressure spin counters. A test may pass a PipelineProbe to observe these live (e.g.
+        // to wait until the engine has provably back-pressured before releasing a gated consumer);
+        // otherwise the pipeline counts into a local probe. The final values land in the result.
+        PipelineProbe local_probe;
+        PipelineProbe &spins = (probe != nullptr) ? *probe : local_probe;
 
         PipelineResult result{};
 
@@ -108,7 +121,7 @@ class ThreadedPipeline {
         std::thread input_thread([&] {
             for (const replay::Command &command : commands) {
                 while (!inbound.try_push(command)) { // lossless: an order is never dropped
-                    inbound_spins.fetch_add(1, std::memory_order_relaxed);
+                    spins.inbound_spins.fetch_add(1, std::memory_order_relaxed);
                     std::this_thread::yield();
                 }
             }
@@ -139,7 +152,7 @@ class ThreadedPipeline {
 
                 while (!outbound.try_push(
                     std::move(pc))) { // lossless: a log/feed record is never dropped
-                    outbound_spins.fetch_add(1, std::memory_order_relaxed);
+                    spins.outbound_spins.fetch_add(1, std::memory_order_relaxed);
                     std::this_thread::yield();
                 }
             };
@@ -192,8 +205,8 @@ class ThreadedPipeline {
         output_thread.join();
 
         // All threads joined: these reads are sequenced after every write to them.
-        result.inbound_backpressure_spins = inbound_spins.load(std::memory_order_relaxed);
-        result.outbound_backpressure_spins = outbound_spins.load(std::memory_order_relaxed);
+        result.inbound_backpressure_spins = spins.inbound_spins.load(std::memory_order_relaxed);
+        result.outbound_backpressure_spins = spins.outbound_spins.load(std::memory_order_relaxed);
         return result;
     }
 };

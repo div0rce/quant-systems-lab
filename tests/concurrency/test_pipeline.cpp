@@ -29,6 +29,7 @@
 #include <vector>
 
 using qsl::concurrency::OutputSink;
+using qsl::concurrency::PipelineProbe;
 using qsl::concurrency::PipelineResult;
 using qsl::concurrency::ProcessedCommand;
 using qsl::concurrency::ThreadedPipeline;
@@ -139,6 +140,24 @@ struct CommandLogSink final : OutputSink {
     }
 };
 
+// Deterministic backpressure barrier: blocks the FIRST processed command until `open` is set, so
+// the output thread parks, the engine fills the bounded outbound queue, and (with the engine
+// stalled) the inbound queue fills too. A test pairs this with a PipelineProbe and releases only
+// once a real spin has been observed, making the "backpressure occurred" assertion deterministic
+// rather than timing-dependent.
+struct GatedSink final : OutputSink {
+    std::atomic<bool> open{false};
+    std::vector<EngineEvent> events;
+    void on_processed(const ProcessedCommand &pc) override {
+        while (!open.load(std::memory_order_acquire)) {
+            std::this_thread::yield();
+        }
+        for (const EngineEvent &e : pc.events) {
+            events.push_back(e);
+        }
+    }
+};
+
 // Run the pipeline at the given capacities and assert it reproduces the single-threaded reference
 // exactly: same counts, same final snapshot (which includes last_seq), and the same ordered event
 // stream observed by the downstream stage.
@@ -196,36 +215,72 @@ TEST_CASE("pipeline corpus is non-vacuous: real rejects, trades, and accepts", "
     REQUIRE(trades > 0);
 }
 
-TEST_CASE("full inbound queue applies deterministic backpressure (lossless)",
+TEST_CASE("saturated inbound queue stays lossless (tiny capacity, deterministic outcome)",
           "[pipeline][backpressure]") {
     // Tiny inbound queue + a fast downstream: the input thread (cheap command copies) outruns the
-    // engine (risk + matching), so the inbound queue saturates and the input thread must spin. The
-    // spin/yield policy is lossless, so the outcome is identical to the unconstrained run.
+    // engine (risk + matching), so the inbound queue saturates and the input thread spins on the
+    // lossless spin/yield policy. The outcome must be identical to the unconstrained run --
+    // capacity changes only backpressure, never the result. Whether a spin is *observed* on any
+    // given run is timing-dependent and intentionally not asserted here (it can legitimately be 0
+    // on a fast run); that a spin provably occurs is covered deterministically by the
+    // gated-consumer test below.
     const auto flow = qsl::replay::generate_property_flow(7, 4, 800);
     const Reference ref = run_reference(flow, kRisk);
 
     CollectingSink sink;
     const PipelineResult result = ThreadedPipeline<2, 4096>::run(flow, kRisk, sink);
 
-    REQUIRE(result.inbound_backpressure_spins >= 1); // the inbound queue actually filled
+    REQUIRE(result.commands_processed == flow.size());
     REQUIRE(result.snapshot == ref.snapshot);
     REQUIRE(sink.events == ref.events);
 }
 
-TEST_CASE("publisher lag back-pressures the engine but does not corrupt engine state",
-          "[pipeline][backpressure]") {
-    // A slow (yielding) downstream stage + a tiny outbound queue: the engine fills the outbound
-    // queue and must spin on try_push. The engine state must still match the reference exactly --
-    // a lagging publisher applies backpressure, it does not corrupt the engine.
+TEST_CASE("publisher lag does not corrupt engine state", "[pipeline][backpressure]") {
+    // A slow (yielding) downstream stage + a tiny outbound queue: the engine repeatedly fills the
+    // outbound queue and back-pressures on try_push. The engine state must still match the
+    // reference exactly -- a lagging publisher applies backpressure, it does not corrupt the
+    // engine. A spin is not asserted here because yield() may let the consumer keep pace on a fast
+    // run; backpressure is proven deterministically by the gated-consumer test below.
     const auto flow = qsl::replay::generate_property_flow(7, 4, 800);
     const Reference ref = run_reference(flow, kRisk);
 
     LaggySink sink;
     const PipelineResult result = ThreadedPipeline<4096, 2>::run(flow, kRisk, sink);
 
-    REQUIRE(result.outbound_backpressure_spins >= 1); // the engine actually back-pressured
+    REQUIRE(result.commands_processed == flow.size());
     REQUIRE(result.snapshot == ref.snapshot);
     REQUIRE(result.last_seq == ref.last_seq);
+    REQUIRE(sink.events == ref.events);
+}
+
+TEST_CASE("backpressure is real and lossless: a blocked consumer forces both queues full",
+          "[pipeline][backpressure]") {
+    // Deterministic backpressure proof (replaces a timing-dependent ">= 1 spins" check). The gated
+    // consumer parks on its first command, so the engine fills the capacity-2 outbound queue and
+    // must spin; with the engine stalled it stops draining the capacity-2 inbound queue, so the
+    // input thread fills it and must spin too. We wait on a live PipelineProbe until BOTH spins
+    // have provably happened, *then* release the consumer -- a real barrier, not a race. The run
+    // must still be lossless and uncorrupted under sustained backpressure.
+    const auto flow = qsl::replay::generate_property_flow(7, 4, 800);
+    const Reference ref = run_reference(flow, kRisk);
+
+    GatedSink sink;
+    PipelineProbe probe;
+    PipelineResult result{};
+    std::thread runner([&] { result = ThreadedPipeline<2, 2>::run(flow, kRisk, sink, &probe); });
+
+    while (probe.inbound_spins.load(std::memory_order_relaxed) < 1 ||
+           probe.outbound_spins.load(std::memory_order_relaxed) < 1) {
+        std::this_thread::yield(); // park until backpressure has provably occurred on both queues
+    }
+    sink.open.store(true, std::memory_order_release); // now let the blocked consumer drain
+    runner.join();
+
+    REQUIRE(result.inbound_backpressure_spins >= 1); // proven by the barrier above, not raced
+    REQUIRE(result.outbound_backpressure_spins >= 1);
+    REQUIRE(result.commands_processed == flow.size());
+    REQUIRE(result.snapshot ==
+            ref.snapshot); // lossless and uncorrupted under sustained backpressure
     REQUIRE(sink.events == ref.events);
 }
 
@@ -298,7 +353,8 @@ TEST_CASE("event-log integrity: accepted commands are logged and replay to the s
     REQUIRE(log.records.size() == ref.accepted);
 
     MatchingEngine replayed;
-    qsl::replay::replay(replayed, log.records);
-    REQUIRE(replayed.snapshot() == result.snapshot); // log replay == pipeline state ...
+    const auto replayed_events = qsl::replay::replay(replayed, log.records);
+    REQUIRE(replayed_events == ref.events); // the logged stream replays the same events ...
+    REQUIRE(replayed.snapshot() == result.snapshot); // ... log replay == pipeline state ...
     REQUIRE(replayed.snapshot() == ref.snapshot);    // ... == single-threaded reference
 }
