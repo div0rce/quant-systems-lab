@@ -109,17 +109,20 @@ full barrier that `seq_cst` stores imply.
 
 ## Wait-freedom, by construction
 
-The header describes `try_push`/`try_pop` as **wait-free per operation**. The justification is
-structural, not benchmarked:
+The header describes `try_push`/`try_pop` as **wait-free per operation** for payload types whose
+copy/move assignment is itself bounded and non-blocking. The justification is structural, not
+benchmarked:
 
-- Each operation executes a *fixed, bounded* number of steps — two atomic loads, one branch, one
-  plain memory access, one atomic store — regardless of what the other thread is doing.
+- Each operation executes a *fixed, bounded* number of steps in the queue protocol itself — two
+  atomic loads, one branch, one plain memory access, one atomic store — regardless of what the
+  other thread is doing.
 - There is **no loop** and **no CAS retry** inside either operation, so there is no execution in
   which a thread is starved or must retry because of contention.
 
-A bounded step count independent of other threads' scheduling is exactly *population-oblivious
-wait-freedom*, the strongest progress class; lock-freedom follows because wait-freedom implies it.
-This is a claim about the *queue operation*, and it is what "lock-free"/"wait-free" mean in the
+For `T` with trivial or otherwise constant-time, non-blocking copy/move assignment, that bounded
+protocol step count is exactly *population-oblivious wait-freedom*, the strongest progress class;
+lock-freedom follows because wait-freedom implies it. This is a claim about the *queue protocol*
+plus the payload operation's own boundedness, and it is what "lock-free"/"wait-free" mean in the
 header and in `concurrency_model.md`.
 
 It is **not** a claim that a *program* using the queue is wait-free. A caller that spins on a full

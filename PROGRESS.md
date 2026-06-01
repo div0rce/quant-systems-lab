@@ -25,7 +25,7 @@ Do not rely on prior chat memory.
 - **Last completed milestone:** M24 — Bounded SPSC ring buffer (squash-merged, PR #84)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** yes (171/171; +8 concurrency cases); `make asan` 171/171 sanitizer-clean; OCaml `dune runtest` 5 suites
-- **Last action:** M25 — added `docs/memory_ordering.md` (per-step ordering table, happens-before proof both directions, wait-free-by-construction justification), expanded `docs/concurrency_model.md` (ownership lifecycle, visibility, backpressure policies, shutdown/drain assumptions, honest limits), and added `tests/concurrency/test_spsc_stress.cpp` + `test_backpressure.cpp` (wired into `tests/CMakeLists.txt`).
+- **Last action:** M25 — qualified the wait-free claim for `SpscRing<T, Capacity>` payload operations (bounded, non-blocking copy/move assignment only) in `docs/memory_ordering.md` and `docs/concurrency_model.md`; added `tests/concurrency/test_spsc_stress.cpp` + `test_backpressure.cpp` (wired into `tests/CMakeLists.txt`).
 - **Next action:** open the M25 PR; after merge, `/start-milestone 26`.
 - **Blockers:** none
 
@@ -262,6 +262,7 @@ Lower priority:
 - [2026-06-01] M25: split the concurrency docs — kept the high-level model (ownership lifecycle, visibility, backpressure, shutdown, limits) in `docs/concurrency_model.md` and moved the C++ memory-model deep dive (ordering table, happens-before proof both directions, wait-free-by-construction argument) into a new `docs/memory_ordering.md`, cross-linked, to avoid one drifting from the other.
 - [2026-06-01] M25: justified the "wait-free per operation" / "lock-free" claim by construction (bounded step count, no loops, no CAS) rather than dropping it, and explicitly scoped it to the queue op — a caller spinning on backpressure is application-level and not wait-free.
 - [2026-06-01] M25: introduced `tests/concurrency/` (separate from `tests/unit/`) for sustained stress + backpressure/shutdown evidence; deferred dynamic data-race detection (ThreadSanitizer) to M27 per the roadmap rather than adding a TSan preset now.
+- [2026-06-01] M25: qualified the wait-free claim further so it only covers payload types with bounded, non-blocking copy/move assignment; `SpscRing` remains SPSC-only and the queue protocol proof does not overpromise for arbitrary `T`.
 - [2026-05-31] Cut GitHub-only `v0.1.0` release after the release-readiness gate; no packages published.
 - [2026-05-31] Promoted old issues into the Phase III/IV roadmap (issue → milestone): #24 → M24, #26 → M26, #27 → M27, #25 → M28, #32 → M29 — instead of leaving them as loose backlog.
 - [2026-05-31] Added Phase IV milestones M29–M31 for Linux perf/socket profiling and external review signal (with M28 memory-pool experiment closing Phase III).

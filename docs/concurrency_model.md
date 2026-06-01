@@ -25,7 +25,8 @@ Each queue has **exactly one producer and one consumer**. That is the defining c
 single-producer/single-consumer (SPSC) queue, so an MPMC queue would add compare-and-swap
 contention, retry loops, and ABA/hazard concerns for a problem we do not have. SPSC lets each
 index be owned by exactly one thread, which keeps the synchronization to a single acquire/release
-pair per direction and the operations wait-free (see `memory_ordering.md`).
+pair per direction. The queue protocol is wait-free for payload types whose copy/move assignment
+is bounded and non-blocking (see `memory_ordering.md`).
 
 `SpscRing<T, Capacity>` is therefore intentionally **not** a general concurrent container:
 concurrent producers, or concurrent consumers, are undefined behavior.
@@ -99,8 +100,9 @@ The M26 pipeline will use the **spin/yield (lossless)** policy on the inbound co
 orders must not be dropped — and may use **drop-with-counter** on a market-data fan-out where
 freshness beats completeness. Capacity sizing is the tuning knob: a larger `Capacity` absorbs
 bigger bursts at the cost of memory and worse cache behavior; it does not change correctness.
-Because the queue op itself is wait-free, any spinning is strictly application-level and is
-measured/bounded by the caller, not hidden inside the queue.
+Because the queue op itself is wait-free for payload types with bounded, non-blocking
+copy/move assignment, any spinning is strictly application-level and is measured/bounded by the
+caller, not hidden inside the queue.
 
 ## Shutdown and lifecycle assumptions
 
@@ -137,8 +139,9 @@ latency delta is *claimed* here — see Limits.)
   Concurrent producers or concurrent consumers are undefined behavior by contract.
 - **Bounded, fixed capacity.** No growth; `try_push` returns false when full and the caller decides
   the backpressure policy (spin, drop, or block — see *Backpressure*).
-- **Wait-free per operation — and justified, not asserted.** Each `try_push`/`try_pop` is a bounded
-  number of atomic loads/stores with no lock and no CAS retry loop; the structural argument is in
+- **Wait-free per operation — and qualified.** Each `try_push`/`try_pop` has a bounded atomic
+  protocol with no lock and no CAS retry loop; for payload types with bounded, non-blocking
+  copy/move assignment, the operation is wait-free end-to-end. The structural argument is in
   `memory_ordering.md` → *Wait-freedom, by construction*. A caller that *spins* on `full()`/
   `empty()` is doing application-level backpressure, which is separate from the queue op, so the
   *system* is not claimed to be wait-free.
