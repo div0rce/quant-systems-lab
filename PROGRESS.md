@@ -19,14 +19,14 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M28 — Memory pool allocator experiment
-- **Status:** implemented and verified (`make check` 186/186; `make asan` 186/186; `make bench-allocator` wrote `results/allocator_experiment.txt`); ready for PR
-- **Active branch:** `feat/m28-memory-pool-allocator`
-- **Last completed milestone:** M27 — ThreadSanitizer coverage (squash-merged, PR #87, commit 5ceb19c)
+- **Active milestone:** M29 — Linux perf and flamegraph profiling artifacts
+- **Status:** in progress
+- **Active branch:** `feat/m29-linux-perf-profiling`
+- **Last completed milestone:** M28 — Memory pool allocator experiment (squash-merged, PR #88, commit 03b4d9a)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes (186/186); `make asan` passing (186/186); allocator benchmark completed with full metadata in `results/allocator_experiment.txt`. `make tsan` remains the M27 race gate for the concurrency tests.
-- **Last action:** addressed PR #88 review: `OrderPool<Capacity>` now uses raw aligned storage with explicit `construct_at`/`destroy_at` lifetime; focused tests cover interior pointer rejection and reset stale-pointer rejection.
-- **Next action:** commit + push `feat/m28-memory-pool-allocator`; open the M28 PR as a draft (do not merge). After human squash-merge, `/start-milestone 29`.
+- **`make check` passing:** last verified on M28 (186/186); M29 verification pending.
+- **Last action:** started M29 from `main` after M28 merged; branch `feat/m29-linux-perf-profiling` created for Linux perf profiling scripts/docs/artifacts.
+- **Next action:** add Linux-only `perf stat` / `perf record` scripts, generate or document Linux profiling artifacts, run `make check`, update docs/progress, then open the M29 PR.
 - **Blockers:** none
 
 ---
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M28 implemented on `feat/m28-memory-pool-allocator` and ready for PR. PR #88 review fix applied: `OrderPool<Capacity>` now uses raw aligned storage, constructs `engine::Order` on acquire, destroys on release/reset/destructor, rejects null/non-owned/interior/already-released pointers, and still has no heap fallback. Added unit coverage for interior pointer rejection and reset stale-pointer rejection; updated docs and regenerated `results/allocator_experiment.txt`. Verified `make check` 186/186, `make asan` 186/186, and `make bench-allocator`. Next precise step: commit, push, comment `@codex review`; after squash-merge `/start-milestone 29`._
+- _M29 started on `feat/m29-linux-perf-profiling` from `main` at M28 squash commit 03b4d9a. DoD: Linux-only perf scripts with clear non-Linux failure, perf stat counters, perf record/report hot-symbol evidence, docs with hardware/kernel/compiler caveats, committed artifacts or documented regeneration limits, `make check`, and updated progress. Next precise step: implement scripts/docs/artifacts._
 
 
 ---
@@ -252,13 +252,14 @@ Lower priority:
 | M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ☑ merged | #85 | Ownership model, acquire/release documentation, stress/backpressure tests |
 | M26 | Multithreaded gateway-engine-feed pipeline prototype | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #86 | Explicit thread boundaries and deterministic shutdown |
 | M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #87 | TSan preset/CI for concurrent tests |
-| M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ◐ in progress | — | Hot-path allocation experiment with benchmark evidence |
-| M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ☐ not started | — | perf stat/record/report artifacts; flamegraph optional |
+| M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
+| M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ◐ in progress | — | perf stat/record/report artifacts; flamegraph optional |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☐ not started | — | syscall/socket-buffer/UDP pressure evidence; epoll optional if scoped |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
 
 ## Decision log additions
 
+- [2026-06-01] M29: started after M28 merged (PR #88, squash commit 03b4d9a). M29 scope is Linux `perf` evidence only: scripts/docs/artifacts for `perf stat` and `perf record/report`; no engine optimization and no M30 socket profiling.
 - [2026-06-01] M28: added a fixed-capacity `OrderPool<Capacity>` for `engine::Order`; exhaustion returns `nullptr`, releases are validated, and there is no silent heap fallback.
 - [2026-06-01] M28: added an isolated allocator benchmark path (`qsl-bench pool` / `make bench-allocator`) comparing raw `operator new`/placement construction against pool acquire/release, with full hardware/compiler/build/commit/dirty-tree metadata in `results/allocator_experiment.txt`.
 - [2026-06-01] M28: kept order-book storage unchanged; the pool is an allocation experiment for future storage decisions, not a semantic refactor or an end-to-end engine latency claim.
