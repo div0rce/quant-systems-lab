@@ -31,7 +31,11 @@ fi
 mkdir -p "$(dirname "$OUT")" "$(dirname "$DATA")"
 
 DIRTY=no
-if [[ -n "$(git status --porcelain --untracked-files=all -- . ":(exclude)$OUT" ":(exclude)$DATA")" ]]; then
+if [[ -n "$(git status --porcelain --untracked-files=all -- . \
+    ":(exclude)results/perf_stat_linux.txt" \
+    ":(exclude)results/perf_report_linux.txt" \
+    ":(exclude)$OUT" \
+    ":(exclude)$DATA")" ]]; then
     DIRTY=yes
 fi
 

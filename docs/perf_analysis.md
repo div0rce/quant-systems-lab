@@ -54,6 +54,9 @@ without documenting the limitation. The scripts can write a partial artifact wit
 Each artifact includes hardware, kernel, compiler, perf version, build type, git commit, dirty
 tree state, dataset, command, event set, and date.
 
+The dirty-tree field excludes only the generated M29 output files themselves so a two-artifact
+run can remain honest (`Dirty tree: no`) while still detecting real source, script, or doc changes.
+
 ## What To Look For
 
 The benchmark harness mixes order-book operations, protocol codec work, gateway/session handling,
