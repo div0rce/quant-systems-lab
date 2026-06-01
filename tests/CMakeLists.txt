@@ -20,6 +20,12 @@ foreach(t test_smoke test_types test_clock test_protocol test_order_book test_ma
   catch_discover_tests(${t})
 endforeach()
 
+foreach(t test_spsc_stress test_backpressure)
+  add_executable(${t} concurrency/${t}.cpp)
+  target_link_libraries(${t} PRIVATE qsl_core qsl_warnings Catch2::Catch2WithMain Threads::Threads)
+  catch_discover_tests(${t})
+endforeach()
+
 set(QSL_REPLAY_MISSING_PATH "${CMAKE_CURRENT_BINARY_DIR}/qsl-replay-definitely-missing.log")
 file(REMOVE "${QSL_REPLAY_MISSING_PATH}")
 add_test(
