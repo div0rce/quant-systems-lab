@@ -19,15 +19,21 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M25 — Memory-ordering and concurrency evidence package
-- **Status:** in progress — implemented and verified (`make check` + `make asan` green); ready for PR
-- **Active branch:** `feat/m25-memory-ordering-evidence`
-- **Last completed milestone:** M24 — Bounded SPSC ring buffer (squash-merged, PR #84)
+- **Active milestone:** M26 — Multithreaded gateway-engine-feed pipeline prototype
+- **Status:** implemented and verified (`make check` 181/181 + `make asan` 181/181 sanitizer-clean); ready for PR
+- **Active branch:** `claude/serene-fermi-rhuFJ` (environment-designated; holds M26 only — see branch note)
+- **Last completed milestone:** M25 — Memory-ordering and concurrency evidence package (squash-merged, PR #85)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes (171/171; +8 concurrency cases); `make asan` 171/171 sanitizer-clean; OCaml `dune runtest` 5 suites
-- **Last action:** M25 — qualified the wait-free claim for `SpscRing<T, Capacity>` payload operations (bounded, non-blocking copy/move assignment only) in `docs/memory_ordering.md` and `docs/concurrency_model.md`; added `tests/concurrency/test_spsc_stress.cpp` + `test_backpressure.cpp` (wired into `tests/CMakeLists.txt`).
-- **Next action:** open the M25 PR; after merge, `/start-milestone 26`.
+- **`make check` passing:** yes (181/181; +10 pipeline cases under `tests/concurrency/`); `make asan` 181/181 sanitizer-clean; `check-fixtures`/`check-manifest` clean. OCaml `dune runtest` not runnable here (no toolchain in this environment) — OCaml/exporter/fixture code is untouched, so it is unaffected and runs in the CI `ocaml-verifier` job.
+- **Last action:** implemented the M26 threaded pipeline (`include/qsl/concurrency/pipeline.hpp`) + `tests/concurrency/test_pipeline.cpp` (9 cases), wired the test into `tests/CMakeLists.txt`, and updated `docs/concurrency_model.md` (Realized pipeline section) + `docs/architecture.md`. Verified `make check` 181/181, `make asan` 181/181 sanitizer-clean, fixtures/manifest clean.
+- **Next action:** commit + push `claude/serene-fermi-rhuFJ`, open the M26 PR as a draft (do not merge). After human squash-merge, `/start-milestone 27` (ThreadSanitizer).
 - **Blockers:** none
+
+> **Branch note:** the managed remote environment mandates development on `claude/serene-fermi-rhuFJ`
+> and forbids pushing to a different branch without explicit permission, so M26 deviates from the
+> `feat/mNN-slug` convention on branch *name* only. The milestone intent is preserved: this branch
+> carries only M26 work and its PR uses the M26 title `feat: add threaded gateway-engine-feed
+> pipeline prototype`.
 
 ---
 
@@ -202,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M25 implemented on `feat/m25-memory-ordering-evidence`. The merged M24 SPSC ring now has a defended evidence package: `docs/memory_ordering.md` (new) + expanded `docs/concurrency_model.md`, plus `tests/concurrency/{test_spsc_stress,test_backpressure}.cpp` wired into `tests/CMakeLists.txt`. `make check` 171/171 and `make asan` 171/171 sanitizer-clean. Next precise step: open the M25 PR; after squash-merge, `/start-milestone 26` (threaded pipeline)._
+- _M26 implemented on `claude/serene-fermi-rhuFJ` and ready for PR. New header-only `include/qsl/concurrency/pipeline.hpp` (`ThreadedPipeline<InboundCapacity, OutboundCapacity>`: input thread → inbound `SpscRing<replay::Command>` → engine thread (sole owner of `MatchingEngine`+`OrderGateway`) → outbound `SpscRing<ProcessedCommand>` → publisher/log thread (sole owner of an `OutputSink`)). Lossless spin/yield on both queues; drain-then-stop via two `atomic<bool>` done-flags; rings joined before `run()` returns. Tests in `tests/concurrency/test_pipeline.cpp` (wired into `tests/CMakeLists.txt`): threaded ≡ single-threaded reference over 8 GTC + 8 property seeds × {tiny, large} capacities; in-order event stream; publisher-lag + full-inbound backpressure (lossless, spin-count > 0); `shutdown_empty`/`shutdown_with_pending_commands`/`shutdown_with_full_queue`; event-log integrity (in-memory `encode_record`→`read_log`→`recovery::replay` reproduces the snapshot). Docs: `docs/concurrency_model.md` (Realized pipeline (M26)) + `docs/architecture.md`. `make check` 181/181, `make asan` 181/181 clean. Next precise step: open the draft M26 PR; after squash-merge, `/start-milestone 27`._
 
 
 ---
@@ -249,8 +255,8 @@ Lower priority:
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☑ merged | #54 | M13-style final polish/readiness pass after Phase II |
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release-notes` | ☑ released | #82 / tag `v0.1.0` | GitHub-only release; no packages |
 | M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ☑ merged | #84 | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
-| M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ◐ in progress | — | Ownership model, acquire/release documentation, stress/backpressure tests |
-| M26 | Multithreaded gateway-engine-feed pipeline prototype | `feat/m26-threaded-pipeline` | ☐ not started | — | Explicit thread boundaries and deterministic shutdown |
+| M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ☑ merged | #85 | Ownership model, acquire/release documentation, stress/backpressure tests |
+| M26 | Multithreaded gateway-engine-feed pipeline prototype | `claude/serene-fermi-rhuFJ` (env-designated) | ◐ in progress | — | Explicit thread boundaries and deterministic shutdown |
 | M27 | ThreadSanitizer coverage | `feat/m27-thread-sanitizer` | ☐ not started | — | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☐ not started | — | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ☐ not started | — | perf stat/record/report artifacts; flamegraph optional |
@@ -259,6 +265,11 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-01] M26: reconciled stale PROGRESS state — M25 was already merged (PR #85, commit 9360364 on main), not "ready for PR"; M24 (#84) + M25 (#85) confirmed merged, satisfying the M26 prerequisites.
+- [2026-06-01] M26: the threaded pipeline is a new header-only `qsl::concurrency::ThreadedPipeline<InboundCapacity, OutboundCapacity>` (`include/qsl/concurrency/pipeline.hpp`). The engine thread is the **sole owner** of `MatchingEngine`+`OrderGateway`, so the concurrency boundary is a value hand-off and deterministic matching semantics are unchanged (no engine code modified).
+- [2026-06-01] M26: the downstream publisher/log stage consumes self-contained `ProcessedCommand` records and never reads the engine — the M6 publisher derives top-of-book from the engine, which would race the engine thread, so keeping the sink engine-free makes "publisher lag cannot corrupt engine state" structurally true, not merely tested.
+- [2026-06-01] M26: both hand-off queues use the lossless spin/yield policy (orders + event-log/feed records never dropped) and drain-then-stop shutdown via per-stage `atomic<bool>` done-flags; rings live on `run()`'s stack and are joined before return (SPSC lifetime bracket). Determinism is proven by asserting the threaded result equals a single-threaded reference *and* a replay of the concurrently-written command log, across seeds and queue capacities (2..4096) — capacity/timing change only backpressure, never the result.
+- [2026-06-01] M26: branch-name deviation — the managed remote environment mandates development on `claude/serene-fermi-rhuFJ` and forbids pushing to a different branch, so M26 keeps the milestone intent (one branch, one PR titled `feat: add threaded gateway-engine-feed pipeline prototype`) but not the `feat/mNN-slug` branch name.
 - [2026-06-01] M25: split the concurrency docs — kept the high-level model (ownership lifecycle, visibility, backpressure, shutdown, limits) in `docs/concurrency_model.md` and moved the C++ memory-model deep dive (ordering table, happens-before proof both directions, wait-free-by-construction argument) into a new `docs/memory_ordering.md`, cross-linked, to avoid one drifting from the other.
 - [2026-06-01] M25: justified the "wait-free per operation" / "lock-free" claim by construction (bounded step count, no loops, no CAS) rather than dropping it, and explicitly scoped it to the queue op — a caller spinning on backpressure is application-level and not wait-free.
 - [2026-06-01] M25: introduced `tests/concurrency/` (separate from `tests/unit/`) for sustained stress + backpressure/shutdown evidence; deferred dynamic data-race detection (ThreadSanitizer) to M27 per the roadmap rather than adding a TSan preset now.
