@@ -12,6 +12,63 @@ The repo brain lives in four root files:
 Keep all four in the repo root.
 
 ---
+## Current handoff
+
+The repo is released at `v0.1.0`. M0–M23 are complete. The next work is Phase III / Phase IV.
+
+Start with:
+
+```text
+/start-milestone 24
+```
+
+Do not start implementation until these files are read:
+
+1. `CLAUDE.md`
+2. `PROGRESS.md`
+3. `MILESTONES.md`
+4. `HANDOFF.md`
+
+Then verify:
+
+```bash
+git status
+git branch --show-current
+git pull --ff-only
+git log --oneline -10
+gh pr list --state open
+git tag -l
+gh release view v0.1.0
+```
+
+Expected state:
+
+- branch: `main`
+- open PRs: ideally 0
+- release tag: `v0.1.0`
+- next branch: `feat/m24-spsc-ring-buffer`
+
+### Next milestone
+
+M24 — Bounded SPSC ring buffer. Implement a bounded SPSC queue as the primitive for later
+threaded gateway-engine-feed work. Do not implement M25–M31 inside M24 — this is where scope
+rot starts.
+
+### Phase III / IV purpose
+
+The next arc exists to address the remaining systems-signal gaps: a multithreaded pipeline, real
+concurrency boundaries, the ring-buffer/backpressure path, memory ordering, ThreadSanitizer
+discipline, an allocator/memory-pool experiment, Linux perf/flamegraph evidence, kernel/socket
+profiling, and an external review signal.
+
+### Forbidden shortcuts
+
+Do not: build a dashboard; add trading strategies; add fake market-data integration; claim
+production HFT; claim formal verification; add benchmark numbers without committed scripts; skip
+to external review before evidence exists; or merge your own PR.
+
+---
+
 
 ## 0. Use Claude Code
 

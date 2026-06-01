@@ -950,3 +950,47 @@ The repo should not stop at “built a matching engine.” That is a known portf
 - Do not add application-polish docs unless M20 explicitly needs final technical framing.
 - Keep C++ as the system under test and OCaml as independent replay/checking infrastructure.
 - Every benchmark or performance claim must remain measured by committed scripts.
+
+
+---
+
+## Phase III / Phase IV roadmap: concurrency, memory, Linux profiling, and external review
+
+v0.1.0 established the correctness-first exchange-systems lab: deterministic matching,
+replay/recovery, binary protocol handling, OCaml differential testing, property
+generation/shrinking, sanitizer hardening, and release hygiene.
+
+The next arc is not more product surface area. It is systems credibility.
+
+Phase III focuses on:
+1. bounded SPSC queue internals;
+2. memory-ordering documentation and stress tests;
+3. a threaded gateway-engine-feed prototype;
+4. ThreadSanitizer coverage;
+5. allocator/memory-pool experiments.
+
+Phase IV focuses on:
+1. Linux perf/flamegraph profiling;
+2. kernel/socket path profiling;
+3. Linux socket hardening experiments;
+4. an external review/maintainer-signal package.
+
+Do not add dashboards, strategies, market-data APIs, FIX adapters, Docker packaging, or
+aesthetic product work before M24–M31 unless the human explicitly changes priorities.
+
+The correct claim after this arc is:
+
+> "correctness-first deterministic exchange-systems lab with measured concurrency, allocator,
+> Linux perf, and socket-profiling evidence."
+
+The incorrect claims remain forbidden:
+
+- production HFT platform
+- real exchange
+- formally verified exchange
+- profitable trading system
+- guaranteed low latency
+- production networking stack
+
+`make tsan` (ThreadSanitizer) is a planned target that becomes available only after M27 exists;
+do not reference it as runnable before then.

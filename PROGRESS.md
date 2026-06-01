@@ -19,13 +19,14 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Backlog execution (post-M22) — GitHub issues #24–#51
-- **Status:** tractable backlog complete (test/tooling/docs); remaining items out of scope/deferred
-- **Active branch:** per-issue `feat/issue-NN-slug` / `fix/issue-NN-slug` (docs refresh on `docs/refresh-repository-documentation`)
-- **Last completed milestone:** M22 — Release readiness audit (PR #54, squash-merged); M0–M22 all merged
-- **`make check` passing:** yes (157/157 tests); OCaml `dune runtest` passing (5 suites)
-- **Last action:** executed the prioritized backlog as Codex-reviewed PRs (one issue = one PR). Merged #34–#51 tractable items: oracle self-test (#34), negative fixtures (#36), divergence demo (#37), coverage matrix (#38), independence audit (#39), failure artifact bundle (#40), shared dispatch helper (#41), price-simplify shrink (#42), symbol/id renumber shrink (#43), reject-reason coverage (#44), cross-compiler determinism (#45), shrinker metrics (#46), seed manifest (#47), oracle mutation testing (#48), corpus prop_seed1..50 (#49), regression archive (#50), differential-harness benchmarks (#51), plus CI seed sweep (#35)
-- **Next action:** tractable backlog done. Open issues: #28–#33 (generic product items, unscoped) and #24–#27 (major architecture, deferred). A docs refresh PR is the only work in flight.
+- **Active milestone:** M24 — Bounded SPSC ring buffer
+- **Status:** v0.1.0 released; Phase III/IV roadmap prepared; ready to start `/start-milestone 24`
+- **Active branch:** none; next branch should be `feat/m24-spsc-ring-buffer`
+- **Last completed milestone:** M23 — v0.1.0 release
+- **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
+- **`make check` passing:** yes as of the release gate (157/157; OCaml `dune runtest` 5 suites); verify again before M24 implementation
+- **Last action:** cut the GitHub-only `v0.1.0` release after the release-readiness gate; planning files updated to promote the concurrency/memory/profiling issues (#24→M24, #26→M26, #27→M27, #25→M28, #32→M29) into the Phase III/IV roadmap (M24–M31) and keep #28–#31/#33 deferred
+- **Next action:** run `/start-milestone 24`
 - **Blockers:** none
 
 ---
@@ -201,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _Tractable backlog (#34–#51) complete and merged. Remaining open issues #28–#33 (generic, unscoped) and #24–#27 (major architecture, deferred). Docs refresh PR in flight._
+- _v0.1.0 released (tag on 9857e1a). Phase III/IV roadmap prepared: #24→M24, #26→M26, #27→M27, #25→M28, #32→M29; #28–#31 and #33 deferred. Next: `/start-milestone 24` (`feat/m24-spsc-ring-buffer`)._
 
 
 ---
@@ -246,10 +247,22 @@ Lower priority:
 | M20 | Differential testing architecture docs | `feat/m20-differential-testing-docs` | ☑ merged | #52 | Final docs for differential/property testing system |
 | M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☑ merged | #53 | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☑ merged | #54 | M13-style final polish/readiness pass after Phase II |
-| M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release-notes` | ◐ in progress | — | Release notes in CHANGELOG; tag/GitHub release pending human go-ahead |
+| M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release-notes` | ☑ released | #82 / tag `v0.1.0` | GitHub-only release; no packages |
+| M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ☐ not started | — | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
+| M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ☐ not started | — | Ownership model, acquire/release documentation, stress/backpressure tests |
+| M26 | Multithreaded gateway-engine-feed pipeline prototype | `feat/m26-threaded-pipeline` | ☐ not started | — | Explicit thread boundaries and deterministic shutdown |
+| M27 | ThreadSanitizer coverage | `feat/m27-thread-sanitizer` | ☐ not started | — | TSan preset/CI for concurrent tests |
+| M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☐ not started | — | Hot-path allocation experiment with benchmark evidence |
+| M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ☐ not started | — | perf stat/record/report artifacts; flamegraph optional |
+| M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☐ not started | — | syscall/socket-buffer/UDP pressure evidence; epoll optional if scoped |
+| M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
 
 ## Decision log additions
 
+- [2026-05-31] Cut GitHub-only `v0.1.0` release after the release-readiness gate; no packages published.
+- [2026-05-31] Promoted old issues into the Phase III/IV roadmap (issue → milestone): #24 → M24, #26 → M26, #27 → M27, #25 → M28, #32 → M29 — instead of leaving them as loose backlog.
+- [2026-05-31] Added Phase IV milestones M29–M31 for Linux perf/socket profiling and external review signal (with M28 memory-pool experiment closing Phase III).
+- [2026-05-31] Deferred generic product items #28–#31 and #33 (realistic flow model, FIX adapter, dashboard, Docker, Pages) until after the systems-credibility arc; #32 (perf/flamegraph) is promoted to M29.
 - [2026-05-29] Target Jane Street SWE first and Linux Engineering second; avoid optimizing for IT Operations because it weakens software-engineering signal.
 - [2026-05-29] Preserve the C++20 exchange simulator as the core project; add OCaml only as a replay-verifier subproject, not as a replacement for the engine.
 - [2026-05-29] Add Linux performance and socket gateway documentation requirements to strengthen Linux Engineering fit.
@@ -270,11 +283,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Start M0 unless already scaffolded:
+Start Phase III:
 
 ```text
-/start-milestone 00
+/start-milestone 24
 ```
+
+Expected branch: `feat/m24-spsc-ring-buffer`.
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 
