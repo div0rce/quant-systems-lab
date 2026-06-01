@@ -19,14 +19,14 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M24 — Bounded SPSC ring buffer
-- **Status:** in progress — implemented; ready for PR
-- **Active branch:** `feat/m24-spsc-ring-buffer`
-- **Last completed milestone:** M23 — v0.1.0 release
+- **Active milestone:** M25 — Memory-ordering and concurrency evidence package
+- **Status:** in progress — implemented and verified (`make check` + `make asan` green); ready for PR
+- **Active branch:** `feat/m25-memory-ordering-evidence`
+- **Last completed milestone:** M24 — Bounded SPSC ring buffer (squash-merged, PR #84)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes (163/163; +6 SPSC cases); `make asan` 163/163 sanitizer-clean; OCaml `dune runtest` 5 suites
-- **Last action:** M24 — added `include/qsl/concurrency/spsc_ring.hpp` (bounded lock-free SPSC ring; acquire/release per direction; cache-line-padded indices), `tests/unit/test_spsc_ring.cpp` (empty/FIFO/full/wraparound/SPSC-stress), and `docs/concurrency_model.md`
-- **Next action:** open the M24 PR; after merge, `/start-milestone 25`
+- **`make check` passing:** yes (171/171; +8 concurrency cases); `make asan` 171/171 sanitizer-clean; OCaml `dune runtest` 5 suites
+- **Last action:** M25 — added `docs/memory_ordering.md` (per-step ordering table, happens-before proof both directions, wait-free-by-construction justification), expanded `docs/concurrency_model.md` (ownership lifecycle, visibility, backpressure policies, shutdown/drain assumptions, honest limits), and added `tests/concurrency/test_spsc_stress.cpp` + `test_backpressure.cpp` (wired into `tests/CMakeLists.txt`).
+- **Next action:** open the M25 PR; after merge, `/start-milestone 26`.
 - **Blockers:** none
 
 ---
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _v0.1.0 released (tag on 9857e1a). Phase III/IV roadmap prepared: #24→M24, #26→M26, #27→M27, #25→M28, #32→M29; #28–#31 and #33 deferred. Next: `/start-milestone 24` (`feat/m24-spsc-ring-buffer`)._
+- _M25 implemented on `feat/m25-memory-ordering-evidence`. The merged M24 SPSC ring now has a defended evidence package: `docs/memory_ordering.md` (new) + expanded `docs/concurrency_model.md`, plus `tests/concurrency/{test_spsc_stress,test_backpressure}.cpp` wired into `tests/CMakeLists.txt`. `make check` 171/171 and `make asan` 171/171 sanitizer-clean. Next precise step: open the M25 PR; after squash-merge, `/start-milestone 26` (threaded pipeline)._
 
 
 ---
@@ -248,8 +248,8 @@ Lower priority:
 | M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☑ merged | #53 | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☑ merged | #54 | M13-style final polish/readiness pass after Phase II |
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release-notes` | ☑ released | #82 / tag `v0.1.0` | GitHub-only release; no packages |
-| M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ◐ in progress | — | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
-| M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ☐ not started | — | Ownership model, acquire/release documentation, stress/backpressure tests |
+| M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ☑ merged | #84 | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
+| M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ◐ in progress | — | Ownership model, acquire/release documentation, stress/backpressure tests |
 | M26 | Multithreaded gateway-engine-feed pipeline prototype | `feat/m26-threaded-pipeline` | ☐ not started | — | Explicit thread boundaries and deterministic shutdown |
 | M27 | ThreadSanitizer coverage | `feat/m27-thread-sanitizer` | ☐ not started | — | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☐ not started | — | Hot-path allocation experiment with benchmark evidence |
@@ -259,6 +259,9 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-01] M25: split the concurrency docs — kept the high-level model (ownership lifecycle, visibility, backpressure, shutdown, limits) in `docs/concurrency_model.md` and moved the C++ memory-model deep dive (ordering table, happens-before proof both directions, wait-free-by-construction argument) into a new `docs/memory_ordering.md`, cross-linked, to avoid one drifting from the other.
+- [2026-06-01] M25: justified the "wait-free per operation" / "lock-free" claim by construction (bounded step count, no loops, no CAS) rather than dropping it, and explicitly scoped it to the queue op — a caller spinning on backpressure is application-level and not wait-free.
+- [2026-06-01] M25: introduced `tests/concurrency/` (separate from `tests/unit/`) for sustained stress + backpressure/shutdown evidence; deferred dynamic data-race detection (ThreadSanitizer) to M27 per the roadmap rather than adding a TSan preset now.
 - [2026-05-31] Cut GitHub-only `v0.1.0` release after the release-readiness gate; no packages published.
 - [2026-05-31] Promoted old issues into the Phase III/IV roadmap (issue → milestone): #24 → M24, #26 → M26, #27 → M27, #25 → M28, #32 → M29 — instead of leaving them as loose backlog.
 - [2026-05-31] Added Phase IV milestones M29–M31 for Linux perf/socket profiling and external review signal (with M28 memory-pool experiment closing Phase III).
@@ -283,13 +286,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Start Phase III:
+Continue Phase III (M24 and M25 done):
 
 ```text
-/start-milestone 24
+/start-milestone 26
 ```
 
-Expected branch: `feat/m24-spsc-ring-buffer`.
+Expected branch: `feat/m26-threaded-pipeline` (after the M25 PR squash-merges).
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 
