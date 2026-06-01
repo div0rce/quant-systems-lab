@@ -1,0 +1,44 @@
+Command:     make perf-stat
+Hardware:    aarch64
+OS:          Linux 6.12.76-linuxkit
+CPU:         
+Compiler:    c++ (Debian 12.2.0-14+deb12u1) 12.2.0
+Perf:        perf version 6.1.174
+Build type:  Release
+Git commit:  05c0a7d
+Dirty tree:  no
+Dataset:     qsl-bench default synthetic benchmark suite
+Events:      cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches,page-faults
+Perf status: 0
+Unsupported counters detected: yes
+Date:        2026-06-01T23:44:36Z
+
+Caveat: Linux perf counters are hardware/kernel/permission dependent.
+This is profiling evidence for investigation, not a production-latency claim.
+
+Benchmark output:
+order_book add/mod/cancel     200000 ops        166.7 ns/op        6000383 ops/sec
+protocol encode+decode        500000 ops         79.2 ns/op       12631779 ops/sec
+gateway session (fill)        200000 ops        175.0 ns/op        5715041 ops/sec
+matching engine flow            5004 items      212.7 ns/item      4700964 items/sec
+replay command log              5004 items      259.1 ns/item      3859182 items/sec
+
+perf stat output:
+
+ Performance counter stats for 'build/perf-linux/qsl-bench':
+
+   <not supported>      cycles                                                      
+   <not supported>      instructions                                                
+   <not supported>      branches                                                    
+   <not supported>      branch-misses                                               
+   <not supported>      cache-references                                            
+   <not supported>      cache-misses                                                
+                 3      context-switches                                                   
+              3311      page-faults                                                        
+
+       0.208707083 seconds time elapsed
+
+       0.176908000 seconds user
+       0.011514000 seconds sys
+
+
