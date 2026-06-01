@@ -3,18 +3,18 @@ Hardware:    arm64
 OS:          Darwin 25.2.0
 Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
 Build type:  Release
-Git commit:  83c67db
-Dirty tree:  yes
+Git commit:  c96c077
+Dirty tree:  no
 Dataset:     engine::Order allocation microbenchmark (new/delete vs fixed pool)
 Warmup:      iters/10 per benchmark, before timing
 Units:       latency = ns/op + ops/sec
-Date:        2026-06-01T22:56:56Z
+Date:        2026-06-01T23:05:43Z
 
 Caveat: isolated allocation microbenchmark (hot cache, single process, no network/disk).
 This measures allocator mechanics for order-like objects, not end-to-end engine latency;
 hardware/compiler/build dependent. A negative or tiny delta is acceptable.
 
 Scenario / Metric / Result:
-order new/delete              500000 ops         26.6 ns/op       37576914 ops/sec
-order pool acquire/release    500000 ops          4.9 ns/op      205124755 ops/sec
-order pool burst cycle          2000 ops       5870.7 ns/op         170337 ops/sec
+order new/delete              500000 ops         28.8 ns/op       34700436 ops/sec
+order pool acquire/release    500000 ops          5.4 ns/op      184928340 ops/sec
+order pool burst cycle          2000 ops       4869.1 ns/op         205377 ops/sec
