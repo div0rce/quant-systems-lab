@@ -20,13 +20,13 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M24 — Bounded SPSC ring buffer
-- **Status:** v0.1.0 released; Phase III/IV roadmap prepared; ready to start `/start-milestone 24`
-- **Active branch:** none; next branch should be `feat/m24-spsc-ring-buffer`
+- **Status:** in progress — implemented; ready for PR
+- **Active branch:** `feat/m24-spsc-ring-buffer`
 - **Last completed milestone:** M23 — v0.1.0 release
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes as of the release gate (157/157; OCaml `dune runtest` 5 suites); verify again before M24 implementation
-- **Last action:** cut the GitHub-only `v0.1.0` release after the release-readiness gate; planning files updated to promote the concurrency/memory/profiling issues (#24→M24, #26→M26, #27→M27, #25→M28, #32→M29) into the Phase III/IV roadmap (M24–M31) and keep #28–#31/#33 deferred
-- **Next action:** run `/start-milestone 24`
+- **`make check` passing:** yes (163/163; +6 SPSC cases); `make asan` 163/163 sanitizer-clean; OCaml `dune runtest` 5 suites
+- **Last action:** M24 — added `include/qsl/concurrency/spsc_ring.hpp` (bounded lock-free SPSC ring; acquire/release per direction; cache-line-padded indices), `tests/unit/test_spsc_ring.cpp` (empty/FIFO/full/wraparound/SPSC-stress), and `docs/concurrency_model.md`
+- **Next action:** open the M24 PR; after merge, `/start-milestone 25`
 - **Blockers:** none
 
 ---
@@ -248,7 +248,7 @@ Lower priority:
 | M21 | Repository license and maintainer docs | `feat/m21-repo-license-maintainer-docs` | ☑ merged | #53 | MIT LICENSE + CONTRIBUTING/SECURITY/CHANGELOG (one-maintainer, honest) |
 | M22 | Release readiness audit | `feat/m22-release-readiness-audit` | ☑ merged | #54 | M13-style final polish/readiness pass after Phase II |
 | M23 | Optional v0.1.0 release | `feat/m23-v0-1-0-release-notes` | ☑ released | #82 / tag `v0.1.0` | GitHub-only release; no packages |
-| M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ☐ not started | — | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
+| M24 | Bounded SPSC ring buffer | `feat/m24-spsc-ring-buffer` | ◐ in progress | — | Phase III begins: bounded SPSC queue, memory ordering, backpressure |
 | M25 | Memory-ordering and concurrency evidence package | `feat/m25-memory-ordering-evidence` | ☐ not started | — | Ownership model, acquire/release documentation, stress/backpressure tests |
 | M26 | Multithreaded gateway-engine-feed pipeline prototype | `feat/m26-threaded-pipeline` | ☐ not started | — | Explicit thread boundaries and deterministic shutdown |
 | M27 | ThreadSanitizer coverage | `feat/m27-thread-sanitizer` | ☐ not started | — | TSan preset/CI for concurrent tests |
