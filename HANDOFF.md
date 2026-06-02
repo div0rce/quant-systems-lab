@@ -14,11 +14,11 @@ Keep all four in the repo root.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M29 are merged: M29 = PR #89 (squash commit 60bd5ee), the
-Linux `perf` workflow plus constrained-environment validation only; the post-M29 roadmap/evidence
-docs sync = PR #91 (squash commit 86443f0). **M30 is the active milestone.**
+The repo is released at `v0.1.0`. M0–M30 are merged. Most recently M30 = PR #92 (squash commit
+3f88a1f): Linux kernel/socket-path profiling + socket hardening (loopback, constrained), which
+passed Codex review clean after four rounds of P2 fixes. **M31 is the active milestone.**
 
-M29 delivered (merged, constrained-environment only):
+Background — M29 delivered (merged, constrained-environment only):
 
 - Linux-only `make perf-stat` / `make perf-record` tooling exists.
 - Metadata-rich `perf` artifacts exist.
@@ -29,8 +29,7 @@ M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-PR #89 (M29) and PR #91 (post-M29 docs/evidence sync) are both squash-merged. M30 is in progress on
-`feat/m30-socket-profiling-hardening`. To resume it:
+M30 (PR #92) is squash-merged. M31 is in progress on `docs/m31-external-review`. To resume it:
 
 ```text
 /resume
@@ -57,16 +56,17 @@ gh release view v0.1.0
 
 Current state:
 
-- main tip: `86443f0` (PR #91)
-- active branch: `feat/m30-socket-profiling-hardening` (M30 in progress)
+- main tip: `3f88a1f` (PR #92, M30)
+- active branch: `docs/m31-external-review` (M31 in progress)
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 
 ### Next milestone
 
-M30 — Kernel/socket path profiling and Linux socket hardening. Do not implement M31–M41 inside
-M30. Do not relabel constrained M29 Docker artifacts as full PMU evidence. If a PMU-capable Linux
-host is available, issue #90 can be handled as the higher-priority evidence follow-up.
+M31 — External review / maintainer signal: a review-request checklist and a feedback template
+(no fabricated endorsements; no claim that review has happened until it has). Do not implement
+M32–M41 inside M31. If a PMU-capable Linux host is available, issue #90 remains the
+higher-priority evidence follow-up.
 
 ### Phase III / IV purpose
 
@@ -79,10 +79,9 @@ networking research.
 Current priority order:
 
 1. Issue #90 — real Linux hardware PMU perf evidence.
-2. M30 — socket/kernel profiling.
-3. M31 — external review signal.
-4. M32 — pool-backed order-book integration.
-5. M33 — advanced concurrency validation.
+2. M31 — external review signal (in progress).
+3. M32 — pool-backed order-book integration.
+4. M33 — advanced concurrency validation.
 
 ### Forbidden shortcuts
 
