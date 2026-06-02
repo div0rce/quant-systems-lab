@@ -17,7 +17,7 @@ Keep all four in the repo root.
 The repo is released at `v0.1.0`. M0–M32 are merged. Most recently M32 = PR #96 (squash commit
 f122ee8): PMR-backed order-book node allocation experiment, engine-level storage benchmark, and
 issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage. **M33 is the active
-milestone.**
+milestone and draft PR #97 is open.**
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -58,7 +58,7 @@ gh release view v0.1.0
 Current state:
 
 - main tip: `f122ee8` (PR #96, M32)
-- active branch: `feat/m33-advanced-concurrency-validation` (M33 in progress)
+- active branch: `feat/m33-advanced-concurrency-validation` (M33 draft PR #97 open)
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
