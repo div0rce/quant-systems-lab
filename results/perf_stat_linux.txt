@@ -1,0 +1,38 @@
+Command:     make perf-stat
+Artifact:    constrained-environment validation (partial; not full hardware PMU evidence)
+Hardware:    aarch64
+OS:          Linux 6.12.76-linuxkit
+CPU:         
+Compiler:    c++ (Debian 12.2.0-14+deb12u1) 12.2.0
+Perf:        perf version 6.1.174
+Perf paranoid: 2
+Build type:  Release
+Git commit:  6024b30
+Dirty tree:  no
+Benchmark binary: build/bench/qsl-bench
+Benchmark status: 0
+Dataset:     qsl-bench default synthetic benchmark suite
+Events:      cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches,page-faults
+Perf status: 255
+Unsupported counters detected: yes
+Hardware counters supported: no
+Date:        2026-06-02T05:44:39Z
+
+Caveat: Linux perf counters are hardware/kernel/permission dependent.
+Partial artifacts document environment behavior only; they are not full PMU evidence.
+This is profiling evidence for investigation, not a production-latency claim.
+
+Benchmark output:
+order_book add/mod/cancel     200000 ops         68.6 ns/op       14566819 ops/sec
+protocol encode+decode        500000 ops         22.1 ns/op       45211873 ops/sec
+gateway session (fill)        200000 ops        115.9 ns/op        8625476 ops/sec
+matching engine flow            5004 items       98.8 ns/item     10119228 items/sec
+replay command log              5004 items      112.5 ns/item      8887606 items/sec
+
+Benchmark output under perf:
+
+perf stat output:
+Error:
+No permission to enable cycles event.
+
+

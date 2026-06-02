@@ -1,0 +1,51 @@
+Command:       make perf-record
+Artifact:      constrained-environment validation (partial; no clean sample report)
+Hardware:      aarch64
+OS:            Linux 6.12.76-linuxkit
+CPU:           
+Compiler:      c++ (Debian 12.2.0-14+deb12u1) 12.2.0
+Perf:          perf version 6.1.174
+Perf paranoid: 2
+Build type:    Release
+Git commit:    6024b30
+Dirty tree:    no
+Benchmark binary: build/bench/qsl-bench
+Benchmark status: 0
+Dataset:       qsl-bench default synthetic benchmark suite
+Record event:  cpu-clock
+Sample freq:   2000 Hz
+Sample count:  0
+Minimum samples for hot profile: 100
+Insufficient samples: no
+Report limit:  1%
+Record status: 255
+Report status: 0
+No samples:    yes
+Perf access limitation: yes
+Perf data:     build/perf/qsl-bench.perf.data (generated, not intended for commit)
+Date:          2026-06-02T05:44:40Z
+
+Caveat: this is constrained/partial perf-record validation, not hot-symbol
+evidence. Treat symbol ordering as unusable until sampling succeeds and
+Sample count meets Minimum samples for hot profile.
+
+Benchmark output:
+order_book add/mod/cancel     200000 ops         62.1 ns/op       16097821 ops/sec
+protocol encode+decode        500000 ops         22.2 ns/op       44978016 ops/sec
+gateway session (fill)        200000 ops        115.1 ns/op        8684340 ops/sec
+matching engine flow            5004 items       81.7 ns/item     12238646 items/sec
+replay command log              5004 items      109.0 ns/item      9174041 items/sec
+
+Benchmark output under perf:
+
+perf record stderr:
+perf_event_open(..., PERF_FLAG_FD_CLOEXEC) failed with unexpected error 1 (Operation not permitted)
+perf_event_open(..., 0) failed unexpectedly with error 1 (Operation not permitted)
+Error:
+No permission to enable cpu-clock event.
+
+
+
+perf report stderr:
+
+perf report output:

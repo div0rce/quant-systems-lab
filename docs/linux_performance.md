@@ -34,9 +34,12 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
 
 ## Measuring deeper
 
-- `perf stat ./build/bench/qsl-bench` for cycles, instructions, IPC, cache misses, branch
-  mispredictions.
-- `perf record` / `perf report` (or a flamegraph) to find hot paths before optimizing.
+- `make perf-stat` runs `scripts/perf_stat.sh` on Linux and records cycles, instructions,
+  branch/cache events, context switches, and page faults when the host exposes those counters.
+- `make perf-record` runs `scripts/perf_record.sh` on Linux and records a `perf report --stdio`
+  software sampling report by default; it is a hot-symbol profile only when the recorded sample
+  count clears the threshold reported in the artifact.
+- See `docs/perf_analysis.md` for the M29 profiling workflow, artifacts, and caveats.
 
 ## What this does not prove
 
