@@ -14,6 +14,26 @@ FREQ="${QSL_PERF_RECORD_FREQ:-2000}"
 LIMIT="${QSL_PERF_REPORT_PERCENT_LIMIT:-1}"
 MIN_SAMPLES="${QSL_PERF_MIN_SAMPLES:-100}"
 
+parse_sample_count_token() {
+    local token="$1"
+    awk -v raw="$token" '
+        BEGIN {
+            gsub(/,/, "", raw)
+            suffix = substr(raw, length(raw), 1)
+            mult = 1
+            if (suffix == "K" || suffix == "k") {
+                mult = 1000
+                raw = substr(raw, 1, length(raw) - 1)
+            } else if (suffix == "M" || suffix == "m") {
+                mult = 1000000
+                raw = substr(raw, 1, length(raw) - 1)
+            }
+            if (raw ~ /^[0-9]+([.][0-9]+)?$/) {
+                printf "%d\n", raw * mult
+            }
+        }'
+}
+
 if [[ "$(uname -s)" != "Linux" ]]; then
     echo "error: scripts/perf_record.sh requires Linux perf; current OS is $(uname -s)." >&2
     exit 2
@@ -102,9 +122,12 @@ if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operat
     PERF_LIMITATION=yes
 fi
 
-SAMPLE_COUNT="$(grep -Eo '# Samples:[[:space:]]*[0-9]+' "$REPORT_OUT" | head -1 | grep -Eo '[0-9]+' || true)"
+SAMPLE_TOKEN="$(sed -nE 's/^# Samples:[[:space:]]*([^[:space:]]+).*/\1/p' "$REPORT_OUT" | head -1)"
+SAMPLE_COUNT="$(parse_sample_count_token "$SAMPLE_TOKEN")"
 if [[ -z "$SAMPLE_COUNT" ]]; then
-    SAMPLE_COUNT="$(grep -Eo '\([0-9]+ samples\)' "$RECORD_ERR" | head -1 | grep -Eo '[0-9]+' || true)"
+    SAMPLE_TOKEN="$(sed -nE 's/.*\(([0-9][0-9.,]*[KkMm]?) samples\).*/\1/p' "$RECORD_ERR" |
+        head -1)"
+    SAMPLE_COUNT="$(parse_sample_count_token "$SAMPLE_TOKEN")"
 fi
 if [[ -z "$SAMPLE_COUNT" ]]; then
     SAMPLE_COUNT=0
