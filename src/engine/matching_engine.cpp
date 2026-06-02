@@ -4,6 +4,8 @@
 
 namespace qsl::engine {
 
+MatchingEngine::MatchingEngine(OrderBook::Storage storage) : book_storage_(storage) {}
+
 SymbolId SymbolRegistry::intern(std::string_view name) {
     const std::string key(name);
     const auto it = ids_.find(key);
@@ -25,7 +27,7 @@ std::optional<SymbolId> SymbolRegistry::find(std::string_view name) const {
 
 SymbolId MatchingEngine::register_symbol(std::string_view name) {
     const SymbolId id = registry_.intern(name);
-    books_.try_emplace(id);
+    books_.try_emplace(id, book_storage_); // constructs OrderBook(book_storage_) in place
     return id;
 }
 

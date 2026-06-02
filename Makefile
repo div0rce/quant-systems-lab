@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator perf-stat perf-record profile-io socket-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record profile-io socket-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -39,6 +39,11 @@ bench-allocator:
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/run_allocator_experiment.sh
+
+bench-storage:
+	cmake --preset bench
+	cmake --build --preset bench --target qsl-bench
+	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/run_storage_benchmarks.sh
 
 perf-stat:
 	@test "$$(uname -s)" = "Linux" || { echo "error: make perf-stat requires Linux perf; current OS is $$(uname -s)." >&2; exit 2; }

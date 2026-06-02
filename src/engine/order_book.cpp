@@ -4,6 +4,17 @@
 
 namespace qsl::engine {
 
+// Baseline uses the shared new_delete_resource (operator new/delete -> identical to pre-M32).
+// Pooled owns an unsynchronized_pool_resource; resource_ is set before the pmr containers (which
+// hold polymorphic_allocators referencing it) are constructed. Per-price FIFO lists are explicitly
+// constructed with resource_ when a new level is inserted.
+OrderBook::OrderBook(Storage storage)
+    : pool_(storage == Storage::Pooled
+                ? std::optional<std::pmr::unsynchronized_pool_resource>(std::in_place)
+                : std::nullopt),
+      resource_(pool_.has_value() ? &pool_.value() : std::pmr::new_delete_resource()),
+      bids_(resource_), asks_(resource_), index_(resource_) {}
+
 template <class OppMap>
 void OrderBook::match_against(OppMap &opposite, OrderId taker_id, bool taker_is_buy, Price limit,
                               bool is_market, Quantity &quantity, std::vector<Trade> &trades) {
@@ -37,16 +48,21 @@ void OrderBook::match_against(OppMap &opposite, OrderId taker_id, bool taker_is_
     }
 }
 
-void OrderBook::rest(OrderId id, Side side, Price price, Quantity quantity) {
+OrderBook::Level &OrderBook::level_for(Side side, Price price) {
     if (side == Side::Buy) {
-        Level &level = bids_[price];
-        level.push_back(Order{id, side, price, quantity});
-        index_[id] = Locator{side, price, std::prev(level.end())};
-    } else {
-        Level &level = asks_[price];
-        level.push_back(Order{id, side, price, quantity});
-        index_[id] = Locator{side, price, std::prev(level.end())};
+        auto [it, inserted] = bids_.emplace(price, Level{Level::allocator_type{resource_}});
+        (void)inserted;
+        return it->second;
     }
+    auto [it, inserted] = asks_.emplace(price, Level{Level::allocator_type{resource_}});
+    (void)inserted;
+    return it->second;
+}
+
+void OrderBook::rest(OrderId id, Side side, Price price, Quantity quantity) {
+    Level &level = level_for(side, price);
+    level.push_back(Order{id, side, price, quantity});
+    index_[id] = Locator{side, price, std::prev(level.end())};
 }
 
 std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quantity quantity,

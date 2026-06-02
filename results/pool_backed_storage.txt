@@ -1,0 +1,21 @@
+Command:     make bench-storage
+Hardware:    arm64
+OS:          Darwin 25.2.0
+Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
+Build type:  Release
+Git commit:  f0055e2
+Dirty tree:  no (excluding this generated output)
+Dataset:     deterministic generated engine flow (seed 42, 4 symbols, 5000 commands)
+Scenario:    baseline OrderBook storage vs PMR pooled node allocation
+Warmup:      one full engine replay per storage mode before timing
+Units:       throughput = ns/command + commands/sec
+Date:        2026-06-02T16:41:23Z
+
+Caveat: engine-level synthetic benchmark (single process, release build, no network/disk).
+M32 uses std::pmr::unsynchronized_pool_resource for list/map/unordered_map node allocation;
+it is not direct M28 OrderPool<Capacity> integration. Hardware/compiler/build dependent.
+A neutral or negative result is acceptable and should not be reported as a speedup.
+
+Scenario / Metric / Result:
+engine flow baseline storage            5004 cmds       30 reps      135.3 ns/cmd      7388992 cmds/sec events=189960 resting=9480 last_seq=189960
+engine flow pooled pmr storage          5004 cmds       30 reps      112.9 ns/cmd      8857181 cmds/sec events=189960 resting=9480 last_seq=189960

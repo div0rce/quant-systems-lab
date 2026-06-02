@@ -49,6 +49,11 @@ struct EngineSnapshot {
 /// strictly-increasing, deterministic engine event stream. No wall-clock dependence.
 class MatchingEngine {
   public:
+    // Storage::Pooled routes every per-symbol book's node storage through a pooled memory resource
+    // (the M32 experiment); Baseline keeps operator new/delete. Default Baseline leaves all
+    // existing behavior unchanged. Matching semantics and determinism are identical either way.
+    explicit MatchingEngine(OrderBook::Storage storage = OrderBook::Storage::Baseline);
+
     SymbolId register_symbol(std::string_view name);
     [[nodiscard]] std::optional<SymbolId> symbol_id(std::string_view name) const;
 
@@ -75,6 +80,7 @@ class MatchingEngine {
     SymbolRegistry registry_;
     std::map<SymbolId, OrderBook> books_; // ordered -> deterministic snapshot
     SeqNo seq_{0};
+    OrderBook::Storage book_storage_{OrderBook::Storage::Baseline};
 };
 
 } // namespace qsl::engine

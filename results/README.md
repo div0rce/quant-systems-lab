@@ -7,6 +7,9 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   gateway replay, and shrinking (`make bench-diff`, `qsl-bench diff`).
 - `allocator_experiment.txt` — isolated M28 allocation experiment comparing `engine::Order`
   `new/delete` with fixed-pool acquire/release (`make bench-allocator`, `qsl-bench pool`).
+- `pool_backed_storage.txt` — M32 engine-level storage experiment comparing baseline order-book
+  node allocation against PMR-backed `std::list`/`std::map`/`std::unordered_map` node allocation
+  (`make bench-storage`, `qsl-bench storage`).
 - `perf_stat_linux.txt` — Linux `perf stat` output for the benchmark harness (`make perf-stat`).
   It is full hardware-counter evidence only when the file says `Artifact: hardware PMU evidence`
   and `Unsupported counters detected: no`; otherwise it is constrained-environment validation.

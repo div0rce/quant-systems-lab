@@ -19,15 +19,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M31 — External review / maintainer signal (ready for PR)
-- **Status:** implementation complete; PR open, awaiting human squash-merge
-- **Active branch:** `docs/m31-external-review`
-- **Last completed milestone:** M30 — Kernel/socket path profiling and Linux socket hardening (squash-merged, PR #92, commit 3f88a1f; Codex review converged clean after four rounds of P2 fixes)
+- **Active milestone:** M32 — Pool-backed order-book storage experiment (in progress)
+- **Status:** draft PR open (#96); local verification passed
+- **Active branch:** `feat/m32-pool-backed-order-book-storage`
+- **Last completed milestone:** M31 — External review / maintainer signal (squash-merged, PR #93, commit b7926ac; Codex auto-review clean — reacted 👍, no findings); external review request opened as issue #94 (labels backlog/documentation/help wanted)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M31 verified 187/187 (`make check`) on 2026-06-02 (docs-only milestone; no code changed).
-- **Last action:** completed M31 implementation and opened PR #93 (`docs: prepare external review package`).
-- **Next action:** human reviews/squash-merges the M31 PR; then M32 (pool-backed order-book storage experiment) or issue #90 (full Linux hardware PMU evidence, PMU-capable host only).
-- **Blockers:** issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; not required for M31 or M32.
+- **`make check` passing:** last verified on M32 (188/188) on 2026-06-02; `make asan` also passed (188/188).
+- **Last action:** opened draft PR #96 for M32 after implementing PMR-backed order-book node allocation, opening issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage, adding an engine-level `make bench-storage` benchmark and `results/pool_backed_storage.txt`, and verifying `make check` / `make asan` / `make bench-storage`.
+- **Next action:** monitor PR #96 CI and Codex review; do not merge.
+- **Blockers:** none for M32. Issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; issue #95 tracks future direct intrusive/custom-node storage and is not part of M32.
 
 ---
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M31 implementation complete on `docs/m31-external-review`; PR #93 open (`docs: prepare external review package`), awaiting human squash-merge. Docs-only; `make check` 187/187 (2026-06-02). Delivered: `docs/review_request.md` (adversarial review checklist over the six DoD areas, each linking claim→evidence→questions, plus a self-certified-vs-externally-reviewed status section), `docs/review_feedback.md` (honest record stating no external review yet + field template; no fabricated endorsements), `.github/ISSUE_TEMPLATE/review_request.md`, and a README link. Decision: prepared the issue template rather than opening a live public review issue (DoD allows either) — the human can open the real issue. Clear this block when M31 merges._
+- _M32 draft PR #96 is open on `feat/m32-pool-backed-order-book-storage`. Implemented `OrderBook::Storage::Baseline` and `Storage::Pooled`, PMR-backed list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation. Added the generated-flow equivalence test (per-command event streams, final snapshot, last_seq, non-vacuity), `make bench-storage`, `results/pool_backed_storage.txt`, `docs/pool_backed_storage.md`, ADR 0009, and issue #95 for future direct intrusive/custom-node `OrderPool<Capacity>` storage. Verification passed: `make check` 188/188, `make asan` 188/188, `make bench-storage`. Next: monitor CI/Codex review; do not merge. Clear this block when M32 merges._
 
 
 ---
@@ -255,8 +255,8 @@ Lower priority:
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☑ merged | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
-| M31 | External review / maintainer signal | `docs/m31-external-review` | ◐ in progress | #93 | Review-request checklist + feedback template; no fabricated endorsements |
-| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☐ not started | — | Integrate pool storage into selected order-book paths and measure engine-level effects |
+| M31 | External review / maintainer signal | `docs/m31-external-review` | ☑ merged | #93 | Review-request checklist + feedback template; review request opened as issue #94 |
+| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ◐ draft PR | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☐ not started | — | Event-driven multi-client gateway design |
 | M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☐ not started | — | TCP/UDP stress, buffer pressure, backpressure investigation |
@@ -269,6 +269,11 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-02] M32: started after M31 (#93) squash-merged (commit b7926ac). Corrected scope: integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator experiment, and measure baseline-vs-pool-backed engine-level workloads — not another allocator microbenchmark. Direct `OrderPool<Capacity>` order-book integration is deferred because the current `std::list<Order>` design allocates implementation-defined list nodes, not bare `engine::Order` objects; intrusive/custom-node storage is tracked separately in issue #95. Matching must remain deterministic (replay/differential tests stay green); no storage-architecture claim beyond what the committed measured artifact supports; document even a negative result.
+- [2026-06-02] M32: implemented the scoped PMR path: `OrderBook::Storage::{Baseline,Pooled}`, per-book `std::pmr::unsynchronized_pool_resource`, PMR list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation via `books_.try_emplace(id, book_storage_)`. Baseline remains the default.
+- [2026-06-02] M32: added a generated-flow equivalence invariant test proving baseline and pooled storage produce identical per-command event streams, final `EngineSnapshot`, and `last_seq`; the test includes non-vacuity guards for real trades and resting liquidity.
+- [2026-06-02] M32: added engine-level storage benchmarking (`make bench-storage`, `qsl-bench storage`, `scripts/run_storage_benchmarks.sh`, `results/pool_backed_storage.txt`). This compares baseline engine storage against PMR pooled node allocation; it is not an isolated allocator-only benchmark and not a production-latency claim.
+- [2026-06-02] M31: PR #93 squash-merged (commit b7926ac); Codex auto-reviewed on open and reacted 👍 with no findings (docs-only, deliberately honest/conservative). The external-review request was then opened as GitHub issue #94 (labels backlog/documentation/help wanted), satisfying the "review request issue opened" alternative in the M31 DoD; `review_feedback.md` still records that no external feedback has been received yet.
 - [2026-06-02] M31: started after M30 (#92) squash-merged (commit 3f88a1f). Scope is the external-review package only: a review-request checklist, a review-feedback template, an optional issue template, and a small README link. Non-negotiable: no fabricated endorsements and no claim that review has happened until it has — `review_feedback.md` states plainly that no external review has occurred yet.
 - [2026-06-02] M30: PR #92 squash-merged (commit 3f88a1f) after Codex review converged clean ("Didn't find any major issues") across four rounds of P2 fixes, each verified (happy + negative paths) in containerized Linux and on macOS before re-requesting review: (1) `profile_gateway_io.sh` fails loudly (no artifact) when strace captures no syscall summary; (2) `socket_stress.sh` reports loss as `published − received` (captures end-of-burst tail drops the interior sequence-gap counter misses); (3) `profile_gateway_io.sh` Pass 2 launches the gateway *under* strace (launch form) so tracing works under Yama `ptrace_scope=1` without `CAP_SYS_PTRACE`, stopping the traced gateway with SIGTERM/SIGKILL (never strace) so the `-c` report is flushed; (4) both scripts fail loudly (no artifact) on port conflicts / helper failures.
 - [2026-06-02] M30: started after PR #91 (post-M29 docs sync) squash-merged to main (commit 86443f0). Scope is Linux kernel/socket-path profiling + socket hardening only; M31–M41 are not implemented here. Also corrected the stale HANDOFF.md "Current handoff" block (it still said "M29 is PR #89 and should land"; the review bot flagged this on #91, which merged before the comment was addressed).

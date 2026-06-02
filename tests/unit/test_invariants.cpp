@@ -146,3 +146,49 @@ TEST_CASE("replay reproduces final state under stress across seeds", "[invariant
         REQUIRE(rebuilt.snapshot() == original.snapshot()); // (6) replay == original
     }
 }
+
+TEST_CASE("pool-backed order-book storage matches baseline exactly", "[invariants][m32]") {
+    // M32: the OrderBook storage mode (Baseline = operator new/delete vs Pooled = a per-book
+    // std::pmr::unsynchronized_pool_resource) must not change any observable result -- it only
+    // changes where nodes live in memory. Replay the same generated flow through both modes and
+    // require identical emitted event streams, last sequence numbers, and final snapshots.
+    bool any_trades = false;
+    bool any_rested = false;
+
+    for (std::uint64_t seed = 1; seed <= 6; ++seed) {
+        const auto flow = replay::generate_flow(seed, /*symbols=*/4, /*orders=*/2000);
+        engine::MatchingEngine baseline; // Storage::Baseline (default)
+        engine::MatchingEngine pooled{engine::OrderBook::Storage::Pooled};
+
+        std::vector<engine::EngineEvent> base_stream;
+        std::vector<engine::EngineEvent> pool_stream;
+        for (const auto &cmd : flow) {
+            const auto be = replay::apply(baseline, cmd);
+            const auto pe = replay::apply(pooled, cmd);
+            REQUIRE(be == pe); // per-command event streams are identical
+            for (const auto &e : be) {
+                base_stream.push_back(e);
+                if (std::holds_alternative<engine::TradeEvent>(e)) {
+                    any_trades = true;
+                }
+            }
+            for (const auto &e : pe) {
+                pool_stream.push_back(e);
+            }
+        }
+
+        REQUIRE(base_stream == pool_stream);
+        REQUIRE(baseline.last_seq() == pooled.last_seq());
+        REQUIRE(baseline.snapshot() == pooled.snapshot());
+        for (const auto &s : baseline.snapshot().symbols) {
+            if (s.order_count > 0) {
+                any_rested = true;
+            }
+        }
+    }
+
+    // Non-vacuity: the flow must actually exercise matching and leave resting liquidity, so this
+    // equivalence cannot silently degrade into comparing two empty books.
+    REQUIRE(any_trades);
+    REQUIRE(any_rested);
+}
