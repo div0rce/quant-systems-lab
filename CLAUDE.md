@@ -247,7 +247,13 @@ Keep this synchronized with the Makefile.
 - `make fmt` — apply clang-format
 - `make tidy` — clang-tidy target if available
 - `make bench` — run benchmark suite
+- `make bench-diff` — run differential harness benchmarks
+- `make bench-allocator` — run M28 allocator experiment
+- `make bench-storage` — run M32 storage experiment
 - `make asan` — build/run sanitizer preset
+- `make tsan` — build/run ThreadSanitizer concurrency tests
+- `make concurrency-stress` — opt-in repeated concurrency validation loop
+- `make socket-stress` — UDP socket-buffer / burst-loss experiment
 - `make clean` — remove build artifacts
 
 Run `make check` before every PR.

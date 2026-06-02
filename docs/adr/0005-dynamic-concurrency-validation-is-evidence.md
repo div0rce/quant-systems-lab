@@ -26,6 +26,6 @@ correctness proof. Concurrency claims must distinguish:
 
 ## Consequences
 
-Future concurrency work belongs in M33 and may add randomized scheduling perturbation, longer
-Linux stress runs, expanded capacity coverage, and additional happens-before documentation. The
-repo must not state that TSan proves all interleavings correct.
+M33 adds deterministic scheduling perturbation and an opt-in repeated stress target. These broaden
+the executed schedule set, but the repo must not state that TSan, perturbation, or stress proves all
+interleavings correct.

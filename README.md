@@ -58,11 +58,12 @@ make demo      # end-to-end local demo (see below)
 ```
 
 Other targets: `make check` (format-check + build + test), `make fmt`, `make asan`
-(AddressSanitizer + UBSan), `make bench` / `make bench-diff` (build the bench preset and write
-`results/latest.txt` / `results/differential.txt`), `make check-fixtures` (regenerate the
-differential fixtures and verify they match current C++ output), `make check-manifest` (verify
-the fixture provenance manifest), and `make determinism` (assert fixtures are byte-identical
-across compilers).
+(AddressSanitizer + UBSan), `make tsan` (ThreadSanitizer over concurrency-labelled tests),
+`make concurrency-stress` (opt-in repeated concurrency validation), `make bench` /
+`make bench-diff` / `make bench-storage` (committed benchmark harnesses), `make check-fixtures`
+(regenerate the differential fixtures and verify they match current C++ output),
+`make check-manifest` (verify the fixture provenance manifest), and `make determinism` (assert
+fixtures are byte-identical across compilers).
 
 ## Demo
 
@@ -106,7 +107,9 @@ the core numbers above.
 
 - **Synthetic and local.** No real market data, no real venue connectivity, no order types
   beyond limit/market + GTC/IOC.
-- **Single-threaded** gateway and feed (a single accept/event loop); no concurrency model.
+- **Networking remains simple.** The TCP gateway is intentionally one-connection-at-a-time; the
+  threaded gateway-engine-feed pipeline is an opt-in correctness prototype, not a production
+  event loop.
 - **Benchmarks are microbenchmarks**, not end-to-end or production latency (see above).
 - **Networking is minimal**: loopback TCP order entry and a UDP market-data feed,
   unauthenticated, no TLS, no framing recovery beyond disconnect-on-malformed. The socket path is
