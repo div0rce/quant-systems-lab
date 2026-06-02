@@ -35,12 +35,45 @@ if [[ -n "$(git status --porcelain --untracked-files=all -- . \
 fi
 
 BENCH_OUT="$(mktemp)"
+PERF_BENCH_OUT="$(mktemp)"
 PERF_OUT="$(mktemp)"
 TMP_OUT="$(mktemp)"
-trap 'rm -f "$BENCH_OUT" "$PERF_OUT" "$TMP_OUT"' EXIT
+trap 'rm -f "$BENCH_OUT" "$PERF_BENCH_OUT" "$PERF_OUT" "$TMP_OUT"' EXIT
 
-STATUS=0
-perf stat -e "$EVENTS" -- "$BIN" >"$BENCH_OUT" 2>"$PERF_OUT" || STATUS=$?
+BENCH_STATUS=0
+"$BIN" >"$BENCH_OUT" 2>&1 || BENCH_STATUS=$?
+
+if [[ "$BENCH_STATUS" -ne 0 ]]; then
+    {
+        echo "Command:     make perf-stat"
+        echo "Artifact:    failed benchmark run (not perf evidence)"
+        echo "Hardware:    $(uname -m)"
+        echo "OS:          $(uname -s) $(uname -r)"
+        echo "CPU:         $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
+        echo "Compiler:    $(c++ --version | head -1)"
+        echo "Perf:        $(perf --version)"
+        echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
+        echo "Build type:  Release"
+        echo "Git commit:  $(git rev-parse --short HEAD)"
+        echo "Dirty tree:  $DIRTY"
+        echo "Benchmark binary: $BIN"
+        echo "Benchmark status: $BENCH_STATUS"
+        echo "Dataset:     qsl-bench default synthetic benchmark suite"
+        echo "Events:      $EVENTS"
+        echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo
+        echo "Benchmark output:"
+        cat "$BENCH_OUT"
+    } >"$TMP_OUT"
+    mv "$TMP_OUT" "$OUT"
+    echo "wrote $OUT"
+    cat "$OUT"
+    echo "error: benchmark command failed before perf stat; partial mode cannot override this." >&2
+    exit 4
+fi
+
+PERF_STATUS=0
+perf stat -e "$EVENTS" -- "$BIN" >"$PERF_BENCH_OUT" 2>"$PERF_OUT" || PERF_STATUS=$?
 
 UNSUPPORTED=no
 if grep -Eiq '<not supported>|not supported|No permission|not counted|Operation not permitted|Permission denied' "$PERF_OUT"; then
@@ -49,9 +82,11 @@ fi
 
 ARTIFACT_TYPE="hardware PMU evidence"
 HARDWARE_COUNTERS_SUPPORTED=yes
-if [[ "$STATUS" -ne 0 || "$UNSUPPORTED" == "yes" ]]; then
+if [[ "$UNSUPPORTED" == "yes" ]]; then
     ARTIFACT_TYPE="constrained-environment validation (partial; not full hardware PMU evidence)"
     HARDWARE_COUNTERS_SUPPORTED=no
+elif [[ "$PERF_STATUS" -ne 0 ]]; then
+    ARTIFACT_TYPE="failed perf stat run (not accepted evidence)"
 fi
 
 {
@@ -66,9 +101,11 @@ fi
     echo "Build type:  Release"
     echo "Git commit:  $(git rev-parse --short HEAD)"
     echo "Dirty tree:  $DIRTY"
+    echo "Benchmark binary: $BIN"
+    echo "Benchmark status: $BENCH_STATUS"
     echo "Dataset:     qsl-bench default synthetic benchmark suite"
     echo "Events:      $EVENTS"
-    echo "Perf status: $STATUS"
+    echo "Perf status: $PERF_STATUS"
     echo "Unsupported counters detected: $UNSUPPORTED"
     echo "Hardware counters supported: $HARDWARE_COUNTERS_SUPPORTED"
     echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -80,6 +117,9 @@ fi
     echo "Benchmark output:"
     cat "$BENCH_OUT"
     echo
+    echo "Benchmark output under perf:"
+    cat "$PERF_BENCH_OUT"
+    echo
     echo "perf stat output:"
     cat "$PERF_OUT"
 } >"$TMP_OUT"
@@ -88,7 +128,13 @@ mv "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"
 
-if [[ "$STATUS" -ne 0 || "$UNSUPPORTED" == "yes" ]]; then
+if [[ "$PERF_STATUS" -ne 0 && "$UNSUPPORTED" != "yes" ]]; then
+    echo "error: perf stat failed for a reason other than unsupported/permission-limited counters." >&2
+    echo "       Partial mode cannot override benchmark or unexpected perf failures." >&2
+    exit 3
+fi
+
+if [[ "$UNSUPPORTED" == "yes" ]]; then
     if [[ "${QSL_PERF_ALLOW_PARTIAL:-0}" != "1" ]]; then
         echo "error: perf stat did not capture the required hardware counters cleanly." >&2
         echo "       Re-run on a Linux host with PMU access, or set QSL_PERF_ALLOW_PARTIAL=1" >&2

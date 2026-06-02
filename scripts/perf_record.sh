@@ -12,6 +12,7 @@ DATA="${QSL_PERF_DATA:-build/perf/qsl-bench.perf.data}"
 EVENT="${QSL_PERF_RECORD_EVENT:-cpu-clock}"
 FREQ="${QSL_PERF_RECORD_FREQ:-99}"
 LIMIT="${QSL_PERF_REPORT_PERCENT_LIMIT:-1}"
+MIN_SAMPLES="${QSL_PERF_MIN_SAMPLES:-100}"
 
 if [[ "$(uname -s)" != "Linux" ]]; then
     echo "error: scripts/perf_record.sh requires Linux perf; current OS is $(uname -s)." >&2
@@ -40,14 +41,49 @@ if [[ -n "$(git status --porcelain --untracked-files=all -- . \
 fi
 
 BENCH_OUT="$(mktemp)"
+RECORD_BENCH_OUT="$(mktemp)"
 RECORD_ERR="$(mktemp)"
 REPORT_OUT="$(mktemp)"
 REPORT_ERR="$(mktemp)"
 TMP_OUT="$(mktemp)"
-trap 'rm -f "$BENCH_OUT" "$RECORD_ERR" "$REPORT_OUT" "$REPORT_ERR" "$TMP_OUT"' EXIT
+trap 'rm -f "$BENCH_OUT" "$RECORD_BENCH_OUT" "$RECORD_ERR" "$REPORT_OUT" "$REPORT_ERR" "$TMP_OUT"' EXIT
+
+BENCH_STATUS=0
+"$BIN" >"$BENCH_OUT" 2>&1 || BENCH_STATUS=$?
+
+if [[ "$BENCH_STATUS" -ne 0 ]]; then
+    {
+        echo "Command:       make perf-record"
+        echo "Artifact:      failed benchmark run (not perf evidence)"
+        echo "Hardware:      $(uname -m)"
+        echo "OS:            $(uname -s) $(uname -r)"
+        echo "CPU:           $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
+        echo "Compiler:      $(c++ --version | head -1)"
+        echo "Perf:          $(perf --version)"
+        echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
+        echo "Build type:    Release"
+        echo "Git commit:    $(git rev-parse --short HEAD)"
+        echo "Dirty tree:    $DIRTY"
+        echo "Benchmark binary: $BIN"
+        echo "Benchmark status: $BENCH_STATUS"
+        echo "Dataset:       qsl-bench default synthetic benchmark suite"
+        echo "Record event:  $EVENT"
+        echo "Sample freq:   $FREQ Hz"
+        echo "Minimum samples for hot profile: $MIN_SAMPLES"
+        echo "Date:          $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo
+        echo "Benchmark output:"
+        cat "$BENCH_OUT"
+    } >"$TMP_OUT"
+    mv "$TMP_OUT" "$OUT"
+    echo "wrote $OUT"
+    cat "$OUT"
+    echo "error: benchmark command failed before perf record; partial mode cannot override this." >&2
+    exit 4
+fi
 
 RECORD_STATUS=0
-perf record -F "$FREQ" -g -e "$EVENT" -o "$DATA" -- "$BIN" >"$BENCH_OUT" 2>"$RECORD_ERR" ||
+perf record -F "$FREQ" -g -e "$EVENT" -o "$DATA" -- "$BIN" >"$RECORD_BENCH_OUT" 2>"$RECORD_ERR" ||
     RECORD_STATUS=$?
 
 REPORT_STATUS=0
@@ -61,9 +97,30 @@ if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operat
     NO_SAMPLES=yes
 fi
 
+PERF_LIMITATION=no
+if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operation not permitted|perf_event_open|not supported|Operation not supported' "$RECORD_ERR" "$REPORT_OUT" "$REPORT_ERR"; then
+    PERF_LIMITATION=yes
+fi
+
+SAMPLE_COUNT="$(grep -Eo '# Samples:[[:space:]]*[0-9]+' "$REPORT_OUT" | head -1 | grep -Eo '[0-9]+' || true)"
+if [[ -z "$SAMPLE_COUNT" ]]; then
+    SAMPLE_COUNT="$(grep -Eo '\([0-9]+ samples\)' "$RECORD_ERR" | head -1 | grep -Eo '[0-9]+' || true)"
+fi
+if [[ -z "$SAMPLE_COUNT" ]]; then
+    SAMPLE_COUNT=0
+fi
+
+INSUFFICIENT_SAMPLES=no
+if [[ "$RECORD_STATUS" -eq 0 && "$REPORT_STATUS" -eq 0 && "$NO_SAMPLES" == "no" &&
+    "$SAMPLE_COUNT" -lt "$MIN_SAMPLES" ]]; then
+    INSUFFICIENT_SAMPLES=yes
+fi
+
 ARTIFACT_TYPE="software sampling hot-symbol profile"
 if [[ "$RECORD_STATUS" -ne 0 || "$REPORT_STATUS" -ne 0 || "$NO_SAMPLES" == "yes" ]]; then
     ARTIFACT_TYPE="constrained-environment validation (partial; no clean sample report)"
+elif [[ "$INSUFFICIENT_SAMPLES" == "yes" ]]; then
+    ARTIFACT_TYPE="constrained-environment validation (partial; insufficient samples for hot-symbol conclusions)"
 fi
 
 {
@@ -78,22 +135,37 @@ fi
     echo "Build type:    Release"
     echo "Git commit:    $(git rev-parse --short HEAD)"
     echo "Dirty tree:    $DIRTY"
+    echo "Benchmark binary: $BIN"
+    echo "Benchmark status: $BENCH_STATUS"
     echo "Dataset:       qsl-bench default synthetic benchmark suite"
     echo "Record event:  $EVENT"
     echo "Sample freq:   $FREQ Hz"
+    echo "Sample count:  $SAMPLE_COUNT"
+    echo "Minimum samples for hot profile: $MIN_SAMPLES"
+    echo "Insufficient samples: $INSUFFICIENT_SAMPLES"
     echo "Report limit:  $LIMIT%"
     echo "Record status: $RECORD_STATUS"
     echo "Report status: $REPORT_STATUS"
     echo "No samples:    $NO_SAMPLES"
+    echo "Perf access limitation: $PERF_LIMITATION"
     echo "Perf data:     $DATA (generated, not intended for commit)"
     echo "Date:          $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo
-    echo "Caveat: perf report is hardware/kernel/compiler/build dependent. The default"
-    echo "cpu-clock event is a software sampling profile for hot-symbol investigation,"
-    echo "not a latency or throughput measurement."
+    if [[ "$ARTIFACT_TYPE" == "software sampling hot-symbol profile" ]]; then
+        echo "Caveat: perf report is hardware/kernel/compiler/build dependent. The default"
+        echo "cpu-clock event is a software sampling profile for hot-symbol investigation,"
+        echo "not a latency or throughput measurement."
+    else
+        echo "Caveat: this is constrained/partial perf-record validation, not hot-symbol"
+        echo "evidence. Treat symbol ordering as unusable until sampling succeeds and"
+        echo "Sample count meets Minimum samples for hot profile."
+    fi
     echo
     echo "Benchmark output:"
     cat "$BENCH_OUT"
+    echo
+    echo "Benchmark output under perf:"
+    cat "$RECORD_BENCH_OUT"
     echo
     echo "perf record stderr:"
     cat "$RECORD_ERR"
@@ -109,7 +181,14 @@ mv "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"
 
-if [[ "$RECORD_STATUS" -ne 0 || "$REPORT_STATUS" -ne 0 || "$NO_SAMPLES" == "yes" ]]; then
+if [[ ("$RECORD_STATUS" -ne 0 || "$REPORT_STATUS" -ne 0) && "$PERF_LIMITATION" != "yes" ]]; then
+    echo "error: perf record/report failed for a reason other than a perf access/sample limitation." >&2
+    echo "       Partial mode cannot override benchmark or unexpected perf failures." >&2
+    exit 3
+fi
+
+if [[ "$NO_SAMPLES" == "yes" || "$INSUFFICIENT_SAMPLES" == "yes" ||
+    "$RECORD_STATUS" -ne 0 || "$REPORT_STATUS" -ne 0 ]]; then
     if [[ "${QSL_PERF_ALLOW_PARTIAL:-0}" != "1" ]]; then
         echo "error: perf record/report did not produce a clean sample report." >&2
         echo "       Re-run on Linux with perf sampling access, or set QSL_PERF_ALLOW_PARTIAL=1" >&2

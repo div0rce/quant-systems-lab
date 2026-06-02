@@ -11,7 +11,8 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   It is full hardware-counter evidence only when the file says `Artifact: hardware PMU evidence`
   and `Unsupported counters detected: no`; otherwise it is constrained-environment validation.
 - `perf_report_linux.txt` — Linux `perf record/report` hot-symbol output for the benchmark
-  harness (`make perf-record`). It is useful only when the file says `No samples: no`.
+  harness (`make perf-record`). It is useful as a hot-symbol profile only when the file says
+  `No samples: no`, `Insufficient samples: no`, and the sample count meets the reported minimum.
 
 ## Policy
 
