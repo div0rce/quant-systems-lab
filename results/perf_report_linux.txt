@@ -7,7 +7,7 @@ Compiler:      c++ (Debian 12.2.0-14+deb12u1) 12.2.0
 Perf:          perf version 6.1.174
 Perf paranoid: 2
 Build type:    Release
-Git commit:    dcd5d58
+Git commit:    6024b30
 Dirty tree:    no
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
@@ -23,18 +23,18 @@ Report status: 0
 No samples:    yes
 Perf access limitation: yes
 Perf data:     build/perf/qsl-bench.perf.data (generated, not intended for commit)
-Date:          2026-06-02T05:37:10Z
+Date:          2026-06-02T05:44:40Z
 
 Caveat: this is constrained/partial perf-record validation, not hot-symbol
 evidence. Treat symbol ordering as unusable until sampling succeeds and
 Sample count meets Minimum samples for hot profile.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops         66.0 ns/op       15148838 ops/sec
-protocol encode+decode        500000 ops         22.4 ns/op       44661966 ops/sec
-gateway session (fill)        200000 ops        152.2 ns/op        6570185 ops/sec
-matching engine flow            5004 items       85.0 ns/item     11760628 items/sec
-replay command log              5004 items      130.3 ns/item      7674381 items/sec
+order_book add/mod/cancel     200000 ops         62.1 ns/op       16097821 ops/sec
+protocol encode+decode        500000 ops         22.2 ns/op       44978016 ops/sec
+gateway session (fill)        200000 ops        115.1 ns/op        8684340 ops/sec
+matching engine flow            5004 items       81.7 ns/item     12238646 items/sec
+replay command log              5004 items      109.0 ns/item      9174041 items/sec
 
 Benchmark output under perf:
 

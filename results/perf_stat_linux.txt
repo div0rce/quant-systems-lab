@@ -7,7 +7,7 @@ Compiler:    c++ (Debian 12.2.0-14+deb12u1) 12.2.0
 Perf:        perf version 6.1.174
 Perf paranoid: 2
 Build type:  Release
-Git commit:  dcd5d58
+Git commit:  6024b30
 Dirty tree:  no
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
@@ -16,18 +16,18 @@ Events:      cycles,instructions,branches,branch-misses,cache-references,cache-m
 Perf status: 255
 Unsupported counters detected: yes
 Hardware counters supported: no
-Date:        2026-06-02T05:37:10Z
+Date:        2026-06-02T05:44:39Z
 
 Caveat: Linux perf counters are hardware/kernel/permission dependent.
 Partial artifacts document environment behavior only; they are not full PMU evidence.
 This is profiling evidence for investigation, not a production-latency claim.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops         70.5 ns/op       14194422 ops/sec
-protocol encode+decode        500000 ops         25.9 ns/op       38583471 ops/sec
-gateway session (fill)        200000 ops        136.3 ns/op        7339371 ops/sec
-matching engine flow            5004 items      101.0 ns/item      9901477 items/sec
-replay command log              5004 items      131.2 ns/item      7619893 items/sec
+order_book add/mod/cancel     200000 ops         68.6 ns/op       14566819 ops/sec
+protocol encode+decode        500000 ops         22.1 ns/op       45211873 ops/sec
+gateway session (fill)        200000 ops        115.9 ns/op        8625476 ops/sec
+matching engine flow            5004 items       98.8 ns/item     10119228 items/sec
+replay command log              5004 items      112.5 ns/item      8887606 items/sec
 
 Benchmark output under perf:
 
