@@ -42,10 +42,12 @@ passes over the same workload:
    `close`, plus connection setup). `strace` multiplies syscall cost dramatically, so this pass
    is read for the **syscall mix**, never for wall-clock seconds.
 
-Each pass starts the gateway **directly** (the script owns its PID), waits for it to accept a
-loopback connection, drives the load, then snapshots procfs (pass 1) or lets `strace` summarize
-on exit (pass 2) before stopping the gateway. The two passes use adjacent ports to avoid
-`TIME_WAIT` reuse stalls.
+Pass 1 starts the gateway **directly** (the script owns its PID) and reads its procfs rusage;
+pass 2 runs the gateway **under** `strace -f -c` so the gateway is strace's *descendant* — that
+relationship is what lets tracing work under the common Yama `ptrace_scope=1` default, where a
+tracer may only trace its own descendants (attaching to a sibling would need `CAP_SYS_PTRACE`).
+Each pass waits for the gateway to accept a loopback connection, drives the load, then stops the
+gateway; the two passes use adjacent ports to avoid `TIME_WAIT` reuse stalls.
 
 ### Reading it
 
@@ -60,8 +62,10 @@ on exit (pass 2) before stopping the gateway. The two passes use adjacent ports 
 On a representative constrained run (300 round trips, containerized Linux), the gateway's
 *measurable* CPU was effectively all in the kernel/socket path — user-space matching fell below
 the clock-tick (10 ms) granularity, with roughly one voluntary context switch per connection —
-and the syscall mix was exactly `accept` / `read` / `sendto` / `close`. The honest takeaway: for
-this trivial-per-order loopback workload the socket servicing dominates, not the matching. The
+and the syscall mix was dominated by the per-request `accept` / `read` / `sendto` / `close`
+(alongside one-time process and socket setup such as `execve` / `socket` / `bind` / `listen`).
+The honest takeaway: for this trivial-per-order loopback workload the socket servicing dominates,
+not the matching. The
 committed [`results/socket_profile_loopback.txt`](../results/socket_profile_loopback.txt) records
 the actual run.
 

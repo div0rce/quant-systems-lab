@@ -6,14 +6,16 @@
 #   1. rusage pass  -> reads /proc/<pid>/{stat,status} for the gateway: user (engine-side) vs
 #      system (kernel/socket) CPU time, voluntary/involuntary context switches, minor/major page
 #      faults, peak RSS. Minimal perturbation (no tracer attached).
-#   2. strace pass  -> attaches `strace -f -c` to the gateway for per-syscall call counts and
-#      time-in-kernel, i.e. which syscalls the socket path actually spends time in. strace heavily
-#      perturbs timing, so this pass is for the syscall *mix*, not wall-clock numbers.
+#   2. strace pass  -> runs the gateway UNDER `strace -f -c` (launch form, not -p attach) for
+#      per-syscall call counts and time-in-kernel, i.e. which syscalls the socket path spends time
+#      in. strace heavily perturbs timing, so this pass is for the syscall *mix*, not wall-clock.
 #
-# The gateway is backgrounded directly (this script owns its PID and signals it directly), so the
-# stop path needs no procps/pkill and cannot hang. Linux-only (procfs + strace). Skips clearly on
-# other systems. Loopback only -- no NIC/driver/routing is exercised. Constrained profiling
-# evidence for investigation, not a production-latency or capacity claim.
+# Pass 1 backgrounds the gateway directly (this script owns its PID). Pass 2 launches it under
+# strace so the gateway is strace's *child*: that is what lets tracing work under the common Yama
+# ptrace_scope=1 default, where a tracer may only trace its own descendants (attaching to a sibling
+# would need CAP_SYS_PTRACE). Both stop paths escalate to SIGKILL so the script cannot hang.
+# Linux-only (procfs + strace); skips clearly on other systems. Loopback only -- no NIC/driver/
+# routing is exercised. Constrained profiling evidence for investigation, not a latency claim.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -77,7 +79,16 @@ TMP_OUT="$(mktemp)"
 GW_PID=""
 STRACE_PID=""
 cleanup() {
-    [[ -n "$STRACE_PID" ]] && kill -KILL "$STRACE_PID" 2>/dev/null || true
+    local kids="" k
+    if [[ -n "$STRACE_PID" ]]; then
+        # Kill strace's child (the traced gateway) too, so an interrupted run leaves no orphan.
+        if [[ -r "/proc/$STRACE_PID/task/$STRACE_PID/children" ]]; then
+            read -r kids <"/proc/$STRACE_PID/task/$STRACE_PID/children" 2>/dev/null || kids=""
+            for k in $kids; do kill -KILL "$k" 2>/dev/null || true; done
+        fi
+        command -v pkill >/dev/null 2>&1 && pkill -KILL -P "$STRACE_PID" 2>/dev/null || true
+        kill -KILL "$STRACE_PID" 2>/dev/null || true
+    fi
     [[ -n "$GW_PID" ]] && kill -KILL "$GW_PID" 2>/dev/null || true
     rm -f "$RUSAGE_OUT" "$STRACE_OUT" "$STRACE_ERR" "$TMP_OUT"
 }
@@ -117,6 +128,36 @@ stop_gateway() {
     GW_PID=""
 }
 
+# Stop the gateway that strace launched, so strace observes its exit and flushes the -c summary.
+# The signal must go to the gateway (strace's CHILD), never to strace: killing strace loses the
+# report. SIGTERM/SIGKILL on the child both make strace report; SIGINT does not reliably terminate
+# a traced child, so it is not used. kill is signalling only, so this is unaffected by Yama
+# ptrace_scope. Find the child via procfs (no dependency), with pkill -P as a fallback.
+stop_strace_pass() {
+    local kids="" k i
+    [[ -z "$STRACE_PID" ]] && return 0
+    if [[ -r "/proc/$STRACE_PID/task/$STRACE_PID/children" ]]; then
+        read -r kids <"/proc/$STRACE_PID/task/$STRACE_PID/children" 2>/dev/null || kids=""
+    fi
+    for k in $kids; do kill -TERM "$k" 2>/dev/null || true; done
+    command -v pkill >/dev/null 2>&1 && pkill -TERM -P "$STRACE_PID" 2>/dev/null || true
+    # strace exits once its tracee dies; wait for that (it flushes the report on the way out).
+    for i in $(seq 1 20); do
+        kill -0 "$STRACE_PID" 2>/dev/null || return 0
+        sleep 0.1
+    done
+    # Child still alive -> force it (still the child, NOT strace, so the summary is preserved).
+    for k in $kids; do kill -KILL "$k" 2>/dev/null || true; done
+    command -v pkill >/dev/null 2>&1 && pkill -KILL -P "$STRACE_PID" 2>/dev/null || true
+    for i in $(seq 1 30); do
+        kill -0 "$STRACE_PID" 2>/dev/null || return 0
+        sleep 0.1
+    done
+    # Absolute hang-guard if strace is wedged with no child left: kill it. The summary gate then
+    # fails loudly rather than accepting an empty artifact.
+    kill -KILL "$STRACE_PID" 2>/dev/null || true
+}
+
 # Pass 1: snapshot the gateway's rusage from procfs after the load, before stopping it.
 CLK="$(getconf CLK_TCK 2>/dev/null || echo 100)"
 "$GATEWAY" "$PORT" >/dev/null 2>&1 &
@@ -148,30 +189,30 @@ else
 fi
 stop_gateway
 
-# Pass 2: attach strace -f -c to a fresh gateway, drive the same load, then stop it so strace
-# writes its summary. Uses PORT+1 to dodge TIME_WAIT on the first port.
-"$GATEWAY" "$((PORT + 1))" >/dev/null 2>&1 &
-GW_PID=$!
+# Pass 2: run a fresh gateway UNDER strace -f -c (launch form, not -p attach) so the gateway is
+# strace's child. That descendant relationship is what lets tracing work under the common Yama
+# ptrace_scope=1 default; attaching to a sibling would need CAP_SYS_PTRACE. Uses PORT+1 to dodge
+# TIME_WAIT on the first port.
+strace -f -c -o "$STRACE_OUT" "$GATEWAY" "$((PORT + 1))" >/dev/null 2>"$STRACE_ERR" &
+STRACE_PID=$!
 if ! wait_ready "$((PORT + 1))"; then
     echo "error: gateway did not become ready for the strace pass on port $((PORT + 1))." >&2
-    stop_gateway
+    stop_strace_pass
     exit 3
 fi
-strace -f -c -o "$STRACE_OUT" -p "$GW_PID" >/dev/null 2>"$STRACE_ERR" &
-STRACE_PID=$!
-sleep 0.5 # let strace attach before driving load
 drive_load "$((PORT + 1))" "$CONNECTIONS"
-stop_gateway # gateway exits -> strace detaches and writes its -c summary
+stop_strace_pass # stop the traced gateway -> strace writes its -c summary and exits
 STRACE_RC=0
-wait "$STRACE_PID" || STRACE_RC=$?
+wait "$STRACE_PID" 2>/dev/null || STRACE_RC=$?
 STRACE_PID=""
-# strace must have produced a real syscall summary. A nonzero strace exit or an empty/absent
-# summary -- e.g. strace exists but cannot attach because ptrace is blocked by container/Yama
-# policy -- is a failure, not a successful artifact with an empty syscall section. Fail loudly
-# (and leave any previously committed artifact untouched) instead of writing misleading output.
-if [[ "$STRACE_RC" -ne 0 ]] || ! grep -qw total "$STRACE_OUT" 2>/dev/null; then
-    echo "error: strace captured no syscall summary (rc=$STRACE_RC); refusing to write a misleading artifact." >&2
-    echo "       Ensure strace can attach (ptrace must be permitted for this process) and re-run." >&2
+# strace must have produced a real syscall summary (a "total" row). An empty/absent summary --
+# e.g. strace could not trace at all -- is a failure, not a successful artifact with an empty
+# syscall section, so fail loudly and leave any previously committed artifact untouched. The
+# summary content is the signal, not STRACE_RC: a clean stop can interrupt strace with SIGINT,
+# which yields a nonzero exit while still flushing a valid -c report.
+if ! grep -qw total "$STRACE_OUT" 2>/dev/null; then
+    echo "error: strace captured no syscall summary (strace rc=$STRACE_RC); refusing to write a misleading artifact." >&2
+    echo "       Ensure strace can trace its child (it is launched as strace's descendant) and re-run." >&2
     if [[ -s "$STRACE_ERR" ]]; then
         echo "       strace stderr:" >&2
         sed 's/^/         /' "$STRACE_ERR" >&2 || true
