@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator perf-stat perf-record asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator perf-stat perf-record profile-io socket-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -51,6 +51,17 @@ perf-record:
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/perf_record.sh
+
+# M30: syscall / kernel-socket path profile of the gateway (strace + procfs rusage). Linux-only.
+profile-io:
+	@test "$$(uname -s)" = "Linux" || { echo "error: make profile-io requires Linux (strace + procfs); current OS is $$(uname -s)." >&2; exit 2; }
+	cmake --preset dev
+	cmake --build --preset dev --target qsl-gateway qsl-client
+	bash scripts/profile_gateway_io.sh
+
+# M30: UDP burst/gap + receive-socket-buffer experiment over loopback. Portable (Linux/macOS).
+socket-stress: build
+	bash scripts/socket_stress.sh
 
 asan:
 	cmake --preset asan

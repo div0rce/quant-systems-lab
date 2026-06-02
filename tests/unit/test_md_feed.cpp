@@ -101,6 +101,22 @@ TEST_CASE("udp client detects an out-of-sequence gap end-to-end", "[feed][udp]")
     REQUIRE(client.total_gaps() == 1);
 }
 
+TEST_CASE("udp client honours a requested receive-buffer size", "[feed][udp]") {
+    UdpFeedClient default_client{0}; // OS default SO_RCVBUF
+    REQUIRE(default_client.good());
+    REQUIRE(default_client.recv_buffer_bytes() > 0); // the granted default is reported
+
+    UdpFeedClient small{0, 1 << 13}; // request 8 KiB
+    UdpFeedClient large{0, 1 << 20}; // request 1 MiB
+    REQUIRE(small.good());
+    REQUIRE(large.good());
+    REQUIRE(small.recv_buffer_bytes() > 0);
+    // Exact granted sizes are kernel-dependent (Linux roughly doubles the request; both Linux
+    // and macOS clamp to a system maximum), so assert monotonicity, not a specific value: a
+    // larger request never yields a smaller effective buffer.
+    REQUIRE(large.recv_buffer_bytes() >= small.recv_buffer_bytes());
+}
+
 TEST_CASE("decode_market_data rejects a known non-market-data frame", "[feed]") {
     const auto ack = qsl::protocol::encode(qsl::protocol::Ack{/*order_id=*/1, /*seq=*/2});
     REQUIRE_FALSE(decode_market_data(ack).has_value());

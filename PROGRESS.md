@@ -19,15 +19,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M30 — Kernel/socket path profiling and Linux socket hardening (next planned; not started)
-- **Status:** documentation sync PR open after M29 merge
-- **Active branch:** `docs/roadmap-sync-after-m29`
-- **Last completed milestone:** M29 — Linux perf profiling workflow and artifacts (squash-merged, PR #89, commit 60bd5ee)
+- **Active milestone:** M30 — Kernel/socket path profiling and Linux socket hardening (ready for PR)
+- **Status:** implementation complete; PR open, awaiting human squash-merge
+- **Active branch:** `feat/m30-socket-profiling-hardening`
+- **Last completed milestone:** M29 — Linux perf profiling workflow and artifacts (squash-merged, PR #89, commit 60bd5ee); post-M29 roadmap/evidence docs sync squash-merged (PR #91, commit 86443f0)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** last verified on M29 (186/186) on 2026-06-02.
-- **Last action:** opened draft PR #91 to synchronize repository memory after M28/M29 review.
-- **Next action:** review/land PR #91, then start M30 with `/start-milestone 30`.
-- **Blockers:** none for PR #91 scope; full hardware PMU evidence remains blocked on PMU-capable Linux access and backlogged in #90.
+- **`make check` passing:** M30 verified 187/187 (`make check`) and 187/187 (`make asan`) on 2026-06-02.
+- **Last action:** completed M30 implementation and opened the PR `perf: profile and harden Linux socket path`.
+- **Next action:** human reviews/squash-merges the M30 PR; then issue #90 (full Linux hardware PMU evidence, PMU-capable host only) or M31 (external review signal).
+- **Blockers:** issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; it is not required for M30. M30 socket artifacts that need real Linux data are Linux-only / constrained-environment, same caveat policy as M29.
 
 ---
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _Draft PR #91 is open for documentation-only synchronization after the M29 merge. Full Linux hardware PMU evidence is backlogged as follow-up issue #90 because current macOS/Docker Desktop environments do not expose the required counters. M29 landed the workflow and constrained validation only. Documentation sync pass is documentation-only: do not change code or benchmark results._
+- _M30 implementation complete on `feat/m30-socket-profiling-hardening`; PR open for `perf: profile and harden Linux socket path`, awaiting human squash-merge. `make check` 187/187 and `make asan` 187/187 (2026-06-02). Delivered: `SO_RCVBUF` knob on `UdpFeedClient` (+ `qsl-mdfeed` `[rcvbuf_bytes]`/`[orders]` args and a subscriber idle-break); `scripts/profile_gateway_io.sh` (Linux-only, `make profile-io`) and `scripts/socket_stress.sh` (portable, `make socket-stress`); `docs/socket_profiling.md` + `docs/socket_hardening.md` + ADR 0008; constrained loopback artifacts `results/socket_profile_loopback.txt` (Docker Linux) and `results/socket_stress_summary.txt` (native). epoll deferred to M34/M35. Do NOT merge own PR. Clear this block when M30 squash-merges._
 
 
 ---
@@ -254,7 +254,7 @@ Lower priority:
 | M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #87 | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
-| M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☐ not started | — | syscall/socket-buffer/UDP pressure evidence; epoll optional if scoped |
+| M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ◐ in progress | — | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
 | M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☐ not started | — | Integrate pool storage into selected order-book paths and measure engine-level effects |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
@@ -269,6 +269,12 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-02] M30: started after PR #91 (post-M29 docs sync) squash-merged to main (commit 86443f0). Scope is Linux kernel/socket-path profiling + socket hardening only; M31–M41 are not implemented here. Also corrected the stale HANDOFF.md "Current handoff" block (it still said "M29 is PR #89 and should land"; the review bot flagged this on #91, which merged before the comment was addressed).
+- [2026-06-02] M30: added an optional `SO_RCVBUF` knob to `UdpFeedClient(port, recv_buffer_bytes=0)` that requests the buffer and reads back the kernel-granted size via `getsockopt`; `qsl-mdfeed subscribe` gains `[rcvbuf_bytes]`, `qsl-mdfeed publish` gains `[orders]`, and the subscriber idle-breaks after a few empty receives so burst experiments terminate promptly. Backward-compatible (defaulted param); unit-tested for monotonic effective-size growth.
+- [2026-06-02] M30: `scripts/socket_stress.sh` (`make socket-stress`) is portable (Linux+macOS) — UDP burst + receive-buffer experiment over loopback, multi-trial. Measured on this macOS host: a 2 KiB buffer intermittently drops datagrams under a ~16.9k-datagram burst (gaps/trial 6,0,1,0) while the OS default (~768 KiB) and an 8 MiB buffer lose nothing. Loss is timing/OS dependent, so the artifact reports per-trial variance, not a fixed number.
+- [2026-06-02] M30: `scripts/profile_gateway_io.sh` (`make profile-io`) is Linux-only (skips with exit 2 elsewhere, like the M29 perf scripts). It backgrounds the gateway directly (owns its PID), reads rusage from `/proc/<pid>/{stat,status}` (Pass 1) and attaches `strace -f -c` (Pass 2) — no GNU time / pkill dependency, with SIGKILL escalation so it cannot hang. The committed `results/socket_profile_loopback.txt` was generated in containerized Linux (Docker, `--cap-add=SYS_PTRACE`): user-space matching CPU fell below the 10 ms tick while the measurable CPU was the kernel/socket path, with ~1 voluntary context switch per connection and a syscall mix of exactly accept/read/sendto/close.
+- [2026-06-02] M30: both socket artifacts are loopback-only, constrained-environment evidence (ADR 0008), same honesty policy as ADR 0007 for perf; the gateway profile carries `Dirty tree: yes` because it was generated mid-development in a container — regenerate on a clean Linux checkout for a clean-tree version. No NIC/driver/real-network or production-capacity claim is made.
+- [2026-06-02] M30: deferred the optional `epoll` adapter to M34 (multi-client pressure to M35) and `io_uring` to discuss-only. Rationale: `epoll` is Linux-only and cannot be compiled or tested on the macOS development host, and committing untested platform-specific code violates the no-untested-C++ bar; M30 profiles and hardens the existing one-connection-at-a-time gateway instead of rewriting it.
 - [2026-06-01] M29: started after M28 merged (PR #88, squash commit 03b4d9a). M29 scope is Linux `perf` evidence only: scripts/docs/artifacts for `perf stat` and `perf record/report`; no engine optimization and no M30 socket profiling.
 - [2026-06-01] M29: `make perf-stat` and `make perf-record` fail before building on non-Linux hosts; Linux scripts capture hardware/kernel/compiler/perf/build/git/dirty-tree metadata and keep generated M29 result files out of the dirty-tree calculation.
 - [2026-06-01] M29: local verification on macOS passed `make check` (186/186). Docker Desktop Linux can run `perf` and `qsl-bench`, but does not expose hardware PMU counters; committed artifacts must keep that caveat visible instead of substituting unsupported counter values.

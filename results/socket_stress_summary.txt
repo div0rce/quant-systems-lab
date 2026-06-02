@@ -1,0 +1,35 @@
+Command:     bash scripts/socket_stress.sh  (make socket-stress)
+Artifact:    UDP socket-buffer / burst-loss experiment (loopback, constrained)
+Hardware:    arm64
+OS:          Darwin 25.2.0
+Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
+Git commit:  86443f0
+Dirty tree:  yes
+Transport:   UDP unicast over 127.0.0.1 (loopback)
+Dataset:     qsl-mdfeed publish, seed 42, 20000 orders, 3 symbols
+Trials/setting: 4
+Date:        2026-06-02T06:42:27Z
+
+Setup: one publisher bursts every market-data datagram back-to-back (no pacing); one
+subscriber drains them while detecting sequence gaps. The only variable is the
+subscriber's requested SO_RCVBUF. Requested 0 = OS default; the kernel may round up or
+clamp the request, so the effective (granted) size is read back via getsockopt.
+
+setting    requested(B)  effective(B)   published  gaps/trial                max
+-------    ------------  ------------   ---------  ----------                ---
+small              2048          2048       16931  6,0,1,0                     6
+default               0        786896       16931  0,0,0,0                     0
+large           8388608       8388608       16931  0,0,0,0                     0
+
+Reading the result: a too-small receive buffer overflows during the burst and the
+kernel silently drops datagrams, which the sequence tracker reports as gaps. The OS
+default and larger buffers absorb the same burst with little or no loss. Because UDP
+loss is timing/OS/load dependent, gap counts vary between trials and runs -- a small
+buffer does not lose on every trial. The mechanism (SO_RCVBUF bounds in-kernel
+queueing, so an undersized buffer drops under burst) is the point, not a fixed number.
+
+Caveats:
+- Loopback only: no NIC, driver, routing, or real-network loss is exercised.
+- This measures the receive socket-buffer / kernel-drop mechanism, not throughput,
+  not latency, and not a production capacity claim.
+- No retransmit channel exists; loss is detected (gap count), never recovered.
