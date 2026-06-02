@@ -1,11 +1,13 @@
 Command:       make perf-record
+Artifact:      software sampling hot-symbol profile
 Hardware:      aarch64
 OS:            Linux 6.12.76-linuxkit
 CPU:           
 Compiler:      c++ (Debian 12.2.0-14+deb12u1) 12.2.0
 Perf:          perf version 6.1.174
+Perf paranoid: 2
 Build type:    Release
-Git commit:    05c0a7d
+Git commit:    2c4bfa2
 Dirty tree:    no
 Dataset:       qsl-bench default synthetic benchmark suite
 Record event:  cpu-clock
@@ -15,22 +17,22 @@ Record status: 0
 Report status: 0
 No samples:    no
 Perf data:     build/perf/qsl-bench.perf.data (generated, not intended for commit)
-Date:          2026-06-01T23:44:39Z
+Date:          2026-06-02T02:50:26Z
 
 Caveat: perf report is hardware/kernel/compiler/build dependent. The default
 cpu-clock event is a software sampling profile for hot-symbol investigation,
 not a latency or throughput measurement.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops        111.7 ns/op        8953437 ops/sec
-protocol encode+decode        500000 ops         48.8 ns/op       20500030 ops/sec
-gateway session (fill)        200000 ops        302.6 ns/op        3304583 ops/sec
-matching engine flow            5004 items      359.9 ns/item      2778791 items/sec
-replay command log              5004 items      231.3 ns/item      4322799 items/sec
+order_book add/mod/cancel     200000 ops         70.6 ns/op       14156160 ops/sec
+protocol encode+decode        500000 ops         42.8 ns/op       23352709 ops/sec
+gateway session (fill)        200000 ops        145.9 ns/op        6854754 ops/sec
+matching engine flow            5004 items       94.4 ns/item     10593186 items/sec
+replay command log              5004 items      578.2 ns/item      1729601 items/sec
 
 perf record stderr:
 [ perf record: Woken up 1 times to write data ]
-[ perf record: Captured and wrote 0.006 MB build/perf/qsl-bench.perf.data (18 samples) ]
+[ perf record: Captured and wrote 0.005 MB build/perf/qsl-bench.perf.data (12 samples) ]
 
 perf report stderr:
 
@@ -40,184 +42,130 @@ perf report output:
 #
 # Total Lost Samples: 0
 #
-# Samples: 18  of event 'cpu-clock'
-# Event count (approx.): 181818180
+# Samples: 12  of event 'cpu-clock'
+# Event count (approx.): 121212120
 #
-# Overhead  Symbol                                                                                                                                                                                                                                                                                                                                                                                                                         Shared Object        IPC   [IPC Coverage]
-# ........  .............................................................................................................................................................................................................................................................................................................................................................................................................................  ...................  ....................
+# Overhead  Symbol                                Shared Object        IPC   [IPC Coverage]
+# ........  ....................................  ...................  ....................
 #
-    16.67%  [.] cfree                                                                                                                                                                                                                                                                                                                                                                                                                      libc.so.6            -      -            
+    16.67%  [.] malloc                            libc.so.6            -      -            
+            |
+            ---operator new
+               |          
+               |--8.33%--qsl::protocol::encode
+               |          qsl::gateway::(anonymous namespace)::emit_result
+               |          qsl::gateway::Session::process_frame
+               |          qsl::gateway::Session::on_bytes
+               |          main
+               |          0xffffbee67744
+               |          __libc_start_main
+               |          _start
+               |          
+                --8.33%--qsl::protocol::encode
+                          main
+                          0xffffbee67744
+                          __libc_start_main
+                          _start
+
+    16.67%  [.] qsl::protocol::decode_new_order   qsl-bench            -      -            
             |          
-            |--5.56%--qsl::engine::OrderBook::match_against<std::map<long, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> >, std::less<long>, std::allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> > > > > >
-            |          qsl::engine::OrderBook::add_limit
-            |          qsl::engine::MatchingEngine::new_limit
-            |          qsl::replay::apply
-            |          qsl::replay::replay
+            |--8.33%--qsl::gateway::Session::process_frame
+            |          qsl::gateway::Session::on_bytes
             |          main
-            |          0xffffa99f7744
+            |          0xffffbee67744
             |          __libc_start_main
             |          _start
             |          
-            |--5.56%--std::_Rb_tree<unsigned int, std::pair<unsigned int const, qsl::engine::OrderBook>, std::_Select1st<std::pair<unsigned int const, qsl::engine::OrderBook> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, qsl::engine::OrderBook> > >::_M_erase
-            |          std::_Rb_tree<unsigned int, std::pair<unsigned int const, qsl::engine::OrderBook>, std::_Select1st<std::pair<unsigned int const, qsl::engine::OrderBook> >, std::less<unsigned int>, std::allocator<std::pair<unsigned int const, qsl::engine::OrderBook> > >::_M_erase
-            |          main
-            |          0xffffa99f7744
-            |          __libc_start_main
-            |          _start
-            |          
-             --5.56%--main
-                       0xffffa99f7744
+             --8.33%--main
+                       0xffffbee67744
                        __libc_start_main
                        _start
 
-    11.11%  [.] malloc                                                                                                                                                                                                                                                                                                                                                                                                                     libc.so.6            -      -            
+     8.33%  [k] el0_da                            [kernel.kallsyms]    -      -            
             |
-            ---operator new
-               qsl::gateway::(anonymous namespace)::emit_result
+            ---el0t_64_sync_handler
+               el0t_64_sync
+               qsl::replay::replay
+               main
+               0xffffbee67744
+               __libc_start_main
+               _start
+
+     8.33%  [.] operator delete@plt               libstdc++.so.6.0.30  -      -            
+            |
+            ---qsl::engine::OrderBook::cancel
+               main
+               0xffffbee67744
+               __libc_start_main
+               _start
+
+     8.33%  [.] qsl::engine::OrderBook::contains  qsl-bench            -      -            
+            |
+            ---qsl::engine::MatchingEngine::modify
+               qsl::replay::apply
+               qsl::replay::replay
+               main
+               0xffffbee67744
+               __libc_start_main
+               _start
+
+     8.33%  [.] 0x000000000008fab8                libc.so.6            -      -            
+            |
+            ---cfree
                qsl::gateway::Session::process_frame
                qsl::gateway::Session::on_bytes
                main
-               0xffffa99f7744
+               0xffffbee67744
                __libc_start_main
                _start
 
-    11.11%  [.] qsl::protocol::decode_new_order                                                                                                                                                                                                                                                                                                                                                                                            qsl-bench            -      -            
-            |          
-            |--5.56%--qsl::gateway::Session::process_frame
-            |          qsl::gateway::Session::on_bytes
-            |          main
-            |          0xffffa99f7744
-            |          __libc_start_main
-            |          _start
-            |          
-             --5.56%--main
-                       0xffffa99f7744
-                       __libc_start_main
-                       _start
-
-     5.56%  [.] free@plt                                                                                                                                                                                                                                                                                                                                                                                                                   libstdc++.so.6.0.30  -      -            
+     8.33%  [.] 0x000000000008fac4                libc.so.6            -      -            
             |
-            ---qsl::engine::OrderBook::match_against<std::map<long, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> >, std::greater<long>, std::allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> > > > > >
-               qsl::engine::OrderBook::add_limit
-               qsl::engine::MatchingEngine::new_limit
-               qsl::replay::apply
+            ---cfree
                main
-               0xffffa99f7744
+               0xffffbee67744
                __libc_start_main
                _start
 
-     5.56%  [k] handle_softirqs                                                                                                                                                                                                                                                                                                                                                                                                            [kernel.kallsyms]    -      -            
+     8.33%  [.] 0x000000000008fb18                libc.so.6            -      -            
             |
-            ---__do_softirq
-               ____do_softirq
-               call_on_irq_stack
-               do_softirq_own_stack
-               irq_exit_rcu
-               el0_interrupt
-               __el0_irq_handler_common
-               el0t_64_irq_handler
-               el0t_64_irq
+            ---cfree
+               std::_Hashtable<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_erase
                qsl::engine::OrderBook::match_against<std::map<long, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> >, std::greater<long>, std::allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> > > > > >
                qsl::engine::OrderBook::add_limit
                qsl::engine::MatchingEngine::new_limit
                qsl::replay::apply
                main
-               0xffffa99f7744
+               0xffffbee67744
                __libc_start_main
                _start
 
-     5.56%  [.] operator delete                                                                                                                                                                                                                                                                                                                                                                                                            libstdc++.so.6.0.30  -      -            
+     8.33%  [.] 0x000000000008fb54                libc.so.6            -      -            
             |
-            ---qsl::gateway::(anonymous namespace)::emit_result
-               qsl::gateway::Session::process_frame
-               qsl::gateway::Session::on_bytes
-               main
-               0xffffa99f7744
-               __libc_start_main
-               _start
-
-     5.56%  [.] operator delete@plt                                                                                                                                                                                                                                                                                                                                                                                                        libstdc++.so.6.0.30  -      -            
-            |
-            ---main
-               0xffffa99f7744
-               __libc_start_main
-               _start
-
-     5.56%  [.] operator new@plt                                                                                                                                                                                                                                                                                                                                                                                                           qsl-bench            -      -            
-            |
-            ---qsl::engine::OrderBook::rest
+            ---cfree
+               qsl::engine::OrderBook::match_against<std::map<long, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> >, std::greater<long>, std::allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> > > > > >
                qsl::engine::OrderBook::add_limit
-               main
-               0xffffa99f7744
-               __libc_start_main
-               _start
-
-     5.56%  [.] qsl::engine::MatchingEngine::cancel                                                                                                                                                                                                                                                                                                                                                                                        qsl-bench            -      -            
-            |
-            ---qsl::replay::apply
-               main
-               0xffffa99f7744
-               __libc_start_main
-               _start
-
-     5.56%  [.] qsl::engine::OrderBook::contains                                                                                                                                                                                                                                                                                                                                                                                           qsl-bench            -      -            
-            |
-            ---qsl::engine::MatchingEngine::new_limit
-               qsl::gateway::OrderGateway::new_limit
-               qsl::gateway::Session::process_frame
-               qsl::gateway::Session::on_bytes
-               main
-               0xffffa99f7744
-               __libc_start_main
-               _start
-
-     5.56%  [.] qsl::gateway::Session::on_bytes                                                                                                                                                                                                                                                                                                                                                                                            qsl-bench            -      -            
-            |
-            ---main
-               0xffffa99f7744
-               __libc_start_main
-               _start
-
-     5.56%  [.] std::_Rb_tree<long, std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> > >, std::_Select1st<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> > > >, std::greater<long>, std::allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::allocator<qsl::engine::Order> > > > >::_M_get_insert_hint_unique_pos  qsl-bench            -      -            
-            |
-            ---qsl::engine::OrderBook::rest
-               qsl::engine::OrderBook::add_limit
-               main
-               0xffffa99f7744
-               __libc_start_main
-               _start
-
-     5.56%  [k] try_charge_memcg                                                                                                                                                                                                                                                                                                                                                                                                           [kernel.kallsyms]    -      -            
-            |
-            ---__mem_cgroup_charge
-               __handle_mm_fault
-               handle_mm_fault
-               do_page_fault
-               do_translation_fault
-               do_mem_abort
-               el0_da
-               el0t_64_sync_handler
-               el0t_64_sync
+               qsl::engine::MatchingEngine::new_limit
+               qsl::replay::apply
                qsl::replay::replay
                main
-               0xffffa99f7744
+               0xffffbee67744
                __libc_start_main
                _start
 
-     5.56%  [.] 0x000000000008faa8                                                                                                                                                                                                                                                                                                                                                                                                         libc.so.6            -      -            
+     8.33%  [.] 0x000000000008ff24                libc.so.6            -      -            
             |
             ---cfree
                qsl::engine::MatchingEngine::new_limit
-               qsl::gateway::OrderGateway::new_limit
-               qsl::gateway::Session::process_frame
-               qsl::gateway::Session::on_bytes
+               qsl::replay::apply
+               qsl::replay::replay
                main
-               0xffffa99f7744
+               0xffffbee67744
                __libc_start_main
                _start
 
 
 
 #
-# (Tip: To see list of saved events and attributes: perf evlist -v)
+# (Tip: System-wide collection from all CPUs: perf record -a)
 #
