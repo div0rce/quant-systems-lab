@@ -41,7 +41,7 @@ void UdpPublisher::on_market_data(const MarketDataMessage &msg) {
     ::sendto(fd_, bytes.data(), bytes.size(), 0, generic, static_cast<socklen_t>(sizeof(dest)));
 }
 
-UdpFeedClient::UdpFeedClient(std::uint16_t port) {
+UdpFeedClient::UdpFeedClient(std::uint16_t port, int recv_buffer_bytes) {
     fd_ = ::socket(AF_INET, SOCK_DGRAM, 0);
     if (fd_ < 0) {
         return;
@@ -61,6 +61,19 @@ UdpFeedClient::UdpFeedClient(std::uint16_t port) {
     timeval timeout{};
     timeout.tv_sec = 1;
     ::setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, static_cast<socklen_t>(sizeof(timeout)));
+    // Optional receive-buffer sizing for the M30 socket-buffer experiment. A larger SO_RCVBUF
+    // lets the kernel queue more datagrams during a burst before dropping them; a small one
+    // makes loss (and the resulting sequence gaps) easy to observe on loopback. The kernel may
+    // round up or clamp the request, so the granted value is read back for honest reporting.
+    if (recv_buffer_bytes > 0) {
+        ::setsockopt(fd_, SOL_SOCKET, SO_RCVBUF, &recv_buffer_bytes,
+                     static_cast<socklen_t>(sizeof(recv_buffer_bytes)));
+    }
+    int effective_buffer = 0;
+    socklen_t effective_len = sizeof(effective_buffer);
+    if (::getsockopt(fd_, SOL_SOCKET, SO_RCVBUF, &effective_buffer, &effective_len) == 0) {
+        recv_buffer_bytes_ = effective_buffer;
+    }
     sockaddr_in bound{};
     socklen_t len = sizeof(bound);
     auto *bound_generic = reinterpret_cast<sockaddr *>(&bound); // NOLINT: POSIX socket API

@@ -109,7 +109,10 @@ the core numbers above.
 - **Single-threaded** gateway and feed (a single accept/event loop); no concurrency model.
 - **Benchmarks are microbenchmarks**, not end-to-end or production latency (see above).
 - **Networking is minimal**: loopback TCP order entry and a UDP market-data feed,
-  unauthenticated, no TLS, no framing recovery beyond disconnect-on-malformed.
+  unauthenticated, no TLS, no framing recovery beyond disconnect-on-malformed. The socket path is
+  profiled and its hardening posture documented in
+  [docs/socket_profiling.md](docs/socket_profiling.md) and
+  [docs/socket_hardening.md](docs/socket_hardening.md) (loopback-only, constrained evidence).
 - **Not production-hardened**: no persistence beyond the flat event log, no clustering,
   no exchange-grade risk/clearing.
 

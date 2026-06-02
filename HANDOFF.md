@@ -14,10 +14,11 @@ Keep all four in the repo root.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M28 are merged. M29 is PR #89 and should land as Linux
-`perf` workflow plus constrained-environment validation only.
+The repo is released at `v0.1.0`. M0–M29 are merged: M29 = PR #89 (squash commit 60bd5ee), the
+Linux `perf` workflow plus constrained-environment validation only; the post-M29 roadmap/evidence
+docs sync = PR #91 (squash commit 86443f0). **M30 is the active milestone.**
 
-Current M29 state:
+M29 delivered (merged, constrained-environment only):
 
 - Linux-only `make perf-stat` / `make perf-record` tooling exists.
 - Metadata-rich `perf` artifacts exist.
@@ -28,11 +29,11 @@ Current M29 state:
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-If PR #89 is still open, review/land it as constrained validation only. After PR #89 is
-squash-merged, start with:
+PR #89 (M29) and PR #91 (post-M29 docs/evidence sync) are both squash-merged. M30 is in progress on
+`feat/m30-socket-profiling-hardening`. To resume it:
 
 ```text
-/start-milestone 30
+/resume
 ```
 
 Do not start implementation until these files are read:
@@ -54,11 +55,11 @@ git tag -l
 gh release view v0.1.0
 ```
 
-Expected state after PR #89 merges:
+Current state:
 
-- branch: `main`
+- main tip: `86443f0` (PR #91)
+- active branch: `feat/m30-socket-profiling-hardening` (M30 in progress)
 - release tag: `v0.1.0`
-- next branch: `feat/m30-socket-profiling-hardening`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 
 ### Next milestone

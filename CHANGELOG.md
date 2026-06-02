@@ -5,8 +5,24 @@ All notable changes to this project. The format is loosely based on
 
 ## [Unreleased]
 
+### Added
+
+- M30: optional UDP receive-buffer (`SO_RCVBUF`) sizing on the market-data client, with the
+  granted size read back via `getsockopt`. `qsl-mdfeed subscribe` gains a `[rcvbuf_bytes]`
+  argument and `qsl-mdfeed publish` an `[orders]` burst-size argument.
+- M30: `scripts/profile_gateway_io.sh` (`make profile-io`, Linux-only) — profiles the gateway
+  syscall / kernel-socket path with `strace -f -c` plus procfs rusage (`/proc/<pid>/{stat,status}`),
+  distinguishing user-space matching cost from kernel/socket overhead.
+- M30: `scripts/socket_stress.sh` (`make socket-stress`, portable) — UDP burst/gap and
+  receive-socket-buffer experiment over loopback, run over multiple trials.
+
 ### Documentation
 
+- M30: added `docs/socket_profiling.md` (syscall/rusage + UDP-loss methodology and how to read
+  the artifacts) and `docs/socket_hardening.md` (socket defensive posture, the `SO_RCVBUF` knob,
+  and what is intentionally out of scope). Recorded ADR 0008 (socket evidence is
+  loopback-constrained; `epoll` deferred to M34/M35). Committed constrained loopback artifacts
+  `results/socket_profile_loopback.txt` and `results/socket_stress_summary.txt`.
 - Classified PR #89 / M29 as Linux `perf` workflow plus constrained-environment validation, not
   full hardware PMU evidence.
 - Recorded issue #90 as the follow-up for full Linux hardware PMU perf artifacts on a PMU-capable
