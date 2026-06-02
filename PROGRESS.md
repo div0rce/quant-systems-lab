@@ -25,8 +25,8 @@ Do not rely on prior chat memory.
 - **Last completed milestone:** M29 — Linux perf profiling workflow and artifacts (squash-merged, PR #89, commit 60bd5ee); post-M29 roadmap/evidence docs sync squash-merged (PR #91, commit 86443f0)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** M30 verified 187/187 (`make check`) and 187/187 (`make asan`) on 2026-06-02.
-- **Last action:** completed M30 implementation and opened the PR `perf: profile and harden Linux socket path`.
-- **Next action:** human reviews/squash-merges the M30 PR; then issue #90 (full Linux hardware PMU evidence, PMU-capable host only) or M31 (external review signal).
+- **Last action:** completed M30 implementation and opened PR #92 (`perf: profile and harden Linux socket path`).
+- **Next action:** human reviews/squash-merges PR #92; then issue #90 (full Linux hardware PMU evidence, PMU-capable host only) or M31 (external review signal).
 - **Blockers:** issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; it is not required for M30. M30 socket artifacts that need real Linux data are Linux-only / constrained-environment, same caveat policy as M29.
 
 ---
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M30 implementation complete on `feat/m30-socket-profiling-hardening`; PR open for `perf: profile and harden Linux socket path`, awaiting human squash-merge. `make check` 187/187 and `make asan` 187/187 (2026-06-02). Delivered: `SO_RCVBUF` knob on `UdpFeedClient` (+ `qsl-mdfeed` `[rcvbuf_bytes]`/`[orders]` args and a subscriber idle-break); `scripts/profile_gateway_io.sh` (Linux-only, `make profile-io`) and `scripts/socket_stress.sh` (portable, `make socket-stress`); `docs/socket_profiling.md` + `docs/socket_hardening.md` + ADR 0008; constrained loopback artifacts `results/socket_profile_loopback.txt` (Docker Linux) and `results/socket_stress_summary.txt` (native). epoll deferred to M34/M35. Do NOT merge own PR. Clear this block when M30 squash-merges._
+- _M30 implementation complete on `feat/m30-socket-profiling-hardening`; PR #92 open (`perf: profile and harden Linux socket path`), awaiting human squash-merge. `make check` 187/187 and `make asan` 187/187 (2026-06-02). Delivered: `SO_RCVBUF` knob on `UdpFeedClient` (+ `qsl-mdfeed` `[rcvbuf_bytes]`/`[orders]` args and a subscriber idle-break); `scripts/profile_gateway_io.sh` (Linux-only, `make profile-io`) and `scripts/socket_stress.sh` (portable, `make socket-stress`); `docs/socket_profiling.md` + `docs/socket_hardening.md` + ADR 0008; constrained loopback artifacts `results/socket_profile_loopback.txt` (Docker Linux) and `results/socket_stress_summary.txt` (native). epoll deferred to M34/M35. Do NOT merge own PR. Clear this block when M30 squash-merges._
 
 
 ---
@@ -254,7 +254,7 @@ Lower priority:
 | M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #87 | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
-| M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ◐ in progress | — | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
+| M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ◐ in progress | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
 | M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☐ not started | — | Integrate pool storage into selected order-book paths and measure engine-level effects |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
