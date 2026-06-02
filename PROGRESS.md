@@ -20,13 +20,13 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M32 — Pool-backed order-book storage experiment (in progress)
-- **Status:** locally verified; ready for PR
+- **Status:** draft PR open (#96); local verification passed
 - **Active branch:** `feat/m32-pool-backed-order-book-storage`
 - **Last completed milestone:** M31 — External review / maintainer signal (squash-merged, PR #93, commit b7926ac; Codex auto-review clean — reacted 👍, no findings); external review request opened as issue #94 (labels backlog/documentation/help wanted)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** last verified on M32 (188/188) on 2026-06-02; `make asan` also passed (188/188).
-- **Last action:** implemented M32 PMR-backed order-book node allocation, opened issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage, added an engine-level `make bench-storage` benchmark and `results/pool_backed_storage.txt`, and verified `make check` / `make asan` / `make bench-storage`.
-- **Next action:** open PR for M32 with the explicit PMR-vs-OrderPool boundary; do not merge.
+- **Last action:** opened draft PR #96 for M32 after implementing PMR-backed order-book node allocation, opening issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage, adding an engine-level `make bench-storage` benchmark and `results/pool_backed_storage.txt`, and verifying `make check` / `make asan` / `make bench-storage`.
+- **Next action:** monitor PR #96 CI and Codex review; do not merge.
 - **Blockers:** none for M32. Issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; issue #95 tracks future direct intrusive/custom-node storage and is not part of M32.
 
 ---
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M32 locally verified on `feat/m32-pool-backed-order-book-storage`. Implemented `OrderBook::Storage::Baseline` and `Storage::Pooled`, PMR-backed list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation. Added the generated-flow equivalence test (per-command event streams, final snapshot, last_seq, non-vacuity), `make bench-storage`, `results/pool_backed_storage.txt`, `docs/pool_backed_storage.md`, ADR 0009, and issue #95 for future direct intrusive/custom-node `OrderPool<Capacity>` storage. Verification passed: `make check` 188/188, `make asan` 188/188, `make bench-storage`. Next: open PR and request Codex review. Clear this block when M32 merges._
+- _M32 draft PR #96 is open on `feat/m32-pool-backed-order-book-storage`. Implemented `OrderBook::Storage::Baseline` and `Storage::Pooled`, PMR-backed list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation. Added the generated-flow equivalence test (per-command event streams, final snapshot, last_seq, non-vacuity), `make bench-storage`, `results/pool_backed_storage.txt`, `docs/pool_backed_storage.md`, ADR 0009, and issue #95 for future direct intrusive/custom-node `OrderPool<Capacity>` storage. Verification passed: `make check` 188/188, `make asan` 188/188, `make bench-storage`. Next: monitor CI/Codex review; do not merge. Clear this block when M32 merges._
 
 
 ---
@@ -256,7 +256,7 @@ Lower priority:
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☑ merged | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☑ merged | #93 | Review-request checklist + feedback template; review request opened as issue #94 |
-| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ◐ in progress | — | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
+| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ◐ draft PR | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☐ not started | — | Event-driven multi-client gateway design |
 | M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☐ not started | — | TCP/UDP stress, buffer pressure, backpressure investigation |
