@@ -47,13 +47,22 @@ if grep -Eiq '<not supported>|not supported|No permission|not counted|Operation 
     UNSUPPORTED=yes
 fi
 
+ARTIFACT_TYPE="hardware PMU evidence"
+HARDWARE_COUNTERS_SUPPORTED=yes
+if [[ "$STATUS" -ne 0 || "$UNSUPPORTED" == "yes" ]]; then
+    ARTIFACT_TYPE="constrained-environment validation (partial; not full hardware PMU evidence)"
+    HARDWARE_COUNTERS_SUPPORTED=no
+fi
+
 {
     echo "Command:     make perf-stat"
+    echo "Artifact:    $ARTIFACT_TYPE"
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
     echo "CPU:         $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
     echo "Compiler:    $(c++ --version | head -1)"
     echo "Perf:        $(perf --version)"
+    echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
     echo "Build type:  Release"
     echo "Git commit:  $(git rev-parse --short HEAD)"
     echo "Dirty tree:  $DIRTY"
@@ -61,9 +70,11 @@ fi
     echo "Events:      $EVENTS"
     echo "Perf status: $STATUS"
     echo "Unsupported counters detected: $UNSUPPORTED"
+    echo "Hardware counters supported: $HARDWARE_COUNTERS_SUPPORTED"
     echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo
     echo "Caveat: Linux perf counters are hardware/kernel/permission dependent."
+    echo "Partial artifacts document environment behavior only; they are not full PMU evidence."
     echo "This is profiling evidence for investigation, not a production-latency claim."
     echo
     echo "Benchmark output:"

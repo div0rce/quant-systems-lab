@@ -20,14 +20,14 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M29 — Linux perf and flamegraph profiling artifacts
-- **Status:** ready for PR after artifact regeneration
+- **Status:** PR open; full hardware-PMU evidence blocked by available environment
 - **Active branch:** `feat/m29-linux-perf-profiling`
 - **Last completed milestone:** M28 — Memory pool allocator experiment (squash-merged, PR #88, commit 03b4d9a)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** last verified on M29 (186/186) on 2026-06-01.
-- **Last action:** added Linux-only `perf stat` / `perf record` scripts, docs, and result-artifact metadata handling; verified Darwin fail-fast behavior and local `make check`.
-- **Next action:** regenerate Linux perf artifacts from the clean M29 source commit, commit them, push `feat/m29-linux-perf-profiling`, and open the M29 PR.
-- **Blockers:** none
+- **Last action:** opened draft PR #89 with Linux perf scripts/docs/artifacts; CI passed, but Docker Desktop Linux does not expose hardware PMU counters.
+- **Next action:** run `make perf-stat` / `make perf-record` on bare-metal Linux or a VM with hardware `perf_event` access if available; otherwise keep PR #89 artifacts labeled as constrained-environment validation and do not merge as full PMU evidence.
+- **Blockers:** no PMU-capable Linux host is currently available from this workspace.
 
 ---
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M29 scripts/docs are implemented and `make check` passed 186/186 on 2026-06-01. Non-Linux `make perf-stat` / `make perf-record` fail fast on Darwin as expected. Next precise step: regenerate `results/perf_stat_linux.txt` and `results/perf_report_linux.txt` from the clean M29 source commit, then commit/push/open PR._
+- _M29 draft PR #89 is open and CI passed. Available Linux here is Docker Desktop/LinuxKit only; preflight shows requested hardware counters unsupported. Next precise step, if a PMU-capable Linux host becomes available: rerun `make perf-stat`, `make perf-record`, and `make check`, then replace the constrained artifacts. Until then, keep artifacts labeled as constrained validation and do not merge as full PMU evidence._
 
 
 ---
@@ -253,7 +253,7 @@ Lower priority:
 | M26 | Multithreaded gateway-engine-feed pipeline prototype | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #86 | Explicit thread boundaries and deterministic shutdown |
 | M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #87 | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
-| M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ◐ ready for PR | — | perf stat/record/report artifacts; flamegraph omitted unless reproducible |
+| M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ◐ draft PR | #89 | constrained Docker Linux artifacts; full PMU run pending real Linux access |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☐ not started | — | syscall/socket-buffer/UDP pressure evidence; epoll optional if scoped |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
 
@@ -262,6 +262,7 @@ Lower priority:
 - [2026-06-01] M29: started after M28 merged (PR #88, squash commit 03b4d9a). M29 scope is Linux `perf` evidence only: scripts/docs/artifacts for `perf stat` and `perf record/report`; no engine optimization and no M30 socket profiling.
 - [2026-06-01] M29: `make perf-stat` and `make perf-record` fail before building on non-Linux hosts; Linux scripts capture hardware/kernel/compiler/perf/build/git/dirty-tree metadata and keep generated M29 result files out of the dirty-tree calculation.
 - [2026-06-01] M29: local verification on macOS passed `make check` (186/186). Docker Desktop Linux can run `perf` and `qsl-bench`, but does not expose hardware PMU counters; committed artifacts must keep that caveat visible instead of substituting unsupported counter values.
+- [2026-06-01] M29 review follow-up: Docker preflight (`perf stat -e cycles,instructions,branches,branch-misses,cache-references,cache-misses -- true`) reports all requested hardware counters as `<not supported>` on LinuxKit, so PR #89 artifacts are constrained-environment validation, not full hardware-PMU evidence.
 - [2026-06-01] M28: added a fixed-capacity `OrderPool<Capacity>` for `engine::Order`; exhaustion returns `nullptr`, releases are validated, and there is no silent heap fallback.
 - [2026-06-01] M28: added an isolated allocator benchmark path (`qsl-bench pool` / `make bench-allocator`) comparing raw `operator new`/placement construction against pool acquire/release, with full hardware/compiler/build/commit/dirty-tree metadata in `results/allocator_experiment.txt`.
 - [2026-06-01] M28: kept order-book storage unchanged; the pool is an allocation experiment for future storage decisions, not a semantic refactor or an end-to-end engine latency claim.

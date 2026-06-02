@@ -7,10 +7,11 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   gateway replay, and shrinking (`make bench-diff`, `qsl-bench diff`).
 - `allocator_experiment.txt` — isolated M28 allocation experiment comparing `engine::Order`
   `new/delete` with fixed-pool acquire/release (`make bench-allocator`, `qsl-bench pool`).
-- `perf_stat_linux.txt` — Linux `perf stat` output for the benchmark harness, when generated
-  on a Linux host with PMU access (`make perf-stat`).
+- `perf_stat_linux.txt` — Linux `perf stat` output for the benchmark harness (`make perf-stat`).
+  It is full hardware-counter evidence only when the file says `Artifact: hardware PMU evidence`
+  and `Unsupported counters detected: no`; otherwise it is constrained-environment validation.
 - `perf_report_linux.txt` — Linux `perf record/report` hot-symbol output for the benchmark
-  harness (`make perf-record`).
+  harness (`make perf-record`). It is useful only when the file says `No samples: no`.
 
 ## Policy
 
