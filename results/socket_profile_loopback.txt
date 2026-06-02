@@ -6,22 +6,21 @@ CPU:
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 strace:      strace -- version 6.8
 CLK_TCK:     100
-Git commit:  86443f0
+Git commit:  41ecf2e
 Dirty tree:  yes
 Transport:   TCP over 127.0.0.1 (loopback), one connection at a time
 Load:        300 sequential client round trips (NewOrder + Heartbeat each)
-Date:        2026-06-02T07:56:17Z
+Date:        2026-06-02T14:27:54Z
 
 == Pass 1: gateway rusage from procfs (user vs system CPU, ctx switches, page faults) ==
 User (engine-side) vs System (kernel/socket) CPU time splits user-space matching work
 from time spent in the kernel servicing accept/read/write/close on the socket path.
 
 User (engine-side) CPU time:   0.000 s  (0 ticks)
-System (kernel/socket) CPU time: 0.010 s  (1 ticks)
-System share of CPU:           100.0%
-Minor page faults: 220    Major page faults: 0
-VmHWM:	    3284 kB
-voluntary_ctxt_switches:	307
+System (kernel/socket) CPU time: 0.000 s  (0 ticks)
+Minor page faults: 219    Major page faults: 0
+VmHWM:	    3272 kB
+voluntary_ctxt_switches:	305
 nonvoluntary_ctxt_switches:	0
 
 == Pass 2: strace -f -c (syscall mix on the gateway socket path) ==
@@ -30,12 +29,12 @@ syscall *mix* (which calls dominate the socket path), not the absolute seconds.
 
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
- 26.83    0.003870          12       300           close
- 24.68    0.003560          11       300           sendto
- 24.34    0.003510          11       301         1 accept
- 24.14    0.003482           5       600           read
+ 27.45    0.004169          13       300           close
+ 24.64    0.003743          12       301         1 accept
+ 24.48    0.003718           6       600           read
+ 23.43    0.003558          11       300           sendto
 ------ ----------- ----------- --------- --------- ----------------
-100.00    0.014422           9      1501         1 total
+100.00    0.015188          10      1501         1 total
 
 Caveats:
 - Loopback only: no NIC, device driver, routing, or real-network behaviour is exercised.

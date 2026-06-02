@@ -72,13 +72,14 @@ DIRTY="$(dirty_tree_status)"
 
 RUSAGE_OUT="$(mktemp)"
 STRACE_OUT="$(mktemp)"
+STRACE_ERR="$(mktemp)"
 TMP_OUT="$(mktemp)"
 GW_PID=""
 STRACE_PID=""
 cleanup() {
     [[ -n "$STRACE_PID" ]] && kill -KILL "$STRACE_PID" 2>/dev/null || true
     [[ -n "$GW_PID" ]] && kill -KILL "$GW_PID" 2>/dev/null || true
-    rm -f "$RUSAGE_OUT" "$STRACE_OUT" "$TMP_OUT"
+    rm -f "$RUSAGE_OUT" "$STRACE_OUT" "$STRACE_ERR" "$TMP_OUT"
 }
 trap cleanup EXIT
 
@@ -142,6 +143,8 @@ if wait_ready "$PORT"; then
     } >"$RUSAGE_OUT"
 else
     echo "error: gateway did not become ready for the rusage pass on port $PORT." >&2
+    stop_gateway
+    exit 3
 fi
 stop_gateway
 
@@ -149,17 +152,31 @@ stop_gateway
 # writes its summary. Uses PORT+1 to dodge TIME_WAIT on the first port.
 "$GATEWAY" "$((PORT + 1))" >/dev/null 2>&1 &
 GW_PID=$!
-if wait_ready "$((PORT + 1))"; then
-    strace -f -c -o "$STRACE_OUT" -p "$GW_PID" >/dev/null 2>&1 &
-    STRACE_PID=$!
-    sleep 0.5 # let strace attach before driving load
-    drive_load "$((PORT + 1))" "$CONNECTIONS"
-    stop_gateway          # gateway exits -> strace detaches and writes its -c summary
-    wait "$STRACE_PID" 2>/dev/null || true
-    STRACE_PID=""
-else
+if ! wait_ready "$((PORT + 1))"; then
     echo "error: gateway did not become ready for the strace pass on port $((PORT + 1))." >&2
     stop_gateway
+    exit 3
+fi
+strace -f -c -o "$STRACE_OUT" -p "$GW_PID" >/dev/null 2>"$STRACE_ERR" &
+STRACE_PID=$!
+sleep 0.5 # let strace attach before driving load
+drive_load "$((PORT + 1))" "$CONNECTIONS"
+stop_gateway # gateway exits -> strace detaches and writes its -c summary
+STRACE_RC=0
+wait "$STRACE_PID" || STRACE_RC=$?
+STRACE_PID=""
+# strace must have produced a real syscall summary. A nonzero strace exit or an empty/absent
+# summary -- e.g. strace exists but cannot attach because ptrace is blocked by container/Yama
+# policy -- is a failure, not a successful artifact with an empty syscall section. Fail loudly
+# (and leave any previously committed artifact untouched) instead of writing misleading output.
+if [[ "$STRACE_RC" -ne 0 ]] || ! grep -qw total "$STRACE_OUT" 2>/dev/null; then
+    echo "error: strace captured no syscall summary (rc=$STRACE_RC); refusing to write a misleading artifact." >&2
+    echo "       Ensure strace can attach (ptrace must be permitted for this process) and re-run." >&2
+    if [[ -s "$STRACE_ERR" ]]; then
+        echo "       strace stderr:" >&2
+        sed 's/^/         /' "$STRACE_ERR" >&2 || true
+    fi
+    exit 3
 fi
 
 {
