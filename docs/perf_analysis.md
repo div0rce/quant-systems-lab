@@ -3,6 +3,20 @@
 M29 adds Linux `perf` profiling scripts and documents how to interpret their output. This is
 performance-investigation evidence, not an optimization pass and not a production latency claim.
 
+## Current Status
+
+M29 currently provides the Linux `perf` workflow, Linux-only tooling, metadata-rich artifacts,
+dirty-tree handling, PMU preflight/validation, constrained-environment validation, CI validation,
+and a reproducible command path.
+
+The committed artifacts were generated in a constrained Docker Desktop Linux environment where
+hardware PMU counters and sampling were unavailable or permission-limited. They are intentionally
+labeled as constrained validation. The repository does **not** claim real hardware PMU evidence at
+this time.
+
+Full PMU-backed evidence is tracked by issue #90 and requires a bare-metal Linux host or a Linux
+VM/server with real hardware `perf_event` access.
+
 ## Commands
 
 Build the benchmark preset and run `perf stat`:

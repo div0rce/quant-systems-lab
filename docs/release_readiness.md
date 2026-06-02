@@ -46,7 +46,8 @@ demo), and `determinism` (gcc + clang).
   (#47), oracle mutation testing (#48), 50-seed corpus (#49), regression archive (#50), and
   differential-harness benchmarks (#51).
 - **Architecture decisions** are recorded in `docs/adr/` (independent OCaml oracle, golden
-  fixture regeneration, deterministic shrinker).
+  fixture regeneration, deterministic shrinker, dynamic concurrency validation limits,
+  allocator-vs-storage separation, constrained perf artifacts).
 - **No stale milestone references**: PROGRESS and the milestone tables reflect M0–M22 merged and
   the tractable backlog (#34–#51) complete; #28–#33 (generic) and #24–#27 (major architecture)
   remain open/deferred.
@@ -63,3 +64,17 @@ verification.
 
 Release-ready as a portfolio artifact. An optional, conservative GitHub-only `v0.1.0` release is
 deferred to M23 and requires explicit human approval.
+
+## Post-Release Roadmap Note
+
+After M28/M29 review, the roadmap distinguishes workflow validation from final evidence:
+
+- M29 lands Linux `perf` tooling, metadata-rich artifacts, dirty-tree handling, PMU validation,
+  constrained-environment validation, and CI validation.
+- The current committed M29 artifacts were generated in a constrained Docker Desktop Linux
+  environment and are not real hardware PMU evidence.
+- Issue #90 tracks full PMU-backed artifacts on a bare-metal or PMU-capable Linux target.
+- TSan coverage is dynamic-analysis evidence over executed schedules, not proof over all possible
+  interleavings.
+- M28 allocator evidence did not change order-book storage architecture; pool-backed order-book
+  integration is a separate roadmap item.

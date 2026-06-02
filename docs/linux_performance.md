@@ -41,6 +41,11 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
   count clears the threshold reported in the artifact.
 - See `docs/perf_analysis.md` for the M29 profiling workflow, artifacts, and caveats.
 
+Current M29 artifacts are constrained-environment validation from Docker Desktop Linux. They prove
+the workflow and metadata path, not real hardware PMU access. Full PMU-backed evidence is tracked
+by issue #90 and requires bare-metal Linux or a Linux VM/server that exposes the required hardware
+counters without permission or unsupported-counter errors.
+
 ## What this does not prove
 
 These are in-process microbenchmarks on a commodity machine with the standard library and a

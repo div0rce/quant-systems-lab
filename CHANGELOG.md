@@ -5,7 +5,18 @@ All notable changes to this project. The format is loosely based on
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Documentation
+
+- Classified PR #89 / M29 as Linux `perf` workflow plus constrained-environment validation, not
+  full hardware PMU evidence.
+- Recorded issue #90 as the follow-up for full Linux hardware PMU perf artifacts on a PMU-capable
+  Linux target.
+- Expanded the post-M29 roadmap through M41, covering pool-backed order-book storage, advanced
+  concurrency validation, epoll gateway work, multi-client socket pressure, NUMA studies,
+  lock-free ingress, stronger persistence, recovery benchmarking, DPDK research, and NIC offload
+  study.
+- Added explicit backlog distinctions: TSan coverage is dynamic-analysis evidence rather than
+  proof, and M28 allocator results are allocator evidence rather than engine-storage evidence.
 
 ## [0.1.0] - 2026-05-31
 
