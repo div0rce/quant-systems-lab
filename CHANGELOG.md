@@ -7,6 +7,11 @@ All notable changes to this project. The format is loosely based on
 
 ### Added
 
+- M34: Linux-only `EpollServer` gateway transport prototype. It uses one `epoll` loop,
+  nonblocking accept/read/write, per-client outbound buffers, and one deterministic `Session` per
+  client; `qsl-gateway <port> --epoll` opts in on Linux.
+- M34: epoll gateway tests cover platform scoping, invalid bind-host rejection, and two
+  simultaneous loopback clients handled by one event loop.
 - M33: deterministic pipeline scheduling perturbation (`PipelinePerturbation`) so concurrency tests
   exercise different input/engine/output pacing patterns without timing-sensitive sleeps.
 - M33: `make concurrency-stress` / `scripts/concurrency_stress.sh`, an opt-in repeated
@@ -30,6 +35,8 @@ All notable changes to this project. The format is loosely based on
 
 ### Documentation
 
+- M34: updated socket-gateway docs and added ADR 0010 to distinguish the Linux epoll architecture
+  prototype from M35 multi-client load/socket-pressure evidence.
 - M33: concurrency docs now distinguish static happens-before reasoning, TSan, deterministic
   schedule perturbation, and repeated stress as evidence over executed schedules rather than proof
   over all interleavings.

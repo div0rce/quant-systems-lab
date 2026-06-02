@@ -14,10 +14,9 @@ Keep all four in the repo root.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M32 are merged. Most recently M32 = PR #96 (squash commit
-f122ee8): PMR-backed order-book node allocation experiment, engine-level storage benchmark, and
-issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage. **M33 is the active
-milestone; draft PR #97 is open, CI is green, and Codex review found no major issues.**
+The repo is released at `v0.1.0`. M0–M33 are merged. Most recently M33 = PR #97 (squash commit
+fe8679a): deterministic scheduling perturbation, opt-in repeated concurrency stress, and docs
+framing TSan/perturbation/stress as evidence rather than proof. **M34 is the active milestone.**
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -30,7 +29,7 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-M33 is in progress on `feat/m33-advanced-concurrency-validation`. To resume it:
+M34 is in progress on `feat/m34-epoll-gateway-architecture`. To resume it:
 
 ```text
 /resume
@@ -57,8 +56,8 @@ gh release view v0.1.0
 
 Current state:
 
-- main tip: `f122ee8` (PR #96, M32)
-- active branch: `feat/m33-advanced-concurrency-validation` (M33 draft PR #97 open; CI/Codex clean)
+- main tip: `fe8679a` (PR #97, M33)
+- active branch: `feat/m34-epoll-gateway-architecture` (M34 in progress)
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
@@ -66,9 +65,9 @@ Current state:
 
 ### Next milestone
 
-M33 — Advanced concurrency validation. Add non-flaky scheduling perturbation or longer stress
-modes, document that TSan/stress are empirical evidence rather than proof, and keep long-running or
-Linux-only validation as explicit opt-in commands rather than normal CI requirements.
+M34 — epoll gateway architecture. Add a Linux event-driven gateway prototype with multi-client
+readiness handling, nonblocking accept/read/write behavior, and preserved deterministic session
+semantics. Keep load/pressure testing for M35.
 
 ### Phase III / IV purpose
 
@@ -81,9 +80,9 @@ networking research.
 Current priority order:
 
 1. Issue #90 — real Linux hardware PMU perf evidence.
-2. M33 — advanced concurrency validation (in progress).
-3. M34 — epoll gateway architecture.
-4. M35 — multi-client socket pressure.
+2. M34 — epoll gateway architecture (in progress).
+3. M35 — multi-client socket pressure.
+4. M36 — NUMA awareness study.
 
 ### Forbidden shortcuts
 

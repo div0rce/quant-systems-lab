@@ -123,9 +123,9 @@ clean checkout on a bare-metal Linux host for a clean-tree version.
 - **Loopback only.** No NIC, device driver, queue discipline, routing, or real-network loss /
   reordering / latency is exercised. Loopback removes exactly the parts that dominate real
   network cost.
-- **Single connection at a time.** The gateway (M9) serves one connection at a time by design;
-  this profiles that design. Event-driven multi-client serving (`epoll`) and multi-client load
-  are intentionally out of M30 scope and tracked as later milestones (M34/M35).
+- **Single connection at a time.** The gateway profiled in M30 serves one connection at a time by
+  design; this artifact profiles that design. M34 adds an `epoll` architecture prototype, but
+  multi-client load and socket-pressure evidence are still M35 scope.
 - **`strace` perturbs timing.** Use Pass 1 (procfs rusage) for the user/kernel CPU split; use
   Pass 2 only for the syscall *mix*.
 - **Synthetic, deterministic flow.** The workload is the repo's seeded synthetic flow, not real

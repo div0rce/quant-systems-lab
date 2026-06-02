@@ -66,14 +66,9 @@ stated plainly so the gap counter is not mistaken for reliability.
 
 ## Intentionally out of scope (and why)
 
-- **`epoll` event-driven gateway.** The gateway serves one connection at a time (M9). An
-  `epoll`-based multi-client server (nonblocking `accept`/`recv`/`send`, `EAGAIN`/`EWOULDBLOCK`
-  handling, bounded event batch, clean shutdown) is a real next step, but it is a Linux-specific
-  API that cannot be compiled or tested on the macOS development host, and adding untested
-  platform-specific code would violate the project's "no untested C++" bar. It is therefore
-  deferred to its own milestone (**M34 — epoll gateway architecture**), with multi-client load
-  and socket-pressure testing in **M35**. M30 deliberately profiles and hardens the *existing*
-  design rather than rewriting it.
+- **Event-driven load evidence.** M34 adds a Linux `epoll` gateway architecture prototype, but
+  M30's socket-profile artifacts still describe the original blocking gateway path. Multi-client
+  load, socket-pressure measurements, and capacity conclusions remain **M35** scope.
 - **`io_uring`.** Discussed only. It could reduce syscall overhead on the gateway path, but it is
   a substantial, kernel-version-sensitive dependency and is not justified by any measured
   bottleneck here. No `io_uring` code exists; none is claimed.

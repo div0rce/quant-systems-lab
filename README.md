@@ -107,9 +107,10 @@ the core numbers above.
 
 - **Synthetic and local.** No real market data, no real venue connectivity, no order types
   beyond limit/market + GTC/IOC.
-- **Networking remains simple.** The TCP gateway is intentionally one-connection-at-a-time; the
-  threaded gateway-engine-feed pipeline is an opt-in correctness prototype, not a production
-  event loop.
+- **Networking remains scoped.** The default TCP gateway is intentionally
+  one-connection-at-a-time; Linux builds also include an opt-in `epoll` gateway prototype for
+  event-driven multi-client readiness. It is architecture validation, not a production event loop
+  or capacity claim.
 - **Benchmarks are microbenchmarks**, not end-to-end or production latency (see above).
 - **Networking is minimal**: loopback TCP order entry and a UDP market-data feed,
   unauthenticated, no TLS, no framing recovery beyond disconnect-on-malformed. The socket path is
