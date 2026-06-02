@@ -18,6 +18,12 @@ All notable changes to this project. The format is loosely based on
 
 ### Documentation
 
+- M31: added an external-review package — `docs/review_request.md` (an adversarial review
+  checklist over SPSC memory ordering, backpressure, threaded ownership, event-log integrity under
+  concurrency, and benchmark/profiling + Linux/socket methodology), `docs/review_feedback.md` (an
+  honest, auditable feedback record stating no external review has occurred yet — no fabricated
+  endorsements), and a `.github/ISSUE_TEMPLATE/review_request.md`. README now states claims are
+  self-certified and links the request. Distinguishes self-certified vs externally-reviewed claims.
 - M30: added `docs/socket_profiling.md` (syscall/rusage + UDP-loss methodology and how to read
   the artifacts) and `docs/socket_hardening.md` (socket defensive posture, the `SO_RCVBUF` knob,
   and what is intentionally out of scope). Recorded ADR 0008 (socket evidence is

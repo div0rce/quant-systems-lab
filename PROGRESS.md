@@ -19,15 +19,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M30 — Kernel/socket path profiling and Linux socket hardening (ready for PR)
+- **Active milestone:** M31 — External review / maintainer signal (ready for PR)
 - **Status:** implementation complete; PR open, awaiting human squash-merge
-- **Active branch:** `feat/m30-socket-profiling-hardening`
-- **Last completed milestone:** M29 — Linux perf profiling workflow and artifacts (squash-merged, PR #89, commit 60bd5ee); post-M29 roadmap/evidence docs sync squash-merged (PR #91, commit 86443f0)
+- **Active branch:** `docs/m31-external-review`
+- **Last completed milestone:** M30 — Kernel/socket path profiling and Linux socket hardening (squash-merged, PR #92, commit 3f88a1f; Codex review converged clean after four rounds of P2 fixes)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M30 verified 187/187 (`make check`) and 187/187 (`make asan`) on 2026-06-02.
-- **Last action:** completed M30 implementation and opened PR #92 (`perf: profile and harden Linux socket path`).
-- **Next action:** human reviews/squash-merges PR #92; then issue #90 (full Linux hardware PMU evidence, PMU-capable host only) or M31 (external review signal).
-- **Blockers:** issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; it is not required for M30. M30 socket artifacts that need real Linux data are Linux-only / constrained-environment, same caveat policy as M29.
+- **`make check` passing:** M31 verified 187/187 (`make check`) on 2026-06-02 (docs-only milestone; no code changed).
+- **Last action:** completed M31 implementation and opened the PR `docs: prepare external review package`.
+- **Next action:** human reviews/squash-merges the M31 PR; then M32 (pool-backed order-book storage experiment) or issue #90 (full Linux hardware PMU evidence, PMU-capable host only).
+- **Blockers:** issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; not required for M31 or M32.
 
 ---
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M30 implementation complete on `feat/m30-socket-profiling-hardening`; PR #92 open (`perf: profile and harden Linux socket path`), awaiting human squash-merge. `make check` 187/187 and `make asan` 187/187 (2026-06-02). Delivered: `SO_RCVBUF` knob on `UdpFeedClient` (+ `qsl-mdfeed` `[rcvbuf_bytes]`/`[orders]` args and a subscriber idle-break); `scripts/profile_gateway_io.sh` (Linux-only, `make profile-io`) and `scripts/socket_stress.sh` (portable, `make socket-stress`); `docs/socket_profiling.md` + `docs/socket_hardening.md` + ADR 0008; constrained loopback artifacts `results/socket_profile_loopback.txt` (Docker Linux) and `results/socket_stress_summary.txt` (native). epoll deferred to M34/M35. Do NOT merge own PR. Clear this block when M30 squash-merges._
+- _M31 implementation complete on `docs/m31-external-review`; PR open (`docs: prepare external review package`), awaiting human squash-merge. Docs-only; `make check` 187/187 (2026-06-02). Delivered: `docs/review_request.md` (adversarial review checklist over the six DoD areas, each linking claim→evidence→questions, plus a self-certified-vs-externally-reviewed status section), `docs/review_feedback.md` (honest record stating no external review yet + field template; no fabricated endorsements), `.github/ISSUE_TEMPLATE/review_request.md`, and a README link. Decision: prepared the issue template rather than opening a live public review issue (DoD allows either) — the human can open the real issue. Clear this block when M31 merges._
 
 
 ---
@@ -254,8 +254,8 @@ Lower priority:
 | M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #87 | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
-| M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ◐ in progress | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
-| M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
+| M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☑ merged | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
+| M31 | External review / maintainer signal | `docs/m31-external-review` | ◐ in progress | — | Review-request checklist + feedback template; no fabricated endorsements |
 | M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☐ not started | — | Integrate pool storage into selected order-book paths and measure engine-level effects |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☐ not started | — | Event-driven multi-client gateway design |
@@ -269,6 +269,8 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-02] M31: started after M30 (#92) squash-merged (commit 3f88a1f). Scope is the external-review package only: a review-request checklist, a review-feedback template, an optional issue template, and a small README link. Non-negotiable: no fabricated endorsements and no claim that review has happened until it has — `review_feedback.md` states plainly that no external review has occurred yet.
+- [2026-06-02] M30: PR #92 squash-merged (commit 3f88a1f) after Codex review converged clean ("Didn't find any major issues") across four rounds of P2 fixes, each verified (happy + negative paths) in containerized Linux and on macOS before re-requesting review: (1) `profile_gateway_io.sh` fails loudly (no artifact) when strace captures no syscall summary; (2) `socket_stress.sh` reports loss as `published − received` (captures end-of-burst tail drops the interior sequence-gap counter misses); (3) `profile_gateway_io.sh` Pass 2 launches the gateway *under* strace (launch form) so tracing works under Yama `ptrace_scope=1` without `CAP_SYS_PTRACE`, stopping the traced gateway with SIGTERM/SIGKILL (never strace) so the `-c` report is flushed; (4) both scripts fail loudly (no artifact) on port conflicts / helper failures.
 - [2026-06-02] M30: started after PR #91 (post-M29 docs sync) squash-merged to main (commit 86443f0). Scope is Linux kernel/socket-path profiling + socket hardening only; M31–M41 are not implemented here. Also corrected the stale HANDOFF.md "Current handoff" block (it still said "M29 is PR #89 and should land"; the review bot flagged this on #91, which merged before the comment was addressed).
 - [2026-06-02] M30: added an optional `SO_RCVBUF` knob to `UdpFeedClient(port, recv_buffer_bytes=0)` that requests the buffer and reads back the kernel-granted size via `getsockopt`; `qsl-mdfeed subscribe` gains `[rcvbuf_bytes]`, `qsl-mdfeed publish` gains `[orders]`, and the subscriber idle-breaks after a few empty receives so burst experiments terminate promptly. Backward-compatible (defaulted param); unit-tested for monotonic effective-size growth.
 - [2026-06-02] M30: `scripts/socket_stress.sh` (`make socket-stress`) is portable (Linux+macOS) — UDP burst + receive-buffer experiment over loopback, multi-trial. Measured on this macOS host: a 2 KiB buffer drops datagrams under a ~16.9k-datagram burst while the OS default (~768 KiB) and an 8 MiB buffer lose nothing. Loss is reported as `published − received` (per-trial, varies run-to-run), not a fixed number.

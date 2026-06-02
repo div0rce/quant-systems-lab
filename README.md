@@ -153,8 +153,11 @@ scripts/       demo + benchmark + fixture/determinism checks
 ## Positioning
 
 This repo is written to be defensible under technical questioning, not to impress with
-claims. Positioning notes and conservative résumé bullets are in
-[docs/recruiting_notes.md](docs/recruiting_notes.md). The build plan is in
+claims. Every claim is currently **self-certified** (no external review has happened yet);
+adversarial technical criticism is explicitly invited — see
+[docs/review_request.md](docs/review_request.md), with the honest, auditable outcome record in
+[docs/review_feedback.md](docs/review_feedback.md). Positioning notes and conservative résumé
+bullets are in [docs/recruiting_notes.md](docs/recruiting_notes.md). The build plan is in
 [MILESTONES.md](MILESTONES.md); incremental decisions are logged in [PROGRESS.md](PROGRESS.md).
 
 Licensed under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the
