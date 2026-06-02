@@ -9,18 +9,21 @@ flowchart LR
     bench[qsl-bench] --> core[Core microbenchmarks]
     bench --> diff[Differential harness benchmarks]
     bench --> pool[Allocator experiment]
+    bench --> storage[Storage experiment]
     core --> latest[results/latest.txt]
     diff --> diffout[results/differential.txt]
     pool --> poolout[results/allocator_experiment.txt]
+    storage --> storageout[results/pool_backed_storage.txt]
     latest --> docs[Benchmark docs]
     diffout --> docs
     poolout --> docs
+    storageout --> docs
 ```
 
 ## Policy
 
-No performance number appears in the README, PROGRESS, résumé bullets, or any doc unless it
-was produced by `make bench` and recorded under `results/`. Benchmark results are
+No performance number appears in the README, PROGRESS, resume bullets, or any doc unless it
+was produced by a committed benchmark target and recorded under `results/`. Benchmark results are
 **hardware-, compiler-, and build-dependent**; the committed `results/latest.txt` records the
 machine and toolchain it came from, and a different machine will produce different numbers.
 
@@ -95,6 +98,14 @@ against a fixed-capacity `OrderPool` acquire/release path and writes full metada
 
 ```bash
 make bench-allocator   # runs qsl-bench pool, writes results/allocator_experiment.txt
+```
+
+The M32 storage experiment is separate from the M28 allocator microbenchmark. It replays the same
+deterministic engine flow through baseline order-book storage and PMR-backed container-node
+allocation:
+
+```bash
+make bench-storage   # runs qsl-bench storage, writes results/pool_backed_storage.txt
 ```
 
 ## What these numbers do and do not prove

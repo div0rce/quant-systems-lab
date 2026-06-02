@@ -7,6 +7,14 @@ All notable changes to this project. The format is loosely based on
 
 ### Added
 
+- M32: `OrderBook::Storage::{Baseline,Pooled}` and `MatchingEngine(OrderBook::Storage)` for a
+  scoped PMR-backed order-book node-allocation experiment. `Storage::Pooled` routes per-book
+  `std::list`, `std::map`, and `std::unordered_map` node allocation through
+  `std::pmr::unsynchronized_pool_resource`; baseline storage remains the default.
+- M32: `make bench-storage` / `scripts/run_storage_benchmarks.sh` / `qsl-bench storage`, an
+  engine-level benchmark comparing baseline order-book storage against PMR pooled node allocation.
+- M32: issue #95 tracks the separate future intrusive/custom-node `OrderPool<Capacity>`
+  integration path.
 - M30: optional UDP receive-buffer (`SO_RCVBUF`) sizing on the market-data client, with the
   granted size read back via `getsockopt`. `qsl-mdfeed subscribe` gains a `[rcvbuf_bytes]`
   argument and `qsl-mdfeed publish` an `[orders]` burst-size argument.
@@ -18,6 +26,9 @@ All notable changes to this project. The format is loosely based on
 
 ### Documentation
 
+- M32: added `docs/pool_backed_storage.md` and ADR 0009 to distinguish M28 raw-object pool
+  mechanics, M32 PMR container-node allocation, and the future intrusive/custom-node order-book
+  redesign. Added `results/pool_backed_storage.txt` as the measured engine-level artifact.
 - M31: added an external-review package — `docs/review_request.md` (an adversarial review
   checklist over SPSC memory ordering, backpressure, threaded ownership, event-log integrity under
   concurrency, and benchmark/profiling + Linux/socket methodology), `docs/review_feedback.md` (an

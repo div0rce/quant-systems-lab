@@ -1297,10 +1297,15 @@ Current state:
 - PR #88 did not integrate pool storage into the order-book implementation.
 - Matching engine storage architecture is unchanged.
 - M28 evidence is allocator evidence, not engine-storage evidence.
+- The current order book uses `std::list<Order>` plus `std::map` and `std::unordered_map`.
+  `std::list<Order>` allocates implementation-defined list nodes, not bare `engine::Order`
+  objects, so direct `OrderPool<Capacity>` integration would require an intrusive/custom-node
+  redesign.
 
 Future work:
 
-- integrate pool-backed storage into selected order-book paths;
+- integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator
+  experiment;
 - measure end-to-end matching workloads;
 - evaluate cache-locality effects;
 - evaluate replay impact;
@@ -1321,16 +1326,19 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 ### Scope
 
-- Integrate pool storage into selected order-book paths.
+- Integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator
+  experiment.
+- Keep direct M28 `OrderPool<Capacity>` integration out of scope; that requires an
+  intrusive/custom-node order-book redesign.
 - Benchmark engine-level workloads against the baseline storage.
 - Analyze cache locality and replay impact.
-- Compare against arena, intrusive, and flat-container alternatives at the documentation level unless
-  a small implementation comparison is justified.
+- Compare against arena, intrusive, and flat-container alternatives at the documentation level.
 - Document results even if negative.
 
 ### Definition of Done
 
 - [ ] Pool-backed storage path is scoped and reversible.
+- [ ] Direct intrusive/custom-node `OrderPool<Capacity>` storage is tracked separately.
 - [ ] Baseline vs integrated engine workload measurements are produced by committed scripts.
 - [ ] Results document cache/locality/replay effects and limitations.
 - [ ] No README/resume claim unless supported by the measured artifact.
