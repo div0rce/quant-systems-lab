@@ -20,13 +20,13 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M34 — epoll gateway architecture (in progress)
-- **Status:** in progress
+- **Status:** draft PR open (#98); local verification passed
 - **Active branch:** `feat/m34-epoll-gateway-architecture`
 - **Last completed milestone:** M33 — Advanced concurrency validation (squash-merged, PR #97, commit fe8679a; Codex review clean — no major issues; CI green)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** last verified on M34 (190/190) on 2026-06-02; `make asan` also passed 190/190. Linux Docker verification built `qsl-gateway`/`test_epoll_gateway` and passed 3 epoll tests / 36 assertions.
-- **Last action:** implemented M34 `EpollServer`, `qsl-gateway --epoll`, Linux-gated epoll tests, socket-gateway docs, and ADR 0010.
-- **Next action:** commit, push, open the M34 PR, and request Codex review.
+- **Last action:** opened draft PR #98 for M34 after local and Docker Linux verification passed.
+- **Next action:** trigger Codex review and monitor PR #98 CI; do not merge.
 - **Blockers:** none for M34 on Linux-targeted code paths; issue #90 remains blocked on PMU-capable Linux access; issue #95 remains future intrusive/custom-node storage.
 
 ---
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M34 implementation is locally verified on `feat/m34-epoll-gateway-architecture`: added Linux `EpollServer`, `qsl-gateway --epoll`, Linux-gated two-client epoll tests, socket-gateway docs, and ADR 0010. Verification: `make check` 190/190, `make asan` 190/190, `git diff --check`, and Docker Ubuntu Linux build/test of `qsl-gateway` + `test_epoll_gateway` (3 tests / 36 assertions). Next step: commit, push, open PR, and request Codex review. Clear this block when M34 merges._
+- _M34 draft PR #98 is open on `feat/m34-epoll-gateway-architecture`: added Linux `EpollServer`, `qsl-gateway --epoll`, Linux-gated two-client epoll tests, socket-gateway docs, and ADR 0010. Verification: `make check` 190/190, `make asan` 190/190, `git diff --check`, and Docker Ubuntu Linux build/test of `qsl-gateway` + `test_epoll_gateway` (3 tests / 36 assertions). Next: trigger Codex review and monitor CI; do not merge. Clear this block when M34 merges._
 
 
 ---
@@ -258,7 +258,7 @@ Lower priority:
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☑ merged | #93 | Review-request checklist + feedback template; review request opened as issue #94 |
 | M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☑ merged | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
-| M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ◐ in progress | — | Event-driven multi-client gateway design |
+| M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ◐ draft PR | #98 | Event-driven multi-client gateway design |
 | M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☐ not started | — | TCP/UDP stress, buffer pressure, backpressure investigation |
 | M36 | NUMA awareness study | `feat/m36-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
 | M37 | Lock-free ingress pipeline | `feat/m37-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
@@ -273,6 +273,7 @@ Lower priority:
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
 - [2026-06-02] M34: local verification passed: `make check` 190/190, `make asan` 190/190, `git diff --check`, and Docker Ubuntu Linux `test_epoll_gateway` 3 tests / 36 assertions.
+- [2026-06-02] M34: opened draft PR #98; do not merge from the automation side.
 - [2026-06-02] M33: PR #97 squash-merged (commit fe8679a); CI passed all 6 jobs and Codex review found no major issues. M33 delivered deterministic pipeline scheduling perturbation, opt-in repeated concurrency stress, and docs framing TSan/perturbation/stress as evidence rather than proof.
 - [2026-06-02] M33: started after M32 (#96) squash-merged (commit f122ee8). Scope: advanced concurrency validation only — deterministic scheduling perturbation and/or longer stress modes, stronger concurrency methodology docs, opt-in long-running/Linux checks where appropriate. Do not claim proof; TSan and stress tests remain dynamic evidence over executed schedules.
 - [2026-06-02] M33: added deterministic `PipelinePerturbation` yield hooks to the threaded pipeline and a regression test that compares perturbed pipeline output against the single-threaded reference across seeded property flows, queue capacities, and per-stage yield patterns.

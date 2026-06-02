@@ -16,7 +16,8 @@ Keep all four in the repo root.
 
 The repo is released at `v0.1.0`. M0–M33 are merged. Most recently M33 = PR #97 (squash commit
 fe8679a): deterministic scheduling perturbation, opt-in repeated concurrency stress, and docs
-framing TSan/perturbation/stress as evidence rather than proof. **M34 is the active milestone.**
+framing TSan/perturbation/stress as evidence rather than proof. **M34 is the active milestone and
+draft PR #98 is open.**
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -57,7 +58,7 @@ gh release view v0.1.0
 Current state:
 
 - main tip: `fe8679a` (PR #97, M33)
-- active branch: `feat/m34-epoll-gateway-architecture` (M34 in progress)
+- active branch: `feat/m34-epoll-gateway-architecture` (M34 draft PR #98 open)
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
