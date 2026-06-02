@@ -90,15 +90,22 @@ Do not merge or describe those artifacts as full hardware-counter evidence.
 
 ## What To Look For
 
-The benchmark harness mixes order-book operations, protocol codec work, gateway/session handling,
-matching flow application, replay, and M28's allocator experiment. A useful profile should separate
-where time is spent instead of treating the aggregate number as one result:
+The default `make perf-stat` and `make perf-record` targets profile the default `qsl-bench`
+synthetic suite: order-book operations, protocol codec work, gateway/session handling, matching
+flow application, and replay. They do not profile the separate differential harness
+(`qsl-bench diff` / `make bench-diff`) or the M28 allocator experiment (`qsl-bench pool` /
+`make bench-allocator`).
+
+A useful profile should separate where time is spent instead of treating the aggregate number as
+one result:
 
 - order-book scenarios should make tree/list operations and matching paths visible;
 - protocol scenarios should make encode/decode helpers visible;
-- replay and differential scenarios should show command dispatch, gateway checks, and engine apply
-  paths;
-- allocator experiments should show allocation mechanics separately from matching semantics.
+- replay scenarios should show command dispatch, gateway checks, and engine apply paths.
+
+Do not use the default M29 perf artifacts to draw conclusions about differential-replay or
+allocator hot paths. Those workloads need their own explicit perf run before they can support
+optimization work.
 
 M29 deliberately does not optimize anything based on these reports. Any future optimization should
 first point to a concrete hot path in `perf report`, then add a separate benchmark or regression
@@ -108,4 +115,4 @@ check that proves the change helped on the stated machine.
 
 These profiles are machine-specific. They do not prove production latency, network behavior, or
 kernel/socket-path performance. M30 is reserved for socket and kernel-path profiling; M29 only
-profiles the existing benchmark harness.
+profiles the default benchmark harness.
