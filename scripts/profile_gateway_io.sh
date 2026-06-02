@@ -95,8 +95,11 @@ cleanup() {
 trap cleanup EXIT
 
 wait_ready() {
-    local port="$1" i
+    local port="$1" pid="$2" i
     for i in $(seq 1 100); do
+        # If the process we launched has already exited (e.g. its bind failed because the port is
+        # in use), stop: a successful connect would be to an unrelated listener, not our gateway.
+        kill -0 "$pid" 2>/dev/null || return 1
         if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
             exec 3>&- 3<&-
             return 0
@@ -162,8 +165,15 @@ stop_strace_pass() {
 CLK="$(getconf CLK_TCK 2>/dev/null || echo 100)"
 "$GATEWAY" "$PORT" >/dev/null 2>&1 &
 GW_PID=$!
-if wait_ready "$PORT"; then
+if wait_ready "$PORT" "$GW_PID"; then
     drive_load "$PORT" "$CONNECTIONS"
+    # Confirm our gateway is still the process on this port before recording its procfs data; a
+    # dead PID here means the port was held by something else (our bind failed) or it crashed.
+    if ! kill -0 "$GW_PID" 2>/dev/null; then
+        echo "error: gateway is not alive before recording procfs (is port $PORT already in use, or did it crash?)." >&2
+        stop_gateway
+        exit 3
+    fi
     stat_line="$(cat "/proc/$GW_PID/stat" 2>/dev/null || true)"
     status_blob="$(cat "/proc/$GW_PID/status" 2>/dev/null || true)"
     # /proc/<pid>/stat: strip "pid (comm) "; remaining fields start at 'state' (field 3).
@@ -195,8 +205,10 @@ stop_gateway
 # TIME_WAIT on the first port.
 strace -f -c -o "$STRACE_OUT" "$GATEWAY" "$((PORT + 1))" >/dev/null 2>"$STRACE_ERR" &
 STRACE_PID=$!
-if ! wait_ready "$((PORT + 1))"; then
-    echo "error: gateway did not become ready for the strace pass on port $((PORT + 1))." >&2
+# wait_ready watches STRACE_PID: if the traced gateway's bind fails (port in use), it exits and
+# strace exits with it, so readiness fails instead of connecting to an unrelated listener.
+if ! wait_ready "$((PORT + 1))" "$STRACE_PID"; then
+    echo "error: gateway did not become ready for the strace pass on port $((PORT + 1)) (already in use?)." >&2
     stop_strace_pass
     exit 3
 fi
@@ -205,14 +217,17 @@ stop_strace_pass # stop the traced gateway -> strace writes its -c summary and e
 STRACE_RC=0
 wait "$STRACE_PID" 2>/dev/null || STRACE_RC=$?
 STRACE_PID=""
-# strace must have produced a real syscall summary (a "total" row). An empty/absent summary --
-# e.g. strace could not trace at all -- is a failure, not a successful artifact with an empty
-# syscall section, so fail loudly and leave any previously committed artifact untouched. The
-# summary content is the signal, not STRACE_RC: a clean stop can interrupt strace with SIGINT,
-# which yields a nonzero exit while still flushing a valid -c report.
-if ! grep -qw total "$STRACE_OUT" 2>/dev/null; then
-    echo "error: strace captured no syscall summary (strace rc=$STRACE_RC); refusing to write a misleading artifact." >&2
-    echo "       Ensure strace can trace its child (it is launched as strace's descendant) and re-run." >&2
+# strace must have produced a real summary AND it must show the gateway actually serving the load
+# (accept + sendto/write). A "total" row alone is not enough: if the gateway died at bind (port
+# conflict) strace still records its startup syscalls, which would be a misleading "successful"
+# artifact with no serving activity. The summary content is the signal, not STRACE_RC (a clean
+# stop can terminate the tracee by signal, yielding a nonzero strace exit with a valid report).
+if ! grep -qw total "$STRACE_OUT" 2>/dev/null \
+    || ! grep -qE '(^|[[:space:]])accept' "$STRACE_OUT" 2>/dev/null \
+    || ! grep -qE '(^|[[:space:]])(sendto|write)\b' "$STRACE_OUT" 2>/dev/null; then
+    echo "error: strace summary lacks the gateway's serving syscalls (accept + sendto/write)." >&2
+    echo "       The gateway likely did not serve the load (port $((PORT + 1)) in use, strace could" >&2
+    echo "       not trace, or it crashed). Refusing to write a misleading artifact (strace rc=$STRACE_RC)." >&2
     if [[ -s "$STRACE_ERR" ]]; then
         echo "       strace stderr:" >&2
         sed 's/^/         /' "$STRACE_ERR" >&2 || true

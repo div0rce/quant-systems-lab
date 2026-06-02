@@ -6,22 +6,21 @@ CPU:
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 strace:      strace -- version 6.8
 CLK_TCK:     100
-Git commit:  cc49ea1
+Git commit:  62ed01a
 Dirty tree:  yes
 Transport:   TCP over 127.0.0.1 (loopback), one connection at a time
 Load:        300 sequential client round trips (NewOrder + Heartbeat each)
-Date:        2026-06-02T15:02:33Z
+Date:        2026-06-02T15:26:41Z
 
 == Pass 1: gateway rusage from procfs (user vs system CPU, ctx switches, page faults) ==
 User (engine-side) vs System (kernel/socket) CPU time splits user-space matching work
 from time spent in the kernel servicing accept/read/write/close on the socket path.
 
 User (engine-side) CPU time:   0.000 s  (0 ticks)
-System (kernel/socket) CPU time: 0.010 s  (1 ticks)
-System share of CPU:           100.0%
-Minor page faults: 222    Major page faults: 0
+System (kernel/socket) CPU time: 0.000 s  (0 ticks)
+Minor page faults: 221    Major page faults: 0
 VmHWM:	    3284 kB
-voluntary_ctxt_switches:	304
+voluntary_ctxt_switches:	310
 nonvoluntary_ctxt_switches:	0
 
 == Pass 2: strace -f -c (syscall mix on the gateway socket path) ==
@@ -30,31 +29,31 @@ syscall *mix* (which calls dominate the socket path), not the absolute seconds.
 
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
- 25.33    0.004378          14       306           close
- 23.07    0.003988           6       605           read
- 23.07    0.003988          13       302         1 accept
- 21.87    0.003781          12       300           sendto
-  1.79    0.000310          17        18           mmap
-  1.47    0.000254         254         1           execve
-  0.85    0.000147          29         5           openat
-  0.71    0.000123          13         9           munmap
-  0.71    0.000123          12        10           mprotect
-  0.38    0.000065          10         6           fstat
-  0.10    0.000018          18         1           rseq
-  0.10    0.000017          17         1           socket
-  0.08    0.000013          13         1         1 faccessat
-  0.08    0.000013          13         1           bind
-  0.07    0.000012          12         1           set_tid_address
-  0.06    0.000011          11         1           set_robust_list
+ 24.89    0.004347          14       306           close
+ 24.02    0.004195          13       302         1 accept
+ 22.07    0.003856           6       605           read
+ 21.42    0.003741          12       300           sendto
+  2.51    0.000438          24        18           mmap
+  1.37    0.000239          23        10           mprotect
+  1.14    0.000200          40         5           openat
+  0.89    0.000156          17         9           munmap
+  0.59    0.000103          17         6           fstat
+  0.25    0.000043          43         1           socket
+  0.13    0.000023          23         1           bind
+  0.10    0.000017          17         1           execve
+  0.09    0.000016          16         1           set_tid_address
+  0.09    0.000016          16         1           rseq
+  0.09    0.000015          15         1           set_robust_list
+  0.08    0.000014          14         1           setsockopt
+  0.07    0.000013          13         1         1 faccessat
   0.06    0.000011           3         3           brk
-  0.06    0.000010          10         1           futex
-  0.05    0.000008           8         1           listen
-  0.04    0.000007           7         1           prlimit64
-  0.03    0.000005           5         1         1 ioctl
-  0.02    0.000004           4         1           setsockopt
+  0.06    0.000010          10         1         1 ioctl
+  0.05    0.000008           8         1           prlimit64
+  0.04    0.000007           7         1           listen
+  0.00    0.000000           0         1           futex
   0.00    0.000000           0         1           getrandom
 ------ ----------- ----------- --------- --------- ----------------
-100.00    0.017286          10      1577         3 total
+100.00    0.017468          11      1577         3 total
 
 Caveats:
 - Loopback only: no NIC, device driver, routing, or real-network behaviour is exercised.

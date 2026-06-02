@@ -70,34 +70,50 @@ DIRTY="$(dirty_tree_status)"
 run_case() {
     local label="$1" req_buf="$2" port="$3"
     local effective="?" published="?" loss_csv="" max_loss=0 gaps_csv=""
-    local t sub_out pub_out gaps eff pub rcv loss
+    local t sub_out pub_out gaps eff pub rcv loss sub_pid sub_rc pub_rc
     for ((t = 0; t < TRIALS; t++)); do
         sub_out="$(mktemp)"
         pub_out="$(mktemp)"
         "$BIN" subscribe "$port" 1000000 "$req_buf" >"$sub_out" 2>&1 &
-        local sub_pid=$!
+        sub_pid=$!
         sleep 0.5
-        "$BIN" publish "$port" "$SEED" "$ORDERS" >"$pub_out" 2>&1 || true
-        wait "$sub_pid" 2>/dev/null || true
+        pub_rc=0
+        "$BIN" publish "$port" "$SEED" "$ORDERS" >"$pub_out" 2>&1 || pub_rc=$?
+        sub_rc=0
+        wait "$sub_pid" || sub_rc=$?
+
+        # A failed helper (e.g. the trial port is already in use, so the subscriber cannot bind)
+        # must fail the run, not silently record '?' fields in a successful-looking artifact.
+        if [[ "$sub_rc" -ne 0 || "$pub_rc" -ne 0 ]]; then
+            echo "error: socket-stress '$label' trial on port $port: helper failed (subscribe rc=$sub_rc, publish rc=$pub_rc); is the port already in use?" >&2
+            sed 's/^/  subscribe: /' "$sub_out" >&2 || true
+            sed 's/^/  publish:   /' "$pub_out" >&2 || true
+            rm -f "$sub_out" "$pub_out"
+            return 1
+        fi
 
         pub="$(grep -oE 'md_seq up to [0-9]+' "$pub_out" | grep -oE '[0-9]+' | tail -1 || true)"
         rcv="$(grep -oE 'received [0-9]+ datagrams' "$sub_out" | grep -oE '[0-9]+' | tail -1 || true)"
         gaps="$(grep -oE 'total gaps detected: [0-9]+' "$sub_out" | grep -oE '[0-9]+' | tail -1 || true)"
         eff="$(grep -oE 'SO_RCVBUF=[0-9]+' "$sub_out" | grep -oE '[0-9]+' | tail -1 || true)"
-        [[ -n "$pub" ]] && published="$pub"
-        [[ -n "$eff" ]] && effective="$eff"
+
+        # The expected summary fields must all be present, otherwise the trial did not produce a
+        # valid measurement and we refuse to write a misleading artifact.
+        if [[ ! "$pub" =~ ^[0-9]+$ || ! "$rcv" =~ ^[0-9]+$ || ! "$eff" =~ ^[0-9]+$ ]]; then
+            echo "error: socket-stress '$label' trial on port $port produced no usable measurement (published='$pub' received='$rcv' SO_RCVBUF='$eff'); refusing to write a misleading artifact." >&2
+            rm -f "$sub_out" "$pub_out"
+            return 1
+        fi
+        published="$pub"
+        effective="$eff"
         # Total loss = published - received. This is the honest loss metric: it counts TAIL drops
         # (datagrams dropped at the end of the burst), which the sequence-gap counter cannot see
         # because no later datagram arrives to reveal the missing sequence number.
-        if [[ "$pub" =~ ^[0-9]+$ && "$rcv" =~ ^[0-9]+$ ]]; then
-            loss=$((pub - rcv))
-            ((loss < 0)) && loss=0
-        else
-            loss="?"
-        fi
+        loss=$((pub - rcv))
+        ((loss < 0)) && loss=0
         loss_csv="${loss_csv:+$loss_csv,}$loss"
-        gaps_csv="${gaps_csv:+$gaps_csv,}${gaps:-?}"
-        if [[ "$loss" =~ ^[0-9]+$ ]] && ((loss > max_loss)); then max_loss="$loss"; fi
+        gaps_csv="${gaps_csv:+$gaps_csv,}${gaps:-0}"
+        ((loss > max_loss)) && max_loss="$loss"
 
         rm -f "$sub_out" "$pub_out"
         port=$((port + 1))
@@ -105,10 +121,11 @@ run_case() {
     printf '%s|%s|%s|%s|%s|%s|%s\n' "$label" "$req_buf" "$effective" "$published" "$loss_csv" "$max_loss" "$gaps_csv"
 }
 
-# Wide port spacing per setting so retries never collide across trials.
-SMALL_LINE="$(run_case "small" "$SMALL_BUF" "$PORT_BASE")"
-DEFAULT_LINE="$(run_case "default" 0 "$((PORT_BASE + 20))")"
-LARGE_LINE="$(run_case "large" "$LARGE_BUF" "$((PORT_BASE + 40))")"
+# Wide port spacing per setting so retries never collide across trials. A failed trial (helper
+# error or missing fields) aborts the run rather than writing a misleading artifact.
+SMALL_LINE="$(run_case "small" "$SMALL_BUF" "$PORT_BASE")" || exit 1
+DEFAULT_LINE="$(run_case "default" 0 "$((PORT_BASE + 20))")" || exit 1
+LARGE_LINE="$(run_case "large" "$LARGE_BUF" "$((PORT_BASE + 40))")" || exit 1
 
 TMP_OUT="$(mktemp)"
 {

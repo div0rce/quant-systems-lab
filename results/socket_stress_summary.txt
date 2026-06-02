@@ -3,12 +3,12 @@ Artifact:    UDP socket-buffer / burst-loss experiment (loopback, constrained)
 Hardware:    arm64
 OS:          Darwin 25.2.0
 Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
-Git commit:  551a9c5
+Git commit:  62ed01a
 Dirty tree:  yes
 Transport:   UDP unicast over 127.0.0.1 (loopback)
 Dataset:     qsl-mdfeed publish, seed 42, 20000 orders, 3 symbols
 Trials/setting: 4
-Date:        2026-06-02T14:39:28Z
+Date:        2026-06-02T15:25:02Z
 
 Setup: one publisher bursts every market-data datagram back-to-back (no pacing); one
 subscriber drains them and reports how many it received. The only variable is the
@@ -17,7 +17,7 @@ clamp the request, so the effective (granted) size is read back via getsockopt.
 
 setting  requested(B) effective(B)  published  lost/trial      maxlost  seq-gaps/trial 
 -------  ------------ ------------  ---------  ----------      -------  -------------- 
-small            2048         2048      16931  1150,0,312,15      1150  1150,0,312,15  
+small            2048         2048      16931  6,0,0,0               6  6,0,0,0        
 default             0       786896      16931  0,0,0,0               0  0,0,0,0        
 large         8388608      8388608      16931  0,0,0,0               0  0,0,0,0        
 
