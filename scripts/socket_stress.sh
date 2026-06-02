@@ -4,8 +4,9 @@
 # Sends a deterministic burst of market-data datagrams over loopback (qsl-mdfeed publish) and
 # receives them with the gap-tracking client (qsl-mdfeed subscribe) under three receive-buffer
 # (SO_RCVBUF) settings: a small request, the OS default, and a large request. For each setting it
-# runs several trials and reports how many datagrams were published, the effective buffer the
-# kernel granted, and the sequence gaps (kernel drops) detected per trial.
+# runs several trials and reports datagrams published, the effective buffer the kernel granted,
+# the loss per trial (published minus received -- this counts tail drops), and the interior
+# sequence-gap count (which by itself misses datagrams dropped at the end of the burst).
 #
 # Portable: runs on Linux and macOS (BSD sockets). UDP has no retransmit, so loss is detected,
 # not recovered. Results are LOOPBACK-ONLY and timing/OS/load dependent -- they demonstrate the
@@ -68,8 +69,8 @@ DIRTY="$(dirty_tree_status)"
 #   "<label>|<requested>|<effective>|<published>|<gaps_csv>|<max_gaps>"
 run_case() {
     local label="$1" req_buf="$2" port="$3"
-    local effective="?" published="?" gaps_csv="" max_gaps=0
-    local t sub_out pub_out gaps eff pub
+    local effective="?" published="?" loss_csv="" max_loss=0 gaps_csv=""
+    local t sub_out pub_out gaps eff pub rcv loss
     for ((t = 0; t < TRIALS; t++)); do
         sub_out="$(mktemp)"
         pub_out="$(mktemp)"
@@ -80,18 +81,28 @@ run_case() {
         wait "$sub_pid" 2>/dev/null || true
 
         pub="$(grep -oE 'md_seq up to [0-9]+' "$pub_out" | grep -oE '[0-9]+' | tail -1 || true)"
+        rcv="$(grep -oE 'received [0-9]+ datagrams' "$sub_out" | grep -oE '[0-9]+' | tail -1 || true)"
         gaps="$(grep -oE 'total gaps detected: [0-9]+' "$sub_out" | grep -oE '[0-9]+' | tail -1 || true)"
         eff="$(grep -oE 'SO_RCVBUF=[0-9]+' "$sub_out" | grep -oE '[0-9]+' | tail -1 || true)"
         [[ -n "$pub" ]] && published="$pub"
         [[ -n "$eff" ]] && effective="$eff"
-        gaps="${gaps:-?}"
-        gaps_csv="${gaps_csv:+$gaps_csv,}$gaps"
-        if [[ "$gaps" =~ ^[0-9]+$ ]] && ((gaps > max_gaps)); then max_gaps="$gaps"; fi
+        # Total loss = published - received. This is the honest loss metric: it counts TAIL drops
+        # (datagrams dropped at the end of the burst), which the sequence-gap counter cannot see
+        # because no later datagram arrives to reveal the missing sequence number.
+        if [[ "$pub" =~ ^[0-9]+$ && "$rcv" =~ ^[0-9]+$ ]]; then
+            loss=$((pub - rcv))
+            ((loss < 0)) && loss=0
+        else
+            loss="?"
+        fi
+        loss_csv="${loss_csv:+$loss_csv,}$loss"
+        gaps_csv="${gaps_csv:+$gaps_csv,}${gaps:-?}"
+        if [[ "$loss" =~ ^[0-9]+$ ]] && ((loss > max_loss)); then max_loss="$loss"; fi
 
         rm -f "$sub_out" "$pub_out"
         port=$((port + 1))
     done
-    printf '%s|%s|%s|%s|%s|%s\n' "$label" "$req_buf" "$effective" "$published" "$gaps_csv" "$max_gaps"
+    printf '%s|%s|%s|%s|%s|%s|%s\n' "$label" "$req_buf" "$effective" "$published" "$loss_csv" "$max_loss" "$gaps_csv"
 }
 
 # Wide port spacing per setting so retries never collide across trials.
@@ -119,25 +130,27 @@ TMP_OUT="$(mktemp)"
     echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo
     echo "Setup: one publisher bursts every market-data datagram back-to-back (no pacing); one"
-    echo "subscriber drains them while detecting sequence gaps. The only variable is the"
+    echo "subscriber drains them and reports how many it received. The only variable is the"
     echo "subscriber's requested SO_RCVBUF. Requested 0 = OS default; the kernel may round up or"
     echo "clamp the request, so the effective (granted) size is read back via getsockopt."
     echo
-    printf '%-9s %13s %13s %11s  %-20s %8s\n' \
-        "setting" "requested(B)" "effective(B)" "published" "gaps/trial" "max"
-    printf '%-9s %13s %13s %11s  %-20s %8s\n' \
-        "-------" "------------" "------------" "---------" "----------" "---"
+    printf '%-8s %12s %12s %10s  %-15s %7s  %-15s\n' \
+        "setting" "requested(B)" "effective(B)" "published" "lost/trial" "maxlost" "seq-gaps/trial"
+    printf '%-8s %12s %12s %10s  %-15s %7s  %-15s\n' \
+        "-------" "------------" "------------" "---------" "----------" "-------" "--------------"
     for line in "$SMALL_LINE" "$DEFAULT_LINE" "$LARGE_LINE"; do
-        IFS='|' read -r label req eff pub gaps_csv maxg <<<"$line"
-        printf '%-9s %13s %13s %11s  %-20s %8s\n' "$label" "$req" "$eff" "$pub" "$gaps_csv" "$maxg"
+        IFS='|' read -r label req eff pub loss_csv maxl gaps_csv <<<"$line"
+        printf '%-8s %12s %12s %10s  %-15s %7s  %-15s\n' "$label" "$req" "$eff" "$pub" "$loss_csv" "$maxl" "$gaps_csv"
     done
     echo
-    echo "Reading the result: a too-small receive buffer overflows during the burst and the"
-    echo "kernel silently drops datagrams, which the sequence tracker reports as gaps. The OS"
-    echo "default and larger buffers absorb the same burst with little or no loss. Because UDP"
-    echo "loss is timing/OS/load dependent, gap counts vary between trials and runs -- a small"
-    echo "buffer does not lose on every trial. The mechanism (SO_RCVBUF bounds in-kernel"
-    echo "queueing, so an undersized buffer drops under burst) is the point, not a fixed number."
+    echo "Reading the result: 'lost/trial' is the honest loss metric -- published minus received"
+    echo "-- so it counts TAIL drops too. 'seq-gaps/trial' is the SequenceTracker count, which"
+    echo "sees only INTERIOR gaps: a datagram dropped at the very end of the burst has no later"
+    echo "datagram to reveal a missing sequence number, so a trial can show real loss with zero"
+    echo "sequence gaps. A too-small receive buffer overflows under the burst and the kernel drops"
+    echo "datagrams; the OS default and larger buffers absorb the same burst with little or no"
+    echo "loss. Loss is timing/OS/load dependent, so per-trial counts vary run-to-run -- the"
+    echo "mechanism (SO_RCVBUF bounds in-kernel queueing) is the point, not a fixed number."
     echo
     echo "Caveats:"
     echo "- Loopback only: no NIC, driver, routing, or real-network loss is exercised."

@@ -70,23 +70,28 @@ the actual run.
 Artifact: [`results/socket_stress_summary.txt`](../results/socket_stress_summary.txt).
 
 `qsl-mdfeed publish` bursts every market-data datagram of a deterministic synthetic flow
-back-to-back with no pacing; `qsl-mdfeed subscribe` drains them while the `SequenceTracker`
-counts gaps (missed sequence numbers). The single independent variable is the subscriber's
-requested `SO_RCVBUF`: a small request, the OS default, and a large request. The kernel may
-round up (Linux roughly doubles) or clamp the request to a system maximum, so the **effective**
-granted size is read back with `getsockopt` and reported alongside the request. Each setting is
-run over several trials.
+back-to-back with no pacing; `qsl-mdfeed subscribe` drains them and reports how many it received.
+The authoritative loss metric is **`published − received`**, which also counts datagrams dropped
+at the *end* of the burst; the `SequenceTracker` count is reported separately as **interior**
+gaps only. The single independent variable is the subscriber's requested `SO_RCVBUF`: a small
+request, the OS default, and a large request. The kernel may round up (Linux roughly doubles) or
+clamp the request to a system maximum, so the **effective** granted size is read back with
+`getsockopt` and reported alongside the request. Each setting is run over several trials.
 
 ### Reading it
 
 A too-small receive buffer overflows during the burst and the kernel **silently drops**
-datagrams, which surface as sequence gaps. The OS default and larger buffers absorb the same
-burst with little or no loss. Because UDP loss is timing/OS/load dependent, gap counts vary
-between trials and runs — a small buffer does **not** lose on every trial. The mechanism
-(`SO_RCVBUF` bounds in-kernel queueing, so an undersized buffer drops under burst) is the point,
-not any specific number. A representative loopback run on the development machine showed
-intermittent loss only at the smallest buffer (single-digit gaps on some trials) and zero loss
-at the default and large buffers; the committed artifact records the actual run.
+datagrams. Read `published − received` (the `lost/trial` column) as the true loss: a datagram
+dropped at the very end of the burst leaves no later sequence number to reveal it, so the
+interior `seq-gaps` count can read 0 even when datagrams were lost — which is exactly why the
+artifact reports loss as `published − received` and treats the sequence-gap count as a secondary,
+interior-only signal. The OS default and larger buffers absorb the same burst with little or no
+loss. Because UDP loss is timing/OS/load dependent, per-trial counts vary between trials and runs
+— a small buffer does **not** lose on every trial — so the mechanism (`SO_RCVBUF` bounds
+in-kernel queueing) is the point, not any specific number. A representative loopback run on the
+development machine showed loss only at the smallest buffer (from a handful to ~a thousand
+datagrams across trials) and none at the default and large buffers; the committed artifact
+records the actual run.
 
 This directly motivates the receive-buffer tuning knob documented in
 [`socket_hardening.md`](socket_hardening.md#receive-buffer-sizing-so_rcvbuf).

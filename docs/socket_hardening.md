@@ -51,8 +51,9 @@ explicit UdpFeedClient(std::uint16_t port, int recv_buffer_bytes = 0);
 - `qsl-mdfeed subscribe <port> [count] [rcvbuf_bytes]` exposes the knob.
 
 The [`make socket-stress`](socket_profiling.md#udp-socket-buffer--burst-loss-experiment-make-socket-stress)
-experiment measures the effect: an undersized buffer drops datagrams under burst (sequence gaps
-appear), while the default and larger buffers absorb the same burst. This is the honest,
+experiment measures the effect: an undersized buffer drops datagrams under burst (measured as
+`published − received`, which also captures end-of-burst tail drops the sequence-gap counter
+misses), while the default and larger buffers absorb the same burst. This is the honest,
 measured justification for the knob — not a guess.
 
 ### Loss model: detected, not recovered
