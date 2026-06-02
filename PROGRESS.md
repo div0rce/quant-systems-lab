@@ -25,7 +25,7 @@ Do not rely on prior chat memory.
 - **Last completed milestone:** M30 — Kernel/socket path profiling and Linux socket hardening (squash-merged, PR #92, commit 3f88a1f; Codex review converged clean after four rounds of P2 fixes)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** M31 verified 187/187 (`make check`) on 2026-06-02 (docs-only milestone; no code changed).
-- **Last action:** completed M31 implementation and opened the PR `docs: prepare external review package`.
+- **Last action:** completed M31 implementation and opened PR #93 (`docs: prepare external review package`).
 - **Next action:** human reviews/squash-merges the M31 PR; then M32 (pool-backed order-book storage experiment) or issue #90 (full Linux hardware PMU evidence, PMU-capable host only).
 - **Blockers:** issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; not required for M31 or M32.
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M31 implementation complete on `docs/m31-external-review`; PR open (`docs: prepare external review package`), awaiting human squash-merge. Docs-only; `make check` 187/187 (2026-06-02). Delivered: `docs/review_request.md` (adversarial review checklist over the six DoD areas, each linking claim→evidence→questions, plus a self-certified-vs-externally-reviewed status section), `docs/review_feedback.md` (honest record stating no external review yet + field template; no fabricated endorsements), `.github/ISSUE_TEMPLATE/review_request.md`, and a README link. Decision: prepared the issue template rather than opening a live public review issue (DoD allows either) — the human can open the real issue. Clear this block when M31 merges._
+- _M31 implementation complete on `docs/m31-external-review`; PR #93 open (`docs: prepare external review package`), awaiting human squash-merge. Docs-only; `make check` 187/187 (2026-06-02). Delivered: `docs/review_request.md` (adversarial review checklist over the six DoD areas, each linking claim→evidence→questions, plus a self-certified-vs-externally-reviewed status section), `docs/review_feedback.md` (honest record stating no external review yet + field template; no fabricated endorsements), `.github/ISSUE_TEMPLATE/review_request.md`, and a README link. Decision: prepared the issue template rather than opening a live public review issue (DoD allows either) — the human can open the real issue. Clear this block when M31 merges._
 
 
 ---
@@ -255,7 +255,7 @@ Lower priority:
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☑ merged | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
-| M31 | External review / maintainer signal | `docs/m31-external-review` | ◐ in progress | — | Review-request checklist + feedback template; no fabricated endorsements |
+| M31 | External review / maintainer signal | `docs/m31-external-review` | ◐ in progress | #93 | Review-request checklist + feedback template; no fabricated endorsements |
 | M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☐ not started | — | Integrate pool storage into selected order-book paths and measure engine-level effects |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☐ not started | — | Event-driven multi-client gateway design |
