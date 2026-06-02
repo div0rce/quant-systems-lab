@@ -13,6 +13,8 @@ EVENT="${QSL_PERF_RECORD_EVENT:-cpu-clock}"
 FREQ="${QSL_PERF_RECORD_FREQ:-2000}"
 LIMIT="${QSL_PERF_REPORT_PERCENT_LIMIT:-1}"
 MIN_SAMPLES="${QSL_PERF_MIN_SAMPLES:-100}"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
 
 parse_sample_count_token() {
     local token="$1"
@@ -34,6 +36,64 @@ parse_sample_count_token() {
         }'
 }
 
+repo_relative_or_empty() {
+    local path="$1"
+    local abs
+    local dir
+    local base
+    local resolved_dir
+    local resolved
+
+    if [[ -z "$path" ]]; then
+        return
+    fi
+    if [[ "$path" = /* ]]; then
+        abs="$path"
+    else
+        abs="$REPO_ROOT/$path"
+    fi
+
+    dir="$(dirname "$abs")"
+    base="$(basename "$abs")"
+    if ! resolved_dir="$(cd "$dir" 2>/dev/null && pwd -P)"; then
+        return
+    fi
+    resolved="$resolved_dir/$base"
+
+    case "$resolved" in
+    "$REPO_ROOT"/*) printf '%s\n' "${resolved#"$REPO_ROOT"/}" ;;
+    esac
+}
+
+dirty_tree_status() {
+    local out_rel
+    local data_rel
+    local status_output
+    local pathspecs=(. ":(exclude)results/perf_stat_linux.txt"
+        ":(exclude)results/perf_report_linux.txt")
+
+    out_rel="$(repo_relative_or_empty "$OUT")"
+    if [[ -n "$out_rel" ]]; then
+        pathspecs+=(":(exclude)$out_rel")
+    fi
+
+    data_rel="$(repo_relative_or_empty "$DATA")"
+    if [[ -n "$data_rel" ]]; then
+        pathspecs+=(":(exclude)$data_rel")
+    fi
+
+    if ! status_output="$(git status --porcelain --untracked-files=all -- "${pathspecs[@]}")"; then
+        echo "error: dirty-tree check failed; refusing to write misleading metadata." >&2
+        exit 2
+    fi
+
+    if [[ -n "$status_output" ]]; then
+        echo yes
+    else
+        echo no
+    fi
+}
+
 if [[ "$(uname -s)" != "Linux" ]]; then
     echo "error: scripts/perf_record.sh requires Linux perf; current OS is $(uname -s)." >&2
     exit 2
@@ -51,14 +111,7 @@ fi
 
 mkdir -p "$(dirname "$OUT")" "$(dirname "$DATA")"
 
-DIRTY=no
-if [[ -n "$(git status --porcelain --untracked-files=all -- . \
-    ":(exclude)results/perf_stat_linux.txt" \
-    ":(exclude)results/perf_report_linux.txt" \
-    ":(exclude)$OUT" \
-    ":(exclude)$DATA")" ]]; then
-    DIRTY=yes
-fi
+DIRTY="$(dirty_tree_status)"
 
 BENCH_OUT="$(mktemp)"
 RECORD_BENCH_OUT="$(mktemp)"
