@@ -19,15 +19,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M29 — Linux perf and flamegraph profiling artifacts
-- **Status:** PR open; constrained-environment validation complete
-- **Active branch:** `feat/m29-linux-perf-profiling`
-- **Last completed milestone:** M28 — Memory pool allocator experiment (squash-merged, PR #88, commit 03b4d9a)
+- **Active milestone:** M30 — Kernel/socket path profiling and Linux socket hardening (next planned; not started)
+- **Status:** documentation sync PR open after M29 merge
+- **Active branch:** `docs/roadmap-sync-after-m29`
+- **Last completed milestone:** M29 — Linux perf profiling workflow and artifacts (squash-merged, PR #89, commit 60bd5ee)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** last verified on M29 (186/186) on 2026-06-01.
-- **Last action:** opened draft PR #89 with Linux perf workflow plus constrained Docker Desktop Linux validation; full hardware PMU evidence is tracked separately in issue #90.
-- **Next action:** review/land PR #89 as perf workflow plus constrained-environment validation only; do not treat it as full hardware PMU evidence.
-- **Blockers:** none for PR #89 scope; full hardware PMU evidence is blocked on PMU-capable Linux access and backlogged in #90.
+- **`make check` passing:** last verified on M29 (186/186) on 2026-06-02.
+- **Last action:** opened draft PR #91 to synchronize repository memory after M28/M29 review.
+- **Next action:** review/land PR #91, then start M30 with `/start-milestone 30`.
+- **Blockers:** none for PR #91 scope; full hardware PMU evidence remains blocked on PMU-capable Linux access and backlogged in #90.
 
 ---
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M29 draft PR #89 is open and CI passed. Full Linux hardware PMU evidence is backlogged as follow-up issue #90 because current macOS/Docker Desktop environments do not expose the required counters. PR #89 lands the workflow and constrained validation only._
+- _Draft PR #91 is open for documentation-only synchronization after the M29 merge. Full Linux hardware PMU evidence is backlogged as follow-up issue #90 because current macOS/Docker Desktop environments do not expose the required counters. M29 landed the workflow and constrained validation only. Documentation sync pass is documentation-only: do not change code or benchmark results._
 
 
 ---
@@ -253,9 +253,19 @@ Lower priority:
 | M26 | Multithreaded gateway-engine-feed pipeline prototype | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #86 | Explicit thread boundaries and deterministic shutdown |
 | M27 | ThreadSanitizer coverage | `claude/serene-fermi-rhuFJ` (env-designated) | ☑ merged | #87 | TSan preset/CI for concurrent tests |
 | M28 | Memory pool allocator experiment | `feat/m28-memory-pool-allocator` | ☑ merged | #88 | Hot-path allocation experiment with benchmark evidence |
-| M29 | Linux perf and flamegraph profiling artifacts | `feat/m29-linux-perf-profiling` | ◐ draft PR | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
+| M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☐ not started | — | syscall/socket-buffer/UDP pressure evidence; epoll optional if scoped |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☐ not started | — | Review checklist and feedback record |
+| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☐ not started | — | Integrate pool storage into selected order-book paths and measure engine-level effects |
+| M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
+| M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☐ not started | — | Event-driven multi-client gateway design |
+| M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☐ not started | — | TCP/UDP stress, buffer pressure, backpressure investigation |
+| M36 | NUMA awareness study | `feat/m36-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
+| M37 | Lock-free ingress pipeline | `feat/m37-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
+| M38 | Exchange-grade persistence prototype | `feat/m38-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
+| M39 | Recovery benchmarking | `feat/m39-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
+| M40 | DPDK research and prototype | `feat/m40-dpdk-research-prototype` | ☐ not started | — | User-space packet-path research after M30–M39 |
+| M41 | NIC offload and low-latency networking study | `feat/m41-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
 ## Decision log additions
 
@@ -269,6 +279,11 @@ Lower priority:
 - [2026-06-02] M29 review fix: `perf_record.sh` now parses perf's abbreviated sample counts (`K`/`M` suffixes and comma separators), so a valid `# Samples: 2K ...` report is counted as 2000 samples rather than 2.
 - [2026-06-02] M29 review fix: dirty-tree metadata now excludes generated perf artifacts only when their output paths are inside the repository; external absolute paths such as `/tmp/report.txt` are never passed to Git pathspecs, and dirty-check failures abort instead of recording `Dirty tree: no`.
 - [2026-06-02] M29 review fix: perf docs now state that default `make perf-stat` / `make perf-record` artifacts profile only the default `qsl-bench` suite; differential (`qsl-bench diff`) and allocator (`qsl-bench pool`) workloads require separate explicit perf runs before supporting hotspot conclusions.
+- [2026-06-02] M29 documentation sync: PR #89 currently contains Linux perf workflow, Linux-only tooling, metadata-rich artifacts, dirty-tree handling, PMU preflight/validation logic, constrained-environment validation, CI validation, and a reproducible workflow; it does **not** contain real hardware PMU evidence.
+- [2026-06-02] M29 documentation sync: issue #90 tracks full Linux hardware PMU evidence generation. Current committed artifacts were generated in Docker Desktop Linux where hardware PMU counters and sampling were unavailable/permission-limited, so the repository must not claim real PMU evidence yet.
+- [2026-06-02] M29 documentation sync: TSan coverage is dynamic-analysis evidence over executed schedules, not a correctness proof over all possible thread interleavings; advanced concurrency validation is added as M33.
+- [2026-06-02] M29 documentation sync: M28 allocator evidence did not alter order-book storage architecture; pool-backed order-book integration is added as M32 for engine-level memory-architecture evaluation.
+- [2026-06-02] M29 documentation sync: roadmap extended through M41 (pool-backed storage, advanced concurrency validation, epoll gateway, multi-client socket pressure, NUMA, lock-free ingress, persistence, recovery benchmarking, DPDK, NIC offload study) with priority order #90, M30, M31, M32, M33.
 - [2026-06-01] M28: added a fixed-capacity `OrderPool<Capacity>` for `engine::Order`; exhaustion returns `nullptr`, releases are validated, and there is no silent heap fallback.
 - [2026-06-01] M28: added an isolated allocator benchmark path (`qsl-bench pool` / `make bench-allocator`) comparing raw `operator new`/placement construction against pool acquire/release, with full hardware/compiler/build/commit/dirty-tree metadata in `results/allocator_experiment.txt`.
 - [2026-06-01] M28: kept order-book storage unchanged; the pool is an allocation experiment for future storage decisions, not a semantic refactor or an end-to-end engine latency claim.
@@ -309,13 +324,17 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Continue Phase III/IV after M28 review:
+Continue Phase III/IV after M29 review:
 
 ```text
-/start-milestone 29
+/start-milestone 30
 ```
 
-Expected branch: `feat/m29-linux-perf-profiling` (after the M28 PR squash-merges).
+Expected branch after PR #89 squash-merges: `feat/m30-socket-profiling-hardening`.
+
+Priority before/around M30: issue #90 remains the evidence debt for full Linux hardware PMU
+artifacts. Work it only on a PMU-capable Linux host; do not relabel constrained Docker artifacts as
+full evidence.
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 

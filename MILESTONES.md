@@ -1019,18 +1019,41 @@ hardening, and external review signal — not more product surface area.
 
 ## Phase III / IV execution rule
 
-Do M24–M31 **in order**. Do not skip to Linux perf/socket work before the concurrency primitive
-and threaded pipeline exist. Do not start external review before there is enough evidence to
-review.
+Do M24–M41 **in order**, except that issue #90 can be worked as an evidence follow-up as soon as a
+PMU-capable Linux host is available. Do not skip to Linux perf/socket work before the concurrency
+primitive and threaded pipeline exist. Do not start external review before there is enough evidence
+to review.
 
 1. M24 ring buffer
 2. M25 memory-ordering evidence
 3. M26 threaded pipeline
 4. M27 ThreadSanitizer
 5. M28 memory pool allocator
-6. M29 Linux perf/flamegraph profiling
+6. M29 Linux perf workflow and constrained profiling validation
 7. M30 kernel/socket profiling and socket hardening
 8. M31 external review package
+9. M32 pool-backed order-book storage experiment
+10. M33 advanced concurrency validation
+11. M34 epoll gateway architecture
+12. M35 multi-client load and socket-pressure testing
+13. M36 NUMA awareness study
+14. M37 lock-free ingress pipeline
+15. M38 exchange-grade persistence prototype
+16. M39 recovery benchmarking
+17. M40 DPDK research and prototype
+18. M41 NIC offload and low-latency networking study
+
+## Post-M29 priority order
+
+After PR #89, prioritize:
+
+1. Issue #90 — generate full Linux hardware PMU perf artifacts on a PMU-capable Linux target.
+2. M30 — socket/kernel profiling.
+3. M31 — external review signal.
+4. M32 — pool-backed order-book integration.
+5. M33 — advanced concurrency validation.
+
+These items produce more systems-engineering signal than more isolated microbenchmarks.
 
 Forbidden throughout: production-grade/HFT/real-exchange/formally-verified/profitable/guaranteed-
 low-latency/production-networking claims; and dashboards, trading strategies, market-data APIs,
@@ -1133,6 +1156,8 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
       unsupported on the local/macOS toolchain).
 - [ ] Docs state TSan is for data-race detection, not performance; no benchmark numbers collected
       under TSan.
+- [ ] Docs avoid representing TSan as a proof: it validates executed schedules only, not all
+      possible thread interleavings.
 - [ ] `make tsan` passes where supported; `make check` passes; `PROGRESS.md` updated.
 
 ---
@@ -1160,24 +1185,33 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
 
 ---
 
-## M29 — Linux perf and flamegraph profiling artifacts
+## M29 — Linux perf profiling workflow and artifacts
 
 - **Branch:** `feat/m29-linux-perf-profiling`
 - **PR title:** `perf: add Linux perf profiling artifacts`
-- **Goal:** Real performance-investigation evidence, not just benchmark timing.
+- **Goal:** Linux perf workflow plus honest constrained-environment validation. Full hardware PMU
+  evidence requires a PMU-capable Linux host and is tracked separately by issue #90.
 
 ### Scope
 
 - `scripts/perf_stat.sh`, `scripts/perf_record.sh`, `docs/perf_analysis.md`,
-  `results/perf_stat_linux.txt`, `results/perf_report_linux.txt`, `results/flamegraph.svg` (optional).
+  `results/perf_stat_linux.txt`, `results/perf_report_linux.txt`, `results/flamegraph.svg`
+  (optional only when reproducible).
 
 ### Definition of Done
 
 - [ ] Linux-only scripts fail clearly on non-Linux; record CPU/kernel/compiler/build metadata.
-- [ ] `perf stat` captures cycles, instructions, branches, branch-misses, cache-references,
-      cache-misses, context-switches, page-faults; `perf record/report` identifies hot-path symbols;
-      flamegraph optional and only if reproducible.
-- [ ] Docs explain what was hot and what was not optimized, and that results are
+- [ ] `perf stat` and `perf record/report` workflows exist and capture metadata-rich artifacts.
+- [ ] Dirty-tree metadata excludes only generated artifacts inside the repo; dirty-check failures do
+      not silently record `Dirty tree: no`.
+- [ ] If hardware PMU counters are unavailable, artifacts are labeled constrained-environment
+      validation and must not be described as full PMU evidence.
+- [ ] Full PMU evidence requires `Artifact: hardware PMU evidence`, `Unsupported counters detected:
+      no`, `Hardware counters supported: yes`, `Dirty tree: no`, and numeric values for the required
+      hardware counters.
+- [ ] Issue #90 tracks full hardware PMU evidence generation when a bare-metal or PMU-capable Linux
+      VM/server is available.
+- [ ] Docs explain what was and was not profiled, what was not optimized, and that results are
       hardware/kernel/compiler dependent; artifacts committed with caveats or regeneration documented.
 - [ ] `make check` passes; `PROGRESS.md` updated.
 
@@ -1227,3 +1261,276 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
       exists, summarize reviewer / criticism / accepted-rejected / rationale / follow-up.
 - [ ] Docs clearly distinguish self-certified vs externally reviewed claims; review request issue
       opened or template prepared; `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## Post-M29 backlog additions
+
+### TSan coverage is evidence, not proof
+
+Current state:
+
+- M27 added ThreadSanitizer coverage.
+- TSan validates executed schedules and can detect races that occur during tested executions.
+- TSan does not prove correctness across all possible thread interleavings.
+- Existing stress tests, queue-capacity sweeps, and TSan runs provide empirical evidence only.
+
+Future work:
+
+- randomized scheduling perturbation;
+- expanded stress coverage;
+- long-duration Linux stress runs;
+- additional happens-before reasoning documentation;
+- stronger concurrency validation methodology.
+
+Recruiting significance: improves rigor of concurrency claims, prevents overstating sanitizer
+coverage, and demonstrates understanding of dynamic-analysis limits. Do not represent TSan as a
+correctness proof anywhere in the repository.
+
+### Pool-backed order-book storage experiment
+
+Current state:
+
+- M28 implemented a raw-storage `OrderPool`.
+- M28 benchmarked allocator acquire/release versus `new`/`delete`.
+- M28 preserved correct object lifetimes.
+- PR #88 did not integrate pool storage into the order-book implementation.
+- Matching engine storage architecture is unchanged.
+- M28 evidence is allocator evidence, not engine-storage evidence.
+
+Future work:
+
+- integrate pool-backed storage into selected order-book paths;
+- measure end-to-end matching workloads;
+- evaluate cache-locality effects;
+- evaluate replay impact;
+- compare against arena, intrusive, and flat-container alternatives;
+- retain only if evidence supports it.
+
+Recruiting significance: moves allocator experimentation into actual engine-memory architecture
+work without pretending the M28 allocator microbenchmark already changed the engine.
+
+---
+
+## M32 — Pool-backed order-book storage experiment
+
+- **Branch:** `feat/m32-pool-backed-order-book-storage`
+- **PR title:** `perf: evaluate pool-backed order-book storage`
+- **Goal:** Memory-architecture evaluation inside selected order-book paths, not another allocator
+  microbenchmark.
+
+### Scope
+
+- Integrate pool storage into selected order-book paths.
+- Benchmark engine-level workloads against the baseline storage.
+- Analyze cache locality and replay impact.
+- Compare against arena, intrusive, and flat-container alternatives at the documentation level unless
+  a small implementation comparison is justified.
+- Document results even if negative.
+
+### Definition of Done
+
+- [ ] Pool-backed storage path is scoped and reversible.
+- [ ] Baseline vs integrated engine workload measurements are produced by committed scripts.
+- [ ] Results document cache/locality/replay effects and limitations.
+- [ ] No README/resume claim unless supported by the measured artifact.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M33 — Advanced concurrency validation
+
+- **Branch:** `feat/m33-advanced-concurrency-validation`
+- **PR title:** `test: expand concurrency validation methodology`
+- **Goal:** Improve confidence in concurrency correctness without claiming proof.
+
+### Scope
+
+- Randomized scheduling perturbation.
+- Stronger stress coverage.
+- Longer Linux runs where available.
+- Concurrency-analysis documentation.
+- Expanded validation methodology.
+
+### Definition of Done
+
+- [ ] Tests add scheduling perturbation or longer stress modes without flakiness in normal CI.
+- [ ] Docs distinguish empirical evidence, TSan coverage, and reasoning/proof obligations.
+- [ ] Long-running or Linux-only checks are documented with clear opt-in commands.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M34 — epoll gateway architecture
+
+- **Branch:** `feat/m34-epoll-gateway-architecture`
+- **PR title:** `feat: add epoll gateway architecture prototype`
+- **Goal:** Event-driven gateway design with bounded, documented behavior.
+
+### Scope
+
+- `epoll`-based gateway architecture.
+- Multi-client readiness handling.
+- Nonblocking accept/read/write with clear disconnect behavior.
+- Measurement and documentation.
+
+### Definition of Done
+
+- [ ] Event-driven path handles multiple clients without thread-per-connection design.
+- [ ] EAGAIN/EWOULDBLOCK and partial read/write behavior is tested or documented.
+- [ ] Existing deterministic session semantics are preserved.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M35 — Multi-client load and socket-pressure testing
+
+- **Branch:** `feat/m35-multi-client-socket-pressure`
+- **PR title:** `test: add multi-client socket pressure coverage`
+- **Goal:** Stress the gateway/feed network path under realistic local pressure.
+
+### Scope
+
+- Socket-buffer pressure.
+- TCP/UDP stress.
+- Connection scaling.
+- Backpressure investigation.
+
+### Definition of Done
+
+- [ ] Scripts/tests document load shape and environment.
+- [ ] Results distinguish kernel/socket pressure from engine costs.
+- [ ] No production-capacity claim.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M36 — NUMA awareness study
+
+- **Branch:** `feat/m36-numa-awareness-study`
+- **PR title:** `docs: study NUMA and CPU affinity effects`
+- **Goal:** Document and measure CPU locality tradeoffs where hardware exists.
+
+### Scope
+
+- CPU affinity.
+- NUMA locality experiments.
+- Documentation and measurements.
+
+### Definition of Done
+
+- [ ] Scripts or docs describe how to run the study on NUMA-capable Linux.
+- [ ] Artifacts are labeled hardware-specific.
+- [ ] Non-NUMA hosts are treated as unsupported/constrained, not faked.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M37 — Lock-free ingress pipeline
+
+- **Branch:** `feat/m37-lock-free-ingress-pipeline`
+- **PR title:** `perf: evaluate lock-free ingress pipeline`
+- **Goal:** Explore ingress contention without changing deterministic matching ownership.
+
+### Scope
+
+- Lock-free ingress experiments.
+- Preserve single-owner deterministic matching.
+- Measure contention effects.
+
+### Explicit non-goal
+
+This is **not** lock-free matching.
+
+### Definition of Done
+
+- [ ] Matching engine ownership remains deterministic and single-owner where required.
+- [ ] Lock-free claims are scoped to the ingress experiment only.
+- [ ] Contention measurements are produced by committed scripts.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M38 — Exchange-grade persistence prototype
+
+- **Branch:** `feat/m38-persistence-prototype`
+- **PR title:** `feat: prototype stronger persistence strategy`
+- **Goal:** Investigate durability strategy beyond the current append-only lab log.
+
+### Scope
+
+- Durability strategy.
+- WAL analysis.
+- Crash recovery validation.
+
+### Definition of Done
+
+- [ ] Persistence semantics and failure model are documented.
+- [ ] Crash/recovery validation is automated where feasible.
+- [ ] No claim that the simulator is production durable.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M39 — Recovery benchmarking
+
+- **Branch:** `feat/m39-recovery-benchmarking`
+- **PR title:** `perf: benchmark recovery paths`
+- **Goal:** Measure recovery objectives from replay and snapshot restoration.
+
+### Scope
+
+- Replay performance.
+- Snapshot restoration performance.
+- Recovery objectives.
+
+### Definition of Done
+
+- [ ] Recovery benchmarks are generated by committed scripts.
+- [ ] Results include metadata and dirty-tree state.
+- [ ] Docs explain what recovery objective was measured.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M40 — DPDK research and prototype
+
+- **Branch:** `feat/m40-dpdk-research-prototype`
+- **PR title:** `docs: research DPDK packet-path tradeoffs`
+- **Goal:** User-space networking investigation only after M30–M39.
+
+### Scope
+
+- DPDK/user-space networking research.
+- Packet-path investigation.
+- Comparison against kernel networking.
+
+### Definition of Done
+
+- [ ] Research distinguishes what was measured from what was only studied.
+- [ ] Prototype is optional and only if environment support exists.
+- [ ] No kernel-bypass performance claim without real measurements.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M41 — NIC offload and low-latency networking study
+
+- **Branch:** `feat/m41-nic-offload-study`
+- **PR title:** `docs: study NIC offload and low-latency networking`
+- **Goal:** Research-heavy networking study unless suitable hardware exists.
+
+### Scope
+
+- Solarflare.
+- Mellanox.
+- RSS.
+- Timestamping.
+- Kernel-bypass ecosystem.
+
+### Definition of Done
+
+- [ ] Docs distinguish research notes from measured artifacts.
+- [ ] Hardware-specific measurements are only recorded when real hardware exists.
+- [ ] No offload/latency claim without evidence.
+- [ ] `make check` passes; `PROGRESS.md` updated.

@@ -14,12 +14,25 @@ Keep all four in the repo root.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M23 are complete. The next work is Phase III / Phase IV.
+The repo is released at `v0.1.0`. M0–M28 are merged. M29 is PR #89 and should land as Linux
+`perf` workflow plus constrained-environment validation only.
 
-Start with:
+Current M29 state:
+
+- Linux-only `make perf-stat` / `make perf-record` tooling exists.
+- Metadata-rich `perf` artifacts exist.
+- Dirty-tree handling and PMU preflight/validation exist.
+- CI validates the workflow.
+- The committed artifacts were generated in a constrained Docker Desktop Linux environment where
+  hardware PMU counters/sampling were unavailable or permission-limited.
+- The repository does **not** currently claim real hardware PMU evidence.
+- Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
+
+If PR #89 is still open, review/land it as constrained validation only. After PR #89 is
+squash-merged, start with:
 
 ```text
-/start-milestone 24
+/start-milestone 30
 ```
 
 Do not start implementation until these files are read:
@@ -41,25 +54,34 @@ git tag -l
 gh release view v0.1.0
 ```
 
-Expected state:
+Expected state after PR #89 merges:
 
 - branch: `main`
-- open PRs: ideally 0
 - release tag: `v0.1.0`
-- next branch: `feat/m24-spsc-ring-buffer`
+- next branch: `feat/m30-socket-profiling-hardening`
+- open follow-up issue: #90 for full Linux hardware PMU perf evidence
 
 ### Next milestone
 
-M24 — Bounded SPSC ring buffer. Implement a bounded SPSC queue as the primitive for later
-threaded gateway-engine-feed work. Do not implement M25–M31 inside M24 — this is where scope
-rot starts.
+M30 — Kernel/socket path profiling and Linux socket hardening. Do not implement M31–M41 inside
+M30. Do not relabel constrained M29 Docker artifacts as full PMU evidence. If a PMU-capable Linux
+host is available, issue #90 can be handled as the higher-priority evidence follow-up.
 
 ### Phase III / IV purpose
 
-The next arc exists to address the remaining systems-signal gaps: a multithreaded pipeline, real
-concurrency boundaries, the ring-buffer/backpressure path, memory ordering, ThreadSanitizer
-discipline, an allocator/memory-pool experiment, Linux perf/flamegraph evidence, kernel/socket
-profiling, and an external review signal.
+The current arc exists to address remaining systems-signal gaps: full hardware PMU evidence,
+kernel/socket profiling, external review signal, pool-backed order-book storage integration,
+advanced concurrency validation, event-driven gateway architecture, multi-client socket pressure,
+NUMA/affinity studies, ingress contention, persistence/recovery benchmarking, and low-latency
+networking research.
+
+Current priority order:
+
+1. Issue #90 — real Linux hardware PMU perf evidence.
+2. M30 — socket/kernel profiling.
+3. M31 — external review signal.
+4. M32 — pool-backed order-book integration.
+5. M33 — advanced concurrency validation.
 
 ### Forbidden shortcuts
 

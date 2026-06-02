@@ -970,18 +970,24 @@ Phase III focuses on:
 5. allocator/memory-pool experiments.
 
 Phase IV focuses on:
-1. Linux perf/flamegraph profiling;
-2. kernel/socket path profiling;
-3. Linux socket hardening experiments;
-4. an external review/maintainer-signal package.
+1. Linux perf workflow and honest constrained-environment validation;
+2. full hardware PMU evidence when a PMU-capable Linux host is available (issue #90);
+3. kernel/socket path profiling;
+4. Linux socket hardening experiments;
+5. an external review/maintainer-signal package;
+6. pool-backed order-book storage integration;
+7. advanced concurrency validation.
 
 Do not add dashboards, strategies, market-data APIs, FIX adapters, Docker packaging, or
-aesthetic product work before M24–M31 unless the human explicitly changes priorities.
+aesthetic product work before M24–M41 unless the human explicitly changes priorities.
 
 The correct claim after this arc is:
 
 > "correctness-first deterministic exchange-systems lab with measured concurrency, allocator,
-> Linux perf, and socket-profiling evidence."
+> constrained Linux perf workflow, and socket-profiling evidence."
+
+Do not claim real hardware PMU evidence until issue #90 is completed on a bare-metal or
+PMU-capable Linux target. Current M29 artifacts are constrained-environment validation only.
 
 The incorrect claims remain forbidden:
 
@@ -994,3 +1000,24 @@ The incorrect claims remain forbidden:
 
 `make tsan` (ThreadSanitizer) is a planned target that becomes available only after M27 exists;
 do not reference it as runnable before then.
+
+After M27 exists, ThreadSanitizer remains dynamic-analysis evidence, not a correctness proof. TSan
+validates executed schedules and can detect races that occur during tested executions; it does not
+prove correctness across all possible thread interleavings.
+
+M28 allocator evidence is allocator evidence only. It does not mean the order book uses pool-backed
+storage. Pool-backed order-book integration is M32 and must be measured against engine-level
+workloads before any storage-architecture claim is made.
+
+Post-M29 priority order:
+
+1. Issue #90 — full Linux hardware PMU perf evidence.
+2. M30 — socket/kernel profiling.
+3. M31 — external review signal.
+4. M32 — pool-backed order-book integration.
+5. M33 — advanced concurrency validation.
+
+Roadmap after M33: M34 epoll gateway architecture; M35 multi-client load and socket-pressure
+testing; M36 NUMA awareness study; M37 lock-free ingress pipeline (not lock-free matching); M38
+exchange-grade persistence prototype; M39 recovery benchmarking; M40 DPDK research/prototype; M41
+NIC offload and low-latency networking study.
