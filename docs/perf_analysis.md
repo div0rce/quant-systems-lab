@@ -25,10 +25,10 @@ make perf-record
 ```
 
 This runs `scripts/perf_record.sh`, which writes a text report to
-`results/perf_report_linux.txt`. By default it uses software `cpu-clock` sampling at 99 Hz. That
+`results/perf_report_linux.txt`. By default it uses software `cpu-clock` sampling at 2000 Hz. That
 default is intentional: many CI, VM, and container environments do not expose hardware PMU events
-to unprivileged processes, but a software sampled report can still identify hot symbols when it
-captures enough samples to make the ordering meaningful.
+to unprivileged processes, and the benchmark harness is short enough that a lower frequency can
+miss the minimum sample count needed for meaningful hot-symbol ordering.
 
 ## Required Environment
 

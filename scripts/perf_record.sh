@@ -10,7 +10,7 @@ BIN="${QSL_BENCH_BIN:-build/bench/qsl-bench}"
 OUT="${QSL_PERF_REPORT_OUT:-results/perf_report_linux.txt}"
 DATA="${QSL_PERF_DATA:-build/perf/qsl-bench.perf.data}"
 EVENT="${QSL_PERF_RECORD_EVENT:-cpu-clock}"
-FREQ="${QSL_PERF_RECORD_FREQ:-99}"
+FREQ="${QSL_PERF_RECORD_FREQ:-2000}"
 LIMIT="${QSL_PERF_REPORT_PERCENT_LIMIT:-1}"
 MIN_SAMPLES="${QSL_PERF_MIN_SAMPLES:-100}"
 
