@@ -88,6 +88,31 @@ struct PipelineProbe {
     std::atomic<std::uint64_t> outbound_spins{0};
 };
 
+/// Optional deterministic scheduling perturbation. Tests can ask each stage to yield after every N
+/// successful steps, exploring more interleavings without making correctness depend on wall-clock
+/// sleeps or scheduler timing. Normal callers pass `nullptr`.
+struct PipelinePerturbation {
+    std::uint32_t input_yield_every = 0;
+    std::uint32_t engine_yield_every = 0;
+    std::uint32_t output_yield_every = 0;
+    std::uint32_t yields_per_hit = 1;
+};
+
+namespace detail {
+inline void maybe_yield(std::uint64_t &counter, std::uint32_t every, std::uint32_t yields) {
+    if (every == 0) {
+        return;
+    }
+    ++counter;
+    if ((counter % every) != 0) {
+        return;
+    }
+    for (std::uint32_t i = 0; i < yields; ++i) {
+        std::this_thread::yield();
+    }
+}
+} // namespace detail
+
 /// Bounded three-thread pipeline. `InboundCapacity`/`OutboundCapacity` are the SPSC queue
 /// capacities (compile-time); small values force backpressure in tests, larger values absorb
 /// bursts. Capacity affects only timing/backpressure, never the result.
@@ -99,7 +124,8 @@ class ThreadedPipeline {
     /// stack frame, outlive both the producer and the consumer of each — the lifetime bracket the
     /// SPSC contract requires). Deterministic given `commands` and `risk`.
     static PipelineResult run(const std::vector<replay::Command> &commands, engine::RiskConfig risk,
-                              OutputSink &sink, PipelineProbe *probe = nullptr) {
+                              OutputSink &sink, PipelineProbe *probe = nullptr,
+                              const PipelinePerturbation *perturbation = nullptr) {
         SpscRing<replay::Command, InboundCapacity> inbound;
         SpscRing<ProcessedCommand, OutboundCapacity> outbound;
 
@@ -119,10 +145,15 @@ class ThreadedPipeline {
 
         // Stage 1 — input thread: the sole producer of the inbound queue.
         std::thread input_thread([&] {
+            std::uint64_t input_steps = 0;
             for (const replay::Command &command : commands) {
                 while (!inbound.try_push(command)) { // lossless: an order is never dropped
                     spins.inbound_spins.fetch_add(1, std::memory_order_relaxed);
                     std::this_thread::yield();
+                }
+                if (perturbation != nullptr) {
+                    detail::maybe_yield(input_steps, perturbation->input_yield_every,
+                                        perturbation->yields_per_hit);
                 }
             }
             input_done.store(true, std::memory_order_release);
@@ -131,6 +162,7 @@ class ThreadedPipeline {
         // Stage 2 — engine thread: sole consumer of inbound, sole producer of outbound, and the
         // ONLY thread that touches the engine + gateway.
         std::thread engine_thread([&] {
+            std::uint64_t engine_steps = 0;
             engine::MatchingEngine engine;
             gateway::OrderGateway gw(engine, risk);
 
@@ -154,6 +186,10 @@ class ThreadedPipeline {
                     std::move(pc))) { // lossless: a log/feed record is never dropped
                     spins.outbound_spins.fetch_add(1, std::memory_order_relaxed);
                     std::this_thread::yield();
+                }
+                if (perturbation != nullptr) {
+                    detail::maybe_yield(engine_steps, perturbation->engine_yield_every,
+                                        perturbation->yields_per_hit);
                 }
             };
 
@@ -184,15 +220,24 @@ class ThreadedPipeline {
 
         // Stage 3 — publisher/log thread: sole consumer of the outbound queue.
         std::thread output_thread([&] {
+            std::uint64_t output_steps = 0;
             ProcessedCommand pc;
             for (;;) {
                 if (outbound.try_pop(pc)) {
                     sink.on_processed(pc);
+                    if (perturbation != nullptr) {
+                        detail::maybe_yield(output_steps, perturbation->output_yield_every,
+                                            perturbation->yields_per_hit);
+                    }
                     continue;
                 }
                 if (engine_done.load(std::memory_order_acquire)) {
                     while (outbound.try_pop(pc)) { // drain-then-stop: no published record is lost
                         sink.on_processed(pc);
+                        if (perturbation != nullptr) {
+                            detail::maybe_yield(output_steps, perturbation->output_yield_every,
+                                                perturbation->yields_per_hit);
+                        }
                     }
                     break;
                 }

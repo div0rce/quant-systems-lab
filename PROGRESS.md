@@ -19,15 +19,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M32 — Pool-backed order-book storage experiment (in progress)
-- **Status:** draft PR open (#96); local verification passed
-- **Active branch:** `feat/m32-pool-backed-order-book-storage`
-- **Last completed milestone:** M31 — External review / maintainer signal (squash-merged, PR #93, commit b7926ac; Codex auto-review clean — reacted 👍, no findings); external review request opened as issue #94 (labels backlog/documentation/help wanted)
+- **Active milestone:** M33 — Advanced concurrency validation (in progress)
+- **Status:** draft PR open (#97); local verification passed; CI green; Codex review clean
+- **Active branch:** `feat/m33-advanced-concurrency-validation`
+- **Last completed milestone:** M32 — Pool-backed order-book storage experiment (squash-merged, PR #96, commit f122ee8; Codex auto-review clean — no major issues; CI green)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** last verified on M32 (188/188) on 2026-06-02; `make asan` also passed (188/188).
-- **Last action:** opened draft PR #96 for M32 after implementing PMR-backed order-book node allocation, opening issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage, adding an engine-level `make bench-storage` benchmark and `results/pool_backed_storage.txt`, and verifying `make check` / `make asan` / `make bench-storage`.
-- **Next action:** monitor PR #96 CI and Codex review; do not merge.
-- **Blockers:** none for M32. Issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; issue #95 tracks future direct intrusive/custom-node storage and is not part of M32.
+- **`make check` passing:** last verified on M33 (189/189) on 2026-06-02; `make asan` also passed 189/189, `make tsan` passed 19/19 concurrency tests, and a two-loop `make concurrency-stress` smoke passed.
+- **Last action:** PR #97 CI passed all 6 jobs and Codex review found no major issues.
+- **Next action:** human review/squash-merge PR #97; do not merge from the automation side.
+- **Blockers:** none for M33. Issue #90 (full hardware PMU evidence) remains blocked on PMU-capable Linux access; issue #95 tracks future direct intrusive/custom-node storage and is not part of M33.
 
 ---
 
@@ -202,7 +202,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M32 draft PR #96 is open on `feat/m32-pool-backed-order-book-storage`. Implemented `OrderBook::Storage::Baseline` and `Storage::Pooled`, PMR-backed list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation. Added the generated-flow equivalence test (per-command event streams, final snapshot, last_seq, non-vacuity), `make bench-storage`, `results/pool_backed_storage.txt`, `docs/pool_backed_storage.md`, ADR 0009, and issue #95 for future direct intrusive/custom-node `OrderPool<Capacity>` storage. Verification passed: `make check` 188/188, `make asan` 188/188, `make bench-storage`. Next: monitor CI/Codex review; do not merge. Clear this block when M32 merges._
+- _M33 draft PR #97 is open on `feat/m33-advanced-concurrency-validation`. Implemented deterministic `PipelinePerturbation` hooks/tests, `make concurrency-stress`, and concurrency-methodology docs. Local verification: `make check` 189/189, `make asan` 189/189, `make tsan` 19/19 concurrency tests, `QSL_CONCURRENCY_STRESS_LOOPS=2 make concurrency-stress` 2/2 loops, `bash -n scripts/concurrency_stress.sh`, and `git diff --check`. PR #97 CI passed all 6 jobs and Codex review found no major issues. Next: human review/squash-merge; do not merge. Clear this block when M33 merges._
 
 
 ---
@@ -256,8 +256,8 @@ Lower priority:
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☑ merged | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☑ merged | #93 | Review-request checklist + feedback template; review request opened as issue #94 |
-| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ◐ draft PR | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
-| M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☐ not started | — | Scheduling perturbation, longer stress, and stronger concurrency methodology |
+| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
+| M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ◐ draft PR | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☐ not started | — | Event-driven multi-client gateway design |
 | M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☐ not started | — | TCP/UDP stress, buffer pressure, backpressure investigation |
 | M36 | NUMA awareness study | `feat/m36-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
@@ -269,6 +269,13 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-02] M33: started after M32 (#96) squash-merged (commit f122ee8). Scope: advanced concurrency validation only — deterministic scheduling perturbation and/or longer stress modes, stronger concurrency methodology docs, opt-in long-running/Linux checks where appropriate. Do not claim proof; TSan and stress tests remain dynamic evidence over executed schedules.
+- [2026-06-02] M33: added deterministic `PipelinePerturbation` yield hooks to the threaded pipeline and a regression test that compares perturbed pipeline output against the single-threaded reference across seeded property flows, queue capacities, and per-stage yield patterns.
+- [2026-06-02] M33: added `make concurrency-stress` / `scripts/concurrency_stress.sh` as an opt-in repeated concurrency-label test loop. Normal CI remains non-flaky; longer local/Linux runs are documented through explicit knobs rather than hidden in the default gate.
+- [2026-06-02] M33: local verification passed: `make check` 189/189, `make asan` 189/189, `make tsan` 19/19 concurrency tests, `QSL_CONCURRENCY_STRESS_LOOPS=2 make concurrency-stress` 2/2 loops, `bash -n scripts/concurrency_stress.sh`, and `git diff --check`.
+- [2026-06-02] M33: opened draft PR #97 and triggered `@codex review`; do not merge from the automation side.
+- [2026-06-02] M33: PR #97 CI passed all 6 jobs (`build-test`, `sanitizers`, `thread-sanitizer`, `determinism`, `differential-sweep`, `ocaml-verifier`) and Codex review found no major issues.
+- [2026-06-02] M32: PR #96 squash-merged (commit f122ee8); Codex review found no major issues and CI passed all jobs. M32 delivered PMR-backed order-book node allocation, an engine-level storage benchmark, docs/ADR, and issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage.
 - [2026-06-02] M32: started after M31 (#93) squash-merged (commit b7926ac). Corrected scope: integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator experiment, and measure baseline-vs-pool-backed engine-level workloads — not another allocator microbenchmark. Direct `OrderPool<Capacity>` order-book integration is deferred because the current `std::list<Order>` design allocates implementation-defined list nodes, not bare `engine::Order` objects; intrusive/custom-node storage is tracked separately in issue #95. Matching must remain deterministic (replay/differential tests stay green); no storage-architecture claim beyond what the committed measured artifact supports; document even a negative result.
 - [2026-06-02] M32: implemented the scoped PMR path: `OrderBook::Storage::{Baseline,Pooled}`, per-book `std::pmr::unsynchronized_pool_resource`, PMR list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation via `books_.try_emplace(id, book_storage_)`. Baseline remains the default.
 - [2026-06-02] M32: added a generated-flow equivalence invariant test proving baseline and pooled storage produce identical per-command event streams, final `EngineSnapshot`, and `last_seq`; the test includes non-vacuity guards for real trades and resting liquidity.
@@ -338,17 +345,17 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Continue Phase III/IV after M29 review:
+Current action is M33 on `feat/m33-advanced-concurrency-validation`; see the top-level current state
+block for the exact next step.
+
+After M33 squash-merges, resume with:
 
 ```text
-/start-milestone 30
+/start-milestone 34
 ```
 
-Expected branch after PR #89 squash-merges: `feat/m30-socket-profiling-hardening`.
-
-Priority before/around M30: issue #90 remains the evidence debt for full Linux hardware PMU
-artifacts. Work it only on a PMU-capable Linux host; do not relabel constrained Docker artifacts as
-full evidence.
+Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
+PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 

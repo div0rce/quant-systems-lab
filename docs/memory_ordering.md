@@ -9,7 +9,8 @@
 The claims here are checked empirically by
 [`tests/concurrency/test_spsc_stress.cpp`](../tests/concurrency/test_spsc_stress.cpp) and
 [`tests/concurrency/test_backpressure.cpp`](../tests/concurrency/test_backpressure.cpp). Dynamic
-data-race detection (ThreadSanitizer) is deliberately deferred to M27; see
+data-race detection (ThreadSanitizer) was added in M27, and deterministic scheduling perturbation
+plus opt-in repeated stress were added in M33; see
 [Limits](#limits-and-what-this-does-not-prove).
 
 ## The shared state
@@ -142,6 +143,8 @@ spin is the caller's policy, outside the queue operation, and is covered under *
   producer/consumer flows and assert strict FIFO, no loss, and a final-empty queue, which would
   surface a missing release/acquire as dropped or reordered values on a weakly-ordered machine.
   They run clean under the ASan/UBSan preset (`make asan`), but ASan/UBSan do not detect data
-  races. Dynamic race detection via ThreadSanitizer is a separate, dedicated step in **M27**.
+  races. Dynamic race detection via ThreadSanitizer is a separate, dedicated step from **M27**;
+  M33 adds deterministic scheduling perturbation and an opt-in repeated stress command
+  (`make concurrency-stress`). These are stronger evidence, not exhaustive proof.
 - **No latency/throughput numbers here.** Any such number comes only from the committed benchmark
   harness with full metadata, never from this document.

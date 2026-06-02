@@ -10,7 +10,9 @@
 >
 > The behavioral claims here are exercised by
 > [`tests/concurrency/test_spsc_stress.cpp`](../tests/concurrency/test_spsc_stress.cpp) and
-> [`tests/concurrency/test_backpressure.cpp`](../tests/concurrency/test_backpressure.cpp).
+> [`tests/concurrency/test_backpressure.cpp`](../tests/concurrency/test_backpressure.cpp). The
+> threaded pipeline also has deterministic scheduling-perturbation coverage in
+> [`tests/concurrency/test_pipeline.cpp`](../tests/concurrency/test_pipeline.cpp).
 
 ## Why SPSC, not MPMC
 
@@ -207,11 +209,15 @@ makes "a lagging publisher cannot corrupt engine state" *structurally* true, not
 
 For GTC synthetic flows, enriched property flows, several seeds, and queue capacities from `2` up to
 `4096`, the threaded run produces the **same final snapshot and the same ordered event stream as a
-single-threaded reference** — capacity and thread timing change only backpressure, never the result.
+single-threaded reference**. Capacity and thread timing change only backpressure, never the result.
 The event-log integrity test additionally replays the *concurrently written* command log into a
 fresh engine and shows it reconstructs the identical snapshot (`pipeline state == log replay ==
 single-threaded reference`). Backpressure tests confirm a full inbound queue and a lagging publisher
 each apply real backpressure (spin counts > 0) while staying lossless.
+
+M33 adds deterministic scheduling perturbation: tests can ask the input, engine, and output stages
+to yield at fixed step intervals (`PipelinePerturbation`). This broadens the set of executed
+interleavings without relying on sleeps or timing-sensitive assertions.
 
 ### Limits (honest)
 
@@ -220,6 +226,32 @@ matching-latency or throughput number is claimed (none is measured here). It is 
 not MPMC and not a fan-out/fan-in topology. `make check` and `make asan` exercise the threaded paths,
 but ASan/UBSan do not detect data races — dynamic race detection runs under ThreadSanitizer
 (`make tsan`, M27 — see below).
+
+## Advanced validation (M33)
+
+M33 adds two validation layers:
+
+- **Deterministic scheduling perturbation** in the normal pipeline test. The perturbation hook
+  yields after configured stage-step counts, so the same command stream is checked under different
+  input/engine/output pacing patterns while remaining deterministic and non-flaky.
+- **Opt-in long-run repetition** via:
+
+```bash
+make concurrency-stress
+```
+
+That target repeats the `concurrency`-labelled tests outside normal CI. It is intentionally
+developer-invoked because repeated stress runs cost time and still do not prove every possible
+interleaving. Useful knobs:
+
+```bash
+QSL_CONCURRENCY_STRESS_LOOPS=100 make concurrency-stress
+QSL_CONCURRENCY_STRESS_PRESET=tsan QSL_CONCURRENCY_STRESS_LOOPS=10 make concurrency-stress
+```
+
+Use the `tsan` preset only where ThreadSanitizer is supported by the local toolchain. These runs
+increase schedule coverage and can expose rare races or shutdown bugs, but they remain empirical
+evidence over executed schedules.
 
 ## ThreadSanitizer (M27)
 

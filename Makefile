@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record profile-io socket-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record profile-io socket-stress concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -67,6 +67,9 @@ profile-io:
 # M30: UDP burst/gap + receive-socket-buffer experiment over loopback. Portable (Linux/macOS).
 socket-stress: build
 	bash scripts/socket_stress.sh
+
+concurrency-stress:
+	bash scripts/concurrency_stress.sh
 
 asan:
 	cmake --preset asan

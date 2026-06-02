@@ -14,8 +14,10 @@ Keep all four in the repo root.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M31 are merged. Most recently M31 = PR #93 (squash commit
-b7926ac): external-review request package plus issue #94. **M32 is the active milestone.**
+The repo is released at `v0.1.0`. M0–M32 are merged. Most recently M32 = PR #96 (squash commit
+f122ee8): PMR-backed order-book node allocation experiment, engine-level storage benchmark, and
+issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage. **M33 is the active
+milestone; draft PR #97 is open, CI is green, and Codex review found no major issues.**
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -28,7 +30,7 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-M32 is in progress on `feat/m32-pool-backed-order-book-storage`. To resume it:
+M33 is in progress on `feat/m33-advanced-concurrency-validation`. To resume it:
 
 ```text
 /resume
@@ -55,8 +57,8 @@ gh release view v0.1.0
 
 Current state:
 
-- main tip: `b7926ac` (PR #93, M31)
-- active branch: `feat/m32-pool-backed-order-book-storage` (M32 in progress)
+- main tip: `f122ee8` (PR #96, M32)
+- active branch: `feat/m33-advanced-concurrency-validation` (M33 draft PR #97 open; CI/Codex clean)
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
@@ -64,14 +66,9 @@ Current state:
 
 ### Next milestone
 
-M32 — Pool-backed order-book storage experiment. Use the PMR design:
-`OrderBook::Storage::{Baseline,Pooled}`, `std::pmr::unsynchronized_pool_resource`, PMR-backed
-`std::list`/`std::map`/`std::unordered_map` node allocation, and
-`MatchingEngine(OrderBook::Storage)`.
-
-Do not force direct M28 `OrderPool<Capacity>` into the current order book. `std::list<Order>`
-allocates list nodes, not bare `engine::Order` objects; direct `OrderPool` integration requires an
-intrusive/custom-node redesign and is tracked in issue #95.
+M33 — Advanced concurrency validation. Add non-flaky scheduling perturbation or longer stress
+modes, document that TSan/stress are empirical evidence rather than proof, and keep long-running or
+Linux-only validation as explicit opt-in commands rather than normal CI requirements.
 
 ### Phase III / IV purpose
 
@@ -84,9 +81,9 @@ networking research.
 Current priority order:
 
 1. Issue #90 — real Linux hardware PMU perf evidence.
-2. M32 — PMR-backed order-book node allocation (in progress).
-3. M33 — advanced concurrency validation.
-4. M34 — epoll gateway architecture.
+2. M33 — advanced concurrency validation (in progress).
+3. M34 — epoll gateway architecture.
+4. M35 — multi-client socket pressure.
 
 ### Forbidden shortcuts
 

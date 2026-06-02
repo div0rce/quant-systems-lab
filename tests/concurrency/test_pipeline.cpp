@@ -20,6 +20,7 @@
 #include "qsl/replay/event_log.hpp"
 #include "qsl/replay/recovery.hpp"
 
+#include <array>
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
@@ -29,6 +30,7 @@
 #include <vector>
 
 using qsl::concurrency::OutputSink;
+using qsl::concurrency::PipelinePerturbation;
 using qsl::concurrency::PipelineProbe;
 using qsl::concurrency::PipelineResult;
 using qsl::concurrency::ProcessedCommand;
@@ -162,10 +164,12 @@ struct GatedSink final : OutputSink {
 // exactly: same counts, same final snapshot (which includes last_seq), and the same ordered event
 // stream observed by the downstream stage.
 template <std::size_t In, std::size_t Out>
-void require_matches_reference(const std::vector<Command> &commands, RiskConfig risk) {
+void require_matches_reference(const std::vector<Command> &commands, RiskConfig risk,
+                               const PipelinePerturbation *perturbation = nullptr) {
     const Reference ref = run_reference(commands, risk);
     CollectingSink sink;
-    const PipelineResult result = ThreadedPipeline<In, Out>::run(commands, risk, sink);
+    const PipelineResult result =
+        ThreadedPipeline<In, Out>::run(commands, risk, sink, nullptr, perturbation);
 
     REQUIRE(result.commands_processed == commands.size());
     REQUIRE(result.commands_accepted == ref.accepted);
@@ -175,6 +179,27 @@ void require_matches_reference(const std::vector<Command> &commands, RiskConfig 
     REQUIRE(result.snapshot == ref.snapshot);
     REQUIRE(sink.processed == commands.size());
     REQUIRE(sink.events == ref.events); // exact in-order event stream
+}
+
+TEST_CASE("pipeline matches reference under deterministic scheduling perturbations",
+          "[pipeline][perturbation]") {
+    // M33: perturb one or more stages with deterministic yields. The goal is schedule diversity,
+    // not timing dependence: every run must still match the single-threaded reference exactly.
+    constexpr std::array<PipelinePerturbation, 5> patterns{{
+        PipelinePerturbation{1, 0, 0, 1}, // frequently pause input
+        PipelinePerturbation{0, 1, 0, 1}, // frequently pause engine
+        PipelinePerturbation{0, 0, 1, 1}, // frequently pause output
+        PipelinePerturbation{2, 3, 5, 1}, // staggered stage yields
+        PipelinePerturbation{7, 5, 3, 2}, // multiple yields per hit
+    }};
+
+    for (std::uint64_t seed = 1; seed <= 4; ++seed) {
+        const auto flow = qsl::replay::generate_property_flow(seed, 4, 240);
+        for (const PipelinePerturbation &p : patterns) {
+            require_matches_reference<3, 5>(flow, kRisk, &p);
+            require_matches_reference<17, 2>(flow, kRisk, &p);
+        }
+    }
 }
 
 } // namespace

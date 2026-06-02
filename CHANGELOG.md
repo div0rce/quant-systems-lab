@@ -7,6 +7,10 @@ All notable changes to this project. The format is loosely based on
 
 ### Added
 
+- M33: deterministic pipeline scheduling perturbation (`PipelinePerturbation`) so concurrency tests
+  exercise different input/engine/output pacing patterns without timing-sensitive sleeps.
+- M33: `make concurrency-stress` / `scripts/concurrency_stress.sh`, an opt-in repeated
+  concurrency-test loop for longer local or Linux/TSan runs outside normal CI.
 - M32: `OrderBook::Storage::{Baseline,Pooled}` and `MatchingEngine(OrderBook::Storage)` for a
   scoped PMR-backed order-book node-allocation experiment. `Storage::Pooled` routes per-book
   `std::list`, `std::map`, and `std::unordered_map` node allocation through
@@ -26,6 +30,9 @@ All notable changes to this project. The format is loosely based on
 
 ### Documentation
 
+- M33: concurrency docs now distinguish static happens-before reasoning, TSan, deterministic
+  schedule perturbation, and repeated stress as evidence over executed schedules rather than proof
+  over all interleavings.
 - M32: added `docs/pool_backed_storage.md` and ADR 0009 to distinguish M28 raw-object pool
   mechanics, M32 PMR container-node allocation, and the future intrusive/custom-node order-book
   redesign. Added `results/pool_backed_storage.txt` as the measured engine-level artifact.
