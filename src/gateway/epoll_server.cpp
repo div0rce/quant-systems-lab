@@ -160,14 +160,10 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             if ((ev & EPOLLIN) != 0U) {
                 std::array<std::byte, 4096> buffer{};
                 for (;;) {
-                    // Backpressure: once the outbound backlog reaches the high-water mark, stop
-                    // reading *before* pulling in and processing another request, so additional
-                    // requests cannot push the buffer further past the mark. Checked here (not only
-                    // after appending) so the overshoot is bounded to the request already in
-                    // flight. Note: a single response is still buffered whole -- e.g. a market
-                    // order crossing a deep book yields one Fill per resting maker -- so the peak
-                    // buffer is roughly this mark plus the largest single response, not a hard byte
-                    // cap; the mark bounds how many *further* requests are read (see docs).
+                    // Soft backpressure: once the outbound backlog reaches the soft high-water
+                    // mark, stop reading more requests before processing another (the re-arm below
+                    // drops EPOLLIN), resuming once it drains. The absolute bound is the hard cap
+                    // enforced before the append below.
                     if (client.outbuf.size() >= options.max_outbuf_bytes) {
                         break;
                     }
@@ -175,12 +171,24 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                     if (n > 0) {
                         auto response = client.session.on_bytes(
                             std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)));
+                        // Hard cap: if buffering this response would push the connection past the
+                        // hard limit, drop the connection instead of appending. Enforced *before*
+                        // the append, so sustained per-connection memory never exceeds the cap --
+                        // this bounds the high-fanout single-response path (one request can produce
+                        // a Fill per resting maker). A client that reads its responses keeps the
+                        // backlog near zero and never trips this.
+                        if (options.max_outbuf_hard_bytes != 0 &&
+                            client.outbuf.size() + response.size() >
+                                options.max_outbuf_hard_bytes) {
+                            close_now = true;
+                            break;
+                        }
                         client.outbuf.insert(client.outbuf.end(), response.begin(), response.end());
                         if (client.session.logged_out()) {
                             client.close_after_flush = true;
                             break;
                         }
-                        continue; // re-checks the high-water mark at the top before reading again
+                        continue; // re-checks the soft high-water mark at the top before reading
                     }
                     if (n == 0) {
                         client.input_closed = true;

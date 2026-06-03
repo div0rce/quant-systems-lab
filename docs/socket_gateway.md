@@ -55,12 +55,13 @@ stops reading from that client (drops `EPOLLIN`, keeping only `EPOLLOUT`), so un
 up in the kernel receive buffer and TCP flow control pushes back on the sender. Reads resume once
 the backlog drains below the mark.
 
-The mark gates how many *further* requests are read, not the size of one response: a single
-request whose response is large — e.g. a market order crossing a deep book yields one fill per
-resting maker — is buffered in full, so the peak outbound buffer is roughly the mark plus the
-largest single response. Bounding one response further would mean capping matching output, which
-is out of scope for this transport prototype. No response is ever dropped or reordered; the cap is
-on how much *additional* request flow a non-reading peer can induce.
+That soft mark bounds how many *further* requests a non-reading peer induces, but a single
+request's response is buffered whole — a market order sweeping a deep book returns one fill per
+resting maker. So a **hard cap** (`EpollServerOptions::max_outbuf_hard_bytes`, default 8 MiB) is
+the absolute ceiling: if buffering one response would push the connection past it, the server
+drops the connection *before* appending it, so sustained per-connection memory never exceeds the
+hard cap. A client that reads its responses keeps the backlog near zero and trips neither
+threshold; only a peer that stops reading and then induces an over-cap response is disconnected.
 
 ## Malformed frames
 

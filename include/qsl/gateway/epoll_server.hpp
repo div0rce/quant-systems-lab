@@ -12,13 +12,17 @@ namespace qsl::gateway {
 struct EpollServerOptions {
     std::size_t max_events = 64;
     int wait_timeout_ms = 50;
-    // Per-connection outbound high-water mark. While a client's pending response bytes reach this,
-    // the server stops reading more requests from it (drops EPOLLIN), so a peer that floods
-    // requests without reading its responses cannot make the gateway buffer unbounded output;
-    // reads resume once the backlog drains below the mark. A single in-flight response is still
-    // buffered whole, so the peak is roughly this mark plus the largest single response, not a
-    // hard byte cap; the mark bounds how many *further* requests are read.
+    // Soft outbound high-water mark: while a client's pending response bytes reach this, the server
+    // stops reading more requests from it (drops EPOLLIN) and resumes once the backlog drains, so a
+    // peer that floods many small requests without reading gets polite backpressure rather than
+    // unbounded buffering.
     std::size_t max_outbuf_bytes = 1U << 20; // 1 MiB
+    // Hard outbound cap: if buffering a single response would push a connection's pending bytes
+    // past this, the connection is dropped instead, so *sustained* per-connection memory never
+    // exceeds it -- including on the high-fanout path where one request (e.g. a market order
+    // sweeping a deep book) yields one Fill per resting maker. A client that reads its responses
+    // keeps the backlog near zero and never trips this. 0 disables the hard cap.
+    std::size_t max_outbuf_hard_bytes = 8U << 20; // 8 MiB
 };
 
 /// Linux epoll-based TCP front end for the order gateway. It is a transport prototype:

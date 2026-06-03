@@ -210,4 +210,62 @@ TEST_CASE("epoll gateway applies backpressure without dropping responses", "[gat
     REQUIRE(::close(listen_fd) == 0);
 }
 
+TEST_CASE("epoll gateway drops a non-reading client that exceeds the hard buffer cap",
+          "[gateway][epoll]") {
+    sockaddr_in bound{};
+    const int listen_fd = bind_loopback_listener(bound);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    EpollServer server{gateway};
+    std::atomic<bool> server_ok{false};
+
+    // Tiny soft mark and hard cap: a single crossing order whose response (Ack + one Fill per
+    // maker) exceeds the hard cap must make the server drop the connection rather than buffer it.
+    std::thread server_thread([&] {
+        server_ok.store(server.serve_listen_socket(
+                            listen_fd, EpollServerOptions{/*max_events=*/16, /*wait_timeout_ms=*/10,
+                                                          /*max_outbuf_bytes=*/64,
+                                                          /*max_outbuf_hard_bytes=*/64}),
+                        std::memory_order_release);
+    });
+
+    const int client = connect_client(bound);
+
+    // Build a book of eight resting sells at one price, reading each Ack so the buffer stays low.
+    constexpr std::uint64_t kMakers = 8;
+    for (std::uint64_t i = 1; i <= kMakers; ++i) {
+        write_all(
+            client,
+            encode(NewOrder{i, 0, 100, 5, Side::Sell, OrderType::Limit, TimeInForce::GTC}, i));
+        REQUIRE(read_types(client, 1) == std::vector<MsgType>{MsgType::Ack});
+    }
+
+    // One crossing buy fills all eight makers -> Ack + 8 Fills, far past the 64-byte hard cap, so
+    // the server enforces the cap before buffering and drops the connection instead.
+    write_all(client, encode(NewOrder{kMakers + 1, 0, 100, 40, Side::Buy, OrderType::Limit,
+                                      TimeInForce::GTC},
+                             kMakers + 1));
+
+    // The drop surfaces as a clean EOF (read returns 0) rather than the over-cap response. A
+    // non-zero read here would mean the server buffered/sent it (cap not enforced); a -1 timeout
+    // would mean it neither answered nor closed.
+    std::array<std::byte, 512> buf{};
+    ssize_t n = 0;
+    for (int tries = 0; tries < 50; ++tries) {
+        n = ::read(client, buf.data(), buf.size());
+        if (n <= 0) {
+            break;
+        }
+    }
+    REQUIRE(n == 0); // server closed the connection (hard cap enforced)
+
+    REQUIRE(::close(client) == 0);
+    server.request_stop();
+    server_thread.join();
+    REQUIRE(server_ok.load(std::memory_order_acquire));
+    REQUIRE(::close(listen_fd) == 0);
+}
+
 #endif
