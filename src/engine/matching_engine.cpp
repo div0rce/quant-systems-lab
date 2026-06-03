@@ -123,6 +123,15 @@ std::optional<Price> MatchingEngine::best_ask(SymbolId symbol) const {
     return it == books_.end() ? std::nullopt : it->second.best_ask();
 }
 
+std::size_t MatchingEngine::fill_count(SymbolId symbol, Side side, Price price, OrderType type,
+                                       Quantity quantity) const {
+    const auto it = books_.find(symbol);
+    if (it == books_.end()) {
+        return 0;
+    }
+    return it->second.fill_count(side, price, type == OrderType::Market, quantity);
+}
+
 EngineSnapshot MatchingEngine::snapshot() const {
     EngineSnapshot snap;
     snap.last_seq = seq_;

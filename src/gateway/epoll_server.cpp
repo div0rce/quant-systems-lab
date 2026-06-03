@@ -7,6 +7,7 @@
 #include <array>
 #include <cerrno>
 #include <fcntl.h>
+#include <limits>
 #include <memory>
 #include <netinet/in.h>
 #include <span>
@@ -116,6 +117,18 @@ bool send_some(int fd, ClientState &client) {
     return true;
 }
 
+void close_client(int epoll_fd, int fd) noexcept {
+    ::epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
+    ::close(fd);
+}
+
+void close_all_clients(int epoll_fd, std::unordered_map<int, ClientState> &clients) noexcept {
+    for (const auto &entry : clients) {
+        close_client(epoll_fd, entry.first);
+    }
+    clients.clear();
+}
+
 } // namespace
 
 bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options) {
@@ -142,6 +155,7 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             if (errno == EINTR) {
                 continue;
             }
+            close_all_clients(*epoll_fd, clients);
             return false;
         }
 
@@ -172,6 +186,7 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                         errno == ENETUNREACH) {
                         continue;
                     }
+                    close_all_clients(*epoll_fd, clients);
                     return false; // genuinely fatal listener error
                 }
                 continue;
@@ -183,15 +198,20 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             }
             ClientState &client = it->second;
             bool close_now = false;
+            const bool hard_socket_error = (ev & (EPOLLERR | EPOLLHUP)) != 0U;
+
+            if (hard_socket_error) {
+                close_now = true;
+            }
 
             // Drain any writable backlog first, so the read below sees an up-to-date pending() and
             // the hard cap is not enforced against a stale buffer that send_some() could free
             // (which would otherwise falsely drop a client that has resumed reading).
-            if ((ev & EPOLLOUT) != 0U) {
+            if (!close_now && (ev & EPOLLOUT) != 0U) {
                 close_now = !send_some(fd, client);
             }
 
-            if (!close_now && (ev & EPOLLIN) != 0U) {
+            if (!close_now && !client.input_closed && (ev & EPOLLIN) != 0U) {
                 std::array<std::byte, 4096> buffer{};
                 for (;;) {
                     // Soft backpressure: once the unsent backlog reaches the soft high-water mark,
@@ -202,22 +222,17 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                     }
                     const ssize_t n = ::read(fd, buffer.data(), buffer.size());
                     if (n > 0) {
-                        auto response = client.session.on_bytes(
-                            std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)));
                         client.drop_sent_prefix(); // reclaim already-sent bytes before growing
-                        // Hard cap on the RETAINED buffer: if appending this response would push
-                        // the connection past the hard limit, drop it instead of buffering, so the
-                        // sustained per-connection buffer never exceeds the cap. The transient
-                        // response vector is still materialized in full by Session::on_bytes for a
-                        // single request; bounding that needs streaming response generation,
-                        // tracked as a follow-up (see docs/socket_gateway.md).
-                        if (options.max_outbuf_hard_bytes != 0 &&
-                            client.outbuf.size() + response.size() >
-                                options.max_outbuf_hard_bytes) {
-                            close_now = true;
+                        const std::size_t max_output = options.max_outbuf_hard_bytes == 0
+                                                           ? std::numeric_limits<std::size_t>::max()
+                                                           : options.max_outbuf_hard_bytes;
+                        const SessionStatus status = client.session.on_bytes(
+                            std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)),
+                            client.outbuf, max_output);
+                        if (status == SessionStatus::OutputLimitExceeded) {
+                            client.close_after_flush = true;
                             break;
                         }
-                        client.outbuf.insert(client.outbuf.end(), response.begin(), response.end());
                         if (client.session.logged_out()) {
                             client.close_after_flush = true;
                             break;
@@ -240,13 +255,11 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             }
 
             if (!close_now) {
+                if ((ev & EPOLLRDHUP) != 0U) {
+                    client.input_closed = true;
+                }
                 const bool want_write = client.pending() > 0;
-                if ((ev & (EPOLLERR | EPOLLHUP)) != 0U) {
-                    // Hard error/hangup: the socket is dead, so drop it regardless of queued output
-                    // (which can never be sent) instead of re-arming and waking the loop forever.
-                    close_now = true;
-                } else if (!want_write && (client.input_closed || client.close_after_flush ||
-                                           (ev & EPOLLRDHUP) != 0U)) {
+                if (!want_write && (client.input_closed || client.close_after_flush)) {
                     // Fully flushed and the peer is done / logged out / half-closed. RDHUP is a
                     // half-close: the peer can still receive queued responses, so keep flushing
                     // until want_write is false before closing.
@@ -256,7 +269,7 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                     // Backpressure: only keep reading while the unsent backlog is below the
                     // high-water mark, so a client that stops reading its responses cannot make the
                     // gateway buffer unbounded output. Reads resume once the backlog drains.
-                    if (client.pending() < options.max_outbuf_bytes) {
+                    if (!client.input_closed && client.pending() < options.max_outbuf_bytes) {
                         want |= EPOLLIN;
                     }
                     if (want_write) {
@@ -267,19 +280,13 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             }
 
             if (close_now) {
-                ::epoll_ctl(*epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
-                ::close(fd);
+                close_client(*epoll_fd, fd);
                 clients.erase(it);
             }
         }
     }
 
-    for (const auto &entry : clients) {
-        const int fd = entry.first;
-        ::epoll_ctl(*epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
-        ::close(fd);
-    }
-    clients.clear();
+    close_all_clients(*epoll_fd, clients);
     return true;
 }
 

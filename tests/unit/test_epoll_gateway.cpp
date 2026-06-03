@@ -265,6 +265,12 @@ TEST_CASE("epoll gateway drops a non-reading client that exceeds the hard buffer
     server.request_stop();
     server_thread.join();
     REQUIRE(server_ok.load(std::memory_order_acquire));
+    const auto snapshot = engine.snapshot();
+    REQUIRE(snapshot.last_seq == kMakers);
+    REQUIRE(snapshot.symbols.size() == 1);
+    REQUIRE(snapshot.symbols.front().order_count == kMakers);
+    REQUIRE(snapshot.symbols.front().asks.size() == 1);
+    REQUIRE(snapshot.symbols.front().asks.front().quantity == kMakers * 5);
     REQUIRE(::close(listen_fd) == 0);
 }
 

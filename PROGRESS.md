@@ -20,13 +20,13 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M34 — epoll gateway architecture (in progress)
-- **Status:** draft PR open (#98); local verification passed
+- **Status:** draft PR open (#98); Codex review fixes applied locally
 - **Active branch:** `feat/m34-epoll-gateway-architecture`
 - **Last completed milestone:** M33 — Advanced concurrency validation (squash-merged, PR #97, commit fe8679a; Codex review clean — no major issues; CI green)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** last verified on M34 (190/190) on 2026-06-02; `make asan` also passed 190/190. Linux Docker verification built `qsl-gateway`/`test_epoll_gateway` and passed 5 epoll tests / 226 assertions (multi-client, backpressure, and hard-cap coverage added during Codex review).
-- **Last action:** opened draft PR #98 for M34 after local and Docker Linux verification passed.
-- **Next action:** trigger Codex review and monitor PR #98 CI; do not merge.
+- **`make check` passing:** last verified on M34 (191/191) on 2026-06-03; `make asan` also passed 191/191. Linux Docker verification built `qsl-gateway`/`test_epoll_gateway` and passed 5 epoll tests / 231 assertions (multi-client, backpressure, and hard-cap coverage).
+- **Last action:** addressed Codex PR #98 epoll review findings locally: bounded response budgeting before gateway mutation, hard-error/read re-arm cleanup, and fatal-accept client cleanup.
+- **Next action:** commit/push M34 Codex review fixes, trigger Codex review, and monitor PR #98 CI; do not merge.
 - **Blockers:** none for M34 on Linux-targeted code paths; issue #90 remains blocked on PMU-capable Linux access; issue #95 remains future intrusive/custom-node storage.
 
 ---
@@ -177,6 +177,8 @@ Status key:
 - [M5] Rejected modifies do not mutate engine state or consume sequence numbers.
 - [M4] Active resting `OrderId`s are unique per symbol; duplicate active IDs are no-ops in M4 and become structured `DuplicateOrderId` rejections in M5.
 - [M4] Tests cover no orphaned liquidity after duplicate-id attempts.
+- [M34] Epoll response budgeting is enforced at the Session/gateway boundary: over-cap `NewOrder` fanout is rejected before appending responses or mutating engine state.
+- [M34] Epoll transport drains writable backlog before accepting more input for a client, retries `EINTR` sends, skips input on hard hangups, suppresses `EPOLLIN` after EOF, and closes active clients on fatal listener failure.
 
 ---
 
@@ -202,7 +204,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M34 PR #98 open on `feat/m34-epoll-gateway-architecture`: Linux `EpollServer`, `qsl-gateway --epoll`, Linux-gated epoll tests, socket-gateway docs, ADR 0010. Codex review iterated several rounds (all CI green); addressed: read-backpressure, `--epoll` flag/port parsing robustness, a soft high-water mark + a hard outbound cap (drop over-cap connections), O(n²)-flush → write-offset, `EINTR`-on-send retry, transient-accept-error survival, and duplicate-port rejection. The remaining transient single-response allocation (Session::on_bytes materializes a whole high-fanout response) is deliberately backlogged as issue #99 (streaming/byte-budgeted response generation through the shared Session/gateway API — its own milestone) and documented in docs/socket_gateway.md. Verification: `make check` 190/190, `make asan` 190/190, Docker Ubuntu `test_epoll_gateway` 5 tests / 226 assertions + arg-parse smokes. Next: await final Codex pass / CI, then human squash-merge. Clear this block when M34 merges._
+- _M34 PR #98 open on `feat/m34-epoll-gateway-architecture`: Linux `EpollServer`, `qsl-gateway --epoll`, Linux-gated epoll tests, socket-gateway docs, ADR 0010. Codex review fixes addressed: read-backpressure, `--epoll` flag/port parsing robustness, soft high-water mark + hard outbound cap, bounded Session response generation before gateway mutation, O(n²)-flush → write-offset, `EINTR`-on-send retry, transient/fatal accept handling, hard-hangup input suppression, EOF read re-arm suppression, and duplicate-port rejection. Verification: `make check` 191/191, `make asan` 191/191, `make fmt-check`, `git diff --check`, Docker Ubuntu `test_epoll_gateway` 5 tests / 231 assertions. Next: commit/push this review fix, trigger Codex review, and monitor CI. Clear this block when M34 merges._
 
 
 ---

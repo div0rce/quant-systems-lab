@@ -60,6 +60,8 @@ class OrderBook {
     [[nodiscard]] QuantityTotal quantity_at(Side side, Price price) const;
     [[nodiscard]] std::size_t order_count() const;
     [[nodiscard]] bool contains(OrderId id) const;
+    [[nodiscard]] std::size_t fill_count(Side taker_side, Price limit, bool is_market,
+                                         Quantity quantity) const;
 
     // Aggregate resting quantity per price level, best price first.
     [[nodiscard]] std::vector<LevelView> bid_levels() const;

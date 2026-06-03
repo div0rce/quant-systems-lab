@@ -17,11 +17,11 @@ struct EpollServerOptions {
     // peer that floods many small requests without reading gets polite backpressure rather than
     // unbounded buffering.
     std::size_t max_outbuf_bytes = 1U << 20; // 1 MiB
-    // Hard outbound cap: if buffering a single response would push a connection's pending bytes
-    // past this, the connection is dropped instead, so *sustained* per-connection memory never
-    // exceeds it -- including on the high-fanout path where one request (e.g. a market order
-    // sweeping a deep book) yields one Fill per resting maker. A client that reads its responses
-    // keeps the backlog near zero and never trips this. 0 disables the hard cap.
+    // Hard outbound cap: before forwarding a request to the gateway, the session accounts for the
+    // exact response bytes it can produce (Ack/Reject plus one Fill per matched maker). If
+    // appending that response would exceed this cap, the connection is dropped without mutating
+    // engine state. A client that reads its responses keeps the backlog near zero and never trips
+    // this. 0 disables the hard cap.
     std::size_t max_outbuf_hard_bytes = 8U << 20; // 8 MiB
 };
 

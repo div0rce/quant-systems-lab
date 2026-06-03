@@ -6,12 +6,14 @@
 #include "qsl/engine/matching_engine.hpp"
 #include "qsl/engine/risk.hpp"
 
+#include <cstddef>
 #include <utility>
 #include <vector>
 
 namespace qsl::gateway {
 
 using core::OrderId;
+using core::OrderType;
 using core::Price;
 using core::Quantity;
 using core::RejectReason;
@@ -35,6 +37,11 @@ struct GatewayResult {
     }
 };
 
+struct NewOrderPreview {
+    bool accepted;
+    std::size_t fill_count;
+};
+
 /// In-process order gateway: applies deterministic risk checks before forwarding accepted
 /// commands to the engine. Stateless beyond the engine reference and the risk config;
 /// "duplicate" and "unknown order" are defined by current engine state (resting orders).
@@ -47,6 +54,10 @@ class OrderGateway {
     GatewayResult new_market(SymbolId symbol, OrderId id, Side side, Quantity quantity);
     GatewayResult cancel(SymbolId symbol, OrderId id);
     GatewayResult modify(SymbolId symbol, OrderId id, Price new_price, Quantity new_quantity);
+
+    [[nodiscard]] NewOrderPreview preview_new_order(SymbolId symbol, OrderId id, Side side,
+                                                    Price price, Quantity quantity,
+                                                    OrderType type) const;
 
   private:
     MatchingEngine &engine_;

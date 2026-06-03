@@ -28,6 +28,12 @@ can opt into the prototype with:
 The epoll path handles readiness and buffering only. It does not change order-gateway risk logic,
 matching, protocol codecs, or session semantics.
 
+Per-client response buffering is bounded. The epoll transport applies a soft high-water mark that
+stops reading from a client until pending output drains, and a hard cap enforced through a bounded
+`Session` append path. High-fanout `NewOrder` responses are previewed against current engine state
+before they reach the gateway, so an over-cap response drops the connection without appending a
+partial response and without mutating engine state.
+
 ## Consequences
 
 The repo now has a real event-driven multi-client gateway architecture without adopting

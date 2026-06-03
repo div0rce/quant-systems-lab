@@ -30,7 +30,10 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-M34 is in progress on `feat/m34-epoll-gateway-architecture`. To resume it:
+M34 is in progress on `feat/m34-epoll-gateway-architecture` with draft PR #98 open. Codex review
+fixes are applied locally: the epoll path now budgets high-fanout responses at the
+Session/gateway boundary before mutating engine state, and local verification is green. To resume
+it:
 
 ```text
 /resume
@@ -67,8 +70,8 @@ Current state:
 ### Next milestone
 
 M34 — epoll gateway architecture. Add a Linux event-driven gateway prototype with multi-client
-readiness handling, nonblocking accept/read/write behavior, and preserved deterministic session
-semantics. Keep load/pressure testing for M35.
+readiness handling, nonblocking accept/read/write behavior, bounded per-client response buffering,
+and preserved deterministic session semantics. Keep load/pressure testing for M35.
 
 ### Phase III / IV purpose
 
