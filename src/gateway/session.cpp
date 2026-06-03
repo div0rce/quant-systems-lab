@@ -164,6 +164,9 @@ SessionStatus Session::process_frame(std::span<const std::byte> frame, std::vect
 
 SessionStatus Session::on_bytes(std::span<const std::byte> input, std::vector<std::byte> &out,
                                 std::size_t max_output_bytes) {
+    if (logged_out_) {
+        return SessionStatus::Ok;
+    }
     inbuf_.insert(inbuf_.end(), input.begin(), input.end());
     std::size_t consumed = 0;
     while (!logged_out_) {

@@ -33,8 +33,9 @@ Background — M29 delivered (merged, constrained-environment only):
 M34 is in progress on `feat/m34-epoll-gateway-architecture` with draft PR #98 open. Codex review
 fixes are applied locally: the epoll path budgets high-fanout responses at the Session/gateway
 boundary before mutating engine state, drains already-readable `EPOLLIN` bytes before honoring
-`EPOLLHUP`, and immediately closes on hard-cap overflow instead of waiting for a stopped reader to
-flush. To resume it:
+`EPOLLHUP`, suppresses reads once a session is closing, ignores stale fd events through
+per-connection generation tokens, and preserves queued replies from earlier accepted frames before
+a later over-cap close. To resume it:
 
 ```text
 /resume

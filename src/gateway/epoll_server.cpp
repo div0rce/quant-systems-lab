@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <array>
 #include <cerrno>
+#include <cstdint>
 #include <fcntl.h>
 #include <limits>
 #include <memory>
@@ -30,6 +31,8 @@ bool EpollServer::supported() noexcept {
 
 #if defined(__linux__)
 namespace {
+
+inline constexpr std::uint32_t kListenerGeneration = 0;
 
 struct FdCloser {
     void operator()(int *fd) const noexcept {
@@ -58,23 +61,46 @@ bool set_nonblocking(int fd) {
     return ::fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0;
 }
 
-bool add_fd(int epoll_fd, int fd, std::uint32_t events) {
+std::uint64_t pack_event_data(int fd, std::uint32_t generation) noexcept {
+    return (static_cast<std::uint64_t>(generation) << 32U) | static_cast<std::uint32_t>(fd);
+}
+
+int event_fd(const epoll_event &ev) noexcept {
+    return static_cast<int>(static_cast<std::uint32_t>(ev.data.u64));
+}
+
+std::uint32_t event_generation(const epoll_event &ev) noexcept {
+    return static_cast<std::uint32_t>(ev.data.u64 >> 32U);
+}
+
+std::uint32_t next_client_generation(std::uint32_t &next_generation) noexcept {
+    const std::uint32_t generation = next_generation;
+    ++next_generation;
+    if (next_generation == kListenerGeneration) {
+        ++next_generation;
+    }
+    return generation;
+}
+
+bool add_fd(int epoll_fd, int fd, std::uint32_t events, std::uint32_t generation) {
     epoll_event ev{};
     ev.events = events;
-    ev.data.fd = fd;
+    ev.data.u64 = pack_event_data(fd, generation);
     return ::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == 0;
 }
 
-bool mod_fd(int epoll_fd, int fd, std::uint32_t events) {
+bool mod_fd(int epoll_fd, int fd, std::uint32_t events, std::uint32_t generation) {
     epoll_event ev{};
     ev.events = events;
-    ev.data.fd = fd;
+    ev.data.u64 = pack_event_data(fd, generation);
     return ::epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == 0;
 }
 
 struct ClientState {
-    explicit ClientState(OrderGateway &gateway) : session(gateway) {}
+    ClientState(OrderGateway &gateway, std::uint32_t connection_generation)
+        : generation(connection_generation), session(gateway) {}
 
+    std::uint32_t generation;
     Session session;
     std::vector<std::byte> outbuf;
     std::size_t sent = 0; // bytes at the front of outbuf already written to the socket
@@ -140,12 +166,13 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
     if (*epoll_fd < 0) {
         return false;
     }
-    if (!add_fd(*epoll_fd, listen_fd, EPOLLIN)) {
+    if (!add_fd(*epoll_fd, listen_fd, EPOLLIN, kListenerGeneration)) {
         return false;
     }
 
     std::vector<epoll_event> events(options.max_events);
     std::unordered_map<int, ClientState> clients;
+    std::uint32_t next_generation = 1;
 
     stop_requested_.store(false, std::memory_order_release);
     while (!stop_requested_.load(std::memory_order_acquire)) {
@@ -160,18 +187,25 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
         }
 
         for (int i = 0; i < ready; ++i) {
-            const int fd = events[static_cast<std::size_t>(i)].data.fd;
-            const std::uint32_t ev = events[static_cast<std::size_t>(i)].events;
+            const epoll_event &ready_event = events[static_cast<std::size_t>(i)];
+            const int fd = event_fd(ready_event);
+            const std::uint32_t generation = event_generation(ready_event);
+            const std::uint32_t ev = ready_event.events;
 
-            if (fd == listen_fd) {
+            if (generation == kListenerGeneration && fd == listen_fd) {
                 for (;;) {
                     const int conn = ::accept4(listen_fd, nullptr, nullptr, SOCK_NONBLOCK);
                     if (conn >= 0) {
-                        if (!add_fd(*epoll_fd, conn, EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLHUP)) {
+                        const std::uint32_t client_generation =
+                            next_client_generation(next_generation);
+                        auto emplaced = clients.try_emplace(conn, gateway_, client_generation);
+                        if (!emplaced.second ||
+                            !add_fd(*epoll_fd, conn, EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLHUP,
+                                    client_generation)) {
+                            clients.erase(conn);
                             ::close(conn);
                             continue;
                         }
-                        clients.try_emplace(conn, gateway_);
                         continue;
                     }
                     if (is_would_block()) {
@@ -197,6 +231,9 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                 continue;
             }
             ClientState &client = it->second;
+            if (client.generation != generation) {
+                continue;
+            }
             bool close_now = false;
             const bool socket_error = (ev & EPOLLERR) != 0U;
             const bool peer_hung_up = (ev & EPOLLHUP) != 0U;
@@ -212,7 +249,8 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                 close_now = !send_some(fd, client);
             }
 
-            if (!close_now && !client.input_closed && (ev & EPOLLIN) != 0U) {
+            if (!close_now && !client.input_closed && !client.close_after_flush &&
+                (ev & EPOLLIN) != 0U) {
                 std::array<std::byte, 4096> buffer{};
                 for (;;) {
                     // Soft backpressure: once the unsent backlog reaches the soft high-water mark,
@@ -224,6 +262,7 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                     const ssize_t n = ::read(fd, buffer.data(), buffer.size());
                     if (n > 0) {
                         client.drop_sent_prefix(); // reclaim already-sent bytes before growing
+                        const std::size_t out_before = client.outbuf.size();
                         const std::size_t max_output = options.max_outbuf_hard_bytes == 0
                                                            ? std::numeric_limits<std::size_t>::max()
                                                            : options.max_outbuf_hard_bytes;
@@ -231,7 +270,11 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                             std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)),
                             client.outbuf, max_output);
                         if (status == SessionStatus::OutputLimitExceeded) {
-                            close_now = true;
+                            if (client.outbuf.size() > out_before) {
+                                client.close_after_flush = true;
+                            } else {
+                                close_now = true;
+                            }
                             break;
                         }
                         if (client.session.logged_out()) {
@@ -277,13 +320,14 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                         // high-water mark, so a client that stops reading its responses cannot make
                         // the gateway buffer unbounded output. Reads resume once the backlog
                         // drains.
-                        if (!client.input_closed && client.pending() < options.max_outbuf_bytes) {
+                        if (!client.input_closed && !client.close_after_flush &&
+                            client.pending() < options.max_outbuf_bytes) {
                             want |= EPOLLIN;
                         }
                         if (want_write) {
                             want |= EPOLLOUT; // still have bytes to flush
                         }
-                        close_now = !mod_fd(*epoll_fd, fd, want);
+                        close_now = !mod_fd(*epoll_fd, fd, want, client.generation);
                     }
                 }
             }

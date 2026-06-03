@@ -36,8 +36,15 @@ partial response and without mutating engine state.
 
 Disconnect handling distinguishes socket errors from peer hangups: `EPOLLERR` closes immediately,
 while `EPOLLHUP` is honored only after any already-readable `EPOLLIN` bytes have been drained into
-the session. Hard-cap overflow is an immediate close/discard path so a stopped reader cannot pin a
-per-client buffer while the server waits for `EPOLLOUT`.
+the session. Hard-cap overflow closes immediately when the over-cap frame appended nothing; if the
+same read already queued replies for earlier accepted frames, reads are disabled and the bounded
+pending replies are flushed before close.
+
+Each client event stores a per-connection generation token with the fd. If a closed fd is reused
+for a new connection while stale events from the old connection remain in the same `epoll_wait`
+batch, the generation mismatch makes those stale events no-ops. Once a session is closing
+(`close_after_flush`), the server no longer re-arms `EPOLLIN`; it only flushes pending replies and
+then closes.
 
 ## Consequences
 

@@ -49,6 +49,10 @@ The epoll path treats `EAGAIN` / `EWOULDBLOCK` as normal nonblocking backpressur
   connection closes after the pending outbound buffer drains.
 - if Linux reports `EPOLLIN` together with `EPOLLHUP`, the epoll path drains the already-readable
   bytes before honoring the hangup; `EPOLLERR` remains an immediate close.
+- once a session is closing after malformed input or an over-cap frame with queued replies,
+  `EPOLLIN` is not re-armed; the connection is write-only until its pending output drains.
+- client readiness events carry a per-connection generation token, so stale events in the same
+  `epoll_wait` batch cannot act on a newer connection that reused the same numeric fd.
 
 A client that keeps sending requests but stops reading its responses cannot grow the gateway's
 memory without bound. Each connection's outbound buffer has a high-water mark
@@ -64,9 +68,10 @@ absolute ceiling. The epoll path asks `Session` to append responses directly int
 buffer under that byte budget; before a `NewOrder` reaches the gateway, the session previews the
 accepted/rejected outcome and exact fill count against current engine state. If the full response
 would exceed the cap, the connection is dropped without appending a partial response and without
-mutating engine state. A client that reads its responses keeps the backlog near zero and trips
-neither threshold; only a peer that stops reading and then induces an over-cap response is
-disconnected.
+mutating engine state. If the same read already queued valid replies for earlier accepted frames,
+those replies are flushed and reads are disabled before close. A client that reads its responses
+keeps the backlog near zero and trips neither threshold; only a peer that stops reading and then
+induces an over-cap response is disconnected.
 
 ## Malformed frames
 

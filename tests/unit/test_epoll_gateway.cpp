@@ -275,6 +275,55 @@ TEST_CASE("epoll gateway drops a non-reading client that exceeds the hard buffer
     REQUIRE(::close(listen_fd) == 0);
 }
 
+TEST_CASE("epoll gateway preserves queued replies before later over-cap close",
+          "[gateway][epoll]") {
+    sockaddr_in bound{};
+    const int listen_fd = bind_loopback_listener(bound);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    EpollServer server{gateway};
+    std::atomic<bool> server_ok{false};
+
+    std::thread server_thread([&] {
+        server_ok.store(server.serve_listen_socket(
+                            listen_fd, EpollServerOptions{/*max_events=*/16, /*wait_timeout_ms=*/10,
+                                                          /*max_outbuf_bytes=*/1024,
+                                                          /*max_outbuf_hard_bytes=*/kHeaderSize +
+                                                              kAckBodySize}),
+                        std::memory_order_release);
+    });
+
+    const int client = connect_client(bound);
+
+    auto batch = encode(NewOrder{1, 0, 100, 5, Side::Sell, OrderType::Limit, TimeInForce::GTC}, 1);
+    const auto second =
+        encode(NewOrder{2, 0, 101, 5, Side::Sell, OrderType::Limit, TimeInForce::GTC}, 2);
+    batch.insert(batch.end(), second.begin(), second.end());
+    write_all(client, batch);
+
+    REQUIRE(read_types(client, 1) == std::vector<MsgType>{MsgType::Ack});
+
+    std::array<std::byte, 512> buf{};
+    const ssize_t n = ::read(client, buf.data(), buf.size());
+    REQUIRE(n == 0);
+
+    REQUIRE(::close(client) == 0);
+    server.request_stop();
+    server_thread.join();
+    REQUIRE(server_ok.load(std::memory_order_acquire));
+
+    const auto snapshot = engine.snapshot();
+    REQUIRE(snapshot.last_seq == 1);
+    REQUIRE(snapshot.symbols.size() == 1);
+    REQUIRE(snapshot.symbols.front().order_count == 1);
+    REQUIRE(snapshot.symbols.front().asks.size() == 1);
+    REQUIRE(snapshot.symbols.front().asks.front().price == 100);
+    REQUIRE(snapshot.symbols.front().asks.front().quantity == 5);
+    REQUIRE(::close(listen_fd) == 0);
+}
+
 TEST_CASE("epoll gateway drains a complete request before hangup close", "[gateway][epoll]") {
     sockaddr_in bound{};
     const int listen_fd = bind_loopback_listener(bound);

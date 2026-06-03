@@ -12,7 +12,8 @@ All notable changes to this project. The format is loosely based on
   client; `qsl-gateway <port> --epoll` opts in on Linux.
 - M34: epoll gateway tests cover platform scoping, invalid bind-host rejection, and two
   simultaneous loopback clients handled by one event loop, plus soft-backpressure and hard-cap
-  response-budget cases, including disconnect-after-write draining.
+  response-budget cases, including disconnect-after-write draining and queued-reply preservation
+  before a later over-cap close.
 - M33: deterministic pipeline scheduling perturbation (`PipelinePerturbation`) so concurrency tests
   exercise different input/engine/output pacing patterns without timing-sensitive sleeps.
 - M33: `make concurrency-stress` / `scripts/concurrency_stress.sh`, an opt-in repeated
