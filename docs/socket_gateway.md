@@ -10,6 +10,9 @@ the M2 binary protocol. It is split into two pieces:
 - **`TcpServer`** (`include/qsl/gateway/tcp_server.hpp`) — a thin POSIX-socket transport:
   `serve_connection(fd)` runs a `Session` over one connected socket; `run(host, port)` binds,
   listens, and accepts connections one at a time.
+- **`EpollServer`** (`include/qsl/gateway/epoll_server.hpp`) — a Linux-only event-driven
+  transport prototype: one `epoll` loop accepts multiple clients and drives one `Session` per
+  connection with nonblocking reads and writes.
 
 ## Message flow
 
@@ -28,11 +31,47 @@ client <- Ack / Reject / Fill / HeartbeatAck <- Session
 
 The wire is a byte stream, not a message stream. `Session` accumulates bytes in a buffer and
 only processes a frame once the 16-byte header plus the declared `body_len` are present; a
-frame split across multiple `read()`s is held until complete. Outbound responses are written
-with a send-all loop that tolerates partial writes. The socket write path uses
-`send(..., MSG_NOSIGNAL)` where available, and the platform socket option where available,
-so a client that drops before reading a response cannot terminate the gateway through
-`SIGPIPE`.
+frame split across multiple `read()`s is held until complete.
+
+The blocking `TcpServer` writes responses with a send-all loop that tolerates partial writes.
+The Linux `EpollServer` keeps a per-client outbound buffer and leaves the connection registered
+for `EPOLLOUT` until all pending response bytes are accepted by the kernel. Both write paths use
+`send(..., MSG_NOSIGNAL)` where available, and the platform socket option where available, so a
+client that drops before reading a response cannot terminate the gateway through `SIGPIPE`.
+
+The epoll path treats `EAGAIN` / `EWOULDBLOCK` as normal nonblocking backpressure:
+
+- `accept4(..., SOCK_NONBLOCK)` loops until the listening socket would block.
+- client reads loop until the connection would block, reaches EOF, errors, or the `Session`
+  flags a malformed stream for disconnect.
+- client writes loop until the outbound buffer is empty or `send()` would block.
+- a peer that half-closes after sending requests can still receive queued responses; the
+  connection closes after the pending outbound buffer drains.
+- if Linux reports `EPOLLIN` together with `EPOLLHUP`, the epoll path drains the already-readable
+  bytes before honoring the hangup; `EPOLLERR` remains an immediate close.
+- once a session is closing after malformed input or an over-cap frame with queued replies,
+  `EPOLLIN` is not re-armed; the connection is write-only until its pending output drains.
+- client readiness events carry a per-connection generation token, so stale events in the same
+  `epoll_wait` batch cannot act on a newer connection that reused the same numeric fd.
+
+A client that keeps sending requests but stops reading its responses cannot grow the gateway's
+memory without bound. Each connection's outbound buffer has a high-water mark
+(`EpollServerOptions::max_outbuf_bytes`, default 1 MiB): once the backlog reaches it the server
+stops reading from that client (drops `EPOLLIN`, keeping only `EPOLLOUT`), so unread requests back
+up in the kernel receive buffer and TCP flow control pushes back on the sender. Reads resume once
+the backlog drains below the mark.
+
+That soft mark bounds how many *further* requests a non-reading peer induces, but a single
+request's response can fan out — a market order sweeping a deep book returns one fill per resting
+maker. So a **hard cap** (`EpollServerOptions::max_outbuf_hard_bytes`, default 8 MiB) is the
+absolute ceiling. The epoll path asks `Session` to append responses directly into the per-client
+buffer under that byte budget; before a `NewOrder` reaches the gateway, the session previews the
+accepted/rejected outcome and exact fill count against current engine state. If the full response
+would exceed the cap, the connection is dropped without appending a partial response and without
+mutating engine state. If the same read already queued valid replies for earlier accepted frames,
+those replies are flushed and reads are disabled before close. A client that reads its responses
+keeps the backlog near zero and trips neither threshold; only a peer that stops reading and then
+induces an over-cap response is disconnected.
 
 ## Malformed frames
 
@@ -45,15 +84,36 @@ so a client that drops before reading a response cannot terminate the gateway th
 ## Disconnect and heartbeat
 
 - Graceful disconnect: when the peer closes its write side, `read()` returns 0 (EOF) and the
-  server finishes serving and closes the connection.
+  server finishes serving and closes the connection; a complete request delivered before a hangup
+  is still drained before the connection is removed.
 - Heartbeats are a liveness round-trip only; the gateway does not yet time out idle peers.
 
-## Why it is intentionally simple
+## Event-driven gateway mode
 
-A single-threaded accept-and-serve loop (one connection at a time) keeps the code easy to
-reason about and avoids concurrency bugs. The goal is a credible, debuggable systems
-demonstration, not a production matching venue, so there is no thread pool, no epoll/kqueue
-event loop, and no TLS.
+The default demo still uses `TcpServer` because it is portable and easiest to inspect. On Linux,
+`qsl-gateway` can run the epoll prototype explicitly:
+
+```bash
+./build/dev/qsl-gateway 9009 --epoll   # explicit port
+./build/dev/qsl-gateway --epoll        # default port 9009; the flag may precede or replace the port
+```
+
+This mode is single-threaded and event-driven: it does not create one thread per connection.
+Each connected client owns its own `Session`, so deterministic framing, malformed-frame handling,
+risk checks, and response encoding are shared with the blocking transport. M34 tests the real
+loopback socket path with two simultaneous clients (and a backpressure case under a small
+high-water mark) and verifies every client receives correct, in-order responses through one event
+loop.
+
+This is architecture validation, not a production-capacity claim. Multi-client load, socket
+pressure, connection scaling, and throughput measurements remain M35 scope.
+
+## Why it is still intentionally simple
+
+The blocking path remains a single-threaded accept-and-serve loop (one connection at a time).
+The epoll path is also single-threaded, but it multiplexes readiness across multiple clients.
+There is still no thread pool, no TLS, no authentication, no rate limiting, and no real venue
+connectivity.
 
 ## Security
 

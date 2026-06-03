@@ -82,6 +82,32 @@ TEST_CASE("a market order crosses resting liquidity", "[session]") {
     REQUIRE(decode_fill(frames[1]).value.maker_id == 1);
 }
 
+TEST_CASE("a bounded session rejects over-budget fanout before gateway mutation", "[session]") {
+    MatchingEngine eng;
+    eng.register_symbol("AAPL");
+    OrderGateway gw{eng, RiskConfig{1000, 1'000'000}};
+    Session session{gw};
+
+    constexpr std::uint64_t kMakers = 8;
+    for (std::uint64_t i = 1; i <= kMakers; ++i) {
+        static_cast<void>(session.on_bytes(
+            encode(NewOrder{i, 0, 100, 1, Side::Sell, OrderType::Limit, TimeInForce::GTC}, i)));
+    }
+    const auto before = eng.snapshot();
+
+    std::vector<std::byte> out;
+    const NewOrder sweep{
+        kMakers + 1,     0, 100, static_cast<Quantity>(kMakers), Side::Buy, OrderType::Limit,
+        TimeInForce::GTC};
+    const SessionStatus status = session.on_bytes(encode(sweep, kMakers + 1), out,
+                                                  /*max_output_bytes=*/64);
+
+    REQUIRE(status == SessionStatus::OutputLimitExceeded);
+    REQUIRE(session.logged_out());
+    REQUIRE(out.empty());
+    REQUIRE(eng.snapshot() == before);
+}
+
 TEST_CASE("a cancel order through the session yields an Ack", "[session]") {
     MatchingEngine eng;
     eng.register_symbol("AAPL");

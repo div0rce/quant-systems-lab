@@ -14,6 +14,8 @@
 
 namespace qsl::engine {
 
+using core::OrderType;
+
 /// Interns external symbol names to compact numeric SymbolIds (assigned in
 /// registration order).
 class SymbolRegistry {
@@ -72,6 +74,8 @@ class MatchingEngine {
 
     [[nodiscard]] std::optional<Price> best_bid(SymbolId symbol) const;
     [[nodiscard]] std::optional<Price> best_ask(SymbolId symbol) const;
+    [[nodiscard]] std::size_t fill_count(SymbolId symbol, Side side, Price price, OrderType type,
+                                         Quantity quantity) const;
 
   private:
     OrderBook *find_book(SymbolId symbol) noexcept;

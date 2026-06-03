@@ -48,6 +48,32 @@ void OrderBook::match_against(OppMap &opposite, OrderId taker_id, bool taker_is_
     }
 }
 
+template <class OppMap>
+std::size_t count_matches(const OppMap &opposite, bool taker_is_buy, Price limit, bool is_market,
+                          Quantity quantity) {
+    std::size_t count = 0;
+    for (auto level_it = opposite.begin(); quantity > 0 && level_it != opposite.end(); ++level_it) {
+        const Price level_price = level_it->first;
+        if (!is_market) {
+            if (taker_is_buy && level_price > limit) {
+                break;
+            }
+            if (!taker_is_buy && level_price < limit) {
+                break;
+            }
+        }
+        for (const Order &maker : level_it->second) {
+            if (quantity == 0) {
+                break;
+            }
+            const Quantity traded = std::min(quantity, maker.quantity);
+            quantity -= traded;
+            ++count;
+        }
+    }
+    return count;
+}
+
 OrderBook::Level &OrderBook::level_for(Side side, Price price) {
     if (side == Side::Buy) {
         auto [it, inserted] = bids_.emplace(price, Level{Level::allocator_type{resource_}});
@@ -181,6 +207,17 @@ std::size_t OrderBook::order_count() const {
 
 bool OrderBook::contains(OrderId id) const {
     return index_.find(id) != index_.end();
+}
+
+std::size_t OrderBook::fill_count(Side taker_side, Price limit, bool is_market,
+                                  Quantity quantity) const {
+    if (taker_side == Side::Buy) {
+        return count_matches(asks_, /*taker_is_buy=*/true, limit, is_market, quantity);
+    }
+    if (taker_side == Side::Sell) {
+        return count_matches(bids_, /*taker_is_buy=*/false, limit, is_market, quantity);
+    }
+    return 0;
 }
 
 namespace {

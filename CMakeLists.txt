@@ -15,7 +15,8 @@ add_library(qsl_core src/core/types.cpp src/protocol/codec.cpp src/engine/order_
                      src/gateway/order_gateway.cpp src/feed/market_data.cpp
                      src/feed/publisher.cpp src/replay/event_log.cpp src/replay/command.cpp
                      src/replay/recovery.cpp src/gateway/session.cpp src/gateway/tcp_server.cpp
-                     src/feed/udp_feed.cpp src/replay/fixture.cpp src/replay/shrink.cpp)
+                     src/gateway/epoll_server.cpp src/feed/udp_feed.cpp src/replay/fixture.cpp
+                     src/replay/shrink.cpp)
 target_include_directories(qsl_core PUBLIC include)
 target_link_libraries(qsl_core PRIVATE qsl_warnings)
 

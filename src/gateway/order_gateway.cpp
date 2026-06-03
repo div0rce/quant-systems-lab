@@ -59,4 +59,19 @@ GatewayResult OrderGateway::modify(SymbolId symbol, OrderId id, Price new_price,
     return GatewayResult::accept(engine_.modify(symbol, id, new_price, new_quantity));
 }
 
+NewOrderPreview OrderGateway::preview_new_order(SymbolId symbol, OrderId id, Side side, Price price,
+                                                Quantity quantity, OrderType type) const {
+    if (!engine_.has_symbol(symbol) || engine_.contains(symbol, id)) {
+        return NewOrderPreview{/*accepted=*/false, /*fill_count=*/0};
+    }
+    const RejectReason reason = (type == OrderType::Market)
+                                    ? engine::check_market(config_, side, quantity)
+                                    : engine::check_limit(config_, side, price, quantity);
+    if (reason != RejectReason::None) {
+        return NewOrderPreview{/*accepted=*/false, /*fill_count=*/0};
+    }
+    return NewOrderPreview{/*accepted=*/true,
+                           /*fill_count=*/engine_.fill_count(symbol, side, price, type, quantity)};
+}
+
 } // namespace qsl::gateway
