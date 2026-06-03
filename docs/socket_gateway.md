@@ -48,6 +48,14 @@ The epoll path treats `EAGAIN` / `EWOULDBLOCK` as normal nonblocking backpressur
 - a peer that half-closes after sending requests can still receive queued responses; the
   connection closes after the pending outbound buffer drains.
 
+A client that keeps sending requests but stops reading its responses cannot grow the gateway's
+memory without bound. Each connection's outbound buffer has a high-water mark
+(`EpollServerOptions::max_outbuf_bytes`, default 1 MiB): once the backlog reaches it the server
+stops reading from that client (drops `EPOLLIN`, keeping only `EPOLLOUT`), so unread requests back
+up in the kernel receive buffer and TCP flow control pushes back on the sender. Reads resume once
+the backlog drains below the mark. This bounds per-connection memory under a non-reading peer
+without ever dropping or reordering a response.
+
 ## Malformed frames
 
 - A frame with a valid header but an undecodable body, or an unexpected message type, flags
@@ -68,14 +76,16 @@ The default demo still uses `TcpServer` because it is portable and easiest to in
 `qsl-gateway` can run the epoll prototype explicitly:
 
 ```bash
-./build/dev/qsl-gateway 9009 --epoll
+./build/dev/qsl-gateway 9009 --epoll   # explicit port
+./build/dev/qsl-gateway --epoll        # default port 9009; the flag may precede or replace the port
 ```
 
 This mode is single-threaded and event-driven: it does not create one thread per connection.
 Each connected client owns its own `Session`, so deterministic framing, malformed-frame handling,
 risk checks, and response encoding are shared with the blocking transport. M34 tests the real
-loopback socket path with two simultaneous clients and verifies both receive correct responses
-through one event loop.
+loopback socket path with two simultaneous clients (and a backpressure case under a small
+high-water mark) and verifies every client receives correct, in-order responses through one event
+loop.
 
 This is architecture validation, not a production-capacity claim. Multi-client load, socket
 pressure, connection scaling, and throughput measurements remain M35 scope.

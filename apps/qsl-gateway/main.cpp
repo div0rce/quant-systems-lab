@@ -4,14 +4,31 @@
 #include "qsl/gateway/tcp_server.hpp"
 
 #include <cstdint>
+#include <exception>
 #include <iostream>
 #include <string>
 
 // qsl-gateway [port] [--epoll] -> serve on 127.0.0.1:port (default 9009).
 // No authentication; localhost only. This is a local simulator, not a real venue.
 int main(int argc, char **argv) {
-    const std::uint16_t port = (argc >= 2) ? static_cast<std::uint16_t>(std::stoul(argv[1])) : 9009;
-    const bool use_epoll = argc >= 3 && std::string(argv[2]) == "--epoll";
+    // Flags may appear before or instead of the port; the first non-flag argument is the port. So
+    // `qsl-gateway`, `qsl-gateway 9009`, `qsl-gateway --epoll`, and `qsl-gateway 9009 --epoll` all
+    // work (parsing `--epoll` as a port previously aborted with std::invalid_argument).
+    std::uint16_t port = 9009;
+    bool use_epoll = false;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--epoll") {
+            use_epoll = true;
+            continue;
+        }
+        try {
+            port = static_cast<std::uint16_t>(std::stoul(arg)); // first non-flag arg is the port
+        } catch (const std::exception &) {
+            std::cerr << "usage: qsl-gateway [port] [--epoll]\n";
+            return 2;
+        }
+    }
 
     qsl::engine::MatchingEngine engine;
     engine.register_symbol("AAPL"); // SymbolId 0

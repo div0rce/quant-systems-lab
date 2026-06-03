@@ -12,6 +12,11 @@ namespace qsl::gateway {
 struct EpollServerOptions {
     std::size_t max_events = 64;
     int wait_timeout_ms = 50;
+    // Per-connection outbound high-water mark. While a client's pending response bytes reach this,
+    // the server stops reading more requests from it (drops EPOLLIN) so a peer that stops reading
+    // its responses cannot make the gateway buffer unbounded output; reads resume once the backlog
+    // drains below the mark. This bounds per-connection memory under backpressure.
+    std::size_t max_outbuf_bytes = 1U << 20; // 1 MiB
 };
 
 /// Linux epoll-based TCP front end for the order gateway. It is a transport prototype:

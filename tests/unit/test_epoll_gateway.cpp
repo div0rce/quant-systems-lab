@@ -11,6 +11,7 @@
 #include <array>
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <netinet/in.h>
 #include <span>
 #include <sys/socket.h>
@@ -165,6 +166,48 @@ TEST_CASE("epoll gateway rejects invalid bind hosts", "[gateway][epoll]") {
 
     REQUIRE_FALSE(server.run("localhost", 0));
     REQUIRE_FALSE(server.run("not-an-ip", 0));
+}
+
+TEST_CASE("epoll gateway applies backpressure without dropping responses", "[gateway][epoll]") {
+    sockaddr_in bound{};
+    const int listen_fd = bind_loopback_listener(bound);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    EpollServer server{gateway};
+    std::atomic<bool> server_ok{false};
+
+    // A tiny outbound high-water mark forces the read-gating path: once a few responses are
+    // buffered the server must stop reading (drop EPOLLIN) and resume only as the backlog drains.
+    // The contract under that path is that no response is dropped or reordered and nothing
+    // deadlocks.
+    std::thread server_thread([&] {
+        server_ok.store(server.serve_listen_socket(
+                            listen_fd, EpollServerOptions{/*max_events=*/16, /*wait_timeout_ms=*/10,
+                                                          /*max_outbuf_bytes=*/256}),
+                        std::memory_order_release);
+    });
+
+    const int client = connect_client(bound);
+
+    // Send many resting buy orders at one price (no cross -> exactly one Ack each) before reading
+    // any response, so the server's outbound backlog repeatedly crosses the high-water mark.
+    constexpr std::uint64_t kOrders = 64;
+    for (std::uint64_t i = 1; i <= kOrders; ++i) {
+        write_all(client,
+                  encode(NewOrder{i, 0, 100, 5, Side::Buy, OrderType::Limit, TimeInForce::GTC}, i));
+    }
+
+    const auto types = read_types(client, static_cast<std::size_t>(kOrders));
+    REQUIRE(types.size() == static_cast<std::size_t>(kOrders));
+    REQUIRE(std::all_of(types.begin(), types.end(), [](MsgType t) { return t == MsgType::Ack; }));
+
+    REQUIRE(::close(client) == 0);
+    server.request_stop();
+    server_thread.join();
+    REQUIRE(server_ok.load(std::memory_order_acquire));
+    REQUIRE(::close(listen_fd) == 0);
 }
 
 #endif

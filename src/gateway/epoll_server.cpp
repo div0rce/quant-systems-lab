@@ -169,6 +169,9 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                             client.close_after_flush = true;
                             break;
                         }
+                        if (client.outbuf.size() >= options.max_outbuf_bytes) {
+                            break; // write backlog at high-water: stop reading (apply backpressure)
+                        }
                         continue;
                     }
                     if (n == 0) {
@@ -190,14 +193,24 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                 close_now = !send_some(fd, client.outbuf);
             }
 
-            if (!close_now && !client.outbuf.empty()) {
-                close_now =
-                    !mod_fd(*epoll_fd, fd, EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLERR | EPOLLHUP);
-            } else if (!close_now && (client.input_closed || client.close_after_flush ||
-                                      (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0U)) {
-                close_now = true;
-            } else if (!close_now) {
-                close_now = !mod_fd(*epoll_fd, fd, EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLHUP);
+            if (!close_now) {
+                const bool want_write = !client.outbuf.empty();
+                if (!want_write && (client.input_closed || client.close_after_flush ||
+                                    (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0U)) {
+                    close_now = true; // fully flushed and the peer is done / has logged out
+                } else {
+                    std::uint32_t want = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+                    // Backpressure: only keep reading while the write backlog is below the
+                    // high-water mark, so a client that stops reading its responses cannot make the
+                    // gateway buffer unbounded output. Reads resume once the backlog drains.
+                    if (client.outbuf.size() < options.max_outbuf_bytes) {
+                        want |= EPOLLIN;
+                    }
+                    if (want_write) {
+                        want |= EPOLLOUT; // still have bytes to flush
+                    }
+                    close_now = !mod_fd(*epoll_fd, fd, want);
+                }
             }
 
             if (close_now) {
