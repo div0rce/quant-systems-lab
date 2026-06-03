@@ -53,8 +53,14 @@ memory without bound. Each connection's outbound buffer has a high-water mark
 (`EpollServerOptions::max_outbuf_bytes`, default 1 MiB): once the backlog reaches it the server
 stops reading from that client (drops `EPOLLIN`, keeping only `EPOLLOUT`), so unread requests back
 up in the kernel receive buffer and TCP flow control pushes back on the sender. Reads resume once
-the backlog drains below the mark. This bounds per-connection memory under a non-reading peer
-without ever dropping or reordering a response.
+the backlog drains below the mark.
+
+The mark gates how many *further* requests are read, not the size of one response: a single
+request whose response is large — e.g. a market order crossing a deep book yields one fill per
+resting maker — is buffered in full, so the peak outbound buffer is roughly the mark plus the
+largest single response. Bounding one response further would mean capping matching output, which
+is out of scope for this transport prototype. No response is ever dropped or reordered; the cap is
+on how much *additional* request flow a non-reading peer can induce.
 
 ## Malformed frames
 

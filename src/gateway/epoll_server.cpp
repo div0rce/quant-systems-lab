@@ -160,6 +160,17 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             if ((ev & EPOLLIN) != 0U) {
                 std::array<std::byte, 4096> buffer{};
                 for (;;) {
+                    // Backpressure: once the outbound backlog reaches the high-water mark, stop
+                    // reading *before* pulling in and processing another request, so additional
+                    // requests cannot push the buffer further past the mark. Checked here (not only
+                    // after appending) so the overshoot is bounded to the request already in
+                    // flight. Note: a single response is still buffered whole -- e.g. a market
+                    // order crossing a deep book yields one Fill per resting maker -- so the peak
+                    // buffer is roughly this mark plus the largest single response, not a hard byte
+                    // cap; the mark bounds how many *further* requests are read (see docs).
+                    if (client.outbuf.size() >= options.max_outbuf_bytes) {
+                        break;
+                    }
                     const ssize_t n = ::read(fd, buffer.data(), buffer.size());
                     if (n > 0) {
                         auto response = client.session.on_bytes(
@@ -169,10 +180,7 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                             client.close_after_flush = true;
                             break;
                         }
-                        if (client.outbuf.size() >= options.max_outbuf_bytes) {
-                            break; // write backlog at high-water: stop reading (apply backpressure)
-                        }
-                        continue;
+                        continue; // re-checks the high-water mark at the top before reading again
                     }
                     if (n == 0) {
                         client.input_closed = true;

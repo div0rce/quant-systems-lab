@@ -13,9 +13,11 @@ struct EpollServerOptions {
     std::size_t max_events = 64;
     int wait_timeout_ms = 50;
     // Per-connection outbound high-water mark. While a client's pending response bytes reach this,
-    // the server stops reading more requests from it (drops EPOLLIN) so a peer that stops reading
-    // its responses cannot make the gateway buffer unbounded output; reads resume once the backlog
-    // drains below the mark. This bounds per-connection memory under backpressure.
+    // the server stops reading more requests from it (drops EPOLLIN), so a peer that floods
+    // requests without reading its responses cannot make the gateway buffer unbounded output;
+    // reads resume once the backlog drains below the mark. A single in-flight response is still
+    // buffered whole, so the peak is roughly this mark plus the largest single response, not a
+    // hard byte cap; the mark bounds how many *further* requests are read.
     std::size_t max_outbuf_bytes = 1U << 20; // 1 MiB
 };
 

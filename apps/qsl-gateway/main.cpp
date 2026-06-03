@@ -3,9 +3,11 @@
 #include "qsl/gateway/order_gateway.hpp"
 #include "qsl/gateway/tcp_server.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <iostream>
+#include <limits>
 #include <string>
 
 // qsl-gateway [port] [--epoll] -> serve on 127.0.0.1:port (default 9009).
@@ -22,12 +24,22 @@ int main(int argc, char **argv) {
             use_epoll = true;
             continue;
         }
+        // First non-flag arg is the port. Require the WHOLE token to be a number in range, so
+        // typos like "9009x" (std::stoul would stop at the 'x' and accept 9009) or out-of-range
+        // values like "70000" (the uint16_t cast would truncate to 4464) fail fast with a usage
+        // error instead of silently binding an unintended port.
+        std::size_t consumed = 0;
+        unsigned long value = 0;
         try {
-            port = static_cast<std::uint16_t>(std::stoul(arg)); // first non-flag arg is the port
+            value = std::stoul(arg, &consumed);
         } catch (const std::exception &) {
-            std::cerr << "usage: qsl-gateway [port] [--epoll]\n";
+            consumed = 0; // parse failed -> fall through to the usage error
+        }
+        if (consumed != arg.size() || value > std::numeric_limits<std::uint16_t>::max()) {
+            std::cerr << "usage: qsl-gateway [port] [--epoll]   (port is 0-65535)\n";
             return 2;
         }
+        port = static_cast<std::uint16_t>(value);
     }
 
     qsl::engine::MatchingEngine engine;
