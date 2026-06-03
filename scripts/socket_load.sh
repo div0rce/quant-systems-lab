@@ -63,6 +63,26 @@ dirty_tree_status() {
     if [[ -n "$status_output" ]]; then echo yes; else echo no; fi
 }
 
+cpu_model() {
+    local cpu
+    cpu="$(grep -m1 -E '^(model name|Processor|cpu model|Hardware)[[:space:]]*:' /proc/cpuinfo 2>/dev/null |
+        cut -d: -f2- | sed 's/^ *//' || true)"
+    if [[ -z "$cpu" ]] && command -v lscpu >/dev/null 2>&1; then
+        cpu="$(lscpu 2>/dev/null |
+            awk -F: '
+                /^Architecture:/ { arch = $2; sub(/^[[:space:]]*/, "", arch) }
+                /^Vendor ID:/ { vendor = $2; sub(/^[[:space:]]*/, "", vendor) }
+                /^Model name:/ { model = $2; sub(/^[[:space:]]*/, "", model) }
+                END {
+                    if (model != "" && model != "-") print model;
+                    else if (vendor != "" && arch != "") print vendor " " arch;
+                    else if (arch != "") print arch;
+                }
+            ' || true)"
+    fi
+    printf '%s\n' "${cpu:-unknown}"
+}
+
 if [[ "$(uname -s)" != "Linux" ]]; then
     echo "error: scripts/socket_load.sh requires Linux (epoll mode + high-res timer); current OS is $(uname -s)." >&2
     echo "       Run it on a Linux host or inside a Linux container to generate the artifact." >&2
@@ -80,6 +100,10 @@ if ! [[ "$MAX_ATTEMPTS" =~ ^[0-9]+$ ]] || ((MAX_ATTEMPTS < 1)); then
     echo "error: QSL_LOAD_MAX_ATTEMPTS must be a positive integer (got '$MAX_ATTEMPTS')." >&2
     exit 2
 fi
+if ! [[ "$PORT_BASE" =~ ^[0-9]+$ ]] || ((PORT_BASE < 1024 || PORT_BASE > 65535)); then
+    echo "error: QSL_LOAD_PORT must be an integer in [1024, 65535] (got '$PORT_BASE')." >&2
+    exit 2
+fi
 CLIENT_COUNT_VALUES=()
 for count in $CLIENT_COUNTS; do
     if ! [[ "$count" =~ ^[0-9]+$ ]] || ((count < 1)); then
@@ -95,6 +119,13 @@ for count in $CLIENT_COUNTS; do
 done
 if ((${#CLIENT_COUNT_VALUES[@]} == 0)); then
     echo "error: QSL_LOAD_COUNTS must contain at least one positive client count." >&2
+    exit 2
+fi
+REQUIRED_PORTS=$((2 * ${#CLIENT_COUNT_VALUES[@]} * TRIALS * MAX_ATTEMPTS))
+LAST_PORT=$((PORT_BASE + REQUIRED_PORTS - 1))
+if ((LAST_PORT > 65535)); then
+    echo "error: QSL_LOAD_PORT=$PORT_BASE leaves insufficient port headroom for this sweep." >&2
+    echo "       Need $REQUIRED_PORTS contiguous ports for 2 modes x ${#CLIENT_COUNT_VALUES[@]} counts x $TRIALS trials x $MAX_ATTEMPTS attempts; last would be $LAST_PORT." >&2
     exit 2
 fi
 
@@ -258,7 +289,7 @@ TMP_OUT="$(mktemp)"
     echo "Artifact:    multi-client TCP connection-scaling load (loopback, constrained)"
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
-    echo "CPU:         $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
+    echo "CPU:         $(cpu_model)"
     echo "Cores:       $(nproc 2>/dev/null || echo unknown)"
     echo "Compiler:    $(c++ --version | head -1)"
     echo "Git commit:  $(git rev-parse --short HEAD)"
