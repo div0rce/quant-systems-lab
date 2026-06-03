@@ -184,7 +184,14 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             ClientState &client = it->second;
             bool close_now = false;
 
-            if ((ev & EPOLLIN) != 0U) {
+            // Drain any writable backlog first, so the read below sees an up-to-date pending() and
+            // the hard cap is not enforced against a stale buffer that send_some() could free
+            // (which would otherwise falsely drop a client that has resumed reading).
+            if ((ev & EPOLLOUT) != 0U) {
+                close_now = !send_some(fd, client);
+            }
+
+            if (!close_now && (ev & EPOLLIN) != 0U) {
                 std::array<std::byte, 4096> buffer{};
                 for (;;) {
                     // Soft backpressure: once the unsent backlog reaches the soft high-water mark,
@@ -232,15 +239,18 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                 }
             }
 
-            if (!close_now && (ev & EPOLLOUT) != 0U) {
-                close_now = !send_some(fd, client);
-            }
-
             if (!close_now) {
                 const bool want_write = client.pending() > 0;
-                if (!want_write && (client.input_closed || client.close_after_flush ||
-                                    (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0U)) {
-                    close_now = true; // fully flushed and the peer is done / has logged out
+                if ((ev & (EPOLLERR | EPOLLHUP)) != 0U) {
+                    // Hard error/hangup: the socket is dead, so drop it regardless of queued output
+                    // (which can never be sent) instead of re-arming and waking the loop forever.
+                    close_now = true;
+                } else if (!want_write && (client.input_closed || client.close_after_flush ||
+                                           (ev & EPOLLRDHUP) != 0U)) {
+                    // Fully flushed and the peer is done / logged out / half-closed. RDHUP is a
+                    // half-close: the peer can still receive queued responses, so keep flushing
+                    // until want_write is false before closing.
+                    close_now = true;
                 } else {
                     std::uint32_t want = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
                     // Backpressure: only keep reading while the unsent backlog is below the
