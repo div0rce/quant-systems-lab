@@ -198,9 +198,10 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             }
             ClientState &client = it->second;
             bool close_now = false;
-            const bool hard_socket_error = (ev & (EPOLLERR | EPOLLHUP)) != 0U;
+            const bool socket_error = (ev & EPOLLERR) != 0U;
+            const bool peer_hung_up = (ev & EPOLLHUP) != 0U;
 
-            if (hard_socket_error) {
+            if (socket_error) {
                 close_now = true;
             }
 
@@ -217,7 +218,7 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                     // Soft backpressure: once the unsent backlog reaches the soft high-water mark,
                     // stop reading more requests before processing another (the re-arm below drops
                     // EPOLLIN), resuming once it drains.
-                    if (client.pending() >= options.max_outbuf_bytes) {
+                    if (!peer_hung_up && client.pending() >= options.max_outbuf_bytes) {
                         break;
                     }
                     const ssize_t n = ::read(fd, buffer.data(), buffer.size());
@@ -230,7 +231,7 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                             std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)),
                             client.outbuf, max_output);
                         if (status == SessionStatus::OutputLimitExceeded) {
-                            client.close_after_flush = true;
+                            close_now = true;
                             break;
                         }
                         if (client.session.logged_out()) {
@@ -255,27 +256,35 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             }
 
             if (!close_now) {
-                if ((ev & EPOLLRDHUP) != 0U) {
-                    client.input_closed = true;
-                }
-                const bool want_write = client.pending() > 0;
-                if (!want_write && (client.input_closed || client.close_after_flush)) {
-                    // Fully flushed and the peer is done / logged out / half-closed. RDHUP is a
-                    // half-close: the peer can still receive queued responses, so keep flushing
-                    // until want_write is false before closing.
+                // EPOLLHUP can arrive together with EPOLLIN for bytes already delivered by the
+                // peer. Drain those bytes above before honoring the hangup; after that there is no
+                // receiving peer to flush to, so close immediately instead of re-arming a hot HUP.
+                if (peer_hung_up) {
                     close_now = true;
                 } else {
-                    std::uint32_t want = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-                    // Backpressure: only keep reading while the unsent backlog is below the
-                    // high-water mark, so a client that stops reading its responses cannot make the
-                    // gateway buffer unbounded output. Reads resume once the backlog drains.
-                    if (!client.input_closed && client.pending() < options.max_outbuf_bytes) {
-                        want |= EPOLLIN;
+                    if ((ev & EPOLLRDHUP) != 0U) {
+                        client.input_closed = true;
                     }
-                    if (want_write) {
-                        want |= EPOLLOUT; // still have bytes to flush
+                    const bool want_write = client.pending() > 0;
+                    if (!want_write && (client.input_closed || client.close_after_flush)) {
+                        // Fully flushed and the peer is done / logged out / half-closed. RDHUP is a
+                        // half-close: the peer can still receive queued responses, so keep flushing
+                        // until want_write is false before closing.
+                        close_now = true;
+                    } else {
+                        std::uint32_t want = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+                        // Backpressure: only keep reading while the unsent backlog is below the
+                        // high-water mark, so a client that stops reading its responses cannot make
+                        // the gateway buffer unbounded output. Reads resume once the backlog
+                        // drains.
+                        if (!client.input_closed && client.pending() < options.max_outbuf_bytes) {
+                            want |= EPOLLIN;
+                        }
+                        if (want_write) {
+                            want |= EPOLLOUT; // still have bytes to flush
+                        }
+                        close_now = !mod_fd(*epoll_fd, fd, want);
                     }
-                    close_now = !mod_fd(*epoll_fd, fd, want);
                 }
             }
 

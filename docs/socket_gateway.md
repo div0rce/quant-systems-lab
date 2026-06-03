@@ -47,6 +47,8 @@ The epoll path treats `EAGAIN` / `EWOULDBLOCK` as normal nonblocking backpressur
 - client writes loop until the outbound buffer is empty or `send()` would block.
 - a peer that half-closes after sending requests can still receive queued responses; the
   connection closes after the pending outbound buffer drains.
+- if Linux reports `EPOLLIN` together with `EPOLLHUP`, the epoll path drains the already-readable
+  bytes before honoring the hangup; `EPOLLERR` remains an immediate close.
 
 A client that keeps sending requests but stops reading its responses cannot grow the gateway's
 memory without bound. Each connection's outbound buffer has a high-water mark
@@ -77,7 +79,8 @@ disconnected.
 ## Disconnect and heartbeat
 
 - Graceful disconnect: when the peer closes its write side, `read()` returns 0 (EOF) and the
-  server finishes serving and closes the connection.
+  server finishes serving and closes the connection; a complete request delivered before a hangup
+  is still drained before the connection is removed.
 - Heartbeats are a liveness round-trip only; the gateway does not yet time out idle peers.
 
 ## Event-driven gateway mode

@@ -34,6 +34,11 @@ stops reading from a client until pending output drains, and a hard cap enforced
 before they reach the gateway, so an over-cap response drops the connection without appending a
 partial response and without mutating engine state.
 
+Disconnect handling distinguishes socket errors from peer hangups: `EPOLLERR` closes immediately,
+while `EPOLLHUP` is honored only after any already-readable `EPOLLIN` bytes have been drained into
+the session. Hard-cap overflow is an immediate close/discard path so a stopped reader cannot pin a
+per-client buffer while the server waits for `EPOLLOUT`.
+
 ## Consequences
 
 The repo now has a real event-driven multi-client gateway architecture without adopting

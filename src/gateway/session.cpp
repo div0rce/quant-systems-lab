@@ -108,8 +108,9 @@ SessionStatus Session::process_frame(std::span<const std::byte> frame, std::vect
             logged_out_ = true;
             return SessionStatus::Ok;
         }
-        if (ensure_new_order_budget(gateway_, request.value, out, max_output_bytes) !=
-            SessionStatus::Ok) {
+        if (max_output_bytes != std::numeric_limits<std::size_t>::max() &&
+            ensure_new_order_budget(gateway_, request.value, out, max_output_bytes) !=
+                SessionStatus::Ok) {
             logged_out_ = true;
             return SessionStatus::OutputLimitExceeded;
         }

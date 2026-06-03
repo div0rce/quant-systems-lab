@@ -31,9 +31,10 @@ Background — M29 delivered (merged, constrained-environment only):
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
 M34 is in progress on `feat/m34-epoll-gateway-architecture` with draft PR #98 open. Codex review
-fixes are applied locally: the epoll path now budgets high-fanout responses at the
-Session/gateway boundary before mutating engine state, and local verification is green. To resume
-it:
+fixes are applied locally: the epoll path budgets high-fanout responses at the Session/gateway
+boundary before mutating engine state, drains already-readable `EPOLLIN` bytes before honoring
+`EPOLLHUP`, and immediately closes on hard-cap overflow instead of waiting for a stopped reader to
+flush. To resume it:
 
 ```text
 /resume

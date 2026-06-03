@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <netinet/in.h>
@@ -271,6 +272,42 @@ TEST_CASE("epoll gateway drops a non-reading client that exceeds the hard buffer
     REQUIRE(snapshot.symbols.front().order_count == kMakers);
     REQUIRE(snapshot.symbols.front().asks.size() == 1);
     REQUIRE(snapshot.symbols.front().asks.front().quantity == kMakers * 5);
+    REQUIRE(::close(listen_fd) == 0);
+}
+
+TEST_CASE("epoll gateway drains a complete request before hangup close", "[gateway][epoll]") {
+    sockaddr_in bound{};
+    const int listen_fd = bind_loopback_listener(bound);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    EpollServer server{gateway};
+    std::atomic<bool> server_ok{false};
+
+    std::thread server_thread([&] {
+        server_ok.store(
+            server.serve_listen_socket(
+                listen_fd, EpollServerOptions{/*max_events=*/16, /*wait_timeout_ms=*/10}),
+            std::memory_order_release);
+    });
+
+    const int client = connect_client(bound);
+    write_all(client,
+              encode(NewOrder{1, 0, 100, 5, Side::Sell, OrderType::Limit, TimeInForce::GTC}, 1));
+    REQUIRE(::close(client) == 0);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    server.request_stop();
+    server_thread.join();
+    REQUIRE(server_ok.load(std::memory_order_acquire));
+
+    const auto snapshot = engine.snapshot();
+    REQUIRE(snapshot.last_seq == 1);
+    REQUIRE(snapshot.symbols.size() == 1);
+    REQUIRE(snapshot.symbols.front().order_count == 1);
+    REQUIRE(snapshot.symbols.front().asks.size() == 1);
+    REQUIRE(snapshot.symbols.front().asks.front().quantity == 5);
     REQUIRE(::close(listen_fd) == 0);
 }
 
