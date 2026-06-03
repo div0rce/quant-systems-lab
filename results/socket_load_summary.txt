@@ -5,13 +5,13 @@ OS:          Linux 6.12.76-linuxkit
 CPU:         
 Cores:       8
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-Git commit:  bad2d1f
+Git commit:  c044711
 Dirty tree:  no
 Transport:   TCP over 127.0.0.1 (loopback)
 Load shape:  N concurrent qsl-client connections; each connects, sends NewOrder + Heartbeat, reads replies, closes
 Client counts: 1 4 8 16
 Trials/cell: 3 (best/min wall over trials; each gateway on a fresh port, up to 6 start attempts)
-Date:        2026-06-03T21:14:11Z
+Date:        2026-06-03T21:34:19Z
 
 Setup: the same concurrent client load is run against the gateway in each transport mode.
 blocking = the M9 single-connection accept loop (serves one connection at a time); epoll =
@@ -20,14 +20,14 @@ sub-microsecond, so the wall time is the connection-setup/accept/socket path, no
 
 mode       clients   wall(s,best)     conns/s(~)  completed
 -------    -------   ------------     ----------  ---------
-blocking         1         0.0052            192        1/1
-blocking         4         0.0156            256        4/4
-blocking         8         0.0331            242        8/8
-blocking        16         0.0401            399      16/16
-epoll            1         0.0064            156        1/1
-epoll            4         0.0157            255        4/4
-epoll            8         0.0265            302        8/8
-epoll           16         0.0412            388      16/16
+blocking         1         0.0081            123        1/1
+blocking         4         0.0202            198        4/4
+blocking         8         0.0333            240        8/8
+blocking        16         0.0480            333      16/16
+epoll            1         0.0108             93        1/1
+epoll            4         0.0189            212        4/4
+epoll            8         0.0279            287        8/8
+epoll           16         0.0460            348      16/16
 
 Reading the result: compare how the best wall time grows with the client count within each
 mode. In principle the blocking server (one connection at a time) should scale worse than
