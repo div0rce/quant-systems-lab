@@ -18,16 +18,17 @@ int main(int argc, char **argv) {
     // work (parsing `--epoll` as a port previously aborted with std::invalid_argument).
     std::uint16_t port = 9009;
     bool use_epoll = false;
+    bool port_set = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--epoll") {
             use_epoll = true;
             continue;
         }
-        // First non-flag arg is the port. Require the WHOLE token to be a number in range, so
-        // typos like "9009x" (std::stoul would stop at the 'x' and accept 9009) or out-of-range
-        // values like "70000" (the uint16_t cast would truncate to 4464) fail fast with a usage
-        // error instead of silently binding an unintended port.
+        // The first non-flag arg is the port. Require the WHOLE token to be a single in-range
+        // number, so typos like "9009x" (std::stoul stops at the 'x' and accepts 9009), out-of-
+        // range values like "70000" (the uint16_t cast would truncate to 4464), or a second port
+        // token like "9009 9010" (which would silently bind the last) all fail fast.
         std::size_t consumed = 0;
         unsigned long value = 0;
         try {
@@ -35,11 +36,13 @@ int main(int argc, char **argv) {
         } catch (const std::exception &) {
             consumed = 0; // parse failed -> fall through to the usage error
         }
-        if (consumed != arg.size() || value > std::numeric_limits<std::uint16_t>::max()) {
-            std::cerr << "usage: qsl-gateway [port] [--epoll]   (port is 0-65535)\n";
+        if (port_set || consumed != arg.size() ||
+            value > std::numeric_limits<std::uint16_t>::max()) {
+            std::cerr << "usage: qsl-gateway [port] [--epoll]   (one optional port, 0-65535)\n";
             return 2;
         }
         port = static_cast<std::uint16_t>(value);
+        port_set = true;
     }
 
     qsl::engine::MatchingEngine engine;

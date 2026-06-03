@@ -63,6 +63,14 @@ drops the connection *before* appending it, so sustained per-connection memory n
 hard cap. A client that reads its responses keeps the backlog near zero and trips neither
 threshold; only a peer that stops reading and then induces an over-cap response is disconnected.
 
+One caveat remains: the hard cap bounds the *retained* outbound buffer, but a single request's
+response is materialized in full by `Session::on_bytes` before the cap is checked, so the
+*transient* allocation for one pathological order (sweeping a very deep book) is still proportional
+to the fan-out. Bounding that requires streaming or byte-budgeting response generation through the
+shared `Session`/gateway API (which the blocking TCP transport uses too); it is tracked as a
+follow-up ([issue #99](https://github.com/div0rce/quant-systems-lab/issues/99)) rather than
+addressed in this epoll-transport prototype.
+
 ## Malformed frames
 
 - A frame with a valid header but an undecodable body, or an unexpected message type, flags

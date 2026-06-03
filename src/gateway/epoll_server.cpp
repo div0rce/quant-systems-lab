@@ -71,29 +71,50 @@ bool mod_fd(int epoll_fd, int fd, std::uint32_t events) {
     return ::epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev) == 0;
 }
 
-bool send_some(int fd, std::vector<std::byte> &outbuf) {
-    while (!outbuf.empty()) {
-        const ssize_t n = ::send(fd, outbuf.data(), outbuf.size(), MSG_NOSIGNAL);
-        if (n > 0) {
-            outbuf.erase(outbuf.begin(), outbuf.begin() + static_cast<std::ptrdiff_t>(n));
-            continue;
-        }
-        if (n < 0 && is_would_block()) {
-            return true;
-        }
-        return false;
-    }
-    return true;
-}
-
 struct ClientState {
     explicit ClientState(OrderGateway &gateway) : session(gateway) {}
 
     Session session;
     std::vector<std::byte> outbuf;
+    std::size_t sent = 0; // bytes at the front of outbuf already written to the socket
     bool input_closed = false;
     bool close_after_flush = false;
+
+    // Unsent bytes. The soft/hard limits and the "needs write" check use this, not outbuf.size().
+    [[nodiscard]] std::size_t pending() const noexcept { return outbuf.size() - sent; }
+    // Reclaim already-sent bytes from the front. Done once per append (amortized), never per send.
+    void drop_sent_prefix() {
+        if (sent > 0) {
+            outbuf.erase(outbuf.begin(), outbuf.begin() + static_cast<std::ptrdiff_t>(sent));
+            sent = 0;
+        }
+    }
 };
+
+// Flush as much of the client's pending output as the nonblocking socket accepts. Advances a write
+// offset rather than erasing from the front after every send -- erase-per-send is O(n^2) when
+// draining a large buffer and can stall the single event loop. Returns false only on a real send
+// error; EAGAIN/EWOULDBLOCK (socket full) and EINTR (signal) are normal and retryable.
+bool send_some(int fd, ClientState &client) {
+    while (client.sent < client.outbuf.size()) {
+        const ssize_t n = ::send(fd, client.outbuf.data() + client.sent,
+                                 client.outbuf.size() - client.sent, MSG_NOSIGNAL);
+        if (n > 0) {
+            client.sent += static_cast<std::size_t>(n);
+            continue;
+        }
+        if (n < 0 && is_would_block()) {
+            return true; // socket full: resume on the next EPOLLOUT
+        }
+        if (n < 0 && errno == EINTR) {
+            continue; // interrupted by a signal: retry rather than dropping the connection
+        }
+        return false;
+    }
+    client.outbuf.clear(); // fully flushed
+    client.sent = 0;
+    return true;
+}
 
 } // namespace
 
@@ -142,10 +163,16 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
                     if (is_would_block()) {
                         break;
                     }
-                    if (errno == EINTR) {
+                    // Transient per-connection errors -- a connection aborted before accept, or a
+                    // pending network error that Linux reports through accept -- must not tear down
+                    // the whole server; skip this connection and keep serving the rest (accept(2)).
+                    if (errno == EINTR || errno == ECONNABORTED || errno == EPROTO ||
+                        errno == ENETDOWN || errno == ENOPROTOOPT || errno == EHOSTDOWN ||
+                        errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP ||
+                        errno == ENETUNREACH) {
                         continue;
                     }
-                    return false;
+                    return false; // genuinely fatal listener error
                 }
                 continue;
             }
@@ -160,23 +187,23 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             if ((ev & EPOLLIN) != 0U) {
                 std::array<std::byte, 4096> buffer{};
                 for (;;) {
-                    // Soft backpressure: once the outbound backlog reaches the soft high-water
-                    // mark, stop reading more requests before processing another (the re-arm below
-                    // drops EPOLLIN), resuming once it drains. The absolute bound is the hard cap
-                    // enforced before the append below.
-                    if (client.outbuf.size() >= options.max_outbuf_bytes) {
+                    // Soft backpressure: once the unsent backlog reaches the soft high-water mark,
+                    // stop reading more requests before processing another (the re-arm below drops
+                    // EPOLLIN), resuming once it drains.
+                    if (client.pending() >= options.max_outbuf_bytes) {
                         break;
                     }
                     const ssize_t n = ::read(fd, buffer.data(), buffer.size());
                     if (n > 0) {
                         auto response = client.session.on_bytes(
                             std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)));
-                        // Hard cap: if buffering this response would push the connection past the
-                        // hard limit, drop the connection instead of appending. Enforced *before*
-                        // the append, so sustained per-connection memory never exceeds the cap --
-                        // this bounds the high-fanout single-response path (one request can produce
-                        // a Fill per resting maker). A client that reads its responses keeps the
-                        // backlog near zero and never trips this.
+                        client.drop_sent_prefix(); // reclaim already-sent bytes before growing
+                        // Hard cap on the RETAINED buffer: if appending this response would push
+                        // the connection past the hard limit, drop it instead of buffering, so the
+                        // sustained per-connection buffer never exceeds the cap. The transient
+                        // response vector is still materialized in full by Session::on_bytes for a
+                        // single request; bounding that needs streaming response generation,
+                        // tracked as a follow-up (see docs/socket_gateway.md).
                         if (options.max_outbuf_hard_bytes != 0 &&
                             client.outbuf.size() + response.size() >
                                 options.max_outbuf_hard_bytes) {
@@ -206,20 +233,20 @@ bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options)
             }
 
             if (!close_now && (ev & EPOLLOUT) != 0U) {
-                close_now = !send_some(fd, client.outbuf);
+                close_now = !send_some(fd, client);
             }
 
             if (!close_now) {
-                const bool want_write = !client.outbuf.empty();
+                const bool want_write = client.pending() > 0;
                 if (!want_write && (client.input_closed || client.close_after_flush ||
                                     (ev & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) != 0U)) {
                     close_now = true; // fully flushed and the peer is done / has logged out
                 } else {
                     std::uint32_t want = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-                    // Backpressure: only keep reading while the write backlog is below the
+                    // Backpressure: only keep reading while the unsent backlog is below the
                     // high-water mark, so a client that stops reading its responses cannot make the
                     // gateway buffer unbounded output. Reads resume once the backlog drains.
-                    if (client.outbuf.size() < options.max_outbuf_bytes) {
+                    if (client.pending() < options.max_outbuf_bytes) {
                         want |= EPOLLIN;
                     }
                     if (want_write) {
