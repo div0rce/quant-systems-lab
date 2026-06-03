@@ -29,10 +29,11 @@ GATEWAY="${QSL_GATEWAY_BIN:-build/dev/qsl-gateway}"
 CLIENT="${QSL_CLIENT_BIN:-build/dev/qsl-client}"
 OUT="${QSL_SOCKET_LOAD_OUT:-results/socket_load_summary.txt}"
 PORT_BASE="${QSL_LOAD_PORT:-39300}"
-CLIENT_COUNTS="${QSL_LOAD_COUNTS:-1 8 32 64}"
+CLIENT_COUNTS="${QSL_LOAD_COUNTS-1 4 8 16}"
 TRIALS="${QSL_LOAD_TRIALS:-3}"
 CLIENT_TIMEOUT="${QSL_LOAD_CLIENT_TIMEOUT:-30}" # per-client wall cap; bounds a hang if the gateway dies
 MAX_ATTEMPTS="${QSL_LOAD_MAX_ATTEMPTS:-6}"      # retries (on a fresh port) before a trial is failed
+MAX_CLIENT_COUNT=16 # shared listen backlog: blocking TcpServer=16, epoll>=16; keep comparison fair
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
@@ -79,6 +80,23 @@ if ! [[ "$MAX_ATTEMPTS" =~ ^[0-9]+$ ]] || ((MAX_ATTEMPTS < 1)); then
     echo "error: QSL_LOAD_MAX_ATTEMPTS must be a positive integer (got '$MAX_ATTEMPTS')." >&2
     exit 2
 fi
+CLIENT_COUNT_VALUES=()
+for count in $CLIENT_COUNTS; do
+    if ! [[ "$count" =~ ^[0-9]+$ ]] || ((count < 1)); then
+        echo "error: QSL_LOAD_COUNTS must contain only positive integers (got '$count')." >&2
+        exit 2
+    fi
+    if ((count > MAX_CLIENT_COUNT)); then
+        echo "error: QSL_LOAD_COUNTS value '$count' exceeds shared listen backlog $MAX_CLIENT_COUNT." >&2
+        echo "       Use counts <= $MAX_CLIENT_COUNT so blocking and epoll modes have comparable accept queues." >&2
+        exit 2
+    fi
+    CLIENT_COUNT_VALUES+=("$count")
+done
+if ((${#CLIENT_COUNT_VALUES[@]} == 0)); then
+    echo "error: QSL_LOAD_COUNTS must contain at least one positive client count." >&2
+    exit 2
+fi
 
 mkdir -p "$(dirname "$OUT")"
 DIRTY="$(dirty_tree_status)"
@@ -91,12 +109,18 @@ trap 'if [[ -n "$GW_PID" ]]; then kill -KILL "$GW_PID" 2>/dev/null || true; fi' 
 
 now() { date +%s.%N; }
 
+listen_entry_present() {
+    local port="$1" port_hex
+    printf -v port_hex '%04X' "$port"
+    awk -v want="0100007F:$port_hex" '$2 == want && $4 == "0A" { found = 1 } END { exit !found }' \
+        /proc/net/tcp
+}
+
 wait_ready() {
     local port="$1" pid="$2" i
     for i in $(seq 1 100); do
         kill -0 "$pid" 2>/dev/null || return 1 # gateway exited (e.g. bind failed) -> not ready
-        if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
-            exec 3>&- 3<&-
+        if listen_entry_present "$port"; then
             return 0
         fi
         sleep 0.05
@@ -117,11 +141,19 @@ stop_gateway() {
     GW_PID=""
 }
 
+client_response_ok() {
+    local output="$1"
+    grep -Eq '^  (Ack|Reject) order=1( |$)' "$output" &&
+        grep -q '^  HeartbeatAck token=42$' "$output" &&
+        ! grep -Eq '<malformed response>|<unexpected response>' "$output"
+}
+
 # Run one trial: start the gateway in $mode on a fresh port, fire N concurrent clients, measure.
 # Retries on a new fresh port if the gateway fails to start. Sets RESULT_WALL / RESULT_OKRATIO.
 # (Runs in the current shell -- not a subshell -- so NEXT_PORT/GW_PID stay consistent.)
 run_load() {
-    local mode="$1" n="$2" attempt port start end ok c p
+    local mode="$1" n="$2" attempt port start end ok best_ok c p out_dir out_file
+    best_ok=0
     for ((attempt = 0; attempt < MAX_ATTEMPTS; attempt++)); do
         port="$NEXT_PORT"
         NEXT_PORT=$((NEXT_PORT + 1))
@@ -136,18 +168,28 @@ run_load() {
         fi
 
         local pids=()
+        local outputs=()
+        out_dir="$(mktemp -d)"
         ok=0
         start="$(now)"
         for ((c = 0; c < n; c++)); do
-            timeout "$CLIENT_TIMEOUT" "$CLIENT" "$port" >/dev/null 2>&1 &
+            out_file="$out_dir/client-$c.out"
+            timeout "$CLIENT_TIMEOUT" "$CLIENT" "$port" >"$out_file" 2>&1 &
             pids+=("$!")
+            outputs+=("$out_file")
         done
-        for p in "${pids[@]}"; do
-            if wait "$p"; then ok=$((ok + 1)); fi
+        for c in "${!pids[@]}"; do
+            p="${pids[$c]}"
+            out_file="${outputs[$c]}"
+            if wait "$p" && client_response_ok "$out_file"; then ok=$((ok + 1)); fi
         done
         end="$(now)"
+        rm -rf "$out_dir"
         stop_gateway
 
+        if ((ok > best_ok)); then
+            best_ok="$ok"
+        fi
         if ((ok == n)); then
             RESULT_WALL="$(awk -v s="$start" -v e="$end" 'BEGIN { printf "%.4f", e - s }')"
             RESULT_OKRATIO="$n/$n"
@@ -157,7 +199,7 @@ run_load() {
         # isolation); retry the whole trial rather than record a flaky cell.
     done
     RESULT_WALL="0"
-    RESULT_OKRATIO="0/$n"
+    RESULT_OKRATIO="$best_ok/$n"
     return 1
 }
 
@@ -174,7 +216,7 @@ best_of() {
         if [[ -z "$WORST_OKRATIO" ]] || ((ok < ${WORST_OKRATIO%%/*})); then
             WORST_OKRATIO="$RESULT_OKRATIO"
         fi
-        if ((ok > 0)); then
+        if ((ok == n)); then
             if [[ -z "$BEST_WALL" ]] || awk -v a="$RESULT_WALL" -v b="$BEST_WALL" 'BEGIN { exit !(a < b) }'; then
                 BEST_WALL="$RESULT_WALL"
             fi
@@ -187,7 +229,7 @@ best_of() {
 
 declare -a ROWS=()
 for mode in blocking epoll; do
-    for n in $CLIENT_COUNTS; do
+    for n in "${CLIENT_COUNT_VALUES[@]}"; do
         best_of "$mode" "$n"
         rate="$(awk -v n="$n" -v w="$BEST_WALL" 'BEGIN { if (w > 0) printf "%.0f", n / w; else printf "n/a" }')"
         ROWS+=("$mode|$n|$BEST_WALL|$rate|$WORST_OKRATIO")
