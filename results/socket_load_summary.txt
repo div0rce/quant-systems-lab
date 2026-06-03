@@ -1,0 +1,53 @@
+Command:     bash scripts/socket_load.sh  (make socket-load)
+Artifact:    multi-client TCP connection-scaling load (loopback, constrained)
+Hardware:    aarch64
+OS:          Linux 6.12.76-linuxkit
+CPU:         
+Cores:       8
+Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Git commit:  9e3750b
+Dirty tree:  yes
+Transport:   TCP over 127.0.0.1 (loopback)
+Load shape:  N concurrent qsl-client connections; each connects, sends NewOrder + Heartbeat, reads replies, closes
+Client counts: 1 8 32 64
+Trials/cell: 3 (best/min wall time reported)
+Date:        2026-06-03T19:31:50Z
+
+Setup: the same concurrent client load is run against the gateway in each transport mode.
+blocking = the M9 single-connection accept loop (serves one connection at a time); epoll =
+the M34 event loop (multiplexes readiness across all connections). Per-order engine work is
+sub-microsecond, so the wall time is the connection-setup/accept/socket path, not matching.
+
+mode       clients   wall(s,best)     conns/s(~)  completed
+-------    -------   ------------     ----------  ---------
+blocking         1         0.0024            417        1/1
+blocking         8         0.0065           1231        8/8
+blocking        32         0.0175           1829      32/32
+blocking        64         0.0311           2058      64/64
+epoll            1         0.0025            400        1/1
+epoll            8         0.0082            976        8/8
+epoll           32         0.0198           1616      32/32
+epoll           64         0.0306           2092      64/64
+
+Reading the result: compare how the best wall time grows with the client count within
+each mode. The blocking server serializes concurrent connections while epoll multiplexes
+them, so epoll should grow more slowly as N rises -- but at these small loopback counts,
+where per-connection serve work is tiny and connection setup dominates, the two modes can
+look similar (same order of magnitude); the epoll advantage only emerges once
+serialization dominates. Absolute conns/s figures are loopback, single-machine, and load
+dependent -- not a production-capacity or throughput claim. The 'completed' column shows
+the worst per-trial completion; anything below N/N means a trial dropped connections.
+
+Caveats:
+- Loopback only: no NIC, driver, routing, or real-network behaviour is exercised.
+- Each client is a brand-new short-lived connection (connection-setup heavy), not a
+  long-lived high-throughput session; this measures connection scaling, not steady-state
+  message throughput.
+- Spawning client processes adds fork/exec cost on the driver side; both modes pay it
+  equally, so the blocking-vs-epoll comparison is still meaningful, but absolute conns/s
+  is bounded by client spawn cost, not just the server.
+- Transient: under rapid gateway start/stop cycling a trial can occasionally fail to bind
+  or serve on a constrained host, shown as a '< N/N' completed cell; the reported best
+  wall time is taken only from trials whose gateway actually served (failed trials do not
+  poison the minimum).
+- Constrained-environment evidence for investigation; not a production-capacity claim.

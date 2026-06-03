@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record profile-io socket-stress concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record profile-io socket-stress socket-load concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -67,6 +67,13 @@ profile-io:
 # M30: UDP burst/gap + receive-socket-buffer experiment over loopback. Portable (Linux/macOS).
 socket-stress: build
 	bash scripts/socket_stress.sh
+
+# M35: multi-client TCP connection-scaling load (blocking vs epoll gateway). Linux-only.
+socket-load:
+	@test "$$(uname -s)" = "Linux" || { echo "error: make socket-load requires Linux (epoll + hi-res timer); current OS is $$(uname -s)." >&2; exit 2; }
+	cmake --preset dev
+	cmake --build --preset dev --target qsl-gateway qsl-client
+	bash scripts/socket_load.sh
 
 concurrency-stress:
 	bash scripts/concurrency_stress.sh

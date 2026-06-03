@@ -132,11 +132,38 @@ clean checkout on a bare-metal Linux host for a clean-tree version.
   order traffic.
 - Results are **hardware/kernel/OS dependent** and will differ across machines.
 
+## Multi-client connection-scaling load (`make socket-load`)
+
+Artifact: [`results/socket_load_summary.txt`](../results/socket_load_summary.txt).
+
+`scripts/socket_load.sh` (Linux-only) drives **N concurrent** short-lived clients (`qsl-client`:
+connect → `NewOrder` + `Heartbeat` → read replies → close) against `qsl-gateway` in **both**
+transport modes — the blocking single-connection accept loop (M9) and the epoll event loop (M34)
+— across a sweep of client counts, reporting the best (minimum) wall time and an approximate
+connections/second per cell.
+
+### Reading it
+
+Per-order matching is sub-microsecond, so the wall time is the **connection-setup / accept /
+socket path**, not engine cost. In principle the blocking server (one connection at a time) should
+scale worse than epoll (which multiplexes readiness), but at these small loopback counts connection
+setup dominates and the two modes stay **close**: in the committed run both grow to the same order
+of magnitude with no consistent separation between them, and which one is marginally faster varies
+run to run. A clear epoll advantage would require higher concurrency or heavier per-connection work
+than this connection-setup-bound loopback load exercises — the honest read of the artifact is "the
+two transports are comparable at this scale," not a demonstrated win for either. The absolute
+conns/s figures are loopback, single-machine, and bounded by client process-spawn cost, so they are
+**not** a production-capacity or throughput claim. The script is Linux-only (epoll mode + the high-resolution
+timer) and skips cleanly elsewhere; the committed artifact is regenerated with `make socket-load`
+in containerized Linux (constrained-environment), like the gateway profile above. Receiver-side socket-buffer pressure is
+covered separately by the UDP experiment ([`make socket-stress`](#udp-socket-buffer--burst-loss-experiment-make-socket-stress)).
+
 ## What this does and does not show
 
 It **does** show: where the gateway's time splits between user-space work and the kernel socket
 path; the syscall mix of that path; and that an undersized UDP receive buffer causes observable,
 sequence-visible datagram loss under burst while adequate buffers do not.
 
-It **does not** show: production latency or throughput, behaviour over a real network, behaviour
-under concurrency, or any kernel-bypass / low-latency-networking result. No such claim is made.
+It **does not** show: production latency or throughput, behaviour over a real network, production
+throughput under concurrency (the load test shows connection-scaling *shape*, not capacity), or
+any kernel-bypass / low-latency-networking result. No such claim is made.
