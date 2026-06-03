@@ -13,12 +13,13 @@ They are profiling evidence for investigation, not a latency, throughput, or cap
 
 ## What is profiled
 
-Two distinct paths, two scripts:
+Three distinct paths, three scripts:
 
 | Path | Transport | Script | `make` target | OS |
 |------|-----------|--------|---------------|----|
 | TCP order gateway | TCP, one connection at a time | `scripts/profile_gateway_io.sh` | `make profile-io` | Linux only |
 | Market-data feed | UDP unicast | `scripts/socket_stress.sh` | `make socket-stress` | Linux + macOS |
+| TCP connection-scaling load | TCP, blocking vs epoll | `scripts/socket_load.sh` | `make socket-load` | Linux only |
 
 The gateway profile needs `strace` and Linux procfs (`/proc/<pid>/{stat,status}`), so that script
 **fails clearly on non-Linux** (exit 2), exactly like the M29 `perf` scripts. The UDP
@@ -110,6 +111,10 @@ make profile-io
 # Linux or macOS — UDP buffer/loss experiment:
 make socket-stress
 #   tunables: QSL_STRESS_ORDERS, QSL_STRESS_TRIALS, QSL_STRESS_SMALL_BUF, QSL_STRESS_LARGE_BUF
+
+# Linux only — multi-client blocking-vs-epoll connection-scaling load:
+make socket-load
+#   tunables: QSL_LOAD_COUNTS, QSL_LOAD_TRIALS, QSL_LOAD_PORT, QSL_LOAD_ALLOW_PARTIAL
 ```
 
 The committed gateway artifact was generated in a **containerized Linux** environment (Docker)
