@@ -2,16 +2,16 @@ Command:     bash scripts/socket_load.sh  (make socket-load)
 Artifact:    multi-client TCP connection-scaling load (loopback, constrained)
 Hardware:    aarch64
 OS:          Linux 6.12.76-linuxkit
-CPU:         
+CPU:         Apple aarch64
 Cores:       8
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-Git commit:  c044711
+Git commit:  5f56bb5
 Dirty tree:  no
 Transport:   TCP over 127.0.0.1 (loopback)
 Load shape:  N concurrent qsl-client connections; each connects, sends NewOrder + Heartbeat, reads replies, closes
 Client counts: 1 4 8 16
 Trials/cell: 3 (best/min wall over trials; each gateway on a fresh port, up to 6 start attempts)
-Date:        2026-06-03T21:34:19Z
+Date:        2026-06-03T22:09:36Z
 
 Setup: the same concurrent client load is run against the gateway in each transport mode.
 blocking = the M9 single-connection accept loop (serves one connection at a time); epoll =
@@ -20,14 +20,14 @@ sub-microsecond, so the wall time is the connection-setup/accept/socket path, no
 
 mode       clients   wall(s,best)     conns/s(~)  completed
 -------    -------   ------------     ----------  ---------
-blocking         1         0.0081            123        1/1
-blocking         4         0.0202            198        4/4
-blocking         8         0.0333            240        8/8
-blocking        16         0.0480            333      16/16
-epoll            1         0.0108             93        1/1
-epoll            4         0.0189            212        4/4
-epoll            8         0.0279            287        8/8
-epoll           16         0.0460            348      16/16
+blocking         1         0.0097            103        1/1
+blocking         4         0.0207            193        4/4
+blocking         8         0.0331            242        8/8
+blocking        16         0.0571            280      16/16
+epoll            1         0.0083            120        1/1
+epoll            4         0.0209            191        4/4
+epoll            8         0.0273            293        8/8
+epoll           16         0.0870            184      16/16
 
 Reading the result: compare how the best wall time grows with the client count within each
 mode. In principle the blocking server (one connection at a time) should scale worse than
