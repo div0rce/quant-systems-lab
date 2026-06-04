@@ -1092,10 +1092,10 @@ M32 delivered a scoped PMR-backed order-book node-allocation experiment. Direct 
 
 ## Current post-M35 roadmap memory
 
-Current landed state on `main`: M36 is merged (PR #104, 0d2b97a) after M35 (PR #100, a86b701), the
-project-memory syncs (PR #101 40f9249, PR #102 7092423), and the repository-health refactor phase
-insertion (PR #103 0f2ceb7). M37 — threaded-pipeline stage helpers — is open as draft PR #105
-within the inserted behavior-preserving refactor phase **M36–M42** (M36 epoll
+Current landed state on `main`: M37 is merged (PR #105, a8c0485) after M35 (PR #100, a86b701), the
+project-memory syncs (PR #101 40f9249, PR #102 7092423), the repository-health refactor phase
+insertion (PR #103 0f2ceb7), and M36 (PR #104, 0d2b97a). M38 — shrinker reduction passes — is
+open as draft PR #106 within the inserted behavior-preserving refactor phase **M36–M42** (M36 epoll
 decomposition, M37 threaded-pipeline stage helpers, M38 shrinker passes, M39 order-book matching
 parameters, M40 engine test-suite consolidation, M41 session frame dispatch, M42 shared shell-script
 helpers).

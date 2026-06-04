@@ -40,6 +40,9 @@ All notable changes to this project. The format is loosely based on
 
 ### Changed
 
+- M38: split the command-stream shrinker into named reduction/remap passes. `shrink` and
+  `renumber` preserve deterministic output and public behavior while moving contiguous removal,
+  field simplification, symbol remapping, and order-id compaction into small helpers.
 - M37: decomposed the threaded pipeline into a run context plus named input/engine/output stage
   helpers, and consolidated concurrency-test assertion/producer-consumer helpers. Public
   CLI/protocol behavior, deterministic pipeline results, and benchmark claims are unchanged.
