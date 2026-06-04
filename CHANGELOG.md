@@ -40,9 +40,15 @@ All notable changes to this project. The format is loosely based on
 
 ### Documentation
 
-- Synchronized project-memory files before repository-health planning: M35 is merged as PR #100,
-  PR #101 has landed as docs-only synchronization, and original M36 NUMA work remains deferred until
-  after repository-health analysis is completed or explicitly skipped by the human.
+- Synchronized project-memory files before repository-health planning (PR #101, PR #102): M35 is
+  merged as PR #100; the project-memory syncs landed; the repository-health analysis has since been
+  completed (see the inserted refactor phase below).
+- Inserted a repository-health refactor phase after M35, derived from a CodeScene Code Health
+  analysis (5 production + 6 test files below 9.0) plus one manually-identified shell-maintainability
+  milestone: seven refactor milestones M36–M42 (epoll decomposition; threaded-pipeline stage helpers;
+  shrinker passes; order-book matching parameters; engine test-suite consolidation; session frame
+  dispatch; shared shell-script helpers). The original M36–M41 networking/persistence roadmap is
+  renumbered to M43–M48; NUMA awareness is now M43.
 - M34: updated socket-gateway docs and added ADR 0010 to distinguish the Linux epoll architecture
   prototype from M35 multi-client load/socket-pressure evidence. The docs cover EAGAIN/EWOULDBLOCK,
   partial writes, half-close flushing, and bounded outbound buffering.

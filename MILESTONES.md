@@ -1024,7 +1024,7 @@ hardening, and external review signal — not more product surface area.
 
 ## Phase III / IV execution rule
 
-Do M24–M41 **in order**, except that issue #90 can be worked as an evidence follow-up as soon as a
+Do M24–M48 **in order**, except that issue #90 can be worked as an evidence follow-up as soon as a
 PMU-capable Linux host is available. Do not skip to Linux perf/socket work before the concurrency
 primitive and threaded pipeline exist. Do not start external review before there is enough evidence
 to review.
@@ -1041,12 +1041,19 @@ to review.
 10. M33 advanced concurrency validation
 11. M34 epoll gateway architecture
 12. M35 multi-client load and socket-pressure testing
-13. M36 NUMA awareness study
-14. M37 lock-free ingress pipeline
-15. M38 exchange-grade persistence prototype
-16. M39 recovery benchmarking
-17. M40 DPDK research and prototype
-18. M41 NIC offload and low-latency networking study
+13. M36 decompose the epoll event loop and connection lifecycle
+14. M37 extract threaded-pipeline stage helpers
+15. M38 split the command-stream shrinker into named passes
+16. M39 encapsulate order-book matching parameters
+17. M40 consolidate engine correctness test suites
+18. M41 simplify gateway session frame dispatch
+19. M42 extract shared shell-script helpers
+20. M43 NUMA awareness study
+21. M44 lock-free ingress pipeline
+22. M45 exchange-grade persistence prototype
+23. M46 recovery benchmarking
+24. M47 DPDK research and prototype
+25. M48 NIC offload and low-latency networking study
 
 ## Post-M29 priority order
 
@@ -1418,9 +1425,179 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 ---
 
-## M36 — NUMA awareness study
+## Repository-health refactor phase (inserted after M35)
 
-- **Branch:** `feat/m36-numa-awareness-study`
+After M35, a CodeScene Code Health analysis (project 80913) of all production and test files
+identified eleven files below 9.0. They are addressed by the seven behavior-preserving refactor
+milestones **M36–M42** below, inserted before the original networking/persistence roadmap (which
+shifts to **M43–M48**; NUMA is now **M43**). M36–M39 and M41 come from production findings; M40
+consolidates the engine test suites (a CodeScene test finding, kept as its own milestone); M42
+(shell-script helpers) was identified manually because CodeScene cannot score shell. Determinism,
+replay, the differential suite, and integer-tick pricing remain invariants, not refactor targets.
+
+---
+
+## M36 — Decompose the epoll event loop and connection lifecycle
+
+- **Branch:** `refactor/m36-epoll-event-loop-decomposition`
+- **PR title:** `refactor: decompose epoll event-loop and connection lifecycle`
+- **Goal:** Reduce the complexity of the epoll transport without changing its behavior.
+
+### Scope
+
+- `src/gateway/epoll_server.cpp` (Code Health 5.35): split `EpollServer::serve_listen_socket`
+  (cyclomatic complexity 67, 154 lines, nesting depth 7) into per-event handlers
+  (accept / readable / writable / error+hup / close) plus a connection-lifecycle helper.
+- Flatten nesting with guard clauses; encapsulate the complex conditionals.
+
+### Definition of Done
+
+- [ ] `serve_listen_socket` decomposed; no function exceeds the C++ complexity/length thresholds.
+- [ ] CodeScene Code Health for `src/gateway/epoll_server.cpp` improves to ≥ 9.0 (record before→after).
+- [ ] Behavior unchanged: `tests/unit/test_epoll_gateway.cpp` passes; characterization tests cover
+      accept / `EAGAIN` / `EPOLLHUP` / `EPOLLERR` / hard-cap / fd-generation paths.
+- [ ] No public API or wire-behavior change; session/matching semantics unchanged.
+- [ ] `make check` + `make asan` pass; `PROGRESS.md` updated.
+
+---
+
+## M37 — Extract threaded-pipeline stage helpers
+
+- **Branch:** `refactor/m37-threaded-pipeline-stage-helpers`
+- **PR title:** `refactor: extract threaded pipeline stage helpers`
+- **Goal:** Break up the pipeline's brain method and tidy the concurrency tests that guard it.
+
+### Scope
+
+- `include/qsl/concurrency/pipeline.hpp` (Code Health 7.13): split the `run` brain method
+  (103 lines, nesting 4, 5 arguments) into ingress / engine / egress stage helpers and a
+  run-context struct.
+- `tests/concurrency/test_pipeline.cpp` (8.28) and `tests/concurrency/test_backpressure.cpp` (8.44):
+  reduce large/duplicated assertion blocks and per-test nesting via shared helpers.
+
+### Definition of Done
+
+- [ ] `run` decomposed; argument count and nesting within thresholds.
+- [ ] Code Health ≥ 9.0 for `pipeline.hpp`, `test_pipeline.cpp`, and `test_backpressure.cpp`.
+- [ ] Determinism preserved: the threaded result still equals the single-threaded reference and the
+      replay of the concurrently-written command log across seeds and queue capacities.
+- [ ] `make check` + `make asan` + `make tsan` pass; `PROGRESS.md` updated.
+
+---
+
+## M38 — Split the command-stream shrinker into named passes
+
+- **Branch:** `refactor/m38-shrinker-reduction-passes`
+- **PR title:** `refactor: split shrinker into named reduction passes`
+- **Goal:** Make the shrinker's reduction strategy readable without changing its output.
+
+### Scope
+
+- `src/replay/shrink.cpp` (Code Health 8.15): split `shrink` (cc 18) and `renumber` (cc 21) into
+  named reduction passes (chunk removal, single-command removal, field simplification) behind the
+  existing failure predicate; extract the id-remap helper.
+
+### Definition of Done
+
+- [ ] `shrink` / `renumber` decomposed; functions within complexity/length thresholds.
+- [ ] Code Health for `src/replay/shrink.cpp` ≥ 9.0.
+- [ ] Deterministic shrink output byte-identical (committed shrunk fixtures unchanged); shrinker tests
+      and the OCaml differential suite stay green.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M39 — Encapsulate order-book matching parameters
+
+- **Branch:** `refactor/m39-order-book-matching-parameters`
+- **PR title:** `refactor: encapsulate order-book matching parameters`
+- **Goal:** Reduce order-book complexity in the determinism-critical matching path.
+
+### Scope
+
+- `src/engine/order_book.cpp` (Code Health 8.55): collapse `match_against` (7 arguments, cc 12) and
+  `count_matches` (5 arguments) into a matching-context struct; extract the fill loop. Behavior must
+  stay byte-identical.
+
+### Definition of Done
+
+- [ ] `match_against` / `count_matches` argument counts and complexity within thresholds.
+- [ ] Code Health for `src/engine/order_book.cpp` ≥ 9.0.
+- [ ] **Determinism preserved:** replay equivalence, the C++↔OCaml differential suite, and all
+      property/invariant tests stay green (identical event stream, snapshot, and `last_seq`).
+- [ ] Integer-tick prices and wall-clock-independent matching unchanged.
+- [ ] `make check` + `make asan` pass; `PROGRESS.md` updated.
+
+---
+
+## M40 — Consolidate engine correctness test suites
+
+- **Branch:** `refactor/m40-engine-test-consolidation`
+- **PR title:** `test: consolidate engine correctness test suites`
+- **Goal:** Remove duplication and oversized assertion blocks from the engine/risk test suites
+  without weakening coverage. Test-only milestone — no production change.
+
+### Scope
+
+- `tests/unit/test_order_book.cpp` (7.32), `tests/unit/test_matching_engine.cpp` (8.54),
+  `tests/unit/test_invariants.cpp` (8.45), `tests/unit/test_risk_gateway.cpp` (6.69): extract shared
+  fixtures / assertion helpers, de-duplicate `TEST_CASE`s, and break up large/duplicated assertion
+  blocks and deeply nested property loops.
+
+### Definition of Done
+
+- [ ] Code Health ≥ 9.0 for all four files.
+- [ ] No production code changed; the same scenarios and invariants are asserted (coverage and
+      non-vacuity preserved — trades/rejects/cancels/modifies still exercised).
+- [ ] `make check` + `make asan` pass; `PROGRESS.md` updated.
+
+---
+
+## M41 — Simplify gateway session frame dispatch
+
+- **Branch:** `refactor/m41-session-frame-dispatch`
+- **PR title:** `refactor: simplify gateway session frame dispatch`
+- **Goal:** Replace the session's complex frame-dispatch method with a clear per-message structure.
+
+### Scope
+
+- `src/gateway/session.cpp` (Code Health 8.99): replace `Session::process_frame` (cc 15) message-type
+  if/else chain with a per-message-type handler table / functions.
+
+### Definition of Done
+
+- [ ] `process_frame` complexity within threshold; Code Health for `src/gateway/session.cpp` ≥ 9.0.
+- [ ] Behavior unchanged: malformed-frame disconnect, risk-reject, cancel, modify, and chunked-read
+      session tests pass.
+- [ ] `make check` + `make asan` pass; `PROGRESS.md` updated.
+
+---
+
+## M42 — Extract shared shell-script helpers
+
+- **Branch:** `refactor/m42-shared-shell-script-helpers`
+- **PR title:** `refactor: extract shared shell-script helpers`
+- **Goal:** Remove duplicated boilerplate across the socket/perf scripts (the M35 deferred follow-up).
+  Manually identified — CodeScene does not score shell, so this milestone has no Code Health metric.
+
+### Scope
+
+- Extract the shared dirty-tree / `wait_ready` / gateway-stop / metadata-emission helpers duplicated
+  across `scripts/socket_load.sh`, `scripts/socket_stress.sh`, `scripts/profile_gateway_io.sh`,
+  `scripts/perf_record.sh`, and `scripts/perf_stat.sh` into a sourced `scripts/` library.
+
+### Definition of Done
+
+- [ ] Shared helpers live in one sourced library; the five scripts source it (no copy-paste).
+- [ ] `bash -n` clean for every script; each script's artifact output is unchanged.
+- [ ] The Linux `make` targets (`socket-load`, `socket-stress`, `profile-io`, `perf-stat`,
+      `perf-record`) still run; `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M43 — NUMA awareness study
+
+- **Branch:** `feat/m43-numa-awareness-study`
 - **PR title:** `docs: study NUMA and CPU affinity effects`
 - **Goal:** Document and measure CPU locality tradeoffs where hardware exists.
 
@@ -1439,9 +1616,9 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 ---
 
-## M37 — Lock-free ingress pipeline
+## M44 — Lock-free ingress pipeline
 
-- **Branch:** `feat/m37-lock-free-ingress-pipeline`
+- **Branch:** `feat/m44-lock-free-ingress-pipeline`
 - **PR title:** `perf: evaluate lock-free ingress pipeline`
 - **Goal:** Explore ingress contention without changing deterministic matching ownership.
 
@@ -1464,9 +1641,9 @@ This is **not** lock-free matching.
 
 ---
 
-## M38 — Exchange-grade persistence prototype
+## M45 — Exchange-grade persistence prototype
 
-- **Branch:** `feat/m38-persistence-prototype`
+- **Branch:** `feat/m45-persistence-prototype`
 - **PR title:** `feat: prototype stronger persistence strategy`
 - **Goal:** Investigate durability strategy beyond the current append-only lab log.
 
@@ -1485,9 +1662,9 @@ This is **not** lock-free matching.
 
 ---
 
-## M39 — Recovery benchmarking
+## M46 — Recovery benchmarking
 
-- **Branch:** `feat/m39-recovery-benchmarking`
+- **Branch:** `feat/m46-recovery-benchmarking`
 - **PR title:** `perf: benchmark recovery paths`
 - **Goal:** Measure recovery objectives from replay and snapshot restoration.
 
@@ -1506,11 +1683,12 @@ This is **not** lock-free matching.
 
 ---
 
-## M40 — DPDK research and prototype
+## M47 — DPDK research and prototype
 
-- **Branch:** `feat/m40-dpdk-research-prototype`
+- **Branch:** `feat/m47-dpdk-research-prototype`
 - **PR title:** `docs: research DPDK packet-path tradeoffs`
-- **Goal:** User-space networking investigation only after M30–M39.
+- **Goal:** User-space networking investigation only after the earlier socket, persistence, and
+  recovery milestones.
 
 ### Scope
 
@@ -1527,9 +1705,9 @@ This is **not** lock-free matching.
 
 ---
 
-## M41 — NIC offload and low-latency networking study
+## M48 — NIC offload and low-latency networking study
 
-- **Branch:** `feat/m41-nic-offload-study`
+- **Branch:** `feat/m48-nic-offload-study`
 - **PR title:** `docs: study NIC offload and low-latency networking`
 - **Goal:** Research-heavy networking study unless suitable hardware exists.
 

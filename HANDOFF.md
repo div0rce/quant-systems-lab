@@ -16,10 +16,12 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M35 are merged. Most recently, PR #101 (squash commit
-40f9249) synchronized project-memory files after M35 so repository-health planning can start from
-post-M35 `main`. M35 = PR #100 (squash commit a86b701): Linux-only multi-client socket-load coverage
-comparing the blocking TCP gateway and the epoll gateway under bounded loopback connection pressure.
+The repo is released at `v0.1.0`. M0–M35 are merged. PR #101 (40f9249) and PR #102 (7092423)
+synchronized project-memory files after M35. A CodeScene Code Health analysis then drove a
+repository-health refactor phase: this branch (`docs/roadmap-health-refactor-insertion`) inserts
+seven refactor milestones **M36–M42** and renumbers the original networking/persistence roadmap to
+**M43–M48** (NUMA is now **M43**). Docs-only; no code yet. M35 = PR #100 (a86b701): Linux-only
+multi-client socket-load coverage comparing the blocking TCP gateway and the epoll gateway.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -32,8 +34,8 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-M35 and the docs-only project-memory sync PR #101 are merged on `main`. The next work is
-repository-health analysis and roadmap-insertion planning before original M36 NUMA. To resume:
+Once this roadmap-insertion PR lands on `main`, the next work is `/start-milestone 36` (Decompose
+the epoll event loop and connection lifecycle). To resume:
 
 ```text
 /resume
@@ -60,8 +62,8 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `40f9249` (PR #101, project-memory sync after M35)
-- current post-merge sync branch, if active: `docs/sync-post-pr101-before-health-roadmap`
+- latest synced main baseline: `7092423` (PR #102, post-merge project-memory sync)
+- current roadmap-insertion branch, if active: `docs/roadmap-health-refactor-insertion`
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
@@ -72,8 +74,9 @@ Current state:
 
 ### Next milestone
 
-Project-memory synchronization has landed. Original M36 is NUMA awareness, but the current human
-request is to insert a repository-health refactor phase before NUMA after repository-health analysis.
+The repository-health refactor phase (M36–M42) has been analyzed and confirmed; this PR inserts it.
+The next milestone is **M36 — Decompose the epoll event loop and connection lifecycle**
+(`refactor/m36-epoll-event-loop-decomposition`). Original NUMA awareness is now **M43**.
 
 ### Phase III / IV purpose
 
@@ -85,9 +88,10 @@ networking research.
 
 Current priority order:
 
-1. Issue #90 — real Linux hardware PMU perf evidence.
-2. Repository-health refactor phase before NUMA if the human confirms proposed milestones.
-3. M36 — NUMA awareness study (original next milestone after M35).
+1. Repository-health refactor phase M36–M42 (start with M36, epoll decomposition), once this
+   roadmap-insertion PR lands.
+2. M43 — NUMA awareness study (original next milestone, now shifted after the refactor phase).
+3. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
 
 ### Forbidden shortcuts
 
