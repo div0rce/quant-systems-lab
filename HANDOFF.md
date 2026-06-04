@@ -2,22 +2,24 @@
 
 This is the operator manual. It tells Claude Code and the human how to build the repo in a resumable, sequential, AI-first workflow.
 
-The repo brain lives in four root files:
+Project memory files:
 
-1. `CLAUDE.md` — durable project rules and engineering constraints.
-2. `MILESTONES.md` — ordered milestone plan.
-3. `PROGRESS.md` — live state and resume anchor.
-4. `HANDOFF.md` — this operator manual.
+1. `CLAUDE.md` — canonical Claude Code project memory.
+2. `AGENTS.md` — Codex-facing mirror/adapter. Keep synchronized with `CLAUDE.md`.
+3. `MILESTONES.md` — ordered roadmap and milestone definitions.
+4. `PROGRESS.md` — live state and resume anchor.
+5. `HANDOFF.md` — operator manual tying the files together.
 
-Keep all four in the repo root.
+Keep all five in the repo root. `AGENTS.md` and `CLAUDE.md` must agree on workflow rules,
+command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M33 are merged. Most recently M33 = PR #97 (squash commit
-fe8679a): deterministic scheduling perturbation, opt-in repeated concurrency stress, and docs
-framing TSan/perturbation/stress as evidence rather than proof. **M34 is the active milestone and
-draft PR #98 is open.**
+The repo is released at `v0.1.0`. M0–M35 are merged. Most recently M35 = PR #100 (squash commit
+a86b701): Linux-only multi-client socket-load coverage comparing the blocking TCP gateway and the
+epoll gateway under bounded loopback connection pressure. The current sync branch is
+documentation-only project-memory cleanup before any repository-health refactor planning.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -30,12 +32,9 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-M34 is in progress on `feat/m34-epoll-gateway-architecture` with draft PR #98 open. Codex review
-fixes are applied locally: the epoll path budgets high-fanout responses at the Session/gateway
-boundary before mutating engine state, drains already-readable `EPOLLIN` bytes before honoring
-`EPOLLHUP`, suppresses reads once a session is closing, ignores stale fd events through
-per-connection generation tokens, and preserves queued replies from earlier accepted frames before
-a later over-cap close. To resume it:
+M35 is merged on `main`. The branch `docs/sync-project-memory-before-refactor-roadmap` only
+synchronizes stale project-memory files and must land before any CodeScene/MCP-driven
+refactor-roadmap planning. To resume:
 
 ```text
 /resume
@@ -43,10 +42,10 @@ a later over-cap close. To resume it:
 
 Do not start implementation until these files are read:
 
-1. `CLAUDE.md`
-2. `PROGRESS.md`
-3. `MILESTONES.md`
-4. `HANDOFF.md`
+1. `AGENTS.md` / `CLAUDE.md` depending on agent type.
+2. `PROGRESS.md`.
+3. `MILESTONES.md`.
+4. `HANDOFF.md`.
 
 Then verify:
 
@@ -62,18 +61,21 @@ gh release view v0.1.0
 
 Current state:
 
-- main tip: `fe8679a` (PR #97, M33)
-- active branch: `feat/m34-epoll-gateway-architecture` (M34 draft PR #98 open)
+- main tip: `a86b701` (PR #100, M35)
+- current sync branch: `docs/sync-project-memory-before-refactor-roadmap`
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
   storage
+- open follow-up issue: #99 for broader byte-budgeted/streaming gateway response generation
+- open review request issue: #94
+- legacy backlog still open: #26, #28, #29, #32
 
 ### Next milestone
 
-M34 — epoll gateway architecture. Add a Linux event-driven gateway prototype with multi-client
-readiness handling, nonblocking accept/read/write behavior, bounded per-client response buffering,
-and preserved deterministic session semantics. Keep load/pressure testing for M35.
+Docs-only project-memory synchronization is active. Original M36 is NUMA awareness, but the current
+human request is to insert a repository-health refactor phase before NUMA after project-memory
+synchronization and analysis.
 
 ### Phase III / IV purpose
 
@@ -86,9 +88,8 @@ networking research.
 Current priority order:
 
 1. Issue #90 — real Linux hardware PMU perf evidence.
-2. M34 — epoll gateway architecture (in progress).
-3. M35 — multi-client socket pressure.
-4. M36 — NUMA awareness study.
+2. Repository-health refactor phase before NUMA if the human confirms proposed milestones.
+3. M36 — NUMA awareness study (original next milestone after M35).
 
 ### Forbidden shortcuts
 
@@ -113,7 +114,8 @@ Claude Code is the agentic coding tool that can:
 - open PRs,
 - resume from repo files.
 
-Claude Code is effectively stateless across sessions, so persistence comes from files. That is why this repo uses `CLAUDE.md`, `MILESTONES.md`, `PROGRESS.md`, and `HANDOFF.md`.
+Claude Code is effectively stateless across sessions, so persistence comes from files. That is why
+this repo uses `CLAUDE.md`, `AGENTS.md`, `MILESTONES.md`, `PROGRESS.md`, and `HANDOFF.md`.
 
 If tokens run out, the next session reads those files and resumes. Civilization is mostly just logs and delusion.
 
@@ -216,9 +218,10 @@ git clone git@github.com:<OWNER>/quant-systems-lab.git
 cd quant-systems-lab
 ```
 
-Drop these four files into root:
+Drop these project-memory files into root:
 
 ```text
+AGENTS.md
 CLAUDE.md
 HANDOFF.md
 MILESTONES.md
@@ -228,7 +231,7 @@ PROGRESS.md
 Commit those once on `main` only if the repo is empty and branch protection is not yet configured:
 
 ```bash
-git add CLAUDE.md HANDOFF.md MILESTONES.md PROGRESS.md
+git add AGENTS.md CLAUDE.md HANDOFF.md MILESTONES.md PROGRESS.md
 git commit -m "chore: add project brain files"
 git push origin main
 ```
@@ -248,7 +251,7 @@ Enable GitHub branch protection on `main`:
 Paste this into Claude Code from repo root:
 
 ```text
-Read HANDOFF.md, CLAUDE.md, MILESTONES.md, and PROGRESS.md in full before doing anything.
+Read CLAUDE.md, AGENTS.md, PROGRESS.md, MILESTONES.md, and HANDOFF.md in full before doing anything.
 
 Then bootstrap the repo for Milestone M0:
 - Do not work on main.
@@ -273,7 +276,7 @@ Open Claude Code in repo root and paste:
 
 It must:
 
-1. read `CLAUDE.md`, `PROGRESS.md`, and `MILESTONES.md`,
+1. read `CLAUDE.md`, `AGENTS.md`, `PROGRESS.md`, `MILESTONES.md`, and `HANDOFF.md`,
 2. run git state checks,
 3. check open PRs,
 4. report current milestone,
@@ -291,7 +294,7 @@ After human squash-merges a PR:
 ```bash
 git switch main
 git pull --ff-only
-git branch -d feat/mNN-slug
+git branch -d <milestone-branch>
 ```
 
 Then in Claude Code:
@@ -314,7 +317,7 @@ Finish:
 
 Human reviews and squash-merges.
 
-Repeat until M23.
+Repeat through the active roadmap, stopping for human review after each PR.
 
 ---
 
@@ -356,7 +359,7 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Resume work on Quant Systems Lab. Do not write code yet.
 
-1. Read CLAUDE.md, PROGRESS.md, and MILESTONES.md.
+1. Read CLAUDE.md, PROGRESS.md, MILESTONES.md, and HANDOFF.md.
 2. Run:
    - git status
    - git branch --show-current
@@ -387,24 +390,28 @@ allowed-tools: Read, Bash, Glob, Grep, Edit, Write
 
 Start milestone $ARGUMENTS.
 
-1. Read CLAUDE.md.
-2. Read PROGRESS.md.
-3. Read the M$ARGUMENTS section in MILESTONES.md.
-4. Verify clean tree with git status.
-5. If dirty, stop and ask human.
-6. Run:
+1. Verify clean tree with git status.
+2. If dirty, stop and ask human.
+3. Run:
    - git switch main
    - git pull --ff-only
-7. Create branch using exact milestone slug:
-   - git switch -c feat/m$ARGUMENTS-<slug>
-8. Update PROGRESS.md:
+4. Read updated CLAUDE.md.
+5. Read updated PROGRESS.md.
+6. Read updated HANDOFF.md.
+7. Read the M$ARGUMENTS section in updated MILESTONES.md.
+   - Read the selected milestone entry in `MILESTONES.md`. Use its exact `Branch:` value. Do not synthesize `feat/mNN-*` unless that is the exact branch listed. If no branch is listed, stop and ask.
+8. Create the branch using exactly the milestone's `Branch:` value:
+   - git switch -c <exact Branch value from MILESTONES.md>
+   - Do not infer a prefix from the milestone number.
+   - Do not silently create a branch that violates `MILESTONES.md`.
+9. Update PROGRESS.md:
    - active milestone,
    - status in progress,
    - active branch,
    - next action.
-9. Restate the DoD checklist.
-10. Implement in small steps.
-11. Write tests alongside code.
+10. Restate the DoD checklist.
+11. Implement in small steps.
+12. Write tests alongside code.
 ```
 
 ### `.claude/commands/finish-milestone.md`
@@ -868,7 +875,7 @@ ocaml/
 Paste into Claude Code:
 
 ```text
-Read HANDOFF.md, CLAUDE.md, MILESTONES.md, and PROGRESS.md in full before doing anything.
+Read CLAUDE.md, AGENTS.md, PROGRESS.md, MILESTONES.md, and HANDOFF.md in full before doing anything.
 
 This repo is now targeted at Jane Street SWE and Linux Engineering internships. Preserve the original C++ exchange-systems scope, and also preserve the additive Jane Street context: Linux docs, socket credibility, benchmark honesty, and the late OCaml replay verifier milestone.
 

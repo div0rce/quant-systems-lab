@@ -5,7 +5,7 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Resume work on Quant Systems Lab. Do not write code yet.
 
-1. Read CLAUDE.md, PROGRESS.md, and MILESTONES.md.
+1. Read CLAUDE.md, PROGRESS.md, MILESTONES.md, and HANDOFF.md.
 2. Run:
    - git status
    - git branch --show-current
