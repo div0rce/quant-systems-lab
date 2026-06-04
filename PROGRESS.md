@@ -19,15 +19,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M34 — epoll gateway architecture (in progress)
-- **Status:** draft PR open (#98); Codex review fixes applied locally
-- **Active branch:** `feat/m34-epoll-gateway-architecture`
-- **Last completed milestone:** M33 — Advanced concurrency validation (squash-merged, PR #97, commit fe8679a; Codex review clean — no major issues; CI green)
+- **Active milestone:** M35 — Multi-client load and socket-pressure testing (ready for PR)
+- **Status:** implementation complete; PR open, awaiting human squash-merge
+- **Active branch:** `feat/m35-multi-client-socket-pressure`
+- **Last completed milestone:** M34 — epoll gateway architecture (squash-merged, PR #98, commit 9e3750b; Codex review converged across several rounds, CI green)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** last verified on M34 (191/191) on 2026-06-03; `make asan` also passed 191/191. Linux Docker verification built `qsl-gateway`/`test_epoll_gateway` and passed 7 epoll tests / 273 assertions (multi-client, backpressure, hard-cap, queued-reply, and disconnect-after-write coverage).
-- **Last action:** addressed the latest Codex PR #98 epoll review findings locally: closing sessions no longer re-arm reads, client events carry generation tokens to ignore stale fd events, and queued replies from earlier frames in the same read are preserved before a later over-cap close.
-- **Next action:** commit/push the latest M34 Codex review fixes, trigger Codex review, and monitor PR #98 CI; do not merge.
-- **Blockers:** none for M34 on Linux-targeted code paths; issue #90 remains blocked on PMU-capable Linux access; issue #95 remains future intrusive/custom-node storage.
+- **`make check` passing:** M35 verified 191/191 on 2026-06-03; Linux Docker `socket_load.sh` (blocking vs epoll, N=1/4/8/16) generates `results/socket_load_summary.txt`.
+- **Last action:** hardened M35 socket-load artifact generation after PR #100: fresh monotonic ports per gateway start, bounded retries, no partial artifact by default, clean-tree Docker artifact regenerated.
+- **Next action:** human reviews/squash-merges the M35 PR; then M36 (NUMA awareness study) or backlog (#90 PMU, #95 storage, #99 streaming responses, scripts/lib dedup).
+- **Blockers:** issues #90 / #95 / #99 remain backlog; none required for M35.
 
 ---
 
@@ -206,7 +206,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M34 PR #98 open on `feat/m34-epoll-gateway-architecture`: Linux `EpollServer`, `qsl-gateway --epoll`, Linux-gated epoll tests, socket-gateway docs, ADR 0010. Codex review fixes addressed: read-backpressure, `--epoll` flag/port parsing robustness, soft high-water mark + hard outbound cap, bounded Session response generation before gateway mutation, O(n²)-flush → write-offset, `EINTR`-on-send retry, transient/fatal accept handling, `EPOLLHUP` read-drain before close, close-after-flush read suppression, fd-generation stale-event guards, queued-reply preservation before a later over-cap close, EOF read re-arm suppression, and duplicate-port rejection. Verification: `make check` 191/191, `make asan` 191/191, `make fmt-check`, `git diff --check`, Docker Ubuntu `test_epoll_gateway` 7 tests / 273 assertions. Next: commit/push this review fix, trigger Codex review, and monitor CI. Clear this block when M34 merges._
+- _M35 implementation complete on `feat/m35-multi-client-socket-pressure`; PR #100 open (`test: add multi-client socket pressure coverage`), awaiting human squash-merge. Delivered: `scripts/socket_load.sh` (Linux-only multi-client TCP connection-scaling load — N concurrent `qsl-client`s against the blocking (M9) and epoll (M34) gateways, N=1/4/8/16 to stay within the shared listen backlog, best-of-trials), `make socket-load`, `results/socket_load_summary.txt` (Docker-generated, constrained), and a `docs/socket_profiling.md` load section; receiver-side socket-buffer pressure stays covered by M30's `socket-stress`. /code-review (3 finder agents) caught + fixed real measurement-integrity bugs before PR: `best_of` excludes failed trials from the min (a gateway that served nobody can't masquerade as the fastest) and reports the WORST per-trial completion instead of the last; a per-client `timeout` bounds a hang if the gateway dies; `QSL_LOAD_TRIALS` is validated; and the scaling-shape claim was softened to match the evidence (at these loopback counts the two transports are comparable, not a demonstrated win for either). Post-PR hardening added fresh monotonic ports per gateway start, bounded retries, and fail-closed behavior: if any cell cannot reach N/N completion after retries, no artifact is written unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally. The committed artifact was regenerated from a clean clone and records `Dirty tree: no`. Deferred to a follow-up (noted in the PR): a shared `scripts/lib` to dedup `repo_relative_or_empty`/`dirty_tree_status`/`wait_ready`/gateway-stop across `socket_load`/`socket_stress`/`profile_gateway_io`; the Makefile reconfigure; a single port counter. `make check` 191/191. Clear this block when M35 merges._
 
 
 ---
@@ -262,8 +262,8 @@ Lower priority:
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☑ merged | #93 | Review-request checklist + feedback template; review request opened as issue #94 |
 | M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☑ merged | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
-| M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ◐ draft PR | #98 | Event-driven multi-client gateway design |
-| M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☐ not started | — | TCP/UDP stress, buffer pressure, backpressure investigation |
+| M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☑ merged | #98 | Event-driven multi-client gateway design |
+| M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ◐ in progress | #100 | TCP connection-scaling load (blocking vs epoll) + M30 UDP pressure |
 | M36 | NUMA awareness study | `feat/m36-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
 | M37 | Lock-free ingress pipeline | `feat/m37-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
 | M38 | Exchange-grade persistence prototype | `feat/m38-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
@@ -273,6 +273,8 @@ Lower priority:
 
 ## Decision log additions
 
+- [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the blocking (M9) and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim was softened to match the evidence — at these loopback connection counts the blocking and epoll transports are comparable (connection-setup bound), not a demonstrated win for either. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
+- [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.

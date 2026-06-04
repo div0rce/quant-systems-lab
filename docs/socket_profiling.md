@@ -13,12 +13,13 @@ They are profiling evidence for investigation, not a latency, throughput, or cap
 
 ## What is profiled
 
-Two distinct paths, two scripts:
+Three distinct paths, three scripts:
 
 | Path | Transport | Script | `make` target | OS |
 |------|-----------|--------|---------------|----|
 | TCP order gateway | TCP, one connection at a time | `scripts/profile_gateway_io.sh` | `make profile-io` | Linux only |
 | Market-data feed | UDP unicast | `scripts/socket_stress.sh` | `make socket-stress` | Linux + macOS |
+| TCP connection-scaling load | TCP, blocking vs epoll | `scripts/socket_load.sh` | `make socket-load` | Linux only |
 
 The gateway profile needs `strace` and Linux procfs (`/proc/<pid>/{stat,status}`), so that script
 **fails clearly on non-Linux** (exit 2), exactly like the M29 `perf` scripts. The UDP
@@ -110,6 +111,10 @@ make profile-io
 # Linux or macOS — UDP buffer/loss experiment:
 make socket-stress
 #   tunables: QSL_STRESS_ORDERS, QSL_STRESS_TRIALS, QSL_STRESS_SMALL_BUF, QSL_STRESS_LARGE_BUF
+
+# Linux only — multi-client blocking-vs-epoll connection-scaling load:
+make socket-load
+#   tunables: QSL_LOAD_COUNTS, QSL_LOAD_TRIALS, QSL_LOAD_PORT, QSL_LOAD_ALLOW_PARTIAL
 ```
 
 The committed gateway artifact was generated in a **containerized Linux** environment (Docker)
@@ -123,14 +128,40 @@ clean checkout on a bare-metal Linux host for a clean-tree version.
 - **Loopback only.** No NIC, device driver, queue discipline, routing, or real-network loss /
   reordering / latency is exercised. Loopback removes exactly the parts that dominate real
   network cost.
-- **Single connection at a time.** The gateway profiled in M30 serves one connection at a time by
-  design; this artifact profiles that design. M34 adds an `epoll` architecture prototype, but
-  multi-client load and socket-pressure evidence are still M35 scope.
+- **Transport scope differs by artifact.** The M30 gateway profile covers the blocking
+  single-connection path; `scripts/socket_load.sh` / `results/socket_load_summary.txt` compare
+  blocking and epoll under a bounded multi-client loopback load.
 - **`strace` perturbs timing.** Use Pass 1 (procfs rusage) for the user/kernel CPU split; use
   Pass 2 only for the syscall *mix*.
 - **Synthetic, deterministic flow.** The workload is the repo's seeded synthetic flow, not real
   order traffic.
 - Results are **hardware/kernel/OS dependent** and will differ across machines.
+
+## Multi-client connection-scaling load (`make socket-load`)
+
+Artifact: [`results/socket_load_summary.txt`](../results/socket_load_summary.txt).
+
+`scripts/socket_load.sh` (Linux-only) drives **N concurrent** short-lived clients (`qsl-client`:
+connect → `NewOrder` + `Heartbeat` → read replies → close) against `qsl-gateway` in **both**
+transport modes — the blocking single-connection accept loop (M9) and the epoll event loop (M34)
+— across a sweep of client counts, reporting the best (minimum) wall time and an approximate
+connections/second per cell.
+
+### Reading it
+
+Per-order matching is sub-microsecond, so the wall time is the **connection-setup / accept /
+socket path**, not engine cost. In principle the blocking server (one connection at a time) should
+scale worse than epoll (which multiplexes readiness), but at these small loopback counts connection
+setup dominates and the two modes stay **close**: in the committed run both grow to the same order
+of magnitude with no consistent separation between them, and which one is marginally faster varies
+run to run. A clear epoll advantage would require higher concurrency or heavier per-connection work
+than this connection-setup-bound loopback load exercises — the honest read of the artifact is "the
+two transports are comparable at this scale," not a demonstrated win for either. The absolute
+conns/s figures are loopback, single-machine, and bounded by client process-spawn cost, so they are
+**not** a production-capacity or throughput claim. The script is Linux-only (epoll mode + the high-resolution
+timer) and skips cleanly elsewhere; the committed artifact is regenerated with `make socket-load`
+in containerized Linux (constrained-environment), like the gateway profile above. Receiver-side socket-buffer pressure is
+covered separately by the UDP experiment ([`make socket-stress`](#udp-socket-buffer--burst-loss-experiment-make-socket-stress)).
 
 ## What this does and does not show
 
@@ -138,5 +169,6 @@ It **does** show: where the gateway's time splits between user-space work and th
 path; the syscall mix of that path; and that an undersized UDP receive buffer causes observable,
 sequence-visible datagram loss under burst while adequate buffers do not.
 
-It **does not** show: production latency or throughput, behaviour over a real network, behaviour
-under concurrency, or any kernel-bypass / low-latency-networking result. No such claim is made.
+It **does not** show: production latency or throughput, behaviour over a real network, production
+throughput under concurrency (the load test shows connection-scaling *shape*, not capacity), or
+any kernel-bypass / low-latency-networking result. No such claim is made.

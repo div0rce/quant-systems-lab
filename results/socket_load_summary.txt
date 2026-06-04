@@ -1,0 +1,50 @@
+Command:     bash scripts/socket_load.sh  (make socket-load)
+Artifact:    multi-client TCP connection-scaling load (loopback, constrained)
+Hardware:    aarch64
+OS:          Linux 6.12.76-linuxkit
+CPU:         Apple aarch64
+Cores:       8
+Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Git commit:  5f56bb5
+Dirty tree:  no
+Transport:   TCP over 127.0.0.1 (loopback)
+Load shape:  N concurrent qsl-client connections; each connects, sends NewOrder + Heartbeat, reads replies, closes
+Client counts: 1 4 8 16
+Trials/cell: 3 (best/min wall over trials; each gateway on a fresh port, up to 6 start attempts)
+Date:        2026-06-03T22:09:36Z
+
+Setup: the same concurrent client load is run against the gateway in each transport mode.
+blocking = the M9 single-connection accept loop (serves one connection at a time); epoll =
+the M34 event loop (multiplexes readiness across all connections). Per-order engine work is
+sub-microsecond, so the wall time is the connection-setup/accept/socket path, not matching.
+
+mode       clients   wall(s,best)     conns/s(~)  completed
+-------    -------   ------------     ----------  ---------
+blocking         1         0.0097            103        1/1
+blocking         4         0.0207            193        4/4
+blocking         8         0.0331            242        8/8
+blocking        16         0.0571            280      16/16
+epoll            1         0.0083            120        1/1
+epoll            4         0.0209            191        4/4
+epoll            8         0.0273            293        8/8
+epoll           16         0.0870            184      16/16
+
+Reading the result: compare how the best wall time grows with the client count within each
+mode. In principle the blocking server (one connection at a time) should scale worse than
+epoll (which multiplexes), but at these small loopback counts connection setup dominates and
+the two modes stay close (same order of magnitude); which is marginally faster varies run to
+run. A clear epoll advantage would require higher concurrency or heavier per-connection work.
+Absolute conns/s figures are loopback, single-machine, and load dependent -- not a
+production-capacity or throughput claim. Every 'completed' cell is N/N: a load run that
+cannot reach full completion writes no artifact and fails, so this table is never partial
+unless QSL_LOAD_ALLOW_PARTIAL=1 was set.
+
+Caveats:
+- Loopback only: no NIC, driver, routing, or real-network behaviour is exercised.
+- Each client is a brand-new short-lived connection (connection-setup heavy), not a
+  long-lived high-throughput session; this measures connection scaling, not steady-state
+  message throughput.
+- Spawning client processes adds fork/exec cost on the driver side; both modes pay it
+  equally, so the blocking-vs-epoll comparison is still meaningful, but absolute conns/s
+  is bounded by client spawn cost, not just the server.
+- Constrained-environment evidence for investigation; not a production-capacity claim.
