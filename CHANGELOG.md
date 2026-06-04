@@ -41,8 +41,8 @@ All notable changes to this project. The format is loosely based on
 ### Documentation
 
 - Synchronized project-memory files before repository-health planning: M35 is merged as PR #100,
-  PR #101 is docs-only synchronization, and original M36 NUMA work remains deferred until after
-  repository-health analysis is completed or explicitly skipped by the human.
+  PR #101 has landed as docs-only synchronization, and original M36 NUMA work remains deferred until
+  after repository-health analysis is completed or explicitly skipped by the human.
 - M34: updated socket-gateway docs and added ADR 0010 to distinguish the Linux epoll architecture
   prototype from M35 multi-client load/socket-pressure evidence. The docs cover EAGAIN/EWOULDBLOCK,
   partial writes, half-close flushing, and bounded outbound buffering.

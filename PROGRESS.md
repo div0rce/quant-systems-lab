@@ -20,14 +20,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Project-memory synchronization before repository-health refactor planning
-- **Status:** documentation-only PR #101 is ready for final review/human squash-merge on top of post-M35 `main`; no repository-health analysis, refactor milestone insertion, or NUMA work has started
-- **Active branch:** `docs/sync-project-memory-before-refactor-roadmap`
+- **Active milestone:** Post-PR #101 project-memory sync before repository-health refactor planning
+- **Status:** PR #101 has merged; this docs-only branch clears post-merge resume state. No repository-health analysis, refactor milestone insertion, or NUMA work has started.
+- **Active branch:** `docs/sync-post-pr101-before-health-roadmap` for this sync PR; after merge, resume from `main`
 - **Last completed milestone:** M35 — multi-client load and socket-pressure testing (squash-merged, PR #100, commit a86b701; CI green)
+- **Last completed docs sync:** Project-memory synchronization before refactor planning (squash-merged, PR #101, commit 40f9249)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** PR #101 docs-only sync verified `git diff --check` clean and `make check` 191/191 on 2026-06-04.
-- **Last action:** PR #100 was squash-merged first, PR #101 was rebased onto post-M35 `main`, review issues were fixed, and local verification passed.
-- **Next action:** keep PR #101 review-clean and wait for human squash-merge; after it lands, sync `main` and begin repository-health analysis/planning only, not NUMA implementation.
+- **Last action:** PR #101 was squash-merged to `main` as 40f9249; local `main` was fast-forwarded to that commit.
+- **Next action:** land this post-merge docs sync, then sync `main` and begin repository-health analysis/planning only, not NUMA implementation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
 
 ---
@@ -207,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _PR #101 docs-only sync was repaired after PR #100 landed: `/start-milestone` now uses the exact `Branch:` field from `MILESTONES.md`, the canonical `CLAUDE.md` / `AGENTS.md` project-memory relationship is documented, the PR body matches the repository template, and local verification passed (`git diff --check`, `make check` 191/191). Current next state: keep the PR review-clean and wait for human squash-merge. After it lands, sync `main` and start repository-health analysis/planning only. Do not start CodeScene/MCP analysis, refactor milestone insertion, or M36 NUMA until this PR lands._
+- _Post-PR #101 sync branch: update project-memory files to reflect that PR #101 landed as 40f9249. This branch must remain docs-only and must not insert refactor milestones or start NUMA. After it lands, sync `main` and start repository-health analysis/planning only._
 
 
 ---
@@ -277,7 +278,7 @@ Lower priority:
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the blocking (M9) and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim was softened to match the evidence — at these loopback connection counts the blocking and epoll transports are comparable (connection-setup bound), not a demonstrated win for either. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
-- [2026-06-04] Project-memory sync after M35: PR #101 is docs-only repair on `docs/sync-project-memory-before-refactor-roadmap`, rebased onto post-M35 `main`; no CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
+- [2026-06-04] Project-memory sync after M35: PR #101 squash-merged to `main` as 40f9249. It established the `CLAUDE.md` / `AGENTS.md` memory relationship, exact `Branch:` handling for `/start-milestone`, and the guard that repository-health planning happens before original M36 NUMA. No CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
@@ -361,13 +362,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is the docs-only project-memory sync on
-`docs/sync-project-memory-before-refactor-roadmap`; see the top-level current state block for the
-exact next step.
+Current action is the docs-only post-PR #101 project-memory sync on
+`docs/sync-post-pr101-before-health-roadmap`; see the top-level current state block for the exact
+next step.
 
-After PR #101 squash-merges, return to `main`, pull, and run the repository-health analysis and
-roadmap-insertion planning requested by the human. Do not start original M36 NUMA until that
-analysis is completed or explicitly skipped by the human.
+After this sync PR squash-merges, return to `main`, pull, and run the repository-health analysis and
+roadmap-insertion planning requested by the human. Do not start original M36 NUMA until that analysis
+is completed or explicitly skipped by the human.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
