@@ -63,7 +63,9 @@ Other targets: `make check` (format-check + build + test), `make fmt`, `make asa
 `make bench-diff` / `make bench-storage` (committed benchmark harnesses), `make check-fixtures`
 (regenerate the differential fixtures and verify they match current C++ output),
 `make check-manifest` (verify the fixture provenance manifest), and `make determinism` (assert
-fixtures are byte-identical across compilers).
+fixtures are byte-identical across compilers). Linux-only profiling/load targets include
+`make profile-io` and `make socket-load`; `make socket-stress` runs the UDP socket-buffer
+experiment where supported.
 
 ## Demo
 

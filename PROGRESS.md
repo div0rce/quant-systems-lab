@@ -4,10 +4,11 @@
 
 On resume:
 
-1. Read `CLAUDE.md`.
+1. Read `AGENTS.md` / `CLAUDE.md` depending on agent type.
 2. Read this file.
 3. Read `MILESTONES.md`.
-4. Verify with:
+4. Read `HANDOFF.md`.
+5. Verify with:
    - `git status`
    - `git branch --show-current`
    - `git log --oneline -10`
@@ -19,15 +20,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M35 — Multi-client load and socket-pressure testing (ready for PR)
-- **Status:** implementation complete; PR open, awaiting human squash-merge
-- **Active branch:** `feat/m35-multi-client-socket-pressure`
-- **Last completed milestone:** M34 — epoll gateway architecture (squash-merged, PR #98, commit 9e3750b; Codex review converged across several rounds, CI green)
+- **Active milestone:** Project-memory synchronization before repository-health refactor planning
+- **Status:** documentation-only PR #101 is ready for final review/human squash-merge on top of post-M35 `main`; no repository-health analysis, refactor milestone insertion, or NUMA work has started
+- **Active branch:** `docs/sync-project-memory-before-refactor-roadmap`
+- **Last completed milestone:** M35 — multi-client load and socket-pressure testing (squash-merged, PR #100, commit a86b701; CI green)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M35 verified 191/191 on 2026-06-03; Linux Docker `socket_load.sh` (blocking vs epoll, N=1/4/8/16) generates `results/socket_load_summary.txt`.
-- **Last action:** hardened M35 socket-load artifact generation after PR #100: fresh monotonic ports per gateway start, bounded retries, no partial artifact by default, clean-tree Docker artifact regenerated.
-- **Next action:** human reviews/squash-merges the M35 PR; then M36 (NUMA awareness study) or backlog (#90 PMU, #95 storage, #99 streaming responses, scripts/lib dedup).
-- **Blockers:** issues #90 / #95 / #99 remain backlog; none required for M35.
+- **`make check` passing:** PR #101 docs-only sync verified `git diff --check` clean and `make check` 191/191 on 2026-06-04.
+- **Last action:** PR #100 was squash-merged first, PR #101 was rebased onto post-M35 `main`, review issues were fixed, and local verification passed.
+- **Next action:** keep PR #101 review-clean and wait for human squash-merge; after it lands, sync `main` and begin repository-health analysis/planning only, not NUMA implementation.
+- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
 
 ---
 
@@ -206,7 +207,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M35 implementation complete on `feat/m35-multi-client-socket-pressure`; PR #100 open (`test: add multi-client socket pressure coverage`), awaiting human squash-merge. Delivered: `scripts/socket_load.sh` (Linux-only multi-client TCP connection-scaling load — N concurrent `qsl-client`s against the blocking (M9) and epoll (M34) gateways, N=1/4/8/16 to stay within the shared listen backlog, best-of-trials), `make socket-load`, `results/socket_load_summary.txt` (Docker-generated, constrained), and a `docs/socket_profiling.md` load section; receiver-side socket-buffer pressure stays covered by M30's `socket-stress`. /code-review (3 finder agents) caught + fixed real measurement-integrity bugs before PR: `best_of` excludes failed trials from the min (a gateway that served nobody can't masquerade as the fastest) and reports the WORST per-trial completion instead of the last; a per-client `timeout` bounds a hang if the gateway dies; `QSL_LOAD_TRIALS` is validated; and the scaling-shape claim was softened to match the evidence (at these loopback counts the two transports are comparable, not a demonstrated win for either). Post-PR hardening added fresh monotonic ports per gateway start, bounded retries, and fail-closed behavior: if any cell cannot reach N/N completion after retries, no artifact is written unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally. The committed artifact was regenerated from a clean clone and records `Dirty tree: no`. Deferred to a follow-up (noted in the PR): a shared `scripts/lib` to dedup `repo_relative_or_empty`/`dirty_tree_status`/`wait_ready`/gateway-stop across `socket_load`/`socket_stress`/`profile_gateway_io`; the Makefile reconfigure; a single port counter. `make check` 191/191. Clear this block when M35 merges._
+- _PR #101 docs-only sync was repaired after PR #100 landed: `/start-milestone` now uses the exact `Branch:` field from `MILESTONES.md`, the canonical `CLAUDE.md` / `AGENTS.md` project-memory relationship is documented, the PR body matches the repository template, and local verification passed (`git diff --check`, `make check` 191/191). Current next state: keep the PR review-clean and wait for human squash-merge. After it lands, sync `main` and start repository-health analysis/planning only. Do not start CodeScene/MCP analysis, refactor milestone insertion, or M36 NUMA until this PR lands._
 
 
 ---
@@ -263,7 +264,7 @@ Lower priority:
 | M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☑ merged | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☑ merged | #98 | Event-driven multi-client gateway design |
-| M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ◐ in progress | #100 | TCP connection-scaling load (blocking vs epoll) + M30 UDP pressure |
+| M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☑ merged | #100 | TCP connection-scaling load (blocking vs epoll) + M30 UDP pressure |
 | M36 | NUMA awareness study | `feat/m36-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
 | M37 | Lock-free ingress pipeline | `feat/m37-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
 | M38 | Exchange-grade persistence prototype | `feat/m38-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
@@ -275,6 +276,8 @@ Lower priority:
 
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the blocking (M9) and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim was softened to match the evidence — at these loopback connection counts the blocking and epoll transports are comparable (connection-setup bound), not a demonstrated win for either. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
+- [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
+- [2026-06-04] Project-memory sync after M35: PR #101 is docs-only repair on `docs/sync-project-memory-before-refactor-roadmap`, rebased onto post-M35 `main`; no CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
@@ -358,14 +361,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M34 on `feat/m34-epoll-gateway-architecture`; see the top-level current state
-block for the exact next step.
+Current action is the docs-only project-memory sync on
+`docs/sync-project-memory-before-refactor-roadmap`; see the top-level current state block for the
+exact next step.
 
-After M34 squash-merges, resume with:
-
-```text
-/start-milestone 35
-```
+After PR #101 squash-merges, return to `main`, pull, and run the repository-health analysis and
+roadmap-insertion planning requested by the human. Do not start original M36 NUMA until that
+analysis is completed or explicitly skipped by the human.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.

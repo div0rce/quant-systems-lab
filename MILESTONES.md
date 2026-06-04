@@ -4,7 +4,12 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ## Conventions
 
-- Branch: `feat/mNN-slug`
+- Branch: use the prefix that describes the milestone work, for example `feat/mNN-slug`,
+  `test/mNN-slug`, `docs/mNN-slug`, `perf/mNN-slug`, or `refactor/mNN-slug`.
+- `/start-milestone` must read the selected milestone's exact `Branch:` value and create that
+  branch. The command template in `.claude/commands/start-milestone.md` must follow this rule. If
+  the `Branch:` field is missing or ambiguous, stop and ask the human; do not synthesize
+  `feat/mNN-*` unless that exact branch is listed.
 - PR title becomes the single squashed commit on `main`, so it must read cleanly.
 - DoD = Definition of Done.
 - A milestone is complete only when all DoD boxes are satisfiable, `make check` passes, and `PROGRESS.md` is updated.

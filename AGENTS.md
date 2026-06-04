@@ -1,6 +1,6 @@
-# CLAUDE.md — Quant Systems Lab
+# AGENTS.md — Quant Systems Lab
 
-> **Project memory for Claude Code. Auto-loaded every session. Keep it current.**
+> **Project memory for Codex. Auto-loaded every session. Keep it current.**
 > Starting or resuming work? Read this file → then `PROGRESS.md` → then `MILESTONES.md` → then `HANDOFF.md` → then run `/resume`.
 > Do not write code until you have read all four and verified the git state.
 
@@ -54,7 +54,7 @@ The repo should look like disciplined human engineering, not a tutorial dump, no
    - `make check` passes,
    - `PROGRESS.md` is updated,
    - a PR is opened.
-6. Claude Code must **never merge its own PR**. The human squash-merges.
+6. Codex must **never merge its own PR**. The human squash-merges.
 7. **Never fabricate benchmark numbers.** Metrics exist only after committed benchmark scripts produce them.
 8. No benchmark number enters `README.md`, résumé bullets, PR notes, or docs unless produced by the repo’s benchmark harness.
 9. Core matching logic must be deterministic.
@@ -70,7 +70,7 @@ The repo should look like disciplined human engineering, not a tutorial dump, no
 
 ## Operating model — AI-first, human-in-the-loop
 
-Claude Code does:
+Codex does:
 
 - planning,
 - branch creation,
@@ -109,8 +109,8 @@ After interruption, never rely on conversation memory. Reconstruct state from fi
 
 ```text
 quant-systems-lab/
-├── CLAUDE.md
 ├── AGENTS.md
+├── CLAUDE.md
 ├── HANDOFF.md
 ├── MILESTONES.md
 ├── PROGRESS.md
@@ -945,8 +945,9 @@ When a tradeoff exists, optimize in this order:
 
 Do not build a dashboard before the engine is real. Do not build trading strategies. Do not connect to market data APIs. Do not make profitability claims. The market does not care about decorative software.
 
+---
 
-## Additive M15–M20 technical roadmap replacing old optional application polish
+## Additive M15-M20 technical roadmap replacing old optional application polish
 
 The prior optional `M15 — Jane Street application polish` milestone is removed. Do not implement recruiter-facing polish as the next milestone. The project should now continue with technical depth:
 
@@ -967,7 +968,7 @@ The prior optional `M15 — Jane Street application polish` milestone is removed
 
 ### Strategic reason
 
-The repo should not stop at “built a matching engine.” That is a known portfolio project. The stronger claim is: built a deterministic exchange simulator plus a cross-language differential testing system that can generate, replay, compare, and shrink market-state counterexamples.
+The repo should not stop at "built a matching engine." That is a known portfolio project. The stronger claim is: built a deterministic exchange simulator plus a cross-language differential testing system that can generate, replay, compare, and shrink market-state counterexamples.
 
 ### Non-negotiable constraints
 
@@ -978,7 +979,6 @@ The repo should not stop at “built a matching engine.” That is a known portf
 - Do not add application-polish docs unless M20 explicitly needs final technical framing.
 - Keep C++ as the system under test and OCaml as independent replay/checking infrastructure.
 - Every benchmark or performance claim must remain measured by committed scripts.
-
 
 ---
 
@@ -991,6 +991,7 @@ generation/shrinking, sanitizer hardening, and release hygiene.
 The next arc is not more product surface area. It is systems credibility.
 
 Phase III focuses on:
+
 1. bounded SPSC queue internals;
 2. memory-ordering documentation and stress tests;
 3. a threaded gateway-engine-feed prototype;
@@ -998,6 +999,7 @@ Phase III focuses on:
 5. allocator/memory-pool experiments.
 
 Phase IV focuses on:
+
 1. Linux perf workflow and honest constrained-environment validation;
 2. full hardware PMU evidence when a PMU-capable Linux host is available (issue #90);
 3. kernel/socket path profiling;
@@ -1007,7 +1009,7 @@ Phase IV focuses on:
 7. advanced concurrency validation.
 
 Do not add dashboards, strategies, market-data APIs, FIX adapters, Docker packaging, or
-aesthetic product work before M24–M41 unless the human explicitly changes priorities.
+aesthetic product work before M24-M41 unless the human explicitly changes priorities.
 
 The correct claim after this arc is:
 
@@ -1037,15 +1039,66 @@ M28 allocator evidence is allocator evidence only. M32 delivered a scoped PMR-ba
 node-allocation experiment measured on engine-level workloads. Direct intrusive
 `OrderPool<Capacity>` order-book storage remains future work tracked separately by issue #95.
 
+---
+
+# Current post-M29 evidence and roadmap memory
+
+This section is additive durable memory after the M28/M29 review cycle.
+
+## M29 perf evidence status
+
+M29 currently means:
+
+- Linux `perf` workflow exists.
+- Linux-only `perf` tooling exists.
+- Metadata-rich profiling artifacts exist.
+- Dirty-tree handling exists.
+- PMU preflight/validation exists.
+- Constrained-environment validation exists.
+- CI validation exists.
+- The workflow is reproducible.
+
+M29 does **not** currently mean real hardware PMU evidence has been captured. The committed
+artifacts were generated in a constrained Docker Desktop Linux environment where hardware PMU
+counters and sampling were unavailable or permission-limited. Do not claim real PMU evidence at
+this time.
+
+Issue #90 tracks full PMU-backed evidence generation on a bare-metal Linux host or a Linux VM/server
+with real `perf_event` hardware counter access. Treat this as: problem identified -> limitation
+documented -> follow-up issue created -> acceptance criteria defined. This is intentional
+engineering transparency, not a repo deficiency.
+
+## Dynamic-analysis limits
+
+ThreadSanitizer coverage from M27 is evidence, not proof. TSan validates executed schedules and can
+detect races that occur during tested executions. It does not prove correctness across all possible
+thread interleavings. Do not represent TSan, stress tests, queue-capacity sweeps, or sanitizer runs
+as a complete concurrency proof.
+
+M33 delivered deterministic scheduling perturbation, opt-in repeated concurrency stress, and
+clearer concurrency-evidence documentation. Future concurrency-confidence work can extend those
+checks, but TSan/stress evidence still must not be represented as proof.
+
+## Allocator vs engine-storage evidence
+
+M28 implemented a raw-storage `OrderPool` and benchmarked allocator acquire/release against
+`new`/`delete`. It preserved correct object lifetimes and did not silently fall back to the heap.
+
+M28 did **not** integrate pool storage into the order book. Matching engine storage architecture is
+unchanged. Current M28 evidence is allocator evidence, not engine-storage evidence.
+
+M32 delivered a scoped PMR-backed order-book node-allocation experiment. Direct intrusive
+`OrderPool<Capacity>` order-book storage remains future work tracked separately by issue #95.
+
 ## Current post-M35 roadmap memory
 
 Current landed state on `main`: M35 multi-client socket-pressure testing is merged as PR #100
 (commit a86b701). PR #101 is a docs-only project-memory synchronization branch on top of post-M35
 `main`.
 
-Original roadmap after M35: M36 NUMA awareness study; M37 lock-free ingress pipeline (not
-lock-free matching); M38 exchange-grade persistence prototype; M39 recovery benchmarking; M40 DPDK
-research/prototype; M41 NIC offload and low-latency networking study. Do not start M36 NUMA until
+Original roadmap after M35: M36 NUMA awareness, M37 lock-free ingress pipeline (not lock-free
+matching), M38 exchange-grade persistence prototype, M39 recovery benchmarking, M40 DPDK
+research/prototype, and M41 NIC offload / low-latency networking study. Do not start M36 NUMA until
 the repository-health refactor analysis is completed or explicitly skipped by the human.
 
 Issue #90 remains the full hardware-PMU evidence debt. Issue #99 tracks broader
