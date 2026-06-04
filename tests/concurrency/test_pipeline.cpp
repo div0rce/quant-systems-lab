@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <thread>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -33,6 +34,7 @@ using qsl::concurrency::OutputSink;
 using qsl::concurrency::PipelinePerturbation;
 using qsl::concurrency::PipelineProbe;
 using qsl::concurrency::PipelineResult;
+using qsl::concurrency::PipelineRunOptions;
 using qsl::concurrency::ProcessedCommand;
 using qsl::concurrency::ThreadedPipeline;
 using qsl::engine::EngineEvent;
@@ -88,6 +90,54 @@ std::uint64_t count_trades(const std::vector<EngineEvent> &events) {
         }
     }
     return n;
+}
+
+void require_command_counts(const PipelineResult &result, std::size_t command_count,
+                            const Reference &ref) {
+    REQUIRE(result.commands_processed == command_count);
+    REQUIRE(result.commands_accepted == ref.accepted);
+    REQUIRE(result.commands_rejected == ref.rejected);
+}
+
+void require_engine_output(const PipelineResult &result, const Reference &ref) {
+    REQUIRE(result.events_emitted == ref.events_count);
+    REQUIRE(result.last_seq == ref.last_seq);
+    REQUIRE(result.snapshot == ref.snapshot);
+}
+
+void require_engine_state(const PipelineResult &result, const Reference &ref) {
+    REQUIRE(result.last_seq == ref.last_seq);
+    REQUIRE(result.snapshot == ref.snapshot);
+}
+
+void require_processed_count(const PipelineResult &result, std::size_t command_count) {
+    REQUIRE(result.commands_processed == command_count);
+}
+
+void require_event_stream(const std::vector<EngineEvent> &actual, const Reference &ref) {
+    REQUIRE(actual == ref.events);
+}
+
+void require_empty_counts(const PipelineResult &result) {
+    REQUIRE(result.commands_processed == 0);
+    REQUIRE(result.commands_accepted == 0);
+    REQUIRE(result.commands_rejected == 0);
+}
+
+void require_backpressure_observed(const PipelineResult &result) {
+    REQUIRE(result.inbound_backpressure_spins >= 1);
+    REQUIRE(result.outbound_backpressure_spins >= 1);
+}
+
+void require_log_decode(const qsl::replay::LogReadResult &log, const Reference &ref) {
+    REQUIRE(log.error == qsl::replay::LogError::None);
+    REQUIRE(log.records.size() == ref.accepted);
+}
+
+void require_replayed_state(const MatchingEngine &replayed, const PipelineResult &result,
+                            const Reference &ref) {
+    REQUIRE(replayed.snapshot() == result.snapshot);
+    REQUIRE(replayed.snapshot() == ref.snapshot);
 }
 
 // Collects the downstream event stream in order. Touched only by the publisher/log thread during
@@ -160,6 +210,64 @@ struct GatedSink final : OutputSink {
     }
 };
 
+struct GatedRunResult {
+    PipelineResult result;
+    std::vector<EngineEvent> events;
+    std::uint64_t inbound_spins_before = 0;
+    std::uint64_t outbound_spins_before = 0;
+    std::uint64_t inbound_spins_after = 0;
+    std::uint64_t outbound_spins_after = 0;
+};
+
+GatedRunResult run_gated_backpressure(const std::vector<Command> &flow, PipelineProbe &probe) {
+    GatedRunResult run;
+    run.inbound_spins_before = probe.inbound_spins.load(std::memory_order_relaxed);
+    run.outbound_spins_before = probe.outbound_spins.load(std::memory_order_relaxed);
+
+    GatedSink sink;
+    std::thread runner([&] {
+        run.result =
+            ThreadedPipeline<2, 2>::run(flow, kRisk, sink, PipelineRunOptions{&probe, nullptr});
+    });
+
+    while (probe.inbound_spins.load(std::memory_order_relaxed) <= run.inbound_spins_before ||
+           probe.outbound_spins.load(std::memory_order_relaxed) <= run.outbound_spins_before) {
+        std::this_thread::yield(); // park until this run has produced backpressure on both queues
+    }
+    sink.open.store(true, std::memory_order_release);
+    runner.join();
+
+    run.inbound_spins_after = probe.inbound_spins.load(std::memory_order_relaxed);
+    run.outbound_spins_after = probe.outbound_spins.load(std::memory_order_relaxed);
+    run.events = std::move(sink.events);
+    return run;
+}
+
+void require_probe_delta_result(const GatedRunResult &run) {
+    REQUIRE(run.result.inbound_backpressure_spins ==
+            run.inbound_spins_after - run.inbound_spins_before);
+    REQUIRE(run.result.outbound_backpressure_spins ==
+            run.outbound_spins_after - run.outbound_spins_before);
+    REQUIRE(run.result.inbound_backpressure_spins >= 1);
+    REQUIRE(run.result.outbound_backpressure_spins >= 1);
+}
+
+void require_empty_output(const PipelineResult &result, const CollectingSink &sink) {
+    REQUIRE(result.events_emitted == 0);
+    REQUIRE(result.last_seq == 0);
+    REQUIRE(sink.processed == 0);
+}
+
+void require_empty_state(const PipelineResult &result, const CollectingSink &sink) {
+    REQUIRE(result.snapshot.symbols.empty());
+    REQUIRE(sink.events.empty());
+}
+
+void require_log_write(const CommandLogSink &sink, const Reference &ref) {
+    REQUIRE(sink.ok);
+    REQUIRE(sink.records == ref.accepted);
+}
+
 // Run the pipeline at the given capacities and assert it reproduces the single-threaded reference
 // exactly: same counts, same final snapshot (which includes last_seq), and the same ordered event
 // stream observed by the downstream stage.
@@ -168,17 +276,13 @@ void require_matches_reference(const std::vector<Command> &commands, RiskConfig 
                                const PipelinePerturbation *perturbation = nullptr) {
     const Reference ref = run_reference(commands, risk);
     CollectingSink sink;
-    const PipelineResult result =
-        ThreadedPipeline<In, Out>::run(commands, risk, sink, nullptr, perturbation);
+    const PipelineResult result = ThreadedPipeline<In, Out>::run(
+        commands, risk, sink, PipelineRunOptions{nullptr, perturbation});
 
-    REQUIRE(result.commands_processed == commands.size());
-    REQUIRE(result.commands_accepted == ref.accepted);
-    REQUIRE(result.commands_rejected == ref.rejected);
-    REQUIRE(result.events_emitted == ref.events_count);
-    REQUIRE(result.last_seq == ref.last_seq);
-    REQUIRE(result.snapshot == ref.snapshot);
+    require_command_counts(result, commands.size(), ref);
+    require_engine_output(result, ref);
     REQUIRE(sink.processed == commands.size());
-    REQUIRE(sink.events == ref.events); // exact in-order event stream
+    require_event_stream(sink.events, ref); // exact in-order event stream
 }
 
 TEST_CASE("pipeline matches reference under deterministic scheduling perturbations",
@@ -255,9 +359,9 @@ TEST_CASE("saturated inbound queue stays lossless (tiny capacity, deterministic 
     CollectingSink sink;
     const PipelineResult result = ThreadedPipeline<2, 4096>::run(flow, kRisk, sink);
 
-    REQUIRE(result.commands_processed == flow.size());
+    require_processed_count(result, flow.size());
     REQUIRE(result.snapshot == ref.snapshot);
-    REQUIRE(sink.events == ref.events);
+    require_event_stream(sink.events, ref);
 }
 
 TEST_CASE("publisher lag does not corrupt engine state", "[pipeline][backpressure]") {
@@ -272,10 +376,9 @@ TEST_CASE("publisher lag does not corrupt engine state", "[pipeline][backpressur
     LaggySink sink;
     const PipelineResult result = ThreadedPipeline<4096, 2>::run(flow, kRisk, sink);
 
-    REQUIRE(result.commands_processed == flow.size());
-    REQUIRE(result.snapshot == ref.snapshot);
-    REQUIRE(result.last_seq == ref.last_seq);
-    REQUIRE(sink.events == ref.events);
+    require_processed_count(result, flow.size());
+    require_engine_state(result, ref);
+    require_event_stream(sink.events, ref);
 }
 
 TEST_CASE("backpressure is real and lossless: a blocked consumer forces both queues full",
@@ -289,24 +392,30 @@ TEST_CASE("backpressure is real and lossless: a blocked consumer forces both que
     const auto flow = qsl::replay::generate_property_flow(7, 4, 800);
     const Reference ref = run_reference(flow, kRisk);
 
-    GatedSink sink;
     PipelineProbe probe;
-    PipelineResult result{};
-    std::thread runner([&] { result = ThreadedPipeline<2, 2>::run(flow, kRisk, sink, &probe); });
+    const GatedRunResult run = run_gated_backpressure(flow, probe);
 
-    while (probe.inbound_spins.load(std::memory_order_relaxed) < 1 ||
-           probe.outbound_spins.load(std::memory_order_relaxed) < 1) {
-        std::this_thread::yield(); // park until backpressure has provably occurred on both queues
-    }
-    sink.open.store(true, std::memory_order_release); // now let the blocked consumer drain
-    runner.join();
-
-    REQUIRE(result.inbound_backpressure_spins >= 1); // proven by the barrier above, not raced
-    REQUIRE(result.outbound_backpressure_spins >= 1);
-    REQUIRE(result.commands_processed == flow.size());
-    REQUIRE(result.snapshot ==
+    require_backpressure_observed(run.result); // proven by the barrier above, not raced
+    require_processed_count(run.result, flow.size());
+    REQUIRE(run.result.snapshot ==
             ref.snapshot); // lossless and uncorrupted under sustained backpressure
-    REQUIRE(sink.events == ref.events);
+    require_event_stream(run.events, ref);
+}
+
+TEST_CASE("shared pipeline probe reports per-run backpressure spins", "[pipeline][backpressure]") {
+    const auto flow = qsl::replay::generate_property_flow(7, 4, 800);
+    const Reference ref = run_reference(flow, kRisk);
+
+    PipelineProbe probe;
+    const GatedRunResult first = run_gated_backpressure(flow, probe);
+    const GatedRunResult second = run_gated_backpressure(flow, probe);
+
+    require_probe_delta_result(first);
+    require_probe_delta_result(second);
+    require_engine_state(first.result, ref);
+    require_engine_state(second.result, ref);
+    require_event_stream(first.events, ref);
+    require_event_stream(second.events, ref);
 }
 
 TEST_CASE("shutdown_empty: no commands -> clean join, empty result", "[pipeline][shutdown]") {
@@ -314,14 +423,9 @@ TEST_CASE("shutdown_empty: no commands -> clean join, empty result", "[pipeline]
     CollectingSink sink;
     const PipelineResult result = ThreadedPipeline<8, 8>::run(empty, kRisk, sink);
 
-    REQUIRE(result.commands_processed == 0);
-    REQUIRE(result.commands_accepted == 0);
-    REQUIRE(result.commands_rejected == 0);
-    REQUIRE(result.events_emitted == 0);
-    REQUIRE(result.last_seq == 0);
-    REQUIRE(result.snapshot.symbols.empty());
-    REQUIRE(sink.processed == 0);
-    REQUIRE(sink.events.empty());
+    require_empty_counts(result);
+    require_empty_output(result, sink);
+    require_empty_state(result, sink);
 }
 
 TEST_CASE("shutdown_with_pending_commands: queued commands are drained, not dropped",
@@ -335,11 +439,9 @@ TEST_CASE("shutdown_with_pending_commands: queued commands are drained, not drop
     LaggySink sink;
     const PipelineResult result = ThreadedPipeline<2, 8>::run(flow, kRisk, sink);
 
-    REQUIRE(result.commands_processed == flow.size());
-    REQUIRE(result.commands_accepted == ref.accepted);
-    REQUIRE(result.commands_rejected == ref.rejected);
+    require_command_counts(result, flow.size(), ref);
     REQUIRE(result.snapshot == ref.snapshot);
-    REQUIRE(sink.events == ref.events);
+    require_event_stream(sink.events, ref);
 }
 
 TEST_CASE("shutdown_with_full_queue: full queues at shutdown lose nothing",
@@ -352,10 +454,9 @@ TEST_CASE("shutdown_with_full_queue: full queues at shutdown lose nothing",
     LaggySink sink;
     const PipelineResult result = ThreadedPipeline<2, 2>::run(flow, kRisk, sink);
 
-    REQUIRE(result.commands_processed == flow.size());
-    REQUIRE(result.last_seq == ref.last_seq);
-    REQUIRE(result.snapshot == ref.snapshot);
-    REQUIRE(sink.events == ref.events);
+    require_processed_count(result, flow.size());
+    require_engine_state(result, ref);
+    require_event_stream(sink.events, ref);
 }
 
 TEST_CASE("event-log integrity: accepted commands are logged and replay to the same state",
@@ -370,16 +471,13 @@ TEST_CASE("event-log integrity: accepted commands are logged and replay to the s
     const PipelineResult result =
         ThreadedPipeline<4, 4>::run(flow, kRisk, sink); // small caps: backpressure, still lossless
 
-    REQUIRE(sink.ok);                      // no append failed silently
-    REQUIRE(sink.records == ref.accepted); // every accepted command logged, none dropped
+    require_log_write(sink, ref); // every accepted command logged, none dropped
 
     const auto log = qsl::replay::read_log(sink.bytes);
-    REQUIRE(log.error == qsl::replay::LogError::None); // decodes cleanly on a record boundary
-    REQUIRE(log.records.size() == ref.accepted);
+    require_log_decode(log, ref); // decodes cleanly on a record boundary
 
     MatchingEngine replayed;
     const auto replayed_events = qsl::replay::replay(replayed, log.records);
-    REQUIRE(replayed_events == ref.events); // the logged stream replays the same events ...
-    REQUIRE(replayed.snapshot() == result.snapshot); // ... log replay == pipeline state ...
-    REQUIRE(replayed.snapshot() == ref.snapshot);    // ... == single-threaded reference
+    REQUIRE(replayed_events == ref.events);        // the logged stream replays the same events ...
+    require_replayed_state(replayed, result, ref); // ... == pipeline and reference state
 }

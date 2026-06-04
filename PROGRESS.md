@@ -20,15 +20,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M36 — Decompose the epoll event loop and connection lifecycle
-- **Status:** ◐ PR #104 open and ready for review. `src/gateway/epoll_server.cpp` Code Health improved from 5.35 to 10.0 by decomposing listener setup, ready-event dispatch, client lookup/generation validation, read/write handling, output backpressure, and re-arm/close decisions. Behavior-preserving; no public API/wire change.
-- **Active branch:** `refactor/m36-epoll-event-loop-decomposition`
-- **Last completed milestone:** Repository-health refactor phase insertion (docs-only roadmap renumber, squash-merged PR #103, commit 0f2ceb7)
+- **Active milestone:** M37 — Extract threaded-pipeline stage helpers
+- **Status:** ◐ draft PR #105 open. CodeScene scores reached 10.0 for `include/qsl/concurrency/pipeline.hpp`, `tests/concurrency/test_pipeline.cpp`, and `tests/concurrency/test_backpressure.cpp`; behavior-preserving threaded-pipeline refactor only.
+- **Active branch:** `refactor/m37-threaded-pipeline-stage-helpers`
+- **Last completed milestone:** M36 — Decompose the epoll event loop and connection lifecycle (squash-merged PR #104, commit 0d2b97a)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M36 final local verification passed `make check` 191/191 on 2026-06-04.
-- **Last action:** M36 decomposition completed and re-scored via CodeScene MCP: 5.35 → 10.0, review findings cleared.
-- **Next action:** keep PR #104 review-clean; wait for human review/squash-merge. NUMA awareness remains M43.
+- **`make check` passing:** M37 final local verification passed `make check` 192/192, `make asan` 192/192, and `make tsan` 20/20 on 2026-06-04.
+- **Last action:** Addressed PR #105 review feedback by making reused `PipelineProbe` results report per-run backpressure deltas instead of cumulative counters; added a regression that reuses one probe across two backpressured runs. CodeScene remains 10.0 for `pipeline.hpp`, `test_pipeline.cpp`, and `test_backpressure.cpp`.
+- **Next action:** keep PR #105 review-clean and wait for review/human squash-merge. NUMA awareness remains M43.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
 
 ---
@@ -208,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M36 PR #104 is open and ready for review on `refactor/m36-epoll-event-loop-decomposition`: `src/gateway/epoll_server.cpp` Code Health 5.35 → 10.0 via CodeScene MCP. Verification from final code state: `git diff --check`; Docker Ubuntu Linux `test_epoll_gateway` (8 test cases / 280 assertions); `make check` 191/191; `make asan` 191/191. Keep the PR review-clean; do not merge from automation._
+- _M37 draft PR #105 is open on `refactor/m37-threaded-pipeline-stage-helpers`: `include/qsl/concurrency/pipeline.hpp` CodeScene 7.13 → 10.0, `tests/concurrency/test_pipeline.cpp` 8.28 → 10.0, and `tests/concurrency/test_backpressure.cpp` 8.44 → 10.0. Review feedback fixed: reused `PipelineProbe` counters now produce per-run `PipelineResult` deltas, with a regression test. Final verification passed `git diff --check`, focused `test_pipeline` (12 cases / 629 assertions), `make check` 192/192, `make asan` 192/192, and `make tsan` 20/20. Keep the PR review-clean and do not merge from automation._
 
 
 ---
@@ -266,8 +266,8 @@ Lower priority:
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☑ merged | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☑ merged | #98 | Event-driven multi-client gateway design |
 | M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☑ merged | #100 | TCP connection-scaling load (blocking vs epoll) + M30 UDP pressure |
-| M36 | Decompose the epoll event loop and connection lifecycle | `refactor/m36-epoll-event-loop-decomposition` | ◐ PR open and ready for review | #104 | Repository-health refactor; `epoll_server.cpp` Code Health 5.35 → 10.0 |
-| M37 | Extract threaded-pipeline stage helpers | `refactor/m37-threaded-pipeline-stage-helpers` | ☐ not started | — | Repository-health refactor (mixed); `pipeline.hpp` + `test_pipeline`/`test_backpressure` |
+| M36 | Decompose the epoll event loop and connection lifecycle | `refactor/m36-epoll-event-loop-decomposition` | ☑ merged | #104 | Repository-health refactor; `epoll_server.cpp` Code Health 5.35 → 10.0 |
+| M37 | Extract threaded-pipeline stage helpers | `refactor/m37-threaded-pipeline-stage-helpers` | ◐ draft PR open | #105 | Repository-health refactor; CodeScene 10.0 for `pipeline.hpp`, `test_pipeline`, and `test_backpressure` |
 | M38 | Split the command-stream shrinker into named passes | `refactor/m38-shrinker-reduction-passes` | ☐ not started | — | Repository-health refactor; `shrink.cpp` 8.15 → ≥9.0 |
 | M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ☐ not started | — | Repository-health refactor; `order_book.cpp` 8.55, determinism preserved |
 | M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☐ not started | — | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
@@ -288,7 +288,9 @@ Lower priority:
 - [2026-06-04] Project-memory sync after M35: PR #101 squash-merged to `main` as 40f9249. It established the `CLAUDE.md` / `AGENTS.md` memory relationship, exact `Branch:` handling for `/start-milestone`, and the guard that repository-health planning happens before original M36 NUMA. No CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
 - [2026-06-04] Post-merge project-memory sync PR #102 squash-merged to `main` as 7092423.
 - [2026-06-04] Repository-health refactor phase inserted after M35 (docs-only roadmap renumber, branch `docs/roadmap-health-refactor-insertion`). A CodeScene Code Health analysis (project 80913, via MCP) of all production and test files found eleven files below 9.0: production `epoll_server.cpp` 5.35, `pipeline.hpp` 7.13, `shrink.cpp` 8.15, `order_book.cpp` 8.55, `session.cpp` 8.99; tests `test_risk_gateway` 6.69, `test_order_book` 7.32, `test_pipeline` 8.28, `test_backpressure` 8.44, `test_invariants` 8.45, `test_matching_engine` 8.54. These became seven refactor milestones M36–M42: M36 epoll decomposition, M37 pipeline stage helpers (+ its concurrency tests), M38 shrinker passes, M39 order-book matching parameters, M40 engine test-suite consolidation (test-only; split out per the human), M41 session frame dispatch, M42 shared shell-script helpers (manual — CodeScene cannot score shell; the M35 deferred follow-up). The original M36–M41 networking/persistence roadmap shifted +7 to M43–M48; original NUMA is now M43. Behavior-preserving refactors only; determinism/replay/differential/integer-tick pricing remain invariants. No implementation started.
-- [2026-06-04] M36: decomposed the Linux epoll transport while preserving public API and wire/session behavior. `src/gateway/epoll_server.cpp` now separates listener setup, accept outcome handling, ready-event dispatch, client fd-generation lookup, read/write outcomes, output-budget/backpressure handling, and re-arm/close decisions. CodeScene MCP score improved from 5.35 to 10.0 with no remaining review findings; final verification passed `git diff --check`, Docker Ubuntu Linux `test_epoll_gateway` (8 test cases / 299 assertions), `make check` 191/191, and `make asan` 191/191.
+- [2026-06-04] M36: decomposed the Linux epoll transport while preserving public API and wire/session behavior. `src/gateway/epoll_server.cpp` now separates listener setup, accept outcome handling, ready-event dispatch, client fd-generation lookup, read/write outcomes, output-budget/backpressure handling, and re-arm/close decisions. CodeScene MCP score improved from 5.35 to 10.0 with no remaining review findings; final verification passed `git diff --check`, Docker Ubuntu Linux `test_epoll_gateway` (8 test cases / 280 assertions), `make check` 191/191, and `make asan` 191/191. PR #104 squash-merged as 0d2b97a.
+- [2026-06-04] M37: started on `refactor/m37-threaded-pipeline-stage-helpers` from updated `main` (0d2b97a). Scope is behavior-preserving threaded-pipeline helper extraction: decompose `include/qsl/concurrency/pipeline.hpp` and reduce assertion duplication/nesting in `tests/concurrency/test_pipeline.cpp` and `tests/concurrency/test_backpressure.cpp`. DoD requires Code Health >= 9.0 for all three files plus `make check`, `make asan`, and `make tsan`.
+- [2026-06-04] M37: completed behavior-preserving threaded-pipeline decomposition and opened draft PR #105. `ThreadedPipeline::run` now uses `PipelineRunOptions`, a run context, and named input/engine/output stage helpers; concurrency tests use shared assertion and producer/consumer helpers without changing scenarios. CodeScene re-score: `pipeline.hpp` 7.13 -> 10.0, `test_pipeline.cpp` 8.28 -> 10.0, `test_backpressure.cpp` 8.44 -> 10.0. PR review feedback fixed reused-probe accounting so shared `PipelineProbe` counters stay live/cumulative while each returned `PipelineResult` reports per-run backpressure deltas. Verification passed `git diff --check`, focused `test_pipeline` (12 cases / 629 assertions), `make check` 192/192, `make asan` 192/192, and `make tsan` 20/20.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
@@ -372,12 +374,10 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M36 PR #104 on `refactor/m36-epoll-event-loop-decomposition`: keep the
-behavior-preserving epoll event-loop decomposition review-clean and wait for human review/squash.
+Current action is M37 draft PR #105 on `refactor/m37-threaded-pipeline-stage-helpers`: keep the
+behavior-preserving threaded-pipeline decomposition review-clean and wait for review/human squash.
 
-After the M36 PR squash-merges, return to `main`, pull, update this file factually, and continue
-the inserted repository-health refactor phase with M37 unless the human reprioritizes. NUMA
-awareness remains M43; do not start it until M36–M42 are done or explicitly skipped.
+NUMA awareness remains M43; do not start it until M36–M42 are done or explicitly skipped.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
