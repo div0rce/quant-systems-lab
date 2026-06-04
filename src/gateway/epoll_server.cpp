@@ -3,8 +3,10 @@
 #include "qsl/gateway/session.hpp"
 
 #if defined(__linux__)
+#include <algorithm>
 #include <arpa/inet.h>
 #include <array>
+#include <atomic>
 #include <cerrno>
 #include <cstdint>
 #include <fcntl.h>
@@ -51,6 +53,10 @@ UniqueFd make_fd(int fd) {
 
 bool is_would_block() noexcept {
     return errno == EAGAIN || errno == EWOULDBLOCK;
+}
+
+bool event_has(std::uint32_t events, std::uint32_t flag) noexcept {
+    return (events & flag) != 0U;
 }
 
 bool set_nonblocking(int fd) {
@@ -118,25 +124,49 @@ struct ClientState {
     }
 };
 
+using ClientMap = std::unordered_map<int, ClientState>;
+
+bool has_pending_output(const ClientState &client) noexcept {
+    return client.pending() > 0;
+}
+
+enum class SendResult { Progress, WouldBlock, Interrupted, Closed, Error };
+
+SendResult send_next_chunk(int fd, ClientState &client) {
+    const ssize_t n = ::send(fd, client.outbuf.data() + client.sent,
+                             client.outbuf.size() - client.sent, MSG_NOSIGNAL);
+    if (n > 0) {
+        client.sent += static_cast<std::size_t>(n);
+        return SendResult::Progress;
+    }
+    if (n == 0) {
+        return SendResult::Closed;
+    }
+    if (is_would_block()) {
+        return SendResult::WouldBlock;
+    }
+    if (errno == EINTR) {
+        return SendResult::Interrupted;
+    }
+    return SendResult::Error;
+}
+
 // Flush as much of the client's pending output as the nonblocking socket accepts. Advances a write
 // offset rather than erasing from the front after every send -- erase-per-send is O(n^2) when
 // draining a large buffer and can stall the single event loop. Returns false only on a real send
 // error; EAGAIN/EWOULDBLOCK (socket full) and EINTR (signal) are normal and retryable.
 bool send_some(int fd, ClientState &client) {
     while (client.sent < client.outbuf.size()) {
-        const ssize_t n = ::send(fd, client.outbuf.data() + client.sent,
-                                 client.outbuf.size() - client.sent, MSG_NOSIGNAL);
-        if (n > 0) {
-            client.sent += static_cast<std::size_t>(n);
+        switch (send_next_chunk(fd, client)) {
+        case SendResult::Progress:
+        case SendResult::Interrupted:
             continue;
-        }
-        if (n < 0 && is_would_block()) {
+        case SendResult::WouldBlock:
             return true; // socket full: resume on the next EPOLLOUT
+        case SendResult::Closed:
+        case SendResult::Error:
+            return false;
         }
-        if (n < 0 && errno == EINTR) {
-            continue; // interrupted by a signal: retry rather than dropping the connection
-        }
-        return false;
     }
     client.outbuf.clear(); // fully flushed
     client.sent = 0;
@@ -148,199 +178,343 @@ void close_client(int epoll_fd, int fd) noexcept {
     ::close(fd);
 }
 
-void close_all_clients(int epoll_fd, std::unordered_map<int, ClientState> &clients) noexcept {
+void close_all_clients(int epoll_fd, ClientMap &clients) noexcept {
     for (const auto &entry : clients) {
         close_client(epoll_fd, entry.first);
     }
     clients.clear();
 }
 
-} // namespace
+// Per-run event-loop state. Bundling these (instead of threading five-plus parameters through every
+// handler) keeps each handler's signature small and the dispatch readable.
+struct EventLoop {
+    int epoll_fd;
+    int listen_fd;
+    EpollServerOptions options;
+    OrderGateway &gateway;
+    ClientMap clients{};
+    std::uint32_t next_generation = 1;
+};
 
-bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options) {
-    if (listen_fd < 0 || options.max_events == 0 || !set_nonblocking(listen_fd)) {
+bool is_listener_event(const epoll_event &ev, int listen_fd) noexcept {
+    return event_generation(ev) == kListenerGeneration && event_fd(ev) == listen_fd;
+}
+
+// A connection aborted before accept, or a pending network error Linux reports through accept(2),
+// must not tear down the whole server -- skip the connection and keep serving the rest.
+bool is_transient_accept_error() noexcept {
+    static constexpr int kTransient[] = {EINTR,       ECONNABORTED, EPROTO, ENETDOWN,
+                                         ENOPROTOOPT, EHOSTDOWN,    ENONET, EHOSTUNREACH,
+                                         EOPNOTSUPP,  ENETUNREACH};
+    return std::find(std::begin(kTransient), std::end(kTransient), errno) != std::end(kTransient);
+}
+
+bool prepare_listener_socket(int listen_fd, const EpollServerOptions &options) {
+    if (listen_fd < 0) {
         return false;
     }
+    if (options.max_events == 0) {
+        return false;
+    }
+    return set_nonblocking(listen_fd);
+}
 
+// Build the epoll instance and register the (validated, nonblocking) listener. Returns an invalid
+// fd holder on any failure; a partially-created epoll fd is closed on the way out by UniqueFd.
+UniqueFd make_epoll_listener(int listen_fd, const EpollServerOptions &options) {
+    if (!prepare_listener_socket(listen_fd, options)) {
+        return make_fd(-1);
+    }
     UniqueFd epoll_fd = make_fd(::epoll_create1(EPOLL_CLOEXEC));
     if (*epoll_fd < 0) {
-        return false;
+        return make_fd(-1);
     }
     if (!add_fd(*epoll_fd, listen_fd, EPOLLIN, kListenerGeneration)) {
+        return make_fd(-1);
+    }
+    return epoll_fd;
+}
+
+// Register an accepted connection: one Session per fd, armed for read/peer events. Returns false
+// (leaving nothing in the map) if the slot or the epoll registration could not be created.
+bool register_client(EventLoop &loop, int conn) {
+    const std::uint32_t generation = next_client_generation(loop.next_generation);
+    auto emplaced = loop.clients.try_emplace(conn, loop.gateway, generation);
+    if (!emplaced.second ||
+        !add_fd(loop.epoll_fd, conn, EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLHUP, generation)) {
+        loop.clients.erase(conn);
         return false;
     }
+    return true;
+}
 
-    std::vector<epoll_event> events(options.max_events);
-    std::unordered_map<int, ClientState> clients;
-    std::uint32_t next_generation = 1;
+enum class AcceptResult { Accepted, Drained, Retry, Fatal };
 
-    stop_requested_.store(false, std::memory_order_release);
-    while (!stop_requested_.load(std::memory_order_acquire)) {
-        const int ready = ::epoll_wait(*epoll_fd, events.data(), static_cast<int>(events.size()),
-                                       options.wait_timeout_ms);
+AcceptResult accept_one(EventLoop &loop) {
+    const int conn = ::accept4(loop.listen_fd, nullptr, nullptr, SOCK_NONBLOCK);
+    if (conn >= 0) {
+        if (!register_client(loop, conn)) {
+            ::close(conn);
+        }
+        return AcceptResult::Accepted;
+    }
+    if (is_would_block()) {
+        return AcceptResult::Drained;
+    }
+    if (is_transient_accept_error()) {
+        return AcceptResult::Retry;
+    }
+    return AcceptResult::Fatal;
+}
+
+// Drain the listener's backlog. Returns false only on a genuinely fatal listener error.
+bool accept_connections(EventLoop &loop) {
+    for (;;) {
+        switch (accept_one(loop)) {
+        case AcceptResult::Accepted:
+        case AcceptResult::Retry:
+            continue;
+        case AcceptResult::Drained:
+            return true;
+        case AcceptResult::Fatal:
+            return false;
+        }
+    }
+}
+
+enum class ReadResult { Continue, StopReading, CloseNow };
+
+std::size_t hard_output_limit(const EpollServerOptions &options) noexcept {
+    if (options.max_outbuf_hard_bytes == 0) {
+        return std::numeric_limits<std::size_t>::max();
+    }
+    return options.max_outbuf_hard_bytes;
+}
+
+// Feed one read of client bytes through its Session, honoring the hard output cap. A frame whose
+// response would exceed the cap is rejected: if earlier replies are already queued we flush them
+// then close (StopReading + close_after_flush); otherwise we close immediately (CloseNow).
+ReadResult apply_session_input(const EpollServerOptions &options, ClientState &client,
+                               std::span<const std::byte> bytes) {
+    client.drop_sent_prefix(); // reclaim already-sent bytes before growing outbuf
+    const SessionStatus status =
+        client.session.on_bytes(bytes, client.outbuf, hard_output_limit(options));
+    if (status == SessionStatus::OutputLimitExceeded) {
+        if (!client.outbuf.empty()) {
+            client.close_after_flush = true;
+            return ReadResult::StopReading;
+        }
+        return ReadResult::CloseNow;
+    }
+    if (client.session.logged_out()) {
+        client.close_after_flush = true;
+        return ReadResult::StopReading;
+    }
+    return ReadResult::Continue;
+}
+
+bool should_read_available_input(const EpollServerOptions &options, const ClientState &client,
+                                 bool peer_hung_up) noexcept {
+    return peer_hung_up || client.pending() < options.max_outbuf_bytes;
+}
+
+ReadResult read_once(const EpollServerOptions &options, int fd, ClientState &client,
+                     std::span<std::byte> buffer) {
+    const ssize_t n = ::read(fd, buffer.data(), buffer.size());
+    if (n > 0) {
+        return apply_session_input(
+            options, client,
+            std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)));
+    }
+    if (n == 0) {
+        client.input_closed = true;
+        return ReadResult::StopReading;
+    }
+    if (errno == EINTR) {
+        return ReadResult::Continue;
+    }
+    if (is_would_block()) {
+        return ReadResult::StopReading;
+    }
+    return ReadResult::CloseNow;
+}
+
+// Read everything currently available from the client. The loop guard applies soft backpressure:
+// once the unsent backlog reaches the high-water mark (and the peer has not hung up) reading stops
+// until the backlog drains. Returns true only if the connection must be closed (a read error).
+bool read_available(const EpollServerOptions &options, int fd, ClientState &client,
+                    bool peer_hung_up) {
+    std::array<std::byte, 4096> buffer{};
+    while (should_read_available_input(options, client, peer_hung_up)) {
+        switch (read_once(options, fd, client, std::span<std::byte>(buffer))) {
+        case ReadResult::Continue:
+            continue;
+        case ReadResult::StopReading:
+            return false;
+        case ReadResult::CloseNow:
+            return true;
+        }
+    }
+    return false; // soft backpressure: resume once the backlog drains
+}
+
+bool should_close_for_full_hangup(std::uint32_t events) noexcept {
+    return event_has(events, EPOLLHUP);
+}
+
+void apply_peer_half_close(std::uint32_t events, ClientState &client) noexcept {
+    if (event_has(events, EPOLLRDHUP)) {
+        client.input_closed = true; // half-close: peer can still receive queued responses
+    }
+}
+
+bool should_close_after_flush(const ClientState &client) noexcept {
+    return !has_pending_output(client) && (client.input_closed || client.close_after_flush);
+}
+
+bool wants_read_interest(const EpollServerOptions &options, const ClientState &client) noexcept {
+    return !client.input_closed && !client.close_after_flush &&
+           client.pending() < options.max_outbuf_bytes;
+}
+
+std::uint32_t client_interests(const EpollServerOptions &options,
+                               const ClientState &client) noexcept {
+    std::uint32_t want = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+    if (wants_read_interest(options, client)) {
+        want |= EPOLLIN;
+    }
+    if (has_pending_output(client)) {
+        want |= EPOLLOUT;
+    }
+    return want;
+}
+
+// Decide the client's next epoll interest after its event was serviced, or that it must close now.
+bool rearm_client(EventLoop &loop, int fd, ClientState &client, std::uint32_t ev) {
+    // EPOLLHUP can arrive with EPOLLIN for bytes already delivered; those were drained above. After
+    // a hangup there is no receiving peer, so close instead of re-arming a hot HUP.
+    if (should_close_for_full_hangup(ev)) {
+        return true;
+    }
+    apply_peer_half_close(ev, client);
+    if (should_close_after_flush(client)) {
+        return true; // fully flushed and the peer is done / logged out
+    }
+    return !mod_fd(loop.epoll_fd, fd, client_interests(loop.options, client), client.generation);
+}
+
+ClientMap::iterator find_live_client(EventLoop &loop, int fd, std::uint32_t generation) {
+    ClientMap::iterator it = loop.clients.find(fd);
+    if (it == loop.clients.end() || it->second.generation != generation) {
+        return loop.clients.end();
+    }
+    return it;
+}
+
+bool drain_writable_if_ready(std::uint32_t events, int fd, ClientState &client) {
+    if (!event_has(events, EPOLLOUT)) {
+        return false;
+    }
+    // Drain writable backlog first, so the read path sees an up-to-date pending() count.
+    return !send_some(fd, client);
+}
+
+bool should_read_client_input(std::uint32_t events, const ClientState &client) noexcept {
+    return event_has(events, EPOLLIN) && !client.input_closed && !client.close_after_flush;
+}
+
+bool read_client_input_if_ready(const EpollServerOptions &options, std::uint32_t events, int fd,
+                                ClientState &client) {
+    if (!should_read_client_input(events, client)) {
+        return false;
+    }
+    return read_available(options, fd, client, event_has(events, EPOLLHUP));
+}
+
+bool service_client_event(EventLoop &loop, int fd, ClientState &client, std::uint32_t events) {
+    if (event_has(events, EPOLLERR)) {
+        return true;
+    }
+    if (drain_writable_if_ready(events, fd, client)) {
+        return true;
+    }
+    if (read_client_input_if_ready(loop.options, events, fd, client)) {
+        return true;
+    }
+    return rearm_client(loop, fd, client, events);
+}
+
+void close_client_entry(EventLoop &loop, ClientMap::iterator it) {
+    close_client(loop.epoll_fd, it->first);
+    loop.clients.erase(it);
+}
+
+// Service one ready event for an existing client: error -> drain writable backlog -> read ->
+// re-arm/close. A stale event for a closed fd that was reused (generation mismatch) is ignored.
+void process_client_event(EventLoop &loop, const epoll_event &ready_event) {
+    const int fd = event_fd(ready_event);
+    ClientMap::iterator it = find_live_client(loop, fd, event_generation(ready_event));
+    if (it == loop.clients.end()) {
+        return;
+    }
+    if (service_client_event(loop, fd, it->second, ready_event.events)) {
+        close_client_entry(loop, it);
+    }
+}
+
+bool dispatch_ready_event(EventLoop &loop, const epoll_event &ready_event) {
+    if (is_listener_event(ready_event, loop.listen_fd)) {
+        return accept_connections(loop);
+    }
+    process_client_event(loop, ready_event);
+    return true;
+}
+
+bool dispatch_ready_events(EventLoop &loop, std::span<const epoll_event> ready_events) {
+    for (const epoll_event &ready_event : ready_events) {
+        if (!dispatch_ready_event(loop, ready_event)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool run_event_loop(EventLoop &loop, std::vector<epoll_event> &events,
+                    std::atomic<bool> &stop_requested) {
+    while (!stop_requested.load(std::memory_order_acquire)) {
+        const int ready =
+            ::epoll_wait(loop.epoll_fd, events.data(), static_cast<int>(events.size()),
+                         loop.options.wait_timeout_ms);
         if (ready < 0) {
             if (errno == EINTR) {
                 continue;
             }
-            close_all_clients(*epoll_fd, clients);
             return false;
         }
-
-        for (int i = 0; i < ready; ++i) {
-            const epoll_event &ready_event = events[static_cast<std::size_t>(i)];
-            const int fd = event_fd(ready_event);
-            const std::uint32_t generation = event_generation(ready_event);
-            const std::uint32_t ev = ready_event.events;
-
-            if (generation == kListenerGeneration && fd == listen_fd) {
-                for (;;) {
-                    const int conn = ::accept4(listen_fd, nullptr, nullptr, SOCK_NONBLOCK);
-                    if (conn >= 0) {
-                        const std::uint32_t client_generation =
-                            next_client_generation(next_generation);
-                        auto emplaced = clients.try_emplace(conn, gateway_, client_generation);
-                        if (!emplaced.second ||
-                            !add_fd(*epoll_fd, conn, EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLHUP,
-                                    client_generation)) {
-                            clients.erase(conn);
-                            ::close(conn);
-                            continue;
-                        }
-                        continue;
-                    }
-                    if (is_would_block()) {
-                        break;
-                    }
-                    // Transient per-connection errors -- a connection aborted before accept, or a
-                    // pending network error that Linux reports through accept -- must not tear down
-                    // the whole server; skip this connection and keep serving the rest (accept(2)).
-                    if (errno == EINTR || errno == ECONNABORTED || errno == EPROTO ||
-                        errno == ENETDOWN || errno == ENOPROTOOPT || errno == EHOSTDOWN ||
-                        errno == ENONET || errno == EHOSTUNREACH || errno == EOPNOTSUPP ||
-                        errno == ENETUNREACH) {
-                        continue;
-                    }
-                    close_all_clients(*epoll_fd, clients);
-                    return false; // genuinely fatal listener error
-                }
-                continue;
-            }
-
-            auto it = clients.find(fd);
-            if (it == clients.end()) {
-                continue;
-            }
-            ClientState &client = it->second;
-            if (client.generation != generation) {
-                continue;
-            }
-            bool close_now = false;
-            const bool socket_error = (ev & EPOLLERR) != 0U;
-            const bool peer_hung_up = (ev & EPOLLHUP) != 0U;
-
-            if (socket_error) {
-                close_now = true;
-            }
-
-            // Drain any writable backlog first, so the read below sees an up-to-date pending() and
-            // the hard cap is not enforced against a stale buffer that send_some() could free
-            // (which would otherwise falsely drop a client that has resumed reading).
-            if (!close_now && (ev & EPOLLOUT) != 0U) {
-                close_now = !send_some(fd, client);
-            }
-
-            if (!close_now && !client.input_closed && !client.close_after_flush &&
-                (ev & EPOLLIN) != 0U) {
-                std::array<std::byte, 4096> buffer{};
-                for (;;) {
-                    // Soft backpressure: once the unsent backlog reaches the soft high-water mark,
-                    // stop reading more requests before processing another (the re-arm below drops
-                    // EPOLLIN), resuming once it drains.
-                    if (!peer_hung_up && client.pending() >= options.max_outbuf_bytes) {
-                        break;
-                    }
-                    const ssize_t n = ::read(fd, buffer.data(), buffer.size());
-                    if (n > 0) {
-                        client.drop_sent_prefix(); // reclaim already-sent bytes before growing
-                        const std::size_t out_before = client.outbuf.size();
-                        const std::size_t max_output = options.max_outbuf_hard_bytes == 0
-                                                           ? std::numeric_limits<std::size_t>::max()
-                                                           : options.max_outbuf_hard_bytes;
-                        const SessionStatus status = client.session.on_bytes(
-                            std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)),
-                            client.outbuf, max_output);
-                        if (status == SessionStatus::OutputLimitExceeded) {
-                            if (client.outbuf.size() > out_before) {
-                                client.close_after_flush = true;
-                            } else {
-                                close_now = true;
-                            }
-                            break;
-                        }
-                        if (client.session.logged_out()) {
-                            client.close_after_flush = true;
-                            break;
-                        }
-                        continue; // re-checks the soft high-water mark at the top before reading
-                    }
-                    if (n == 0) {
-                        client.input_closed = true;
-                        break;
-                    }
-                    if (is_would_block()) {
-                        break;
-                    }
-                    if (errno == EINTR) {
-                        continue;
-                    }
-                    close_now = true;
-                    break;
-                }
-            }
-
-            if (!close_now) {
-                // EPOLLHUP can arrive together with EPOLLIN for bytes already delivered by the
-                // peer. Drain those bytes above before honoring the hangup; after that there is no
-                // receiving peer to flush to, so close immediately instead of re-arming a hot HUP.
-                if (peer_hung_up) {
-                    close_now = true;
-                } else {
-                    if ((ev & EPOLLRDHUP) != 0U) {
-                        client.input_closed = true;
-                    }
-                    const bool want_write = client.pending() > 0;
-                    if (!want_write && (client.input_closed || client.close_after_flush)) {
-                        // Fully flushed and the peer is done / logged out / half-closed. RDHUP is a
-                        // half-close: the peer can still receive queued responses, so keep flushing
-                        // until want_write is false before closing.
-                        close_now = true;
-                    } else {
-                        std::uint32_t want = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-                        // Backpressure: only keep reading while the unsent backlog is below the
-                        // high-water mark, so a client that stops reading its responses cannot make
-                        // the gateway buffer unbounded output. Reads resume once the backlog
-                        // drains.
-                        if (!client.input_closed && !client.close_after_flush &&
-                            client.pending() < options.max_outbuf_bytes) {
-                            want |= EPOLLIN;
-                        }
-                        if (want_write) {
-                            want |= EPOLLOUT; // still have bytes to flush
-                        }
-                        close_now = !mod_fd(*epoll_fd, fd, want, client.generation);
-                    }
-                }
-            }
-
-            if (close_now) {
-                close_client(*epoll_fd, fd);
-                clients.erase(it);
-            }
+        if (!dispatch_ready_events(loop, std::span<const epoll_event>(
+                                             events.data(), static_cast<std::size_t>(ready)))) {
+            return false;
         }
     }
-
-    close_all_clients(*epoll_fd, clients);
     return true;
+}
+
+} // namespace
+
+bool EpollServer::serve_listen_socket(int listen_fd, EpollServerOptions options) {
+    stop_requested_.store(false, std::memory_order_release);
+
+    UniqueFd epoll_fd = make_epoll_listener(listen_fd, options);
+    if (*epoll_fd < 0) {
+        return false;
+    }
+
+    EventLoop loop{*epoll_fd, listen_fd, options, gateway_};
+    std::vector<epoll_event> events(options.max_events);
+
+    const bool ok = run_event_loop(loop, events, stop_requested_);
+    close_all_clients(*epoll_fd, loop.clients);
+    return ok;
 }
 
 bool EpollServer::run(const std::string &host, std::uint16_t port, EpollServerOptions options) {
