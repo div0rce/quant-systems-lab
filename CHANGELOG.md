@@ -38,6 +38,15 @@ All notable changes to this project. The format is loosely based on
 - M30: `scripts/socket_stress.sh` (`make socket-stress`, portable) — UDP burst/gap and
   receive-socket-buffer experiment over loopback, run over multiple trials.
 
+### Changed
+
+- M37: decomposed the threaded pipeline into a run context plus named input/engine/output stage
+  helpers, and consolidated concurrency-test assertion/producer-consumer helpers. Public
+  CLI/protocol behavior, deterministic pipeline results, and benchmark claims are unchanged.
+- M37: shared `PipelineProbe` counters remain usable across repeated runs; returned
+  `PipelineResult` backpressure counters now report the per-run delta rather than cumulative probe
+  totals.
+
 ### Documentation
 
 - Synchronized project-memory files before repository-health planning (PR #101, PR #102): M35 is

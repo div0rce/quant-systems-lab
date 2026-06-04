@@ -8,25 +8,195 @@
 
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
+#include <cstddef>
 #include <cstdint>
 #include <thread>
 
 using qsl::concurrency::SpscRing;
 
-TEST_CASE("backpressure contract: full try_push returns false and leaves the queue unchanged",
-          "[spsc][backpressure]") {
-    SpscRing<int, 2> ring;
+template <class T, std::size_t Capacity> void require_empty(const SpscRing<T, Capacity> &ring) {
+    REQUIRE(ring.empty());
+}
+
+struct OrderedReceiveState {
+    std::uint64_t received = 0;
+    std::uint64_t next_expected = 0;
+    bool in_order = true;
+};
+
+struct SurvivorState {
+    std::uint64_t received = 0;
+    bool strictly_increasing = true;
+    bool have_prev = false;
+    std::uint64_t prev = 0;
+};
+
+struct DropCounts {
+    std::uint64_t pushed = 0;
+    std::uint64_t dropped = 0;
+};
+
+void fill_two_item_ring(SpscRing<int, 2> &ring) {
     REQUIRE(ring.try_push(10));
     REQUIRE(ring.try_push(20));
     REQUIRE(ring.full());
+}
 
-    // Full: the push is rejected and nothing is mutated; a later pop still sees the original front.
-    REQUIRE_FALSE(ring.try_push(30));
+void require_push_rejected(SpscRing<int, 2> &ring, int value) {
+    REQUIRE_FALSE(ring.try_push(value));
     REQUIRE(ring.full());
+}
 
+void require_next_pop(SpscRing<int, 2> &ring, int expected) {
     int out = 0;
     REQUIRE(ring.try_pop(out));
-    REQUIRE(out == 10); // unchanged front: the rejected push did not overwrite or reorder anything
+    REQUIRE(out == expected);
+}
+
+void require_lossless_spin_result(const std::atomic<std::uint64_t> &full_rejections,
+                                  const OrderedReceiveState &state, std::uint64_t total) {
+    REQUIRE(full_rejections.load() >= 1);
+    REQUIRE(state.in_order);
+    REQUIRE(state.received == total);
+}
+
+void require_drop_producer_accounting(const DropCounts &counts, std::uint64_t total) {
+    REQUIRE(counts.pushed + counts.dropped == total);
+}
+
+void require_drop_consumer_accounting(const SurvivorState &state, const DropCounts &counts,
+                                      std::uint64_t total) {
+    REQUIRE(state.received == counts.pushed);
+    REQUIRE(state.received + counts.dropped == total);
+}
+
+void record_expected(std::uint64_t value, OrderedReceiveState &state) {
+    if (value != state.next_expected) {
+        state.in_order = false;
+    }
+    ++state.next_expected;
+    ++state.received;
+}
+
+void record_survivor(std::uint64_t value, SurvivorState &state) {
+    if (state.have_prev && value <= state.prev) {
+        state.strictly_increasing = false; // FIFO over the surviving subsequence
+    }
+    state.prev = value;
+    state.have_prev = true;
+    ++state.received;
+}
+
+void produce_lossless_after_backpressure(SpscRing<std::uint64_t, 4> &ring,
+                                         std::atomic<bool> &consumer_may_start,
+                                         std::atomic<std::uint64_t> &full_rejections,
+                                         std::uint64_t count) {
+    for (std::uint64_t i = 0; i < count; ++i) {
+        while (!ring.try_push(i)) {
+            // The queue is full: this is backpressure. Record it and release the consumer so it
+            // can drain. Because the consumer waits for this flag, the producer is guaranteed to
+            // observe at least one full queue (after the first `capacity()` items).
+            full_rejections.fetch_add(1, std::memory_order_relaxed);
+            consumer_may_start.store(true, std::memory_order_release);
+            std::this_thread::yield();
+        }
+    }
+}
+
+void consume_after_backpressure(SpscRing<std::uint64_t, 4> &ring,
+                                const std::atomic<bool> &consumer_may_start, std::uint64_t count,
+                                OrderedReceiveState &state) {
+    while (!consumer_may_start.load(std::memory_order_acquire)) {
+        std::this_thread::yield(); // hold off until the producer has hit a full queue
+    }
+
+    std::uint64_t value = 0;
+    while (state.received < count) {
+        if (ring.try_pop(value)) {
+            record_expected(value, state);
+        } else {
+            std::this_thread::yield();
+        }
+    }
+}
+
+void produce_with_drop_policy(SpscRing<std::uint64_t, 8> &ring, std::uint64_t count,
+                              DropCounts &counts, std::atomic<bool> &producer_done) {
+    for (std::uint64_t i = 0; i < count; ++i) {
+        if (ring.try_push(i)) {
+            ++counts.pushed;
+        } else {
+            ++counts.dropped; // caller's policy: drop instead of spinning
+        }
+    }
+    producer_done.store(true, std::memory_order_release);
+}
+
+void drain_survivors(SpscRing<std::uint64_t, 8> &ring, SurvivorState &state) {
+    std::uint64_t value = 0;
+    while (ring.try_pop(value)) {
+        record_survivor(value, state);
+    }
+}
+
+void consume_drop_policy(SpscRing<std::uint64_t, 8> &ring, const std::atomic<bool> &producer_done,
+                         SurvivorState &state) {
+    std::uint64_t value = 0;
+    for (;;) {
+        if (ring.try_pop(value)) {
+            record_survivor(value, state);
+            continue;
+        }
+        if (producer_done.load(std::memory_order_acquire)) {
+            drain_survivors(ring, state);
+            break;
+        }
+        std::this_thread::yield();
+    }
+}
+
+void produce_until_stop(SpscRing<std::uint64_t, 64> &ring, std::atomic<bool> &stop,
+                        std::uint64_t count) {
+    for (std::uint64_t i = 0; i < count; ++i) {
+        while (!ring.try_push(i)) {
+            std::this_thread::yield();
+        }
+    }
+    stop.store(true, std::memory_order_release); // signal shutdown after the last publish
+}
+
+void drain_expected(SpscRing<std::uint64_t, 64> &ring, OrderedReceiveState &state) {
+    std::uint64_t value = 0;
+    while (ring.try_pop(value)) {
+        record_expected(value, state);
+    }
+}
+
+void consume_until_stop(SpscRing<std::uint64_t, 64> &ring, const std::atomic<bool> &stop,
+                        OrderedReceiveState &state) {
+    std::uint64_t value = 0;
+    for (;;) {
+        if (ring.try_pop(value)) {
+            record_expected(value, state);
+            continue;
+        }
+        if (stop.load(std::memory_order_acquire)) {
+            drain_expected(ring, state);
+            break;
+        }
+        std::this_thread::yield();
+    }
+}
+
+TEST_CASE("backpressure contract: full try_push returns false and leaves the queue unchanged",
+          "[spsc][backpressure]") {
+    SpscRing<int, 2> ring;
+    fill_two_item_ring(ring);
+
+    // Full: the push is rejected and nothing is mutated; a later pop still sees the original front.
+    require_push_rejected(ring, 30);
+
+    require_next_pop(ring, 10); // rejected push did not overwrite or reorder anything
     REQUIRE_FALSE(ring.full());
 
     // Exactly one slot was freed, so exactly one push now succeeds and the next is rejected again.
@@ -44,46 +214,18 @@ TEST_CASE("spin/yield policy: a stalled consumer applies real backpressure but l
     std::atomic<std::uint64_t> full_rejections{0};
 
     std::thread producer([&] {
-        for (std::uint64_t i = 0; i < kCount; ++i) {
-            while (!ring.try_push(i)) {
-                // The queue is full: this is backpressure. Record it and release the consumer so it
-                // can drain. Because the consumer waits for this flag, the producer is guaranteed
-                // to observe at least one full queue (after the first `capacity()` items).
-                full_rejections.fetch_add(1, std::memory_order_relaxed);
-                consumer_may_start.store(true, std::memory_order_release);
-                std::this_thread::yield();
-            }
-        }
+        produce_lossless_after_backpressure(ring, consumer_may_start, full_rejections, kCount);
     });
 
-    std::uint64_t received = 0;
-    std::uint64_t next_expected = 0;
-    bool in_order = true;
-    std::thread consumer([&] {
-        while (!consumer_may_start.load(std::memory_order_acquire)) {
-            std::this_thread::yield(); // hold off until the producer has hit a full queue
-        }
-        std::uint64_t value = 0;
-        while (received < kCount) {
-            if (ring.try_pop(value)) {
-                if (value != next_expected) {
-                    in_order = false;
-                }
-                ++next_expected;
-                ++received;
-            } else {
-                std::this_thread::yield();
-            }
-        }
-    });
+    OrderedReceiveState receive;
+    std::thread consumer(
+        [&] { consume_after_backpressure(ring, consumer_may_start, kCount, receive); });
 
     producer.join();
     consumer.join();
 
-    REQUIRE(full_rejections.load() >= 1); // backpressure actually occurred
-    REQUIRE(in_order);
-    REQUIRE(received == kCount); // lossless: spinning on full delivered every item
-    REQUIRE(ring.empty());
+    require_lossless_spin_result(full_rejections, receive, kCount);
+    require_empty(ring);
 }
 
 TEST_CASE("drop-on-full policy: dropped + received accounts for every produced item",
@@ -92,60 +234,20 @@ TEST_CASE("drop-on-full policy: dropped + received accounts for every produced i
     SpscRing<std::uint64_t, 8> ring;
 
     std::atomic<bool> producer_done{false};
-    std::uint64_t pushed = 0;
-    std::uint64_t dropped = 0;
+    DropCounts counts;
 
-    std::thread producer([&] {
-        for (std::uint64_t i = 0; i < kCount; ++i) {
-            if (ring.try_push(i)) {
-                ++pushed;
-            } else {
-                ++dropped; // caller's policy: drop instead of spinning
-            }
-        }
-        producer_done.store(true, std::memory_order_release);
-    });
+    std::thread producer([&] { produce_with_drop_policy(ring, kCount, counts, producer_done); });
 
-    std::uint64_t received = 0;
-    bool strictly_increasing = true;
-    bool have_prev = false;
-    std::uint64_t prev = 0;
-    std::thread consumer([&] {
-        std::uint64_t value = 0;
-        for (;;) {
-            if (ring.try_pop(value)) {
-                if (have_prev && value <= prev) {
-                    strictly_increasing = false; // FIFO over the surviving subsequence
-                }
-                prev = value;
-                have_prev = true;
-                ++received;
-            } else if (producer_done.load(std::memory_order_acquire)) {
-                // Producer finished; drain whatever it published before signalling done. The
-                // acquire above pairs with the producer's release, so every pushed item is visible.
-                while (ring.try_pop(value)) {
-                    if (have_prev && value <= prev) {
-                        strictly_increasing = false;
-                    }
-                    prev = value;
-                    have_prev = true;
-                    ++received;
-                }
-                break;
-            } else {
-                std::this_thread::yield();
-            }
-        }
-    });
+    SurvivorState survivors;
+    std::thread consumer([&] { consume_drop_policy(ring, producer_done, survivors); });
 
     producer.join();
     consumer.join();
 
-    REQUIRE(strictly_increasing);
-    REQUIRE(pushed + dropped == kCount); // every produced item was either enqueued or dropped
-    REQUIRE(received == pushed);         // and every enqueued item was eventually received
-    REQUIRE(received + dropped == kCount);
-    REQUIRE(ring.empty());
+    REQUIRE(survivors.strictly_increasing);
+    require_drop_producer_accounting(counts, kCount);
+    require_drop_consumer_accounting(survivors, counts, kCount);
+    require_empty(ring);
 }
 
 TEST_CASE("drain-then-stop shutdown: an out-of-band stop flag loses no accepted item",
@@ -155,49 +257,15 @@ TEST_CASE("drain-then-stop shutdown: an out-of-band stop flag loses no accepted 
 
     std::atomic<bool> stop{false};
 
-    std::thread producer([&] {
-        for (std::uint64_t i = 0; i < kCount; ++i) {
-            while (!ring.try_push(i)) {
-                std::this_thread::yield();
-            }
-        }
-        stop.store(true, std::memory_order_release); // signal shutdown after the last publish
-    });
+    std::thread producer([&] { produce_until_stop(ring, stop, kCount); });
 
-    std::uint64_t received = 0;
-    std::uint64_t next_expected = 0;
-    bool in_order = true;
-    std::thread consumer([&] {
-        std::uint64_t value = 0;
-        for (;;) {
-            if (ring.try_pop(value)) {
-                if (value != next_expected) {
-                    in_order = false;
-                }
-                ++next_expected;
-                ++received;
-                continue;
-            }
-            if (stop.load(std::memory_order_acquire)) {
-                // Drain-then-stop: everything published before `stop` happens-before this point, so
-                // this final drain cannot miss a tail element.
-                while (ring.try_pop(value)) {
-                    if (value != next_expected) {
-                        in_order = false;
-                    }
-                    ++next_expected;
-                    ++received;
-                }
-                break;
-            }
-            std::this_thread::yield();
-        }
-    });
+    OrderedReceiveState receive;
+    std::thread consumer([&] { consume_until_stop(ring, stop, receive); });
 
     producer.join();
     consumer.join();
 
-    REQUIRE(in_order);
-    REQUIRE(received == kCount); // no accepted item lost at shutdown
-    REQUIRE(ring.empty());
+    REQUIRE(receive.in_order);
+    REQUIRE(receive.received == kCount); // no accepted item lost at shutdown
+    require_empty(ring);
 }

@@ -98,6 +98,11 @@ struct PipelinePerturbation {
     std::uint32_t yields_per_hit = 1;
 };
 
+struct PipelineRunOptions {
+    PipelineProbe *probe = nullptr;
+    const PipelinePerturbation *perturbation = nullptr;
+};
+
 namespace detail {
 inline void maybe_yield(std::uint64_t &counter, std::uint32_t every, std::uint32_t yields) {
     if (every == 0) {
@@ -118,141 +123,200 @@ inline void maybe_yield(std::uint64_t &counter, std::uint32_t every, std::uint32
 /// bursts. Capacity affects only timing/backpressure, never the result.
 template <std::size_t InboundCapacity = 1024, std::size_t OutboundCapacity = 1024>
 class ThreadedPipeline {
+    struct RunContext {
+        RunContext(const std::vector<replay::Command> &commands_in, engine::RiskConfig risk_in,
+                   OutputSink &sink_in, PipelineRunOptions options)
+            : commands(commands_in), risk(risk_in), sink(sink_in),
+              perturbation(options.perturbation),
+              spins(options.probe != nullptr ? *options.probe : local_probe),
+              inbound_spins_base(spins.inbound_spins.load(std::memory_order_relaxed)),
+              outbound_spins_base(spins.outbound_spins.load(std::memory_order_relaxed)) {}
+
+        const std::vector<replay::Command> &commands;
+        engine::RiskConfig risk;
+        OutputSink &sink;
+        const PipelinePerturbation *perturbation;
+        SpscRing<replay::Command, InboundCapacity> inbound{};
+        SpscRing<ProcessedCommand, OutboundCapacity> outbound{};
+        std::atomic<bool> input_done{false};
+        std::atomic<bool> engine_done{false};
+        PipelineProbe local_probe{};
+        PipelineProbe &spins;
+        std::uint64_t inbound_spins_base = 0;
+        std::uint64_t outbound_spins_base = 0;
+        PipelineResult result{};
+    };
+
+    struct EngineStage {
+        explicit EngineStage(engine::RiskConfig risk) : gw(engine, risk) {}
+
+        engine::MatchingEngine engine;
+        gateway::OrderGateway gw;
+        std::uint64_t steps = 0;
+    };
+
+    static void count_spin(std::atomic<std::uint64_t> &counter) {
+        counter.fetch_add(1, std::memory_order_relaxed);
+        std::this_thread::yield();
+    }
+
+    static void maybe_input_yield(RunContext &ctx, std::uint64_t &steps) {
+        if (ctx.perturbation != nullptr) {
+            detail::maybe_yield(steps, ctx.perturbation->input_yield_every,
+                                ctx.perturbation->yields_per_hit);
+        }
+    }
+
+    static void maybe_engine_yield(RunContext &ctx, std::uint64_t &steps) {
+        if (ctx.perturbation != nullptr) {
+            detail::maybe_yield(steps, ctx.perturbation->engine_yield_every,
+                                ctx.perturbation->yields_per_hit);
+        }
+    }
+
+    static void maybe_output_yield(RunContext &ctx, std::uint64_t &steps) {
+        if (ctx.perturbation != nullptr) {
+            detail::maybe_yield(steps, ctx.perturbation->output_yield_every,
+                                ctx.perturbation->yields_per_hit);
+        }
+    }
+
+    static void push_inbound_lossless(RunContext &ctx, const replay::Command &command) {
+        while (!ctx.inbound.try_push(command)) { // lossless: an order is never dropped
+            count_spin(ctx.spins.inbound_spins);
+        }
+    }
+
+    static void push_outbound_lossless(RunContext &ctx, ProcessedCommand &&processed) {
+        while (!ctx.outbound.try_push(
+            std::move(processed))) { // lossless: a log/feed record is never dropped
+            count_spin(ctx.spins.outbound_spins);
+        }
+    }
+
+    static ProcessedCommand apply_to_engine(RunContext &ctx, engine::MatchingEngine &engine,
+                                            gateway::OrderGateway &gw, replay::Command &&command) {
+        gateway::GatewayResult gr = replay::apply_command(engine, gw, command);
+        ProcessedCommand processed;
+        processed.command = std::move(command);
+        processed.accepted = gr.accepted;
+        processed.reason = gr.reason;
+        processed.events = std::move(gr.events);
+
+        ++ctx.result.commands_processed;
+        if (processed.accepted) {
+            ++ctx.result.commands_accepted;
+        } else {
+            ++ctx.result.commands_rejected;
+        }
+        ctx.result.events_emitted += processed.events.size();
+        return processed;
+    }
+
+    static void process_engine_command(RunContext &ctx, EngineStage &stage,
+                                       replay::Command &&command) {
+        push_outbound_lossless(ctx,
+                               apply_to_engine(ctx, stage.engine, stage.gw, std::move(command)));
+        maybe_engine_yield(ctx, stage.steps);
+    }
+
+    static void drain_inbound_after_done(RunContext &ctx, EngineStage &stage,
+                                         replay::Command &command) {
+        // Drain-then-stop: everything the input thread published happens-before the done-flag, so
+        // this final drain cannot miss a queued command.
+        while (ctx.inbound.try_pop(command)) {
+            process_engine_command(ctx, stage, std::move(command));
+        }
+    }
+
+    static void publish_processed(RunContext &ctx, const ProcessedCommand &processed,
+                                  std::uint64_t &output_steps) {
+        ctx.sink.on_processed(processed);
+        maybe_output_yield(ctx, output_steps);
+    }
+
+    static void drain_outbound_after_done(RunContext &ctx, ProcessedCommand &processed,
+                                          std::uint64_t &output_steps) {
+        while (ctx.outbound.try_pop(processed)) { // drain-then-stop: no published record is lost
+            publish_processed(ctx, processed, output_steps);
+        }
+    }
+
+    static void run_input_stage(RunContext &ctx) {
+        std::uint64_t input_steps = 0;
+        for (const replay::Command &command : ctx.commands) {
+            push_inbound_lossless(ctx, command);
+            maybe_input_yield(ctx, input_steps);
+        }
+        ctx.input_done.store(true, std::memory_order_release);
+    }
+
+    static void run_engine_stage(RunContext &ctx) {
+        EngineStage stage(ctx.risk);
+        replay::Command command;
+
+        for (;;) {
+            if (ctx.inbound.try_pop(command)) {
+                process_engine_command(ctx, stage, std::move(command));
+                continue;
+            }
+            if (ctx.input_done.load(std::memory_order_acquire)) {
+                drain_inbound_after_done(ctx, stage, command);
+                break;
+            }
+            std::this_thread::yield();
+        }
+
+        // The engine has drained its input and is quiescent; still owned by this thread, so
+        // snapshotting it here is race-free.
+        ctx.result.snapshot = stage.engine.snapshot();
+        ctx.result.last_seq = stage.engine.last_seq();
+        ctx.engine_done.store(true,
+                              std::memory_order_release); // released after the last outbound push
+    }
+
+    static void run_output_stage(RunContext &ctx) {
+        std::uint64_t output_steps = 0;
+        ProcessedCommand processed;
+
+        for (;;) {
+            if (ctx.outbound.try_pop(processed)) {
+                publish_processed(ctx, processed, output_steps);
+                continue;
+            }
+            if (ctx.engine_done.load(std::memory_order_acquire)) {
+                drain_outbound_after_done(ctx, processed, output_steps);
+                break;
+            }
+            std::this_thread::yield();
+        }
+    }
+
+    static PipelineResult finish(RunContext &ctx) {
+        // All threads joined: these reads are sequenced after every write to them.
+        const auto inbound_spins_now = ctx.spins.inbound_spins.load(std::memory_order_relaxed);
+        const auto outbound_spins_now = ctx.spins.outbound_spins.load(std::memory_order_relaxed);
+        ctx.result.inbound_backpressure_spins = inbound_spins_now - ctx.inbound_spins_base;
+        ctx.result.outbound_backpressure_spins = outbound_spins_now - ctx.outbound_spins_base;
+        return ctx.result;
+    }
+
   public:
     /// Run `commands` through the pipeline to completion and return the engine's final snapshot
     /// plus stats. Blocks until all three threads are joined (so the queues, which live on this
     /// stack frame, outlive both the producer and the consumer of each — the lifetime bracket the
     /// SPSC contract requires). Deterministic given `commands` and `risk`.
     static PipelineResult run(const std::vector<replay::Command> &commands, engine::RiskConfig risk,
-                              OutputSink &sink, PipelineProbe *probe = nullptr,
-                              const PipelinePerturbation *perturbation = nullptr) {
-        SpscRing<replay::Command, InboundCapacity> inbound;
-        SpscRing<ProcessedCommand, OutboundCapacity> outbound;
-
-        // Out-of-band shutdown signalling (docs/concurrency_model.md → Shutdown): the queues have
-        // no "closed" state, so each upstream stage publishes a done-flag with release after its
-        // last push, and the downstream stage drains-then-stops on acquire.
-        std::atomic<bool> input_done{false};
-        std::atomic<bool> engine_done{false};
-
-        // Backpressure spin counters. A test may pass a PipelineProbe to observe these live (e.g.
-        // to wait until the engine has provably back-pressured before releasing a gated consumer);
-        // otherwise the pipeline counts into a local probe. The final values land in the result.
-        PipelineProbe local_probe;
-        PipelineProbe &spins = (probe != nullptr) ? *probe : local_probe;
-
-        PipelineResult result{};
-
-        // Stage 1 — input thread: the sole producer of the inbound queue.
-        std::thread input_thread([&] {
-            std::uint64_t input_steps = 0;
-            for (const replay::Command &command : commands) {
-                while (!inbound.try_push(command)) { // lossless: an order is never dropped
-                    spins.inbound_spins.fetch_add(1, std::memory_order_relaxed);
-                    std::this_thread::yield();
-                }
-                if (perturbation != nullptr) {
-                    detail::maybe_yield(input_steps, perturbation->input_yield_every,
-                                        perturbation->yields_per_hit);
-                }
-            }
-            input_done.store(true, std::memory_order_release);
-        });
-
-        // Stage 2 — engine thread: sole consumer of inbound, sole producer of outbound, and the
-        // ONLY thread that touches the engine + gateway.
-        std::thread engine_thread([&] {
-            std::uint64_t engine_steps = 0;
-            engine::MatchingEngine engine;
-            gateway::OrderGateway gw(engine, risk);
-
-            const auto process = [&](replay::Command &&command) {
-                gateway::GatewayResult gr = replay::apply_command(engine, gw, command);
-                ProcessedCommand pc;
-                pc.command = std::move(command);
-                pc.accepted = gr.accepted;
-                pc.reason = gr.reason;
-                pc.events = std::move(gr.events);
-
-                ++result.commands_processed;
-                if (pc.accepted) {
-                    ++result.commands_accepted;
-                } else {
-                    ++result.commands_rejected;
-                }
-                result.events_emitted += pc.events.size();
-
-                while (!outbound.try_push(
-                    std::move(pc))) { // lossless: a log/feed record is never dropped
-                    spins.outbound_spins.fetch_add(1, std::memory_order_relaxed);
-                    std::this_thread::yield();
-                }
-                if (perturbation != nullptr) {
-                    detail::maybe_yield(engine_steps, perturbation->engine_yield_every,
-                                        perturbation->yields_per_hit);
-                }
-            };
-
-            replay::Command command;
-            for (;;) {
-                if (inbound.try_pop(command)) {
-                    process(std::move(command));
-                    continue;
-                }
-                if (input_done.load(std::memory_order_acquire)) {
-                    // Drain-then-stop: everything the input thread published happens-before the
-                    // done-flag, so this final drain cannot miss a queued command.
-                    while (inbound.try_pop(command)) {
-                        process(std::move(command));
-                    }
-                    break;
-                }
-                std::this_thread::yield();
-            }
-
-            // The engine has drained its input and is quiescent; still owned by this thread, so
-            // snapshotting it here is race-free.
-            result.snapshot = engine.snapshot();
-            result.last_seq = engine.last_seq();
-            engine_done.store(true,
-                              std::memory_order_release); // released after the last outbound push
-        });
-
-        // Stage 3 — publisher/log thread: sole consumer of the outbound queue.
-        std::thread output_thread([&] {
-            std::uint64_t output_steps = 0;
-            ProcessedCommand pc;
-            for (;;) {
-                if (outbound.try_pop(pc)) {
-                    sink.on_processed(pc);
-                    if (perturbation != nullptr) {
-                        detail::maybe_yield(output_steps, perturbation->output_yield_every,
-                                            perturbation->yields_per_hit);
-                    }
-                    continue;
-                }
-                if (engine_done.load(std::memory_order_acquire)) {
-                    while (outbound.try_pop(pc)) { // drain-then-stop: no published record is lost
-                        sink.on_processed(pc);
-                        if (perturbation != nullptr) {
-                            detail::maybe_yield(output_steps, perturbation->output_yield_every,
-                                                perturbation->yields_per_hit);
-                        }
-                    }
-                    break;
-                }
-                std::this_thread::yield();
-            }
-        });
+                              OutputSink &sink, PipelineRunOptions options = {}) {
+        RunContext ctx(commands, risk, sink, options);
+        std::thread input_thread([&] { run_input_stage(ctx); });
+        std::thread engine_thread([&] { run_engine_stage(ctx); });
+        std::thread output_thread([&] { run_output_stage(ctx); });
 
         input_thread.join();
         engine_thread.join();
         output_thread.join();
-
-        // All threads joined: these reads are sequenced after every write to them.
-        result.inbound_backpressure_spins = spins.inbound_spins.load(std::memory_order_relaxed);
-        result.outbound_backpressure_spins = spins.outbound_spins.load(std::memory_order_relaxed);
-        return result;
+        return finish(ctx);
     }
 };
 
