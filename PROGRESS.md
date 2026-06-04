@@ -20,15 +20,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Post-PR #101 project-memory sync before repository-health refactor planning
-- **Status:** PR #101 has merged; this docs-only branch clears post-merge resume state. No repository-health analysis, refactor milestone insertion, or NUMA work has started.
-- **Active branch:** `docs/sync-post-pr101-before-health-roadmap` for this sync PR; after merge, resume from `main`
+- **Active milestone:** Repository-health refactor phase insertion (docs-only roadmap renumber before NUMA)
+- **Status:** Repository-health analysis complete (CodeScene, project 80913); inserting seven refactor milestones M36–M42 and renumbering the original networking/persistence roadmap to M43–M48. Docs-only; no source code changed and no milestone implemented.
+- **Active branch:** `docs/roadmap-health-refactor-insertion` for this insertion PR; after merge, resume from `main`
 - **Last completed milestone:** M35 — multi-client load and socket-pressure testing (squash-merged, PR #100, commit a86b701; CI green)
-- **Last completed docs sync:** Project-memory synchronization before refactor planning (squash-merged, PR #101, commit 40f9249)
+- **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** PR #101 docs-only sync verified `git diff --check` clean and `make check` 191/191 on 2026-06-04.
-- **Last action:** PR #101 was squash-merged to `main` as 40f9249; local `main` was fast-forwarded to that commit.
-- **Next action:** land this post-merge docs sync, then sync `main` and begin repository-health analysis/planning only, not NUMA implementation.
+- **`make check` passing:** PR #102 docs-only sync verified `git diff --check` clean and `make check` 191/191 on 2026-06-04.
+- **Last action:** PR #102 was squash-merged to `main` as 7092423; local `main` fast-forwarded; CodeScene Code Health analysis run via MCP.
+- **Next action:** land this docs-only roadmap-insertion PR, then `/start-milestone 36` (Decompose the epoll event loop and connection lifecycle). NUMA awareness is now M43.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
 
 ---
@@ -208,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _Post-PR #101 sync branch: update project-memory files to reflect that PR #101 landed as 40f9249. This branch must remain docs-only and must not insert refactor milestones or start NUMA. After it lands, sync `main` and start repository-health analysis/planning only._
+- _Roadmap-insertion branch `docs/roadmap-health-refactor-insertion`: docs-only. Inserts refactor milestones M36–M42 (from the CodeScene Code Health analysis: 5 production + 6 test files below 9.0) and renumbers the original M36–M41 roadmap to M43–M48 (NUMA → M43) across MILESTONES/PROGRESS/HANDOFF/AGENTS/CLAUDE/CHANGELOG. No source code, no implementation. After it lands, `/start-milestone 36`._
 
 
 ---
@@ -266,12 +266,19 @@ Lower priority:
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☑ merged | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☑ merged | #98 | Event-driven multi-client gateway design |
 | M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☑ merged | #100 | TCP connection-scaling load (blocking vs epoll) + M30 UDP pressure |
-| M36 | NUMA awareness study | `feat/m36-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
-| M37 | Lock-free ingress pipeline | `feat/m37-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
-| M38 | Exchange-grade persistence prototype | `feat/m38-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
-| M39 | Recovery benchmarking | `feat/m39-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
-| M40 | DPDK research and prototype | `feat/m40-dpdk-research-prototype` | ☐ not started | — | User-space packet-path research after M30–M39 |
-| M41 | NIC offload and low-latency networking study | `feat/m41-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
+| M36 | Decompose the epoll event loop and connection lifecycle | `refactor/m36-epoll-event-loop-decomposition` | ☐ not started | — | Repository-health refactor; `epoll_server.cpp` Code Health 5.35 → ≥9.0 |
+| M37 | Extract threaded-pipeline stage helpers | `refactor/m37-threaded-pipeline-stage-helpers` | ☐ not started | — | Repository-health refactor (mixed); `pipeline.hpp` + `test_pipeline`/`test_backpressure` |
+| M38 | Split the command-stream shrinker into named passes | `refactor/m38-shrinker-reduction-passes` | ☐ not started | — | Repository-health refactor; `shrink.cpp` 8.15 → ≥9.0 |
+| M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ☐ not started | — | Repository-health refactor; `order_book.cpp` 8.55, determinism preserved |
+| M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☐ not started | — | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
+| M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☐ not started | — | Repository-health refactor; `session.cpp` 8.99 → ≥9.0 |
+| M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☐ not started | — | Repository-health refactor (manual; shell unscored); M35 follow-up |
+| M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
+| M44 | Lock-free ingress pipeline | `feat/m44-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
+| M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
+| M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
+| M47 | DPDK research and prototype | `feat/m47-dpdk-research-prototype` | ☐ not started | — | User-space packet-path research after the networking/recovery milestones |
+| M48 | NIC offload and low-latency networking study | `feat/m48-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
 ## Decision log additions
 
@@ -279,6 +286,8 @@ Lower priority:
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
 - [2026-06-04] Project-memory sync after M35: PR #101 squash-merged to `main` as 40f9249. It established the `CLAUDE.md` / `AGENTS.md` memory relationship, exact `Branch:` handling for `/start-milestone`, and the guard that repository-health planning happens before original M36 NUMA. No CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
+- [2026-06-04] Post-merge project-memory sync PR #102 squash-merged to `main` as 7092423.
+- [2026-06-04] Repository-health refactor phase inserted after M35 (docs-only roadmap renumber, branch `docs/roadmap-health-refactor-insertion`). A CodeScene Code Health analysis (project 80913, via MCP) of all production and test files found eleven files below 9.0: production `epoll_server.cpp` 5.35, `pipeline.hpp` 7.13, `shrink.cpp` 8.15, `order_book.cpp` 8.55, `session.cpp` 8.99; tests `test_risk_gateway` 6.69, `test_order_book` 7.32, `test_pipeline` 8.28, `test_backpressure` 8.44, `test_invariants` 8.45, `test_matching_engine` 8.54. These became seven refactor milestones M36–M42: M36 epoll decomposition, M37 pipeline stage helpers (+ its concurrency tests), M38 shrinker passes, M39 order-book matching parameters, M40 engine test-suite consolidation (test-only; split out per the human), M41 session frame dispatch, M42 shared shell-script helpers (manual — CodeScene cannot score shell; the M35 deferred follow-up). The original M36–M41 networking/persistence roadmap shifted +7 to M43–M48; original NUMA is now M43. Behavior-preserving refactors only; determinism/replay/differential/integer-tick pricing remain invariants. No implementation started.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
@@ -362,13 +371,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is the docs-only post-PR #101 project-memory sync on
-`docs/sync-post-pr101-before-health-roadmap`; see the top-level current state block for the exact
-next step.
+Current action is the docs-only roadmap-insertion PR on `docs/roadmap-health-refactor-insertion`,
+which inserts the repository-health refactor phase (M36–M42) and renumbers the original roadmap to
+M43–M48; see the top-level current state block.
 
-After this sync PR squash-merges, return to `main`, pull, and run the repository-health analysis and
-roadmap-insertion planning requested by the human. Do not start original M36 NUMA until that analysis
-is completed or explicitly skipped by the human.
+After this PR squash-merges, return to `main`, pull, and run `/start-milestone 36` (Decompose the
+epoll event loop and connection lifecycle). NUMA awareness is now M43; do not start it until the
+inserted M36–M42 refactors are done or the human reprioritizes.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.

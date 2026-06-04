@@ -37,7 +37,7 @@ The repo should look like disciplined human engineering, not a tutorial dump, no
    - Milestone branches use the prefix that describes the work: `feat/mNN-slug`, `test/mNN-slug`,
      `docs/mNN-slug`, `perf/mNN-slug`, or `refactor/mNN-slug`.
    - Examples: `feat/m03-order-book`, `docs/m31-external-review`,
-     `refactor/m36-socket-load-artifact-helpers`.
+     `refactor/m36-epoll-event-loop-decomposition`.
    - `/start-milestone` must read the selected milestone's exact `Branch:` value from
      `MILESTONES.md`; do not infer a prefix from the milestone number.
 4. Use Conventional Commits on feature branches:
@@ -1007,7 +1007,7 @@ Phase IV focuses on:
 7. advanced concurrency validation.
 
 Do not add dashboards, strategies, market-data APIs, FIX adapters, Docker packaging, or
-aesthetic product work before M24–M41 unless the human explicitly changes priorities.
+aesthetic product work before M24–M48 unless the human explicitly changes priorities.
 
 The correct claim after this arc is:
 
@@ -1039,15 +1039,17 @@ node-allocation experiment measured on engine-level workloads. Direct intrusive
 
 ## Current post-M35 roadmap memory
 
-Current landed state on `main`: M35 multi-client socket-pressure testing is merged as PR #100
-(commit a86b701), and the docs-only project-memory synchronization landed as PR #101 (commit
-40f9249). The next work is repository-health analysis and roadmap-insertion planning; no refactor
-milestones have been inserted yet.
+Current landed state on `main`: M35 (PR #100, a86b701) and the project-memory syncs (PR #101
+40f9249, PR #102 7092423) are merged. A CodeScene Code Health analysis then inserted a
+repository-health refactor phase: milestones **M36–M42** (M36 epoll decomposition, M37
+threaded-pipeline stage helpers, M38 shrinker passes, M39 order-book matching parameters, M40 engine
+test-suite consolidation, M41 session frame dispatch, M42 shared shell-script helpers) — all
+behavior-preserving.
 
-Original roadmap after M35: M36 NUMA awareness study; M37 lock-free ingress pipeline (not
-lock-free matching); M38 exchange-grade persistence prototype; M39 recovery benchmarking; M40 DPDK
-research/prototype; M41 NIC offload and low-latency networking study. Do not start M36 NUMA until
-the repository-health refactor analysis is completed or explicitly skipped by the human.
+Original roadmap after M35 shifted +7 to **M43–M48**: M43 NUMA awareness study; M44 lock-free
+ingress pipeline (not lock-free matching); M45 exchange-grade persistence prototype; M46 recovery
+benchmarking; M47 DPDK research/prototype; M48 NIC offload and low-latency networking study. NUMA is
+now M43; do not start it until the inserted M36–M42 refactors are done or the human reprioritizes.
 
 Issue #90 remains the full hardware-PMU evidence debt. Issue #99 tracks broader
 byte-budgeted/streaming gateway response generation. Issue #95 tracks intrusive/custom-node
