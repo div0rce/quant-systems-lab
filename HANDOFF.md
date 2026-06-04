@@ -16,10 +16,10 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M35 are merged. Most recently M35 = PR #100 (squash commit
-a86b701): Linux-only multi-client socket-load coverage comparing the blocking TCP gateway and the
-epoll gateway under bounded loopback connection pressure. The current sync branch is
-documentation-only project-memory cleanup before any repository-health refactor planning.
+The repo is released at `v0.1.0`. M0–M35 are merged. Most recently, PR #101 (squash commit
+40f9249) synchronized project-memory files after M35 so repository-health planning can start from
+post-M35 `main`. M35 = PR #100 (squash commit a86b701): Linux-only multi-client socket-load coverage
+comparing the blocking TCP gateway and the epoll gateway under bounded loopback connection pressure.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -32,9 +32,8 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-M35 is merged on `main`. The branch `docs/sync-project-memory-before-refactor-roadmap` only
-synchronizes stale project-memory files and must land before any CodeScene/MCP-driven
-refactor-roadmap planning. To resume:
+M35 and the docs-only project-memory sync PR #101 are merged on `main`. The next work is
+repository-health analysis and roadmap-insertion planning before original M36 NUMA. To resume:
 
 ```text
 /resume
@@ -61,8 +60,8 @@ gh release view v0.1.0
 
 Current state:
 
-- main tip: `a86b701` (PR #100, M35)
-- current sync branch: `docs/sync-project-memory-before-refactor-roadmap`
+- latest synced main baseline: `40f9249` (PR #101, project-memory sync after M35)
+- current post-merge sync branch, if active: `docs/sync-post-pr101-before-health-roadmap`
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
@@ -73,9 +72,8 @@ Current state:
 
 ### Next milestone
 
-Docs-only project-memory synchronization is active. Original M36 is NUMA awareness, but the current
-human request is to insert a repository-health refactor phase before NUMA after project-memory
-synchronization and analysis.
+Project-memory synchronization has landed. Original M36 is NUMA awareness, but the current human
+request is to insert a repository-health refactor phase before NUMA after repository-health analysis.
 
 ### Phase III / IV purpose
 

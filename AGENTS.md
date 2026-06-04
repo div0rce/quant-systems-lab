@@ -1093,8 +1093,9 @@ M32 delivered a scoped PMR-backed order-book node-allocation experiment. Direct 
 ## Current post-M35 roadmap memory
 
 Current landed state on `main`: M35 multi-client socket-pressure testing is merged as PR #100
-(commit a86b701). PR #101 is a docs-only project-memory synchronization branch on top of post-M35
-`main`.
+(commit a86b701), and the docs-only project-memory synchronization landed as PR #101 (commit
+40f9249). The next work is repository-health analysis and roadmap-insertion planning; no refactor
+milestones have been inserted yet.
 
 Original roadmap after M35: M36 NUMA awareness, M37 lock-free ingress pipeline (not lock-free
 matching), M38 exchange-grade persistence prototype, M39 recovery benchmarking, M40 DPDK
