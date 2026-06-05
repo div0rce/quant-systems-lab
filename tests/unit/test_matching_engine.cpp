@@ -16,16 +16,23 @@ void append(std::vector<EngineEvent> &all, std::vector<EngineEvent> evs) {
 }
 
 // A TradeEvent with the given maker/taker/price/quantity on `symbol`.
-void expect_trade(const EngineEvent &ev, SymbolId symbol, OrderId maker, OrderId taker, Price price,
-                  Quantity quantity) {
+struct ExpectedTrade {
+    SymbolId symbol;
+    OrderId maker;
+    OrderId taker;
+    Price price;
+    Quantity quantity;
+};
+
+void expect_trade(const EngineEvent &ev, const ExpectedTrade &expected) {
     REQUIRE(std::holds_alternative<TradeEvent>(ev));
     const auto &tr = std::get<TradeEvent>(ev);
-    CAPTURE(symbol, maker, taker, price, quantity);
-    REQUIRE(tr.symbol == symbol);
-    REQUIRE(tr.maker_id == maker);
-    REQUIRE(tr.taker_id == taker);
-    REQUIRE(tr.price == price);
-    REQUIRE(tr.quantity == quantity);
+    CAPTURE(expected.symbol, expected.maker, expected.taker, expected.price, expected.quantity);
+    REQUIRE(tr.symbol == expected.symbol);
+    REQUIRE(tr.maker_id == expected.maker);
+    REQUIRE(tr.taker_id == expected.taker);
+    REQUIRE(tr.price == expected.price);
+    REQUIRE(tr.quantity == expected.quantity);
 }
 
 // An OrderAccepted for `order_id` on `symbol`.
@@ -83,7 +90,7 @@ TEST_CASE("multiple symbols trade independently", "[engine]") {
     const auto ev = eng.new_limit(a, 2, Side::Buy, 100, 5, TimeInForce::GTC);
     REQUIRE(ev.size() == 2);
     REQUIRE(std::holds_alternative<OrderAccepted>(ev[0]));
-    expect_trade(ev[1], a, /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5);
+    expect_trade(ev[1], ExpectedTrade{a, /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5});
 
     eng.new_limit(m, 3, Side::Sell, 101, 3, TimeInForce::GTC); // rests on MSFT only
 
@@ -151,7 +158,7 @@ TEST_CASE("modify emits OrderModified and any resulting trades", "[engine]") {
     REQUIRE(ev.size() == 2);
     REQUIRE(std::holds_alternative<OrderModified>(ev[0]));
     // order 1 (buy@100) was reduced to qty 3 above, so the cross executes qty 3, not 5
-    expect_trade(ev[1], a, /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/3);
+    expect_trade(ev[1], ExpectedTrade{a, /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/3});
 }
 
 TEST_CASE("command for an unregistered symbol is a no-op", "[engine]") {
@@ -217,6 +224,6 @@ TEST_CASE("market order emits OrderAccepted then a TradeEvent", "[engine]") {
     const auto ev = eng.new_market(a, 2, Side::Buy, 5);
     REQUIRE(ev.size() == 2);
     expect_accepted(ev[0], a, /*order_id=*/2);
-    expect_trade(ev[1], a, /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5);
+    expect_trade(ev[1], ExpectedTrade{a, /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5});
     REQUIRE(seq_of(ev[1]) > seq_of(ev[0]));
 }
