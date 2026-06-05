@@ -26,6 +26,27 @@ void write_all(int fd, const std::vector<std::byte> &data) {
         off += static_cast<std::size_t>(n);
     }
 }
+
+std::vector<std::byte> read_all(int fd) {
+    std::vector<std::byte> received;
+    std::array<std::byte, 4096> buf{};
+    while (true) {
+        const ssize_t n = ::read(fd, buf.data(), buf.size());
+        if (n <= 0) {
+            break;
+        }
+        received.insert(received.end(), buf.begin(), buf.begin() + n);
+    }
+    return received;
+}
+
+bool is_heartbeat_ack(std::span<const std::byte> bytes, std::uint64_t token) {
+    if (bytes.size() != kHeaderSize + kHeartbeatBodySize) {
+        return false;
+    }
+    const auto ack = decode_heartbeat_ack(bytes);
+    return ack.ok() && ack.value.token == token;
+}
 } // namespace
 
 // Single-threaded localhost loopback: the TCP handshake completes in the kernel backlog, so
@@ -72,15 +93,7 @@ TEST_CASE("tcp loopback: orders and heartbeat over a real socket", "[gateway][tc
     server.serve_connection(conn); // reads all, replies, returns on client EOF
     ::shutdown(conn, SHUT_WR);
 
-    std::vector<std::byte> received;
-    std::array<std::byte, 4096> buf{};
-    while (true) {
-        const ssize_t n = ::read(client_fd, buf.data(), buf.size());
-        if (n <= 0) {
-            break;
-        }
-        received.insert(received.end(), buf.begin(), buf.begin() + n);
-    }
+    const std::vector<std::byte> received = read_all(client_fd);
     ::close(conn);
     ::close(client_fd);
     ::close(listen_fd);
@@ -100,6 +113,39 @@ TEST_CASE("tcp loopback: orders and heartbeat over a real socket", "[gateway][tc
     REQUIRE(has(MsgType::Ack));
     REQUIRE(has(MsgType::Fill));
     REQUIRE(has(MsgType::HeartbeatAck));
+}
+
+TEST_CASE("tcp server bounds high-fanout responses before gateway mutation", "[gateway][tcp]") {
+    int fds[2]{};
+    REQUIRE(::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    for (std::uint64_t i = 1; i <= 8; ++i) {
+        static_cast<void>(engine.new_limit(0, i, Side::Sell, 100, 1, TimeInForce::GTC));
+    }
+    const auto before = engine.snapshot();
+
+    std::vector<std::byte> request = encode(Heartbeat{42});
+    const NewOrder sweep{9, 0, 0, 8, Side::Buy, OrderType::Market, TimeInForce::GTC};
+    const auto sweep_frame = encode(sweep, 9);
+    request.insert(request.end(), sweep_frame.begin(), sweep_frame.end());
+    write_all(fds[1], request);
+    static_cast<void>(::shutdown(fds[1], SHUT_WR));
+
+    TcpServerOptions options;
+    options.max_response_bytes = kHeaderSize + kHeartbeatBodySize;
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    TcpServer server{gateway, options};
+    server.serve_connection(fds[0]);
+    static_cast<void>(::shutdown(fds[0], SHUT_WR));
+
+    const std::vector<std::byte> received = read_all(fds[1]);
+    REQUIRE(is_heartbeat_ack(received, 42));
+    REQUIRE(engine.snapshot() == before);
+
+    static_cast<void>(::close(fds[0]));
+    static_cast<void>(::close(fds[1]));
 }
 
 TEST_CASE("tcp server rejects non-numeric bind hosts", "[gateway][tcp]") {

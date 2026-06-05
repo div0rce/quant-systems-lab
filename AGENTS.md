@@ -1115,20 +1115,18 @@ M32 delivered a scoped PMR-backed order-book node-allocation experiment. Direct 
 
 ## Current post-M35 roadmap memory
 
-Current landed state on `main`: M38 is merged (PR #106, 9ccf157) after M35 (PR #100, a86b701), the
+Current landed state on `main`: M41 is merged (PR #109, 68061e6) after M35 (PR #100, a86b701), the
 project-memory syncs (PR #101 40f9249, PR #102 7092423), the repository-health refactor phase
-insertion (PR #103 0f2ceb7), M36 (PR #104, 0d2b97a), and M37 (PR #105, a8c0485). M39 —
-order-book matching parameters — has draft PR #107 open from
-`refactor/m39-order-book-matching-parameters` within the inserted behavior-preserving refactor
-phase **M36–M42** (M36 epoll decomposition, M37 threaded-pipeline stage helpers, M38 shrinker
-passes, M39 order-book matching parameters, M40 engine test-suite consolidation, M41 session frame
-dispatch, M42 shared shell-script helpers).
+insertion (PR #103 0f2ceb7), M36 (PR #104, 0d2b97a), M37 (PR #105, a8c0485), M38 (PR #106,
+9ccf157), M39 (PR #107, 880fbc7), and M40 (PR #108, b939730). M42 — shared shell-script helpers —
+has draft PR #111 open from `refactor/m42-shared-shell-script-helpers`; it was expanded by human
+request to address issue #99 and issue #110 in the same PR.
 
 Original roadmap after M35 shifted +7 to **M43–M48**: M43 NUMA awareness study; M44 lock-free
 ingress pipeline (not lock-free matching); M45 exchange-grade persistence prototype; M46 recovery
 benchmarking; M47 DPDK research/prototype; M48 NIC offload and low-latency networking study. NUMA is
 now M43; do not start it until the inserted M36–M42 refactors are done or the human reprioritizes.
 
-Issue #90 remains the full hardware-PMU evidence debt. Issue #99 tracks broader
-byte-budgeted/streaming gateway response generation. Issue #95 tracks intrusive/custom-node
+Issue #90 remains the full hardware-PMU evidence debt. Issue #99 and issue #110 are addressed by
+PR #111 and should close when that PR merges. Issue #95 tracks intrusive/custom-node
 `OrderPool<Capacity>` order-book storage. Issue #94 is the external technical review request.

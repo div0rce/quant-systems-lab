@@ -30,6 +30,12 @@ std::string make_fixture(std::uint64_t seed, std::size_t orders) {
     return os.str();
 }
 
+std::string render_export(const qsl::replay::FixtureExportRequest &request) {
+    std::ostringstream os;
+    qsl::replay::write_fixture_export(os, request);
+    return os.str();
+}
+
 std::vector<std::string> lines_of(const std::string &s) {
     std::vector<std::string> lines;
     std::istringstream is(s);
@@ -60,6 +66,49 @@ bool contains_prefix(const std::vector<std::string> &lines, const std::string &p
 TEST_CASE("differential fixture export is deterministic", "[fixture]") {
     REQUIRE(make_fixture(7, 60) == make_fixture(7, 60)); // same seed -> identical bytes
     REQUIRE(make_fixture(7, 60) != make_fixture(8, 60)); // different seed -> different output
+}
+
+TEST_CASE("fixture export request dispatch preserves base mode outputs", "[fixture]") {
+    qsl::replay::FixtureExportRequest request;
+
+    request.mode = qsl::replay::FixtureExportMode::Version;
+    REQUIRE(render_export(request) == "1\n");
+
+    request = {};
+    request.params.seed = 7;
+    request.params.orders = 60;
+    REQUIRE(render_export(request) == make_fixture(7, 60));
+
+    request = {};
+    request.mode = qsl::replay::FixtureExportMode::IocScenario;
+    std::ostringstream ioc;
+    qsl::replay::write_ioc_scenario_fixture(ioc);
+    REQUIRE(render_export(request) == ioc.str());
+}
+
+TEST_CASE("fixture export request dispatch preserves generated mode outputs", "[fixture]") {
+    qsl::replay::FixtureExportRequest request;
+
+    request = {};
+    request.mode = qsl::replay::FixtureExportMode::Property;
+    request.seed = 1;
+    std::ostringstream property;
+    qsl::replay::write_property_fixture(property, 1);
+    REQUIRE(render_export(request) == property.str());
+
+    request = {};
+    request.mode = qsl::replay::FixtureExportMode::Shrink;
+    request.seed = 1;
+    std::ostringstream shrink;
+    qsl::replay::write_shrunk_fixture(shrink, 1);
+    REQUIRE(render_export(request) == shrink.str());
+
+    request = {};
+    request.mode = qsl::replay::FixtureExportMode::Divergence;
+    request.seed = 1;
+    std::ostringstream divergence;
+    qsl::replay::write_divergence_fixture(divergence, 1);
+    REQUIRE(render_export(request) == divergence.str());
 }
 
 // Validate the documented grammar line-by-line and cross-check the snapshot against the

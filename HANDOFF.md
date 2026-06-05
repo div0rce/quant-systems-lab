@@ -62,22 +62,22 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `9ccf157` (PR #106, M38 shrinker reduction passes)
-- current active branch, if active: `refactor/m39-order-book-matching-parameters`
-- current active status: M39 draft PR #107 open; wait for CI/review
+- latest synced main baseline: `68061e6` (PR #109, M41 session frame dispatch)
+- current active branch, if active: `refactor/m42-shared-shell-script-helpers`
+- current active status: M42 draft PR #111 open; wait for CI/review
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
   storage
-- open follow-up issue: #99 for broader byte-budgeted/streaming gateway response generation
+- follow-up issues #99 and #110 are addressed by PR #111 and should close when that PR merges
 - open review request issue: #94
 - legacy backlog still open: #26, #28, #29, #32
 
 ### Next milestone
 
-The repository-health refactor phase (M36–M42) has been analyzed and confirmed. M36, M37, and M38
-are merged. M39 draft PR #107 is open on `refactor/m39-order-book-matching-parameters`; the next
-step is waiting for CI/review. Original NUMA awareness is now **M43**.
+The repository-health refactor phase (M36–M42) has been analyzed and confirmed. M36 through M41 are
+merged. M42 draft PR #111 is open on `refactor/m42-shared-shell-script-helpers`; the next step is
+waiting for CI/review. Original NUMA awareness is now **M43**.
 
 ### Phase III / IV purpose
 

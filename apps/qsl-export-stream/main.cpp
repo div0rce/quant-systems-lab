@@ -1,9 +1,47 @@
 #include "qsl/replay/fixture.hpp"
-#include "qsl/replay/recovery.hpp"
 
 #include <cstdint>
 #include <iostream>
 #include <string>
+
+namespace {
+
+qsl::replay::FixtureExportRequest parse_request(int argc, char **argv) {
+    qsl::replay::FixtureExportRequest request;
+    if (argc >= 2) {
+        const std::string mode = argv[1];
+        if (mode == "version") {
+            request.mode = qsl::replay::FixtureExportMode::Version;
+            return request;
+        }
+        if (mode == "ioc") {
+            request.mode = qsl::replay::FixtureExportMode::IocScenario;
+            return request;
+        }
+        if (argc >= 3 && mode == "prop") {
+            request.mode = qsl::replay::FixtureExportMode::Property;
+            request.seed = std::stoull(argv[2]);
+            return request;
+        }
+        if (argc >= 3 && mode == "shrink") {
+            request.mode = qsl::replay::FixtureExportMode::Shrink;
+            request.seed = std::stoull(argv[2]);
+            return request;
+        }
+        if (argc >= 3 && mode == "divergence") {
+            request.mode = qsl::replay::FixtureExportMode::Divergence;
+            request.seed = std::stoull(argv[2]);
+            return request;
+        }
+        request.params.seed = std::stoull(argv[1]);
+    }
+    if (argc >= 3) {
+        request.params.orders = std::stoull(argv[2]);
+    }
+    return request;
+}
+
+} // namespace
 
 // qsl-export-stream [seed] [orders]
 //
@@ -11,33 +49,6 @@
 // rejections + final per-symbol snapshot) to stdout. Deterministic for a given seed; this
 // is the data the independent OCaml replay engine (M16) consumes and M17 compares against.
 int main(int argc, char **argv) {
-    if (argc >= 2 && std::string(argv[1]) == "version") {
-        std::cout << qsl::replay::kGeneratorVersion << "\n";
-        return 0;
-    }
-    if (argc >= 2 && std::string(argv[1]) == "ioc") {
-        qsl::replay::write_ioc_scenario_fixture(std::cout);
-        return 0;
-    }
-    if (argc >= 3 && std::string(argv[1]) == "prop") {
-        qsl::replay::write_property_fixture(std::cout, std::stoull(argv[2]));
-        return 0;
-    }
-    if (argc >= 3 && std::string(argv[1]) == "shrink") {
-        qsl::replay::write_shrunk_fixture(std::cout, std::stoull(argv[2]));
-        return 0;
-    }
-    if (argc >= 3 && std::string(argv[1]) == "divergence") {
-        qsl::replay::write_divergence_fixture(std::cout, std::stoull(argv[2]));
-        return 0;
-    }
-    qsl::replay::FixtureParams params;
-    if (argc >= 2) {
-        params.seed = std::stoull(argv[1]);
-    }
-    if (argc >= 3) {
-        params.orders = std::stoull(argv[2]);
-    }
-    qsl::replay::write_stream_fixture(std::cout, params);
+    qsl::replay::write_fixture_export(std::cout, parse_request(argc, argv));
     return 0;
 }

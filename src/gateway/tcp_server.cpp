@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <array>
 #include <cstddef>
+#include <limits>
 #include <netinet/in.h>
 #include <span>
 #include <sys/socket.h>
@@ -13,6 +14,11 @@
 
 namespace qsl::gateway {
 namespace {
+
+std::size_t response_limit(TcpServerOptions options) noexcept {
+    return options.max_response_bytes == 0 ? std::numeric_limits<std::size_t>::max()
+                                           : options.max_response_bytes;
+}
 
 // Write all bytes, tolerating partial writes. std::byte* converts implicitly to void*.
 bool write_all(int fd, std::span<const std::byte> data) {
@@ -49,9 +55,14 @@ void TcpServer::serve_connection(int fd) {
         if (n <= 0) {
             break; // EOF (0) or error (<0): graceful disconnect
         }
-        const auto response = session.on_bytes(
-            std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)));
+        std::vector<std::byte> response;
+        const SessionStatus status =
+            session.on_bytes(std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)),
+                             response, response_limit(options_));
         if (!response.empty() && !write_all(fd, response)) {
+            break;
+        }
+        if (status == SessionStatus::OutputLimitExceeded) {
             break;
         }
     }
