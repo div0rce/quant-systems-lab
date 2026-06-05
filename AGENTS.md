@@ -103,6 +103,29 @@ non-overclaiming rules, and benchmark rules.
 
 After interruption, never rely on conversation memory. Reconstruct state from files and git.
 
+## Local MCP/tooling memory
+
+Local Codex client MCP servers currently configured:
+
+- `codescene` — use for repository-health analysis, file Code Health review, branch/change-set
+  review, and pre-commit Code Health safeguards.
+- `playwright` — use for browser automation and rendered web-flow verification when a task needs a
+  real browser-level check.
+- `filesystem` — available for MCP filesystem access scoped to this repository; normal shell/git
+  file operations remain acceptable for ordinary repo edits.
+- `sequential_thinking` — use for complex multi-step planning, especially when refactor sequencing
+  or risk tradeoffs need explicit structure.
+- `memory` — use only for durable project-memory facts that should survive sessions; do not store
+  secrets or speculative notes.
+- `docker` — use for Docker/container lifecycle checks and Linux-container verification when a
+  milestone calls for containerized validation.
+- `context7` — use for current library/tool documentation when exact external API behavior matters.
+- `node_repl` — use when JavaScript/browser-plugin workflows require the persistent Node-backed
+  kernel.
+
+Postgres and Perplexity MCP servers are intentionally not configured. Do not assume database or
+Perplexity access unless the human explicitly configures them later.
+
 ---
 
 ## Target repo layout
