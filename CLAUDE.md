@@ -105,7 +105,7 @@ After interruption, never rely on conversation memory. Reconstruct state from fi
 
 ## Local MCP/tooling memory
 
-Local Codex client MCP servers currently configured:
+Local Claude Code client MCP servers currently configured:
 
 - `codescene` — use for repository-health analysis, file Code Health review, branch/change-set
   review, and pre-commit Code Health safeguards.
