@@ -201,9 +201,7 @@ QuantityTotal OrderBook::quantity_at(Side side, Price price) const {
 const OrderBook::Level *OrderBook::find_level(Side side, Price price) const {
     if (side == Side::Buy) {
         const auto it = bids_.find(price);
-        if (it != bids_.end()) {
-            return &it->second;
-        }
+        return it == bids_.end() ? nullptr : &it->second;
     }
     const auto it = asks_.find(price);
     return it == asks_.end() ? nullptr : &it->second;
