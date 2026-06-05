@@ -181,7 +181,7 @@ struct CommandLogSink final : OutputSink {
         }
         qsl::replay::LogRecord rec;
         rec.seq_no = ++seq;
-        rec.type = qsl::replay::RecordType::Command;
+        rec.type = qsl::replay::RecordType::CommandRecord;
         rec.logical_timestamp = seq; // logical, deterministic; replay ignores it
         rec.payload = qsl::replay::encode_command(pc.command);
         if (qsl::replay::encode_record(rec, bytes)) {

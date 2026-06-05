@@ -64,6 +64,14 @@ TEST_CASE("partial fill leaves the maker remainder resting", "[book]") {
     REQUIRE(book.best_ask() == std::optional<Price>{100});
 }
 
+TEST_CASE("quantity_at is side-specific at the same price", "[book]") {
+    OrderBook book;
+    book.add_limit(1, Side::Sell, 100, 5, TimeInForce::GTC);
+
+    REQUIRE(book.quantity_at(Side::Buy, 100) == 0);
+    REQUIRE(book.quantity_at(Side::Sell, 100) == 5);
+}
+
 TEST_CASE("market order sweeps best levels until filled", "[book]") {
     OrderBook book;
     book.add_limit(1, Side::Sell, 100, 3, TimeInForce::GTC);

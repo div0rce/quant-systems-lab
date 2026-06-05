@@ -26,7 +26,7 @@ std::vector<EngineEvent> apply(MatchingEngine &engine, const Command &command) {
 std::vector<EngineEvent> replay(MatchingEngine &engine, const std::vector<LogRecord> &records) {
     std::vector<EngineEvent> events;
     for (const LogRecord &record : records) {
-        if (record.type != RecordType::Command) {
+        if (record.type != RecordType::CommandRecord) {
             continue;
         }
         const auto command = decode_command(record.payload);

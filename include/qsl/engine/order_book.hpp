@@ -81,12 +81,38 @@ class OrderBook {
         Level::iterator it;
     };
 
+    struct MatchContext {
+        OrderId taker_id;
+        bool taker_is_buy;
+        Price limit;
+        bool is_market;
+        Quantity &quantity;
+        std::vector<Trade> &trades;
+    };
+
+    struct MatchQuery {
+        bool taker_is_buy;
+        Price limit;
+        bool is_market;
+        Quantity quantity;
+    };
+
+    template <class OppMap> void match_against(OppMap &opposite, MatchContext &ctx);
+
     template <class OppMap>
-    void match_against(OppMap &opposite, OrderId taker_id, bool taker_is_buy, Price limit,
-                       bool is_market, Quantity &quantity, std::vector<Trade> &trades);
+    std::size_t count_matches(const OppMap &opposite, MatchQuery query) const;
+    template <class LevelMap>
+    void erase_level_if_empty(LevelMap &levels, typename LevelMap::iterator level_it);
+    template <class LevelMap> void erase_from_side(LevelMap &levels, const Locator &loc);
 
     void rest(OrderId id, Side side, Price price, Quantity quantity);
     Level &level_for(Side side, Price price);
+    const Level *find_level(Side side, Price price) const;
+    void fill_front_order(Level &level, Price level_price, MatchContext &ctx);
+    void fill_level(Level &level, Price level_price, MatchContext &ctx);
+    void erase_resting_order(const Locator &loc);
+    static bool can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price);
+    static QuantityTotal level_quantity(const Level &level);
 
     // Declared before the containers so resource_ is valid when they are constructed. `pool_` is
     // engaged only in Pooled mode; resource_ points at it, otherwise at the shared

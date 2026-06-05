@@ -103,6 +103,29 @@ non-overclaiming rules, and benchmark rules.
 
 After interruption, never rely on conversation memory. Reconstruct state from files and git.
 
+## Local MCP/tooling memory
+
+Local Codex client MCP servers currently configured:
+
+- `codescene` — use for repository-health analysis, file Code Health review, branch/change-set
+  review, and pre-commit Code Health safeguards.
+- `playwright` — use for browser automation and rendered web-flow verification when a task needs a
+  real browser-level check.
+- `filesystem` — available for MCP filesystem access scoped to this repository; normal shell/git
+  file operations remain acceptable for ordinary repo edits.
+- `sequential_thinking` — use for complex multi-step planning, especially when refactor sequencing
+  or risk tradeoffs need explicit structure.
+- `memory` — use only for durable project-memory facts that should survive sessions; do not store
+  secrets or speculative notes.
+- `docker` — use for Docker/container lifecycle checks and Linux-container verification when a
+  milestone calls for containerized validation.
+- `context7` — use for current library/tool documentation when exact external API behavior matters.
+- `node_repl` — use when JavaScript/browser-plugin workflows require the persistent Node-backed
+  kernel.
+
+Postgres and Perplexity MCP servers are intentionally not configured. Do not assume database or
+Perplexity access unless the human explicitly configures them later.
+
 ---
 
 ## Target repo layout
@@ -1092,13 +1115,14 @@ M32 delivered a scoped PMR-backed order-book node-allocation experiment. Direct 
 
 ## Current post-M35 roadmap memory
 
-Current landed state on `main`: M37 is merged (PR #105, a8c0485) after M35 (PR #100, a86b701), the
+Current landed state on `main`: M38 is merged (PR #106, 9ccf157) after M35 (PR #100, a86b701), the
 project-memory syncs (PR #101 40f9249, PR #102 7092423), the repository-health refactor phase
-insertion (PR #103 0f2ceb7), and M36 (PR #104, 0d2b97a). M38 — shrinker reduction passes — is
-open as draft PR #106 within the inserted behavior-preserving refactor phase **M36–M42** (M36 epoll
-decomposition, M37 threaded-pipeline stage helpers, M38 shrinker passes, M39 order-book matching
-parameters, M40 engine test-suite consolidation, M41 session frame dispatch, M42 shared shell-script
-helpers).
+insertion (PR #103 0f2ceb7), M36 (PR #104, 0d2b97a), and M37 (PR #105, a8c0485). M39 —
+order-book matching parameters — has draft PR #107 open from
+`refactor/m39-order-book-matching-parameters` within the inserted behavior-preserving refactor
+phase **M36–M42** (M36 epoll decomposition, M37 threaded-pipeline stage helpers, M38 shrinker
+passes, M39 order-book matching parameters, M40 engine test-suite consolidation, M41 session frame
+dispatch, M42 shared shell-script helpers).
 
 Original roadmap after M35 shifted +7 to **M43–M48**: M43 NUMA awareness study; M44 lock-free
 ingress pipeline (not lock-free matching); M45 exchange-grade persistence prototype; M46 recovery
