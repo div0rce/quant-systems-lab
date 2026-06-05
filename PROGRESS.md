@@ -21,14 +21,14 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M39 — Encapsulate order-book matching parameters
-- **Status:** ◐ verified locally; ready for draft PR. `src/engine/order_book.cpp` was decomposed without changing public order-book behavior, event streams, snapshots, integer-tick pricing, or deterministic matching semantics. Also included a warning-hygiene rename of replay `RecordType` enumerators while preserving log values.
+- **Status:** ◐ draft PR #107 open. `src/engine/order_book.cpp` was decomposed without changing public order-book behavior, event streams, snapshots, integer-tick pricing, or deterministic matching semantics. Also included a warning-hygiene rename of replay `RecordType` enumerators while preserving log values.
 - **Active branch:** `refactor/m39-order-book-matching-parameters`
 - **Last completed milestone:** M38 — Split the command-stream shrinker into named passes (squash-merged PR #106, commit 9ccf157)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** M39 local verification passed focused order-book/matching/invariants/risk tests, focused event-log/replay tests, `cmake --build --preset dev`, `cmake --preset bench && cmake --build --preset bench --target qsl-bench`, `make check-fixtures`, `make check-manifest`, `dune runtest --root ocaml`, `make check` 192/192, and `make asan` 192/192 on 2026-06-04.
-- **Last action:** M39 refactor completed; CodeScene re-score for `src/engine/order_book.cpp` improved from 8.55 to 9.68. Replay `RecordType` enumerators were renamed to `CommandRecord` / `EventRecord` with numeric values unchanged.
-- **Next action:** commit, push, and open draft PR for M39; trigger Codex/CodeRabbit review. NUMA awareness remains M43.
+- **Last action:** M39 draft PR #107 opened after local verification; CodeScene re-score for `src/engine/order_book.cpp` improved from 8.55 to 9.68. Replay `RecordType` enumerators were renamed to `CommandRecord` / `EventRecord` with numeric values unchanged.
+- **Next action:** wait for CI, Codex, and CodeRabbit review on PR #107; fix only still-valid review feedback. NUMA awareness remains M43.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
 
 ---
@@ -208,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M39 completed locally on `refactor/m39-order-book-matching-parameters`. `order_book.cpp` Code Health improved 8.55 -> 9.68; remaining finding is the unchanged public `OrderBook::add_limit` API argument count. Verification passed focused engine/replay tests, differential fixture checks, OCaml tests, `make check`, and `make asan`. Next: commit, push, open draft PR, and request review._
+- _M39 draft PR #107 is open on `refactor/m39-order-book-matching-parameters`. `order_book.cpp` Code Health improved 8.55 -> 9.68; remaining finding is the unchanged public `OrderBook::add_limit` API argument count. Verification passed focused engine/replay tests, differential fixture checks, OCaml tests, `make check`, and `make asan`. Next: wait for CI/review and fix only still-valid feedback._
 
 
 ---
@@ -269,7 +269,7 @@ Lower priority:
 | M36 | Decompose the epoll event loop and connection lifecycle | `refactor/m36-epoll-event-loop-decomposition` | ☑ merged | #104 | Repository-health refactor; `epoll_server.cpp` Code Health 5.35 → 10.0 |
 | M37 | Extract threaded-pipeline stage helpers | `refactor/m37-threaded-pipeline-stage-helpers` | ☑ merged | #105 | Repository-health refactor; CodeScene 10.0 for `pipeline.hpp`, `test_pipeline`, and `test_backpressure` |
 | M38 | Split the command-stream shrinker into named passes | `refactor/m38-shrinker-reduction-passes` | ☑ merged | #106 | Repository-health refactor; `shrink.cpp` 8.15 → 10.0 |
-| M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ◐ ready for draft PR | — | Repository-health refactor; `order_book.cpp` 8.55 → 9.68, determinism preserved |
+| M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ◐ draft PR open | #107 | Repository-health refactor; `order_book.cpp` 8.55 → 9.68, determinism preserved |
 | M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☐ not started | — | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
 | M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☐ not started | — | Repository-health refactor; `session.cpp` 8.99 → ≥9.0 |
 | M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☐ not started | — | Repository-health refactor (manual; shell unscored); M35 follow-up |
@@ -297,6 +297,7 @@ Lower priority:
 - [2026-06-04] M38: PR #106 squash-merged to `main` as 9ccf157 after CI, CodeScene, Codex, and CodeRabbit passed.
 - [2026-06-04] M39: started on `refactor/m39-order-book-matching-parameters` from updated `main` (9ccf157). Scope is behavior-preserving order-book matching decomposition: collapse `match_against` / `count_matches` parameter lists into context structs and extract fill-loop structure while preserving byte-identical deterministic event streams, snapshots, integer-tick prices, and wall-clock-independent matching. DoD requires Code Health >= 9.0 for `src/engine/order_book.cpp`, replay/differential/property/invariant tests green, `make check`, and `make asan`.
 - [2026-06-04] M39: completed local behavior-preserving order-book decomposition. `match_against` now takes a `MatchContext`, `count_matches` takes a `MatchQuery`, and fill/erase/level lookup helpers isolate the matching loop without changing deterministic engine output. CodeScene re-score: `src/engine/order_book.cpp` 8.55 -> 9.68; the only remaining finding is the unchanged public `OrderBook::add_limit` argument count. Local warning hygiene also renamed replay `RecordType::Command` / `Event` to `CommandRecord` / `EventRecord` while preserving numeric log values 1 / 2.
+- [2026-06-04] M39: opened draft PR #107 from `refactor/m39-order-book-matching-parameters` after `git diff --check`, focused engine/replay tests, fixture/manifest checks, `dune runtest --root ocaml`, `make check` 192/192, `make asan` 192/192, and CodeScene pre-commit/change-set quality gates passed.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
@@ -380,8 +381,8 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M39 on `refactor/m39-order-book-matching-parameters`: commit, push, open the
-draft PR, and request review for the verified order-book matching-parameter decomposition.
+Current action is M39 on `refactor/m39-order-book-matching-parameters`: wait for CI and review on
+draft PR #107, then fix only still-valid feedback.
 
 NUMA awareness remains M43; do not start it until M36–M42 are done or explicitly skipped.
 

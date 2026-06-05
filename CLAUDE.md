@@ -1042,11 +1042,11 @@ node-allocation experiment measured on engine-level workloads. Direct intrusive
 Current landed state on `main`: M38 is merged (PR #106, 9ccf157) after M35 (PR #100, a86b701), the
 project-memory syncs (PR #101 40f9249, PR #102 7092423), the repository-health refactor phase
 insertion (PR #103 0f2ceb7), M36 (PR #104, 0d2b97a), and M37 (PR #105, a8c0485). M39 —
-order-book matching parameters — is verified locally on
-`refactor/m39-order-book-matching-parameters` and ready for a draft PR within the inserted
-behavior-preserving refactor phase **M36–M42** (M36 epoll decomposition, M37 threaded-pipeline stage
-helpers, M38 shrinker passes, M39 order-book matching parameters, M40 engine test-suite
-consolidation, M41 session frame dispatch, M42 shared shell-script helpers).
+order-book matching parameters — has draft PR #107 open from
+`refactor/m39-order-book-matching-parameters` within the inserted behavior-preserving refactor
+phase **M36–M42** (M36 epoll decomposition, M37 threaded-pipeline stage helpers, M38 shrinker
+passes, M39 order-book matching parameters, M40 engine test-suite consolidation, M41 session frame
+dispatch, M42 shared shell-script helpers).
 
 Original roadmap after M35 shifted +7 to **M43–M48**: M43 NUMA awareness study; M44 lock-free
 ingress pipeline (not lock-free matching); M45 exchange-grade persistence prototype; M46 recovery
