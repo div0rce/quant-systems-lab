@@ -5,6 +5,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/qsl_common.sh
+source scripts/qsl_common.sh
 
 BIN="${QSL_BENCH_BIN:-build/bench/qsl-bench}"
 OUT="${QSL_PERF_REPORT_OUT:-results/perf_report_linux.txt}"
@@ -13,8 +15,6 @@ EVENT="${QSL_PERF_RECORD_EVENT:-cpu-clock}"
 FREQ="${QSL_PERF_RECORD_FREQ:-2000}"
 LIMIT="${QSL_PERF_REPORT_PERCENT_LIMIT:-1}"
 MIN_SAMPLES="${QSL_PERF_MIN_SAMPLES:-100}"
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
 
 parse_sample_count_token() {
     local token="$1"
@@ -36,68 +36,7 @@ parse_sample_count_token() {
         }'
 }
 
-repo_relative_or_empty() {
-    local path="$1"
-    local abs
-    local dir
-    local base
-    local resolved_dir
-    local resolved
-
-    if [[ -z "$path" ]]; then
-        return
-    fi
-    if [[ "$path" = /* ]]; then
-        abs="$path"
-    else
-        abs="$REPO_ROOT/$path"
-    fi
-
-    dir="$(dirname "$abs")"
-    base="$(basename "$abs")"
-    if ! resolved_dir="$(cd "$dir" 2>/dev/null && pwd -P)"; then
-        return
-    fi
-    resolved="$resolved_dir/$base"
-
-    case "$resolved" in
-    "$REPO_ROOT"/*) printf '%s\n' "${resolved#"$REPO_ROOT"/}" ;;
-    esac
-}
-
-dirty_tree_status() {
-    local out_rel
-    local data_rel
-    local status_output
-    local pathspecs=(. ":(exclude)results/perf_stat_linux.txt"
-        ":(exclude)results/perf_report_linux.txt")
-
-    out_rel="$(repo_relative_or_empty "$OUT")"
-    if [[ -n "$out_rel" ]]; then
-        pathspecs+=(":(exclude)$out_rel")
-    fi
-
-    data_rel="$(repo_relative_or_empty "$DATA")"
-    if [[ -n "$data_rel" ]]; then
-        pathspecs+=(":(exclude)$data_rel")
-    fi
-
-    if ! status_output="$(git status --porcelain --untracked-files=all -- "${pathspecs[@]}")"; then
-        echo "error: dirty-tree check failed; refusing to write misleading metadata." >&2
-        exit 2
-    fi
-
-    if [[ -n "$status_output" ]]; then
-        echo yes
-    else
-        echo no
-    fi
-}
-
-if [[ "$(uname -s)" != "Linux" ]]; then
-    echo "error: scripts/perf_record.sh requires Linux perf; current OS is $(uname -s)." >&2
-    exit 2
-fi
+qsl_require_linux "scripts/perf_record.sh" "perf"
 
 if ! command -v perf >/dev/null 2>&1; then
     echo "error: perf not found. Install linux perf tooling for this kernel." >&2
@@ -111,7 +50,7 @@ fi
 
 mkdir -p "$(dirname "$OUT")" "$(dirname "$DATA")"
 
-DIRTY="$(dirty_tree_status)"
+DIRTY="$(qsl_dirty_tree_status results/perf_stat_linux.txt results/perf_report_linux.txt "$OUT" "$DATA")"
 
 BENCH_OUT="$(mktemp)"
 RECORD_BENCH_OUT="$(mktemp)"
@@ -130,12 +69,12 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
         echo "Artifact:      failed benchmark run (not perf evidence)"
         echo "Hardware:      $(uname -m)"
         echo "OS:            $(uname -s) $(uname -r)"
-        echo "CPU:           $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
-        echo "Compiler:      $(c++ --version | head -1)"
+        echo "CPU:           $(qsl_cpu_model)"
+        echo "Compiler:      $(qsl_compiler_version)"
         echo "Perf:          $(perf --version)"
         echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
         echo "Build type:    Release"
-        echo "Git commit:    $(git rev-parse --short HEAD)"
+        echo "Git commit:    $(qsl_git_commit_short)"
         echo "Dirty tree:    $DIRTY"
         echo "Benchmark binary: $BIN"
         echo "Benchmark status: $BENCH_STATUS"
@@ -143,7 +82,7 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
         echo "Record event:  $EVENT"
         echo "Sample freq:   $FREQ Hz"
         echo "Minimum samples for hot profile: $MIN_SAMPLES"
-        echo "Date:          $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "Date:          $(qsl_utc_timestamp)"
         echo
         echo "Benchmark output:"
         cat "$BENCH_OUT"
@@ -204,12 +143,12 @@ fi
     echo "Artifact:      $ARTIFACT_TYPE"
     echo "Hardware:      $(uname -m)"
     echo "OS:            $(uname -s) $(uname -r)"
-    echo "CPU:           $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
-    echo "Compiler:      $(c++ --version | head -1)"
+    echo "CPU:           $(qsl_cpu_model)"
+    echo "Compiler:      $(qsl_compiler_version)"
     echo "Perf:          $(perf --version)"
     echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
     echo "Build type:    Release"
-    echo "Git commit:    $(git rev-parse --short HEAD)"
+    echo "Git commit:    $(qsl_git_commit_short)"
     echo "Dirty tree:    $DIRTY"
     echo "Benchmark binary: $BIN"
     echo "Benchmark status: $BENCH_STATUS"
@@ -225,7 +164,7 @@ fi
     echo "No samples:    $NO_SAMPLES"
     echo "Perf access limitation: $PERF_LIMITATION"
     echo "Perf data:     $DATA (generated, not intended for commit)"
-    echo "Date:          $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "Date:          $(qsl_utc_timestamp)"
     echo
     if [[ "$ARTIFACT_TYPE" == "software sampling hot-symbol profile" ]]; then
         echo "Caveat: perf report is hardware/kernel/compiler/build dependent. The default"

@@ -19,6 +19,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/qsl_common.sh
+source scripts/qsl_common.sh
 
 GATEWAY="${QSL_GATEWAY_BIN:-build/dev/qsl-gateway}"
 CLIENT="${QSL_CLIENT_BIN:-build/dev/qsl-client}"
@@ -26,40 +28,7 @@ OUT="${QSL_SOCKET_PROFILE_OUT:-results/socket_profile_loopback.txt}"
 PORT="${QSL_PROFILE_PORT:-39200}"
 CONNECTIONS="${QSL_PROFILE_CONNECTIONS:-500}"
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
-
-repo_relative_or_empty() {
-    local path="$1" abs dir base resolved_dir resolved
-    [[ -z "$path" ]] && return
-    if [[ "$path" = /* ]]; then abs="$path"; else abs="$REPO_ROOT/$path"; fi
-    dir="$(dirname "$abs")"
-    base="$(basename "$abs")"
-    resolved_dir="$(cd "$dir" 2>/dev/null && pwd -P)" || return
-    resolved="$resolved_dir/$base"
-    case "$resolved" in
-    "$REPO_ROOT"/*) printf '%s\n' "${resolved#"$REPO_ROOT"/}" ;;
-    esac
-}
-
-dirty_tree_status() {
-    local out_rel status_output
-    local pathspecs=(. ":(exclude)results/socket_profile_loopback.txt"
-        ":(exclude)results/socket_stress_summary.txt")
-    out_rel="$(repo_relative_or_empty "$OUT")"
-    [[ -n "$out_rel" ]] && pathspecs+=(":(exclude)$out_rel")
-    if ! status_output="$(git status --porcelain --untracked-files=all -- "${pathspecs[@]}")"; then
-        echo "error: dirty-tree check failed; refusing to write misleading metadata." >&2
-        exit 2
-    fi
-    if [[ -n "$status_output" ]]; then echo yes; else echo no; fi
-}
-
-if [[ "$(uname -s)" != "Linux" ]]; then
-    echo "error: scripts/profile_gateway_io.sh requires Linux (procfs + strace); current OS is $(uname -s)." >&2
-    echo "       Run it on a Linux host or inside a Linux container to generate the artifact." >&2
-    exit 2
-fi
+qsl_require_linux "scripts/profile_gateway_io.sh" "procfs + strace"
 if ! command -v strace >/dev/null 2>&1; then
     echo "error: strace not found. Install strace for this kernel." >&2
     exit 2
@@ -70,7 +39,7 @@ if [[ ! -x "$GATEWAY" || ! -x "$CLIENT" ]]; then
 fi
 
 mkdir -p "$(dirname "$OUT")"
-DIRTY="$(dirty_tree_status)"
+DIRTY="$(qsl_dirty_tree_status results/socket_profile_loopback.txt results/socket_stress_summary.txt "$OUT")"
 
 RUSAGE_OUT="$(mktemp)"
 STRACE_OUT="$(mktemp)"
@@ -94,21 +63,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-wait_ready() {
-    local port="$1" pid="$2" i
-    for i in $(seq 1 100); do
-        # If the process we launched has already exited (e.g. its bind failed because the port is
-        # in use), stop: a successful connect would be to an unrelated listener, not our gateway.
-        kill -0 "$pid" 2>/dev/null || return 1
-        if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
-            exec 3>&- 3<&-
-            return 0
-        fi
-        sleep 0.05
-    done
-    return 1
-}
-
 drive_load() {
     local port="$1" n="$2" i
     for ((i = 0; i < n; i++)); do
@@ -119,15 +73,8 @@ drive_load() {
 # Stop the gateway we started directly: SIGINT (no handler -> terminate), escalate to SIGKILL so
 # it can never hang, then reap.
 stop_gateway() {
-    local i
     [[ -z "$GW_PID" ]] && return 0
-    kill -INT "$GW_PID" 2>/dev/null || true
-    for i in $(seq 1 30); do
-        kill -0 "$GW_PID" 2>/dev/null || break
-        sleep 0.1
-    done
-    kill -KILL "$GW_PID" 2>/dev/null || true
-    wait "$GW_PID" 2>/dev/null || true
+    qsl_stop_process_gracefully "$GW_PID" INT 30 0.1
     GW_PID=""
 }
 
@@ -165,7 +112,7 @@ stop_strace_pass() {
 CLK="$(getconf CLK_TCK 2>/dev/null || echo 100)"
 "$GATEWAY" "$PORT" >/dev/null 2>&1 &
 GW_PID=$!
-if wait_ready "$PORT" "$GW_PID"; then
+if qsl_wait_tcp_connect_ready "$PORT" "$GW_PID"; then
     drive_load "$PORT" "$CONNECTIONS"
     # Confirm our gateway is still the process on this port before recording its procfs data; a
     # dead PID here means the port was held by something else (our bind failed) or it crashed.
@@ -207,7 +154,7 @@ strace -f -c -o "$STRACE_OUT" "$GATEWAY" "$((PORT + 1))" >/dev/null 2>"$STRACE_E
 STRACE_PID=$!
 # wait_ready watches STRACE_PID: if the traced gateway's bind fails (port in use), it exits and
 # strace exits with it, so readiness fails instead of connecting to an unrelated listener.
-if ! wait_ready "$((PORT + 1))" "$STRACE_PID"; then
+if ! qsl_wait_tcp_connect_ready "$((PORT + 1))" "$STRACE_PID"; then
     echo "error: gateway did not become ready for the strace pass on port $((PORT + 1)) (already in use?)." >&2
     stop_strace_pass
     exit 3
@@ -240,15 +187,15 @@ fi
     echo "Artifact:    gateway syscall / kernel-socket path profile (loopback, constrained)"
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
-    echo "CPU:         $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
-    echo "Compiler:    $(c++ --version | head -1)"
+    echo "CPU:         $(qsl_cpu_model)"
+    echo "Compiler:    $(qsl_compiler_version)"
     echo "strace:      $(strace -V 2>&1 | head -1)"
     echo "CLK_TCK:     $CLK"
-    echo "Git commit:  $(git rev-parse --short HEAD)"
+    echo "Git commit:  $(qsl_git_commit_short)"
     echo "Dirty tree:  $DIRTY"
     echo "Transport:   TCP over 127.0.0.1 (loopback), one connection at a time"
     echo "Load:        $CONNECTIONS sequential client round trips (NewOrder + Heartbeat each)"
-    echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "== Pass 1: gateway rusage from procfs (user vs system CPU, ctx switches, page faults) =="
     echo "User (engine-side) vs System (kernel/socket) CPU time splits user-space matching work"

@@ -20,16 +20,16 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M41 — Simplify gateway session frame dispatch
-- **Status:** ◐ PR #109 open. `src/gateway/session.cpp` CodeScene improved 8.99 → 10.0 by decomposing `Session::process_frame` into per-message dispatch helpers; no public API or protocol behavior changed.
-- **Active branch:** `refactor/m41-session-frame-dispatch`
-- **Last completed milestone:** M40 — Consolidate engine correctness test suites (squash-merged PR #108, commit b939730)
+- **Active milestone:** M42 — Extract shared shell-script helpers
+- **Status:** ◐ draft PR #111 open. Shared Bash helpers extracted for dirty-tree metadata, CPU/compiler/git/date metadata, readiness probes, and gateway stop handling across socket/perf scripts.
+- **Active branch:** `refactor/m42-shared-shell-script-helpers`
+- **Last completed milestone:** M41 — Simplify gateway session frame dispatch (squash-merged PR #109, commit 68061e6)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M41 verified rebuilt `./build/dev/tests/test_session` 11 cases / 36 assertions, `git diff --check`, `make check` 193/193, and `make asan` 193/193 on 2026-06-05.
-- **Last action:** opened M41 PR #109 after behavior-preserving session dispatch decomposition; CodeScene score for `src/gateway/session.cpp` is 10.0 with no findings.
-- **Next action:** wait for CI, CodeScene, Codex, and normal PR review on PR #109; fix only still-valid M41 feedback. NUMA awareness remains M43.
-- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
+- **`make check` passing:** M42 verified `bash -n` for shared/socket/perf scripts, helper path-normalization smoke check, `git diff --check`, `make check` 193/193, `make asan` 193/193, reduced temporary-output `make socket-stress`, and Linux-only target/script guard checks on Darwin on 2026-06-05. Full Linux target execution was not run locally because Docker daemon was unavailable.
+- **Last action:** opened draft M42 PR #111 after completing shell-helper extraction; issue #110 tracks the separate stream fixture/export orchestration follow-up.
+- **Next action:** wait for CI/review on PR #111 and fix only still-valid M42 feedback. NUMA awareness remains M43.
+- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #110, #99, #95, #94, #32, #29, #28, and #26.
 
 ---
 
@@ -208,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M41 PR #109 is open on `refactor/m41-session-frame-dispatch`. `src/gateway/session.cpp` CodeScene improved 8.99 -> 10.0 with no findings. Rebuilt `./build/dev/tests/test_session`, `git diff --check`, `make check`, and `make asan` passed. Next: wait for CI/review and fix only still-valid feedback._
+- _M42 draft PR #111 is open on `refactor/m42-shared-shell-script-helpers`. Shared helper extraction and local verification are complete; full Linux target execution was not run locally because Docker daemon was unavailable. Next: wait for CI/review and fix only still-valid M42 feedback._
 
 
 ---
@@ -271,8 +271,8 @@ Lower priority:
 | M38 | Split the command-stream shrinker into named passes | `refactor/m38-shrinker-reduction-passes` | ☑ merged | #106 | Repository-health refactor; `shrink.cpp` 8.15 → 10.0 |
 | M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ☑ merged | #107 | Repository-health refactor; `order_book.cpp` 8.55 → 9.68, determinism preserved |
 | M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☑ merged | #108 | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
-| M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ◐ PR open | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
-| M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☐ not started | — | Repository-health refactor (manual; shell unscored); M35 follow-up |
+| M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☑ merged | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
+| M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ◐ draft PR open | #111 | Repository-health refactor (manual; shell unscored); M35 follow-up |
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
 | M44 | Lock-free ingress pipeline | `feat/m44-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
@@ -306,6 +306,10 @@ Lower priority:
 - [2026-06-05] M41: started on `refactor/m41-session-frame-dispatch` from updated `main` (b939730). Baseline CodeScene for `src/gateway/session.cpp`: 8.99; finding is `Session::process_frame` complexity 15. Pre-refactor `./build/dev/tests/test_session` passed 11 cases / 36 assertions.
 - [2026-06-05] M41: completed behavior-preserving session dispatch decomposition. `Session::process_frame` now delegates to per-message helpers for new order, cancel, heartbeat, and unexpected-message paths while preserving malformed-body logout, output-limit logout, bounded new-order preview before mutation, and response ordering. CodeScene for `src/gateway/session.cpp`: 8.99 -> 10.0 with no findings. Verification passed rebuilt `./build/dev/tests/test_session` 11 cases / 36 assertions, `git diff --check`, `make check` 193/193, and `make asan` 193/193.
 - [2026-06-05] M41: opened PR #109 (`refactor: simplify gateway session frame dispatch`). No manual CodeRabbit review was requested.
+- [2026-06-05] M41: PR #109 squash-merged to `main` as 68061e6.
+- [2026-06-05] M42: started on `refactor/m42-shared-shell-script-helpers` from updated `main` (68061e6). Scope is behavior-preserving shell-helper extraction across `scripts/socket_load.sh`, `scripts/socket_stress.sh`, `scripts/profile_gateway_io.sh`, `scripts/perf_record.sh`, and `scripts/perf_stat.sh`; shell is not CodeScene-scored. The export-stream / fixture-generation coupling is tracked separately as issue #110 and is not part of M42.
+- [2026-06-05] M42: completed shared shell-helper extraction by adding `scripts/qsl_common.sh` for safe repo-relative dirty-tree exclusions, CPU/compiler/git/date metadata helpers, Linux guard helpers, TCP readiness probes, and process stop escalation. The five target scripts now source that helper while preserving workload logic and artifact fields. Verification passed `bash -n scripts/qsl_common.sh scripts/socket_load.sh scripts/socket_stress.sh scripts/profile_gateway_io.sh scripts/perf_record.sh scripts/perf_stat.sh`, helper external/internal path smoke check, `git diff --check`, `make check` 193/193, `make asan` 193/193, reduced temporary-output `make socket-stress`, direct Linux-only script guard checks, and Makefile Linux-only target guard checks. Full Linux execution of `make socket-load`, `make profile-io`, `make perf-stat`, and `make perf-record` was not run locally because the host is Darwin and Docker daemon was unavailable.
+- [2026-06-05] M42: opened draft PR #111 (`refactor: extract shared shell-script helpers`).
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -391,7 +395,7 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M41 on `refactor/m41-session-frame-dispatch`: wait for CI/review on PR #109
+Current action is M42 on `refactor/m42-shared-shell-script-helpers`: wait for CI/review on PR #111
 and fix only still-valid feedback.
 
 NUMA awareness remains M43; do not start it until M36–M42 are done or explicitly skipped.
