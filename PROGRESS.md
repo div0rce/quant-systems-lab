@@ -20,15 +20,15 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M40 — Consolidate engine correctness test suites
-- **Status:** ◐ PR #108 open. All four engine/risk test suites raised to Code Health ≥9.0 (test_risk_gateway 6.69→10.0, test_order_book 7.78→9.09, test_invariants 8.45→10.0, test_matching_engine 8.54→9.38) via behavior-named helpers + de-duplication. No production code changed (diff is test-only); `TEST_CASE` names/scenarios, deterministic seeds, and non-vacuity guards preserved.
-- **Active branch:** `refactor/m40-engine-test-consolidation`
-- **Last completed milestone:** M39 — Encapsulate order-book matching parameters (squash-merged PR #107, commit 880fbc7)
+- **Active milestone:** M41 — Simplify gateway session frame dispatch
+- **Status:** ◐ PR #109 open. `src/gateway/session.cpp` CodeScene improved 8.99 → 10.0 by decomposing `Session::process_frame` into per-message dispatch helpers; no public API or protocol behavior changed.
+- **Active branch:** `refactor/m41-session-frame-dispatch`
+- **Last completed milestone:** M40 — Consolidate engine correctness test suites (squash-merged PR #108, commit b939730)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M40 verified `make check` 193/193 and `make asan` green on 2026-06-05.
-- **Last action:** fixed PR #108 CodeScene/CodeRabbit feedback by collapsing `expect_trade` expected fields into a small value object and reconciling stale M39/M40 resume anchors. CodeScene score for `test_matching_engine.cpp` is 9.38; focused matching-engine tests, `make check`, and `make asan` passed.
-- **Next action:** wait for CI, CodeScene, Codex, and CodeRabbit review on PR #108; fix only still-valid M40 review feedback. NUMA awareness remains M43.
+- **`make check` passing:** M41 verified rebuilt `./build/dev/tests/test_session` 11 cases / 36 assertions, `git diff --check`, `make check` 193/193, and `make asan` 193/193 on 2026-06-05.
+- **Last action:** opened M41 PR #109 after behavior-preserving session dispatch decomposition; CodeScene score for `src/gateway/session.cpp` is 10.0 with no findings.
+- **Next action:** wait for CI, CodeScene, Codex, and normal PR review on PR #109; fix only still-valid M41 feedback. NUMA awareness remains M43.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
 
 ---
@@ -208,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M40 PR #108 is open on `refactor/m40-engine-test-consolidation`. This is test-only engine correctness suite consolidation; production behavior is unchanged. PR review feedback on `expect_trade` excess arguments and stale M39/M40 resume anchors is fixed. Focused matching-engine tests, `make check`, and `make asan` passed. Next: wait for CI/review and fix only still-valid feedback._
+- _M41 PR #109 is open on `refactor/m41-session-frame-dispatch`. `src/gateway/session.cpp` CodeScene improved 8.99 -> 10.0 with no findings. Rebuilt `./build/dev/tests/test_session`, `git diff --check`, `make check`, and `make asan` passed. Next: wait for CI/review and fix only still-valid feedback._
 
 
 ---
@@ -270,8 +270,8 @@ Lower priority:
 | M37 | Extract threaded-pipeline stage helpers | `refactor/m37-threaded-pipeline-stage-helpers` | ☑ merged | #105 | Repository-health refactor; CodeScene 10.0 for `pipeline.hpp`, `test_pipeline`, and `test_backpressure` |
 | M38 | Split the command-stream shrinker into named passes | `refactor/m38-shrinker-reduction-passes` | ☑ merged | #106 | Repository-health refactor; `shrink.cpp` 8.15 → 10.0 |
 | M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ☑ merged | #107 | Repository-health refactor; `order_book.cpp` 8.55 → 9.68, determinism preserved |
-| M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ◐ PR open | #108 | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
-| M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☐ not started | — | Repository-health refactor; `session.cpp` 8.99 → ≥9.0 |
+| M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☑ merged | #108 | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
+| M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ◐ PR open | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
 | M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☐ not started | — | Repository-health refactor (manual; shell unscored); M35 follow-up |
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
 | M44 | Lock-free ingress pipeline | `feat/m44-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
@@ -302,6 +302,10 @@ Lower priority:
 - [2026-06-05] M39: PR #107 squash-merged to `main` as 880fbc7.
 - [2026-06-05] M40: consolidated the four sub-9.0 engine/risk test suites to Code Health >= 9.0 — `test_risk_gateway.cpp` 6.69 -> 10.0, `test_order_book.cpp` 7.78 -> 9.09, `test_invariants.cpp` 8.45 -> 10.0, `test_matching_engine.cpp` 8.54 -> 9.38 — by extracting behavior-named helpers (`expect_reject` / `expect_accepted_one` / `expect_trade` / `expect_top` / `expect_strictly_increasing` / `expect_storage_equivalent`, a shared `Gateway` fixture, and per-invariant `classify_command` / `check_events` / `check_book_invariants`), de-duplicating near-identical `TEST_CASE`s, and flattening the deep property-loop nesting in the invariants suite. Test-only: `git diff --stat main` touches only the four test files + `PROGRESS.md` (no `include/` or `src/`). All `TEST_CASE` names/scenarios, deterministic seeds (1-8, 11/22/33, 1-6), and non-vacuity guards preserved; a few previously-partial trade/reject assertions were strengthened to the full verified contract — one (`modify emits OrderModified and any resulting trades`) was caught by `make check` as a wrong quantity (5 vs the post-reduce 3) and corrected. `make check` 193/193 and `make asan` green.
 - [2026-06-05] M40: fixed PR #108 review feedback by collapsing `expect_trade` expected fields into an `ExpectedTrade` value object, clearing the CodeScene excess-arguments finding while preserving the same trade assertions. Also reconciled stale M39/M40 `PROGRESS.md` anchors so PR #108 is the single current action. Verification passed focused matching-engine tests, `git diff --check`, `make check` 193/193, `make asan` 193/193, and CodeScene score for `test_matching_engine.cpp` is 9.38.
+- [2026-06-05] M40: PR #108 squash-merged to `main` as b939730.
+- [2026-06-05] M41: started on `refactor/m41-session-frame-dispatch` from updated `main` (b939730). Baseline CodeScene for `src/gateway/session.cpp`: 8.99; finding is `Session::process_frame` complexity 15. Pre-refactor `./build/dev/tests/test_session` passed 11 cases / 36 assertions.
+- [2026-06-05] M41: completed behavior-preserving session dispatch decomposition. `Session::process_frame` now delegates to per-message helpers for new order, cancel, heartbeat, and unexpected-message paths while preserving malformed-body logout, output-limit logout, bounded new-order preview before mutation, and response ordering. CodeScene for `src/gateway/session.cpp`: 8.99 -> 10.0 with no findings. Verification passed rebuilt `./build/dev/tests/test_session` 11 cases / 36 assertions, `git diff --check`, `make check` 193/193, and `make asan` 193/193.
+- [2026-06-05] M41: opened PR #109 (`refactor: simplify gateway session frame dispatch`). No manual CodeRabbit review was requested.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -387,8 +391,8 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M40 on `refactor/m40-engine-test-consolidation`: wait for CI and review on
-PR #108, then fix only still-valid feedback.
+Current action is M41 on `refactor/m41-session-frame-dispatch`: wait for CI/review on PR #109
+and fix only still-valid feedback.
 
 NUMA awareness remains M43; do not start it until M36–M42 are done or explicitly skipped.
 

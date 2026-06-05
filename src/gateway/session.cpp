@@ -96,69 +96,95 @@ SessionStatus ensure_new_order_budget(const OrderGateway &gateway, const protoco
                                                              : SessionStatus::OutputLimitExceeded;
 }
 
+struct FrameContext {
+    OrderGateway &gateway;
+    bool &logged_out;
+    std::vector<std::byte> &out;
+    std::size_t max_output_bytes;
+};
+
+SessionStatus close_session(FrameContext &ctx, SessionStatus status) noexcept {
+    ctx.logged_out = true;
+    return status;
+}
+
+SessionStatus close_for_malformed_body(FrameContext &ctx) noexcept {
+    return close_session(ctx, SessionStatus::Ok);
+}
+
+SessionStatus close_for_output_limit(FrameContext &ctx) noexcept {
+    return close_session(ctx, SessionStatus::OutputLimitExceeded);
+}
+
+SessionStatus emit_or_close(FrameContext &ctx, core::OrderId order_id,
+                            const GatewayResult &result) {
+    return emit_result(order_id, result, ctx.out, ctx.max_output_bytes) == SessionStatus::Ok
+               ? SessionStatus::Ok
+               : close_for_output_limit(ctx);
+}
+
+SessionStatus handle_new_order(FrameContext &ctx, std::span<const std::byte> frame) {
+    const auto request = protocol::decode_new_order(frame);
+    if (!request.ok()) {
+        return close_for_malformed_body(ctx);
+    }
+    if (ctx.max_output_bytes != std::numeric_limits<std::size_t>::max() &&
+        ensure_new_order_budget(ctx.gateway, request.value, ctx.out, ctx.max_output_bytes) !=
+            SessionStatus::Ok) {
+        return close_for_output_limit(ctx);
+    }
+    const auto &o = request.value;
+    const GatewayResult result =
+        (o.type == core::OrderType::Market)
+            ? ctx.gateway.new_market(o.symbol, o.order_id, o.side, o.quantity)
+            : ctx.gateway.new_limit(o.symbol, o.order_id, o.side, o.price, o.quantity, o.tif);
+    return emit_or_close(ctx, o.order_id, result);
+}
+
+SessionStatus handle_cancel_order(FrameContext &ctx, std::span<const std::byte> frame) {
+    const auto request = protocol::decode_cancel_order(frame);
+    if (!request.ok()) {
+        return close_for_malformed_body(ctx);
+    }
+    if (!has_space(ctx.out.size(), std::max(kAckFrameBytes, kRejectFrameBytes),
+                   ctx.max_output_bytes)) {
+        return close_for_output_limit(ctx);
+    }
+    const GatewayResult result = ctx.gateway.cancel(request.value.symbol, request.value.order_id);
+    return emit_or_close(ctx, request.value.order_id, result);
+}
+
+SessionStatus handle_heartbeat(FrameContext &ctx, std::span<const std::byte> frame) {
+    const auto request = protocol::decode_heartbeat(frame);
+    if (!request.ok()) {
+        return close_for_malformed_body(ctx);
+    }
+    if (!has_space(ctx.out.size(), kHeartbeatAckFrameBytes, ctx.max_output_bytes)) {
+        return close_for_output_limit(ctx);
+    }
+    return append(ctx.out, protocol::encode(protocol::HeartbeatAck{request.value.token}),
+                  ctx.max_output_bytes);
+}
+
+SessionStatus handle_unexpected_message(FrameContext &ctx) noexcept {
+    return close_session(ctx, SessionStatus::Ok);
+}
+
 } // namespace
 
 SessionStatus Session::process_frame(std::span<const std::byte> frame, std::vector<std::byte> &out,
                                      std::size_t max_output_bytes) {
     const auto header = protocol::decode_header(frame); // already validated by on_bytes
+    FrameContext ctx{gateway_, logged_out_, out, max_output_bytes};
     switch (header.value.type) {
-    case protocol::MsgType::NewOrder: {
-        const auto request = protocol::decode_new_order(frame);
-        if (!request.ok()) {
-            logged_out_ = true;
-            return SessionStatus::Ok;
-        }
-        if (max_output_bytes != std::numeric_limits<std::size_t>::max() &&
-            ensure_new_order_budget(gateway_, request.value, out, max_output_bytes) !=
-                SessionStatus::Ok) {
-            logged_out_ = true;
-            return SessionStatus::OutputLimitExceeded;
-        }
-        const auto &o = request.value;
-        const GatewayResult result =
-            (o.type == core::OrderType::Market)
-                ? gateway_.new_market(o.symbol, o.order_id, o.side, o.quantity)
-                : gateway_.new_limit(o.symbol, o.order_id, o.side, o.price, o.quantity, o.tif);
-        if (emit_result(o.order_id, result, out, max_output_bytes) != SessionStatus::Ok) {
-            logged_out_ = true;
-            return SessionStatus::OutputLimitExceeded;
-        }
-        return SessionStatus::Ok;
-    }
-    case protocol::MsgType::CancelOrder: {
-        const auto request = protocol::decode_cancel_order(frame);
-        if (!request.ok()) {
-            logged_out_ = true;
-            return SessionStatus::Ok;
-        }
-        if (!has_space(out.size(), std::max(kAckFrameBytes, kRejectFrameBytes), max_output_bytes)) {
-            logged_out_ = true;
-            return SessionStatus::OutputLimitExceeded;
-        }
-        const GatewayResult result = gateway_.cancel(request.value.symbol, request.value.order_id);
-        if (emit_result(request.value.order_id, result, out, max_output_bytes) !=
-            SessionStatus::Ok) {
-            logged_out_ = true;
-            return SessionStatus::OutputLimitExceeded;
-        }
-        return SessionStatus::Ok;
-    }
-    case protocol::MsgType::Heartbeat: {
-        const auto request = protocol::decode_heartbeat(frame);
-        if (!request.ok()) {
-            logged_out_ = true;
-            return SessionStatus::Ok;
-        }
-        if (!has_space(out.size(), kHeartbeatAckFrameBytes, max_output_bytes)) {
-            logged_out_ = true;
-            return SessionStatus::OutputLimitExceeded;
-        }
-        return append(out, protocol::encode(protocol::HeartbeatAck{request.value.token}),
-                      max_output_bytes);
-    }
+    case protocol::MsgType::NewOrder:
+        return handle_new_order(ctx, frame);
+    case protocol::MsgType::CancelOrder:
+        return handle_cancel_order(ctx, frame);
+    case protocol::MsgType::Heartbeat:
+        return handle_heartbeat(ctx, frame);
     default:
-        logged_out_ = true; // unexpected (e.g. a response) message -> drop
-        return SessionStatus::Ok;
+        return handle_unexpected_message(ctx); // unexpected (e.g. a response) message -> drop
     }
 }
 
