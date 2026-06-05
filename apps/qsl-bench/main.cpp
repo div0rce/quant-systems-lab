@@ -28,6 +28,7 @@ namespace {
 volatile std::uint64_t g_sink = 0;
 
 using clock_type = std::chrono::steady_clock;
+using RecordType = qsl::replay::RecordType;
 
 // Per-operation latency: run `iters` ops, report ns/op and ops/sec.
 template <class F> void latency(const char *name, std::size_t iters, F op) {
@@ -178,8 +179,7 @@ int main(int argc, char **argv) {
         std::vector<replay::LogRecord> records;
         std::uint64_t seq = 0;
         for (const auto &cmd : flow) {
-            records.push_back(
-                {seq, replay::RecordType::CommandRecord, seq, replay::encode_command(cmd)});
+            records.push_back({seq, RecordType::CommandRecord, seq, replay::encode_command(cmd)});
             ++seq;
         }
         throughput("replay command log", records.size(), 20, [&] {
