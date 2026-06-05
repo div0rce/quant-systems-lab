@@ -25,7 +25,7 @@ TEST_CASE("replay rebuilds identical final state and event sequence", "[replay]"
     for (const auto &command : flow) {
         const auto produced = apply(original, command);
         original_events.insert(original_events.end(), produced.begin(), produced.end());
-        records.push_back(LogRecord{i, RecordType::Command, i, encode_command(command)});
+        records.push_back(LogRecord{i, RecordType::CommandRecord, i, encode_command(command)});
         ++i;
     }
 
@@ -61,7 +61,8 @@ TEST_CASE("file-backed replay uses event-log framing before rebuilding state", "
         for (const auto &command : flow) {
             const auto produced = apply(original, command);
             original_events.insert(original_events.end(), produced.begin(), produced.end());
-            REQUIRE(writer.append(LogRecord{i, RecordType::Command, i, encode_command(command)}));
+            REQUIRE(
+                writer.append(LogRecord{i, RecordType::CommandRecord, i, encode_command(command)}));
             ++i;
         }
     }
@@ -133,9 +134,9 @@ TEST_CASE("snapshot reports aggregate per-level quantities", "[replay]") {
 
 TEST_CASE("non-command records are skipped on replay", "[replay]") {
     std::vector<LogRecord> records{
-        LogRecord{0, RecordType::Command, 0, encode_command(Command{RegisterSymbol{"X"}})},
-        LogRecord{1, RecordType::Event, 1, {}}, // an event record: ignored by replay
-        LogRecord{2, RecordType::Command, 2,
+        LogRecord{0, RecordType::CommandRecord, 0, encode_command(Command{RegisterSymbol{"X"}})},
+        LogRecord{1, RecordType::EventRecord, 1, {}}, // an event record: ignored by replay
+        LogRecord{2, RecordType::CommandRecord, 2,
                   encode_command(Command{NewLimit{0, 1, Side::Buy, 100, 5, TimeInForce::GTC}})},
     };
     MatchingEngine engine;

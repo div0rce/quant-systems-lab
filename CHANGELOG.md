@@ -40,6 +40,11 @@ All notable changes to this project. The format is loosely based on
 
 ### Changed
 
+- M39: encapsulated order-book matching parameters into private match/query contexts and extracted
+  fill, erase, and level-lookup helpers. Public order-book behavior, deterministic matching output,
+  integer-tick prices, and wall-clock-independent engine semantics are unchanged.
+- M39: renamed replay `RecordType` enumerators to `CommandRecord` / `EventRecord` while preserving
+  numeric log values, avoiding `-Wshadow` ambiguity with `qsl::replay::Command`.
 - M38: split the command-stream shrinker into named reduction/remap passes. `shrink` and
   `renumber` preserve deterministic output and public behavior while moving contiguous removal,
   field simplification, symbol remapping, and order-id compaction into small helpers.

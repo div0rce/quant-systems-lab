@@ -11,6 +11,9 @@
 
 using namespace qsl::replay;
 
+static_assert(static_cast<std::uint16_t>(RecordType::CommandRecord) == 1);
+static_assert(static_cast<std::uint16_t>(RecordType::EventRecord) == 2);
+
 namespace {
 std::vector<std::byte> bytes_of(std::initializer_list<std::uint8_t> values) {
     std::vector<std::byte> out;
@@ -20,12 +23,12 @@ std::vector<std::byte> bytes_of(std::initializer_list<std::uint8_t> values) {
     return out;
 }
 
-const LogRecord kR1{1, RecordType::Command, 10, bytes_of({1, 2, 3})};
-const LogRecord kR2{2, RecordType::Event, 11, bytes_of({4, 5})};
+const LogRecord kR1{1, RecordType::CommandRecord, 10, bytes_of({1, 2, 3})};
+const LogRecord kR2{2, RecordType::EventRecord, 11, bytes_of({4, 5})};
 } // namespace
 
 TEST_CASE("a record round-trips through the byte codec", "[log]") {
-    const LogRecord rec{42, RecordType::Command, 7, bytes_of({0xDE, 0xAD, 0xBE, 0xEF})};
+    const LogRecord rec{42, RecordType::CommandRecord, 7, bytes_of({0xDE, 0xAD, 0xBE, 0xEF})};
     std::vector<std::byte> buf;
     REQUIRE(encode_record(rec, buf));
 
@@ -137,7 +140,8 @@ TEST_CASE("writer rejects oversized payload without appending", "[log]") {
         REQUIRE(writer.good());
         REQUIRE(writer.append(kR1));
 
-        LogRecord oversized{2, RecordType::Event, 11, std::vector<std::byte>(kMaxPayload + 1)};
+        LogRecord oversized{2, RecordType::EventRecord, 11,
+                            std::vector<std::byte>(kMaxPayload + 1)};
         REQUIRE_FALSE(writer.append(oversized));
     }
     const auto result = EventLogReader(path).read_all();
@@ -164,7 +168,7 @@ TEST_CASE("encode_record rejects oversized payload without modifying output", "[
     REQUIRE(encode_record(kR1, buf));
     const std::vector<std::byte> before = buf;
 
-    LogRecord oversized{2, RecordType::Event, 11, std::vector<std::byte>(kMaxPayload + 1)};
+    LogRecord oversized{2, RecordType::EventRecord, 11, std::vector<std::byte>(kMaxPayload + 1)};
     REQUIRE_FALSE(encode_record(oversized, buf));
     REQUIRE(buf == before);
 }
@@ -173,7 +177,7 @@ TEST_CASE("declared oversized payload decodes as PayloadTooLarge", "[log]") {
     std::vector<std::byte> buf(kRecordHeaderSize);
     qsl::protocol::store_be<std::uint64_t>(buf.data() + 0, 1);
     qsl::protocol::store_be<std::uint16_t>(buf.data() + 8,
-                                           static_cast<std::uint16_t>(RecordType::Command));
+                                           static_cast<std::uint16_t>(RecordType::CommandRecord));
     qsl::protocol::store_be<std::uint64_t>(buf.data() + 10, 10);
     qsl::protocol::store_be<std::uint32_t>(buf.data() + 18, kMaxPayload + 1);
 
@@ -211,7 +215,7 @@ TEST_CASE("a serialized command payload survives the log", "[log]") {
                                         qsl::protocol::OrderType::Limit,
                                         qsl::protocol::TimeInForce::GTC};
     const std::vector<std::byte> frame = qsl::protocol::encode(order, /*seq=*/5);
-    const LogRecord rec{5, RecordType::Command, 99, frame};
+    const LogRecord rec{5, RecordType::CommandRecord, 99, frame};
 
     std::vector<std::byte> buf;
     REQUIRE(encode_record(rec, buf));

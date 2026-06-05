@@ -138,7 +138,8 @@ TEST_CASE("replay reproduces final state under stress across seeds", "[invariant
         std::uint64_t i = 0;
         for (const auto &cmd : flow) {
             static_cast<void>(replay::apply(original, cmd));
-            records.push_back({i, replay::RecordType::Command, i, replay::encode_command(cmd)});
+            records.push_back(
+                {i, replay::RecordType::CommandRecord, i, replay::encode_command(cmd)});
             ++i;
         }
         engine::MatchingEngine rebuilt;

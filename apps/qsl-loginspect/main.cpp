@@ -35,9 +35,9 @@ int main(int argc, char **argv) {
     std::uint64_t commands = 0;
     std::uint64_t events = 0;
     for (const auto &record : result.records) {
-        if (record.type == qsl::replay::RecordType::Command) {
+        if (record.type == qsl::replay::RecordType::CommandRecord) {
             ++commands;
-        } else if (record.type == qsl::replay::RecordType::Event) {
+        } else if (record.type == qsl::replay::RecordType::EventRecord) {
             ++events;
         }
     }

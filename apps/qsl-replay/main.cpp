@@ -34,7 +34,7 @@ int generate(const std::string &path, std::uint64_t seed) {
     }
     std::uint64_t seq = 0;
     for (const auto &command : flow) {
-        if (!writer.append(qsl::replay::LogRecord{seq, qsl::replay::RecordType::Command, seq,
+        if (!writer.append(qsl::replay::LogRecord{seq, qsl::replay::RecordType::CommandRecord, seq,
                                                   qsl::replay::encode_command(command)})) {
             std::cerr << "append failed for " << path << " at record " << seq << "\n";
             return 1;

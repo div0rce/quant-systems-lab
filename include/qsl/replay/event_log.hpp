@@ -18,8 +18,8 @@ using core::Timestamp;
 // What a log record carries. Both accepted commands and emitted engine events are
 // recordable; the payload is the message's serialized bytes (opaque to the log).
 enum class RecordType : std::uint16_t {
-    Command = 1,
-    Event = 2,
+    CommandRecord = 1,
+    EventRecord = 2,
 };
 
 struct LogRecord {

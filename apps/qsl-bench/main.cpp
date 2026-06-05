@@ -178,7 +178,8 @@ int main(int argc, char **argv) {
         std::vector<replay::LogRecord> records;
         std::uint64_t seq = 0;
         for (const auto &cmd : flow) {
-            records.push_back({seq, replay::RecordType::Command, seq, replay::encode_command(cmd)});
+            records.push_back(
+                {seq, replay::RecordType::CommandRecord, seq, replay::encode_command(cmd)});
             ++seq;
         }
         throughput("replay command log", records.size(), 20, [&] {

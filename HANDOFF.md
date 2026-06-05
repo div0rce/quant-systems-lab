@@ -16,12 +16,12 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M37 are merged. PR #101 (40f9249) and PR #102 (7092423)
+The repo is released at `v0.1.0`. M0–M38 are merged. PR #101 (40f9249) and PR #102 (7092423)
 synchronized project-memory files after M35. PR #103 (0f2ceb7) inserted the repository-health
 refactor phase **M36–M42** and renumbered the original networking/persistence roadmap to
-**M43–M48** (NUMA is now **M43**). M36 landed as PR #104 (0d2b97a), and M37 landed as PR #105
-(a8c0485). Current active work is M38: splitting the command-stream shrinker into named reduction
-passes; draft PR #106 is open for review.
+**M43–M48** (NUMA is now **M43**). M36 landed as PR #104 (0d2b97a), M37 landed as PR #105
+(a8c0485), and M38 landed as PR #106 (9ccf157). Current active work is M39: the order-book
+matching-parameter decomposition is verified locally and ready for a draft PR.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -34,7 +34,7 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-Current work is `/start-milestone 38` (Split the command-stream shrinker into named passes). To
+Current work is `/start-milestone 39` (Encapsulate order-book matching parameters). To
 resume:
 
 ```text
@@ -62,9 +62,9 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `a8c0485` (PR #105, M37 threaded-pipeline stage helpers)
-- current active branch, if active: `refactor/m38-shrinker-reduction-passes`
-- current active status: M38 draft PR #106 is open for review; do not merge from automation
+- latest synced main baseline: `9ccf157` (PR #106, M38 shrinker reduction passes)
+- current active branch, if active: `refactor/m39-order-book-matching-parameters`
+- current active status: M39 verified locally; open the draft PR and request review
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
@@ -75,9 +75,9 @@ Current state:
 
 ### Next milestone
 
-The repository-health refactor phase (M36–M42) has been analyzed and confirmed. M36 and M37 are
-merged. M38 draft PR #106 is open on `refactor/m38-shrinker-reduction-passes`. Original NUMA
-awareness is now **M43**.
+The repository-health refactor phase (M36–M42) has been analyzed and confirmed. M36, M37, and M38
+are merged. M39 is verified locally on `refactor/m39-order-book-matching-parameters`; the next
+step is opening the draft PR. Original NUMA awareness is now **M43**.
 
 ### Phase III / IV purpose
 
@@ -89,8 +89,7 @@ networking research.
 
 Current priority order:
 
-1. Repository-health refactor phase M36–M42 (currently M38, shrinker reduction passes; draft PR
-   #106 open).
+1. Repository-health refactor phase M36–M42 (currently M39, ready for draft PR).
 2. M43 — NUMA awareness study (original next milestone, now shifted after the refactor phase).
 3. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
 
