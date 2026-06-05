@@ -6,13 +6,30 @@
 
 using namespace qsl::engine;
 
+namespace {
+// A trade executed between resting `maker` and aggressing `taker` at `price` for `quantity`.
+void expect_trade(const auto &trade, OrderId maker, OrderId taker, Price price, Quantity quantity) {
+    CAPTURE(maker, taker, price, quantity);
+    REQUIRE(trade.maker_id == maker);
+    REQUIRE(trade.taker_id == taker);
+    REQUIRE(trade.price == price);
+    REQUIRE(trade.quantity == quantity);
+}
+
+// Top of book: best bid and best ask (use std::nullopt for an empty side).
+void expect_top(const OrderBook &book, std::optional<Price> best_bid,
+                std::optional<Price> best_ask) {
+    REQUIRE(book.best_bid() == best_bid);
+    REQUIRE(book.best_ask() == best_ask);
+}
+} // namespace
+
 TEST_CASE("non-crossing limits rest and set top of book", "[book]") {
     OrderBook book;
     REQUIRE(book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC).empty());
     REQUIRE(book.add_limit(2, Side::Sell, 101, 5, TimeInForce::GTC).empty());
 
-    REQUIRE(book.best_bid() == std::optional<Price>{100});
-    REQUIRE(book.best_ask() == std::optional<Price>{101});
+    expect_top(book, std::optional<Price>{100}, std::optional<Price>{101});
     REQUIRE(book.order_count() == 2);
 }
 
@@ -22,10 +39,8 @@ TEST_CASE("crossing limit trades at the resting maker price", "[book]") {
     const auto trades = book.add_limit(2, Side::Buy, 105, 5, TimeInForce::GTC);
 
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].maker_id == 1);
-    REQUIRE(trades[0].taker_id == 2);
-    REQUIRE(trades[0].price == 100); // executes at the resting price, not the aggressor's 105
-    REQUIRE(trades[0].quantity == 5);
+    // executes at the resting maker price 100, not the aggressor's 105
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5);
     REQUIRE(book.order_count() == 0);
 }
 
@@ -35,8 +50,7 @@ TEST_CASE("sell aggressor crosses resting bids", "[book]") {
     const auto trades = book.add_limit(2, Side::Sell, 99, 5, TimeInForce::GTC);
 
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].maker_id == 1);
-    REQUIRE(trades[0].price == 100);
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5);
     REQUIRE(book.order_count() == 0);
 }
 
@@ -47,7 +61,8 @@ TEST_CASE("price-time priority: earlier order at a level fills first", "[book]")
 
     const auto trades = book.add_limit(3, Side::Buy, 100, 5, TimeInForce::GTC);
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].maker_id == 1); // earlier order matched first
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/3, /*price=*/100,
+                 /*quantity=*/5); // earlier first
     REQUIRE(book.quantity_at(Side::Sell, 100) == 5);
     REQUIRE(book.order_count() == 1);
 }
@@ -58,7 +73,7 @@ TEST_CASE("partial fill leaves the maker remainder resting", "[book]") {
 
     const auto trades = book.add_limit(2, Side::Buy, 100, 4, TimeInForce::GTC);
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].quantity == 4);
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/4);
     REQUIRE(book.quantity_at(Side::Sell, 100) == 6); // remainder keeps resting
     REQUIRE(book.order_count() == 1);                // aggressor fully filled, did not rest
     REQUIRE(book.best_ask() == std::optional<Price>{100});
@@ -79,10 +94,8 @@ TEST_CASE("market order sweeps best levels until filled", "[book]") {
 
     const auto trades = book.add_market(3, Side::Buy, 5);
     REQUIRE(trades.size() == 2);
-    REQUIRE(trades[0].price == 100);
-    REQUIRE(trades[0].quantity == 3);
-    REQUIRE(trades[1].price == 101);
-    REQUIRE(trades[1].quantity == 2);
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/3, /*price=*/100, /*quantity=*/3);
+    expect_trade(trades[1], /*maker=*/2, /*taker=*/3, /*price=*/101, /*quantity=*/2);
     REQUIRE(book.quantity_at(Side::Sell, 101) == 1);
     REQUIRE(book.order_count() == 1); // market taker never rests
 }
@@ -100,7 +113,7 @@ TEST_CASE("IOC discards the unfilled remainder", "[book]") {
 
     const auto trades = book.add_limit(2, Side::Buy, 100, 5, TimeInForce::IOC);
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].quantity == 2);
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/2);
     REQUIRE(book.order_count() == 0); // ask consumed, IOC remainder not rested
     REQUIRE_FALSE(book.best_bid().has_value());
 }
@@ -153,8 +166,7 @@ TEST_CASE("modify quantity reduction preserves time priority", "[book]") {
     REQUIRE(book.modify(1, 100, 3).empty()); // same price, smaller qty -> in place
     const auto trades = book.add_limit(3, Side::Buy, 100, 3, TimeInForce::GTC);
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].maker_id == 1); // still ahead of order 2
-    REQUIRE(trades[0].quantity == 3);
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/3, /*price=*/100, /*quantity=*/3); // still ahead
 }
 
 TEST_CASE("modify quantity increase loses time priority", "[book]") {
@@ -165,7 +177,8 @@ TEST_CASE("modify quantity increase loses time priority", "[book]") {
     REQUIRE(book.modify(1, 100, 8).empty()); // qty increase -> requeued behind order 2
     const auto trades = book.add_limit(3, Side::Buy, 100, 5, TimeInForce::GTC);
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].maker_id == 2); // order 2 now has priority
+    expect_trade(trades[0], /*maker=*/2, /*taker=*/3, /*price=*/100,
+                 /*quantity=*/5); // order 2 first
 }
 
 TEST_CASE("modify price change loses priority and can cross", "[book]") {
@@ -175,8 +188,7 @@ TEST_CASE("modify price change loses priority and can cross", "[book]") {
 
     const auto trades = book.modify(2, 100, 5); // ask repriced down to 100 -> crosses the bid
     REQUIRE(trades.size() == 1);
-    REQUIRE(trades[0].maker_id == 1);
-    REQUIRE(trades[0].price == 100);
+    expect_trade(trades[0], /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5);
     REQUIRE(book.order_count() == 0);
 }
 
@@ -187,8 +199,7 @@ TEST_CASE("book is never crossed after matching", "[book]") {
     // Aggressive buy below the ask does not cross; it rests as the new best bid.
     book.add_limit(3, Side::Buy, 101, 5, TimeInForce::GTC);
 
-    REQUIRE(book.best_bid() == std::optional<Price>{101});
-    REQUIRE(book.best_ask() == std::optional<Price>{102});
+    expect_top(book, std::optional<Price>{101}, std::optional<Price>{102});
     REQUIRE(book.best_bid().value() < book.best_ask().value());
 }
 
@@ -227,12 +238,11 @@ TEST_CASE("partially filled maker retains priority over later orders", "[book]")
 
     const auto first = book.add_limit(3, Side::Buy, 100, 3, TimeInForce::GTC);
     REQUIRE(first.size() == 1);
-    REQUIRE(first[0].maker_id == 1); // order 1 partially filled, 2 remaining
+    expect_trade(first[0], /*maker=*/1, /*taker=*/3, /*price=*/100, /*quantity=*/3); // o1 partial
 
     const auto second = book.add_limit(4, Side::Buy, 100, 3, TimeInForce::GTC);
     REQUIRE(second.size() == 2);
-    REQUIRE(second[0].maker_id == 1); // remainder of order 1 fills first
-    REQUIRE(second[0].quantity == 2);
-    REQUIRE(second[1].maker_id == 2); // only then order 2
-    REQUIRE(second[1].quantity == 1);
+    expect_trade(second[0], /*maker=*/1, /*taker=*/4, /*price=*/100,
+                 /*quantity=*/2); // o1 remainder
+    expect_trade(second[1], /*maker=*/2, /*taker=*/4, /*price=*/100, /*quantity=*/1); // then o2
 }
