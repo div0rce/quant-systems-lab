@@ -34,9 +34,11 @@ cmake --build --preset dev --target qsl-export-stream
 ./build/dev/qsl-export-stream [seed] [orders] > fixture.txt
 ```
 
-The exporter drives the deterministic synthetic flow (`generate_flow(seed)`) through the risk
-gateway and is byte-for-byte reproducible for a given seed. A committed example lives at
-`ocaml/test/fixtures/stream_seed7.txt`.
+The exporter drives the deterministic market-like synthetic flow (`generate_flow(seed)`) through
+the risk gateway and is byte-for-byte reproducible for a given seed. The model has drifting
+per-symbol mid-prices, mostly resting liquidity, active-order cancels/modifies, and occasional
+market/crossing flow; it remains synthetic and is not real market data. A committed example lives
+at `ocaml/test/fixtures/stream_seed7.txt`.
 
 ## Format (version 1)
 
@@ -118,7 +120,8 @@ level aggregates, resting order counts, `last_seq`, and trade count (compared vi
 
 Fixtures under test:
 
-- `stream_seed7.txt` — the synthetic flow (GTC limits, market, cancel, modify, rejects, 4 symbols);
+- `stream_seed7.txt` — the market-like synthetic flow (GTC/IOC limits, market, cancel, modify,
+  rejects, 4 symbols);
 - `stream_ioc.txt` — a hand-built scenario from `qsl-export-stream ioc` covering IOC discard
   (partial and no-cross), market, and partial-maker fills (the synthetic flow uses only GTC);
 - `stream_bad_snapshot.txt` — a valid command stream with a deliberately corrupted snapshot
@@ -148,11 +151,12 @@ bundle.
 `test_differential.ml` discovers every `prop_*.txt` fixture (via `Sys.readdir`) and runs the
 same C++-vs-OCaml snapshot equality plus a no-crossed-book invariant on each, reporting the
 failing fixture/seed on divergence. The two engines agree exactly across all committed seeds
-(`prop_seed1..50`); seeds 1–8 alone already exercise every reject reason (UnknownSymbol,
-UnknownOrder, InvalidPrice, InvalidQuantity, MaxQuantityExceeded, MaxNotionalExceeded,
-DuplicateOrderId) and real trades. This reject-reason coverage is enforced by
-`test_reject_coverage` (it tallies the reasons the generator produces and fails CI if any
-reachable reason stops occurring).
+(`prop_seed1..50`); seeds 1–8 alone already exercise every gateway/risk reject reason produced by
+the property generator (UnknownSymbol, UnknownOrder, InvalidPrice, InvalidQuantity,
+MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) and real trades. `StorageExhausted`
+belongs to the opt-in intrusive storage experiment, so it is not part of the baseline property
+corpus. This reject-reason coverage is enforced by `test_reject_coverage` (it tallies the reasons
+the generator produces and fails CI if any reachable reason stops occurring).
 
 ### Oracle hardening
 

@@ -13,10 +13,21 @@ All notable changes to this project. The format is loosely based on
 - Added `FixtureExportRequest` / `FixtureExportMode` and `write_fixture_export` so the replay
   fixture library owns qsl-export-stream export orchestration while the CLI stays argument parsing
   only.
-- Added `TcpServerOptions::max_response_bytes` so the blocking TCP transport uses the bounded
+- Added `TcpServerOptions::max_response_bytes` so the portable TCP transport uses the bounded
   session path and can reject high-fanout response generation before gateway mutation.
+- Added `OrderBook::Storage::IntrusivePooled`, an opt-in storage mode that backs resting
+  `engine::Order` objects with the M28 raw `OrderPool` and custom FIFO order nodes while preserving
+  baseline and PMR-backed storage modes.
+- Added `RejectReason::StorageExhausted` so the gateway can reject an opt-in intrusive-storage
+  allocation limit before mutating the matching engine.
+- Added a stateful market-like synthetic flow generator v2 with multi-symbol skew, drifting
+  reference prices, GTC/IOC limits, market orders, active cancel/modify targets, stale commands, and
+  regenerated OCaml stream fixtures.
+- Added portable threaded `TcpServer` serving: accepted connections run in per-connection workers
+  while gateway mutation remains serialized. `TcpServerOptions` now exposes `listen_backlog` and a
+  `max_accepts` test/embedding hook.
 - M35: `scripts/socket_load.sh` (`make socket-load`, Linux-only) — multi-client TCP
-  connection-scaling load coverage comparing the blocking TCP gateway and the epoll gateway under
+  connection-scaling load coverage comparing the portable threaded TCP gateway and the epoll gateway under
   bounded loopback pressure, with constrained metadata in `results/socket_load_summary.txt`.
 - M34: Linux-only `EpollServer` gateway transport prototype. It uses one `epoll` loop,
   nonblocking accept/read/write, per-client outbound buffers, and one deterministic `Session` per
@@ -35,8 +46,8 @@ All notable changes to this project. The format is loosely based on
   `std::pmr::unsynchronized_pool_resource`; baseline storage remains the default.
 - M32: `make bench-storage` / `scripts/run_storage_benchmarks.sh` / `qsl-bench storage`, an
   engine-level benchmark comparing baseline order-book storage against PMR pooled node allocation.
-- M32: issue #95 tracks the separate future intrusive/custom-node `OrderPool<Capacity>`
-  integration path.
+- M32: the later #95 follow-up adds the separate intrusive/custom-node `OrderPool<Capacity>`
+  integration path that M32 intentionally kept out of its PMR scope.
 - M30: optional UDP receive-buffer (`SO_RCVBUF`) sizing on the market-data client, with the
   granted size read back via `getsockopt`. `qsl-mdfeed subscribe` gains a `[rcvbuf_bytes]`
   argument and `qsl-mdfeed publish` an `[orders]` burst-size argument.
@@ -50,6 +61,8 @@ All notable changes to this project. The format is loosely based on
 
 - M42: `qsl-export-stream` now reports clean usage errors for missing or invalid numeric CLI
   arguments instead of terminating from uncaught parse exceptions.
+- The default portable TCP gateway path now accepts multiple clients concurrently via threaded
+  connection workers. It remains a simple portable socket transport, not the Linux epoll path.
 - M39: encapsulated order-book matching parameters into private match/query contexts and extracted
   fill, erase, and level-lookup helpers. Public order-book behavior, deterministic matching output,
   integer-tick prices, and wall-clock-independent engine semantics are unchanged.
@@ -83,7 +96,7 @@ All notable changes to this project. The format is loosely based on
   schedule perturbation, and repeated stress as evidence over executed schedules rather than proof
   over all interleavings.
 - M32: added `docs/pool_backed_storage.md` and ADR 0009 to distinguish M28 raw-object pool
-  mechanics, M32 PMR container-node allocation, and the future intrusive/custom-node order-book
+  mechanics, M32 PMR container-node allocation, and the later intrusive/custom-node order-book
   redesign. Added `results/pool_backed_storage.txt` as the measured engine-level artifact.
 - M31: added an external-review package — `docs/review_request.md` (an adversarial review
   checklist over SPSC memory ordering, backpressure, threaded ownership, event-log integrity under

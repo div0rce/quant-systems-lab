@@ -19,7 +19,7 @@ using engine::MatchingEngine;
 /// Version of the deterministic command generators below. Bump it whenever a change alters the
 /// generated command streams, then regenerate the fixtures and the reproducibility manifest, so
 /// fixture provenance (seed + version + hash) stays honest.
-inline constexpr int kGeneratorVersion = 1;
+inline constexpr int kGeneratorVersion = 2;
 
 /// Apply one recorded command to the engine, returning the emitted events.
 [[nodiscard]] std::vector<EngineEvent> apply(MatchingEngine &engine, const Command &command);
@@ -29,8 +29,11 @@ inline constexpr int kGeneratorVersion = 1;
 [[nodiscard]] std::vector<EngineEvent> replay(MatchingEngine &engine,
                                               const std::vector<LogRecord> &records);
 
-/// Deterministic synthetic order flow (fixed RNG seed) over `symbols` symbols. Begins with
-/// the RegisterSymbol commands so the flow is self-contained and replayable.
+/// Deterministic market-like synthetic order flow (fixed RNG seed) over `symbols` symbols. Begins
+/// with the RegisterSymbol commands so the flow is self-contained and replayable. The model uses
+/// drifting per-symbol mid-prices, mostly resting liquidity, active-order cancels/modifies, and
+/// occasional crossing/market flow; it is still synthetic and must not be described as real market
+/// data.
 [[nodiscard]] std::vector<Command> generate_flow(std::uint64_t seed, SymbolId symbols,
                                                  std::size_t orders);
 

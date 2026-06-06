@@ -27,14 +27,15 @@ fi
     echo "Git commit:  $(git rev-parse --short HEAD)"
     echo "Dirty tree:  $DIRTY (excluding this generated output)"
     echo "Dataset:     deterministic generated engine flow (seed 42, 4 symbols, 5000 commands)"
-    echo "Scenario:    baseline OrderBook storage vs PMR pooled node allocation"
+    echo "Scenario:    baseline OrderBook storage vs PMR pooled node allocation vs intrusive OrderPool nodes"
     echo "Warmup:      one full engine replay per storage mode before timing"
     echo "Units:       throughput = ns/command + commands/sec"
     echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo
     echo "Caveat: engine-level synthetic benchmark (single process, release build, no network/disk)."
-    echo "M32 uses std::pmr::unsynchronized_pool_resource for list/map/unordered_map node allocation;"
-    echo "it is not direct M28 OrderPool<Capacity> integration. Hardware/compiler/build dependent."
+    echo "M32 uses std::pmr::unsynchronized_pool_resource for list/map/unordered_map node allocation."
+    echo "The intrusive mode uses M28 OrderPool<Capacity> for resting orders plus custom FIFO nodes;"
+    echo "price and index maps remain standard containers. Hardware/compiler/build dependent."
     echo "A neutral or negative result is acceptable and should not be reported as a speedup."
     echo
     echo "Scenario / Metric / Result:"

@@ -18,8 +18,8 @@ response encoding. Rewriting those semantics for an event loop would be unnecess
 
 M34 adds `EpollServer`, a Linux-only transport prototype. It uses one `epoll` loop, nonblocking
 `accept4`, nonblocking client sockets, per-client outbound buffers, and one `Session` per
-connection. The default `qsl-gateway` path remains the portable blocking `TcpServer`; Linux users
-can opt into the prototype with:
+connection. The default `qsl-gateway` path remains the portable `TcpServer`; Linux users can opt
+into the prototype with:
 
 ```bash
 ./build/dev/qsl-gateway 9009 --epoll
@@ -48,9 +48,11 @@ then closes.
 
 ## Consequences
 
-The repo now has a real event-driven multi-client gateway architecture without adopting
-thread-per-connection design. Nonblocking `EAGAIN` / `EWOULDBLOCK` and partial writes are handled
-as transport backpressure through retry-on-readiness, not as protocol errors.
+The repo now has a real event-driven multi-client gateway architecture. Later work also moved the
+portable `TcpServer` beyond one-connection-at-a-time serving with per-connection workers; this ADR
+still describes why the Linux epoll path exists as a separate transport. Nonblocking `EAGAIN` /
+`EWOULDBLOCK` and partial writes are handled as transport backpressure through retry-on-readiness,
+not as protocol errors.
 
 This remains a simulator prototype:
 

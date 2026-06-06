@@ -1057,23 +1057,24 @@ validates executed schedules and can detect races that occur during tested execu
 prove correctness across all possible thread interleavings.
 
 M28 allocator evidence is allocator evidence only. M32 delivered a scoped PMR-backed order-book
-node-allocation experiment measured on engine-level workloads. Direct intrusive
-`OrderPool<Capacity>` order-book storage remains future work tracked separately by issue #95.
+node-allocation experiment measured on engine-level workloads. The active post-M42 follow-up branch
+adds an explicit intrusive `OrderPool<Capacity>` order-book storage mode to close issue #95 without
+claiming that M28 itself changed engine storage.
 
 ## Current post-M35 roadmap memory
 
-Current landed state on `main`: M41 is merged (PR #109, 68061e6) after M35 (PR #100, a86b701), the
+Current landed state on `main`: M42 is merged (PR #111, 003504f) after M35 (PR #100, a86b701), the
 project-memory syncs (PR #101 40f9249, PR #102 7092423), the repository-health refactor phase
 insertion (PR #103 0f2ceb7), M36 (PR #104, 0d2b97a), M37 (PR #105, a8c0485), M38 (PR #106,
-9ccf157), M39 (PR #107, 880fbc7), and M40 (PR #108, b939730). M42 — shared shell-script helpers —
-has draft PR #111 open from `refactor/m42-shared-shell-script-helpers`; it was expanded by human
-request to address issue #99 and issue #110 in the same PR.
+9ccf157), M39 (PR #107, 880fbc7), M40 (PR #108, b939730), and M41 (PR #109, 68061e6). The active
+branch is `feat/close-storage-flow-tcp-followups`, a feature follow-up intended to close #95, #28,
+and #26 in one PR.
 
 Original roadmap after M35 shifted +7 to **M43–M48**: M43 NUMA awareness study; M44 lock-free
 ingress pipeline (not lock-free matching); M45 exchange-grade persistence prototype; M46 recovery
 benchmarking; M47 DPDK research/prototype; M48 NIC offload and low-latency networking study. NUMA is
 now M43; do not start it until the inserted M36–M42 refactors are done or the human reprioritizes.
 
-Issue #90 remains the full hardware-PMU evidence debt. Issue #99 and issue #110 are addressed by
-PR #111 and should close when that PR merges. Issue #95 tracks intrusive/custom-node
-`OrderPool<Capacity>` order-book storage. Issue #94 is the external technical review request.
+Issue #90 remains the full hardware-PMU evidence debt. Issues #99 and #110 were addressed by PR
+#111. Issues #95, #28, and #26 are addressed by the active follow-up branch and should close when
+its PR merges. Issue #94 is the external technical review request.

@@ -1,8 +1,435 @@
 #include "qsl/engine/order_book.hpp"
 
+#include "qsl/memory/order_pool.hpp"
+
 #include <algorithm>
+#include <array>
+#include <cstdint>
+#include <new>
+#include <utility>
 
 namespace qsl::engine {
+
+namespace {
+
+constexpr std::size_t kIntrusivePoolCapacity = 65'536;
+
+template <class T, std::size_t Capacity> class RawPool {
+  public:
+    RawPool() noexcept { reset_free_list(); }
+    ~RawPool() noexcept { destroy_live(); }
+
+    RawPool(const RawPool &) = delete;
+    RawPool &operator=(const RawPool &) = delete;
+
+    template <class... Args> [[nodiscard]] T *try_acquire(Args &&...args) {
+        if (free_count_ == 0) {
+            return nullptr;
+        }
+        const std::size_t idx = free_indices_[free_count_ - 1];
+        auto *object = reinterpret_cast<T *>(slot_storage(idx));
+        std::construct_at(object, std::forward<Args>(args)...);
+        --free_count_;
+        live_[idx] = true;
+        return slot_ptr(idx);
+    }
+
+    bool release(T *object) noexcept {
+        std::size_t slot = 0;
+        if (!slot_index(object, slot) || !live_[slot]) {
+            return false;
+        }
+        std::destroy_at(slot_ptr(slot));
+        live_[slot] = false;
+        free_indices_[free_count_++] = slot;
+        return true;
+    }
+
+    [[nodiscard]] std::size_t available() const noexcept { return free_count_; }
+
+  private:
+    void reset_free_list() noexcept {
+        free_count_ = Capacity;
+        for (std::size_t i = 0; i < Capacity; ++i) {
+            free_indices_[i] = Capacity - 1 - i;
+        }
+    }
+
+    [[nodiscard]] T *slot_ptr(std::size_t idx) noexcept {
+        return std::launder(reinterpret_cast<T *>(slot_storage(idx)));
+    }
+
+    [[nodiscard]] std::byte *slot_storage(std::size_t idx) noexcept {
+        return storage_.data() + (idx * sizeof(T));
+    }
+
+    [[nodiscard]] bool slot_index(const T *object, std::size_t &slot) const noexcept {
+        if (object == nullptr) {
+            return false;
+        }
+        const auto base = reinterpret_cast<std::uintptr_t>(storage_.data());
+        const auto raw = reinterpret_cast<std::uintptr_t>(object);
+        constexpr std::size_t width = sizeof(T);
+        constexpr std::size_t alignment = alignof(T);
+        if (raw < base || raw >= base + (Capacity * width)) {
+            return false;
+        }
+        const std::uintptr_t offset = raw - base;
+        if (offset % width != 0 || raw % alignment != 0) {
+            return false;
+        }
+        slot = static_cast<std::size_t>(offset / width);
+        return slot < Capacity;
+    }
+
+    void destroy_live() noexcept {
+        for (std::size_t i = 0; i < Capacity; ++i) {
+            if (live_[i]) {
+                std::destroy_at(slot_ptr(i));
+                live_[i] = false;
+            }
+        }
+    }
+
+    alignas(T) std::array<std::byte, sizeof(T) * Capacity> storage_{};
+    std::array<bool, Capacity> live_{};
+    std::array<std::size_t, Capacity> free_indices_{};
+    std::size_t free_count_{0};
+};
+
+} // namespace
+
+struct OrderBook::IntrusiveStore {
+    struct Node {
+        Order *order;
+        Node *prev;
+        Node *next;
+    };
+
+    struct Level {
+        Node *head = nullptr;
+        Node *tail = nullptr;
+        std::size_t size = 0;
+    };
+
+    struct Locator {
+        Side side;
+        Price price;
+        Node *node;
+    };
+
+    struct LimitInput {
+        OrderId id;
+        Side side;
+        Price price;
+        Quantity quantity;
+        TimeInForce tif;
+    };
+
+    using BidMap = std::map<Price, Level, std::greater<Price>>;
+    using AskMap = std::map<Price, Level, std::less<Price>>;
+
+    memory::OrderPool<kIntrusivePoolCapacity> orders;
+    RawPool<Node, kIntrusivePoolCapacity> nodes;
+    BidMap bids;
+    AskMap asks;
+    std::unordered_map<OrderId, Locator> index;
+
+    [[nodiscard]] bool has_capacity() const noexcept {
+        return orders.available() > 0 && nodes.available() > 0;
+    }
+
+    static void append_node(Level &level, Node *node) noexcept {
+        node->prev = level.tail;
+        node->next = nullptr;
+        if (level.tail != nullptr) {
+            level.tail->next = node;
+        } else {
+            level.head = node;
+        }
+        level.tail = node;
+        ++level.size;
+    }
+
+    static void unlink_node(Level &level, Node *node) noexcept {
+        if (node->prev != nullptr) {
+            node->prev->next = node->next;
+        } else {
+            level.head = node->next;
+        }
+        if (node->next != nullptr) {
+            node->next->prev = node->prev;
+        } else {
+            level.tail = node->prev;
+        }
+        --level.size;
+    }
+
+    void destroy_node(Node *node) noexcept {
+        static_cast<void>(orders.release(node->order));
+        static_cast<void>(nodes.release(node));
+    }
+
+    template <class LevelMap> Level &level_for(LevelMap &levels, Price price) {
+        return levels.try_emplace(price).first->second;
+    }
+
+    Level &level_for(Side side, Price price) {
+        return side == Side::Buy ? level_for(bids, price) : level_for(asks, price);
+    }
+
+    template <class LevelMap>
+    void erase_level_if_empty(LevelMap &levels, typename LevelMap::iterator level_it) {
+        if (level_it->second.size == 0) {
+            levels.erase(level_it);
+        }
+    }
+
+    template <class LevelMap> void erase_from(LevelMap &levels, Price price, Node *node) {
+        auto level_it = levels.find(price);
+        unlink_node(level_it->second, node);
+        destroy_node(node);
+        erase_level_if_empty(levels, level_it);
+    }
+
+    void erase_resting_order(Locator loc) {
+        if (loc.side == Side::Buy) {
+            erase_from(bids, loc.price, loc.node);
+            return;
+        }
+        erase_from(asks, loc.price, loc.node);
+    }
+
+    bool rest(OrderId id, Side side, Price price, Quantity quantity) {
+        Order *order = orders.try_acquire(id, side, price, quantity);
+        if (order == nullptr) {
+            return false;
+        }
+        Node *node = nodes.try_acquire(Node{order, nullptr, nullptr});
+        if (node == nullptr) {
+            static_cast<void>(orders.release(order));
+            return false;
+        }
+        Level &level = level_for(side, price);
+        append_node(level, node);
+        index[id] = Locator{side, price, node};
+        return true;
+    }
+
+    static bool can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price) {
+        return OrderBook::can_match_level(taker_is_buy, is_market, limit, level_price);
+    }
+
+    void fill_front_order(Level &level, Price level_price, OrderBook::MatchContext &ctx) {
+        Node *node = level.head;
+        Order &maker = *node->order;
+        const Quantity traded = std::min(ctx.quantity, maker.quantity);
+        ctx.trades.push_back(Trade{ctx.taker_id, maker.id, level_price, traded});
+        ctx.quantity -= traded;
+        maker.quantity -= traded;
+        if (maker.quantity == 0) {
+            index.erase(maker.id);
+            unlink_node(level, node);
+            destroy_node(node);
+        }
+    }
+
+    void fill_level(Level &level, Price level_price, OrderBook::MatchContext &ctx) {
+        while (ctx.quantity > 0 && level.head != nullptr) {
+            fill_front_order(level, level_price, ctx);
+        }
+    }
+
+    template <class OppMap> void match_against(OppMap &opposite, OrderBook::MatchContext &ctx) {
+        while (ctx.quantity > 0 && !opposite.empty()) {
+            auto level_it = opposite.begin();
+            const Price level_price = level_it->first;
+            if (!can_match_level(ctx.taker_is_buy, ctx.is_market, ctx.limit, level_price)) {
+                break;
+            }
+            fill_level(level_it->second, level_price, ctx);
+            erase_level_if_empty(opposite, level_it);
+        }
+    }
+
+    template <class OppMap>
+    Quantity remaining_after_match(const OppMap &opposite, bool taker_is_buy, Price limit,
+                                   bool is_market, Quantity quantity) const {
+        for (auto level_it = opposite.begin(); quantity > 0 && level_it != opposite.end();
+             ++level_it) {
+            const Price level_price = level_it->first;
+            if (!can_match_level(taker_is_buy, is_market, limit, level_price)) {
+                break;
+            }
+            for (Node *node = level_it->second.head; quantity > 0 && node != nullptr;
+                 node = node->next) {
+                quantity -= std::min(quantity, node->order->quantity);
+            }
+        }
+        return quantity;
+    }
+
+    [[nodiscard]] Quantity remaining_after_match(Side side, Price limit, bool is_market,
+                                                 Quantity quantity) const {
+        if (side == Side::Buy) {
+            return remaining_after_match(asks, /*taker_is_buy=*/true, limit, is_market, quantity);
+        }
+        return remaining_after_match(bids, /*taker_is_buy=*/false, limit, is_market, quantity);
+    }
+
+    [[nodiscard]] bool can_store_limit(Side side, Price price, Quantity quantity,
+                                       TimeInForce tif) const {
+        if (tif == TimeInForce::IOC) {
+            return true;
+        }
+        return remaining_after_match(side, price, /*is_market=*/false, quantity) == 0 ||
+               has_capacity();
+    }
+
+    std::vector<Trade> add_limit(LimitInput input) {
+        std::vector<Trade> trades;
+        if (contains(input.id)) {
+            return trades;
+        }
+        OrderBook::MatchContext ctx{input.id,
+                                    input.side == Side::Buy,
+                                    input.price,
+                                    /*is_market=*/false,
+                                    input.quantity,
+                                    trades};
+        if (input.side == Side::Buy) {
+            match_against(asks, ctx);
+        } else {
+            match_against(bids, ctx);
+        }
+        if (input.quantity > 0 && input.tif == TimeInForce::GTC) {
+            static_cast<void>(rest(input.id, input.side, input.price, input.quantity));
+        }
+        return trades;
+    }
+
+    std::vector<Trade> add_market(OrderId id, Side side, Quantity quantity) {
+        std::vector<Trade> trades;
+        if (contains(id)) {
+            return trades;
+        }
+        OrderBook::MatchContext ctx{
+            id, side == Side::Buy, /*limit=*/0, /*is_market=*/true, quantity, trades};
+        if (side == Side::Buy) {
+            match_against(asks, ctx);
+        } else {
+            match_against(bids, ctx);
+        }
+        return trades;
+    }
+
+    bool cancel(OrderId id) {
+        const auto found = index.find(id);
+        if (found == index.end()) {
+            return false;
+        }
+        const Locator loc = found->second;
+        erase_resting_order(loc);
+        index.erase(found);
+        return true;
+    }
+
+    std::vector<Trade> modify(OrderId id, Price new_price, Quantity new_quantity) {
+        std::vector<Trade> trades;
+        const auto found = index.find(id);
+        if (found == index.end()) {
+            return trades;
+        }
+        const Locator loc = found->second;
+        if (new_quantity == 0) {
+            static_cast<void>(cancel(id));
+            return trades;
+        }
+        if (new_price == loc.price && new_quantity <= loc.node->order->quantity) {
+            loc.node->order->quantity = new_quantity;
+            return trades;
+        }
+        const Side side = loc.side;
+        static_cast<void>(cancel(id));
+        return add_limit(LimitInput{id, side, new_price, new_quantity, TimeInForce::GTC});
+    }
+
+    [[nodiscard]] std::optional<Price> best_bid() const {
+        return bids.empty() ? std::nullopt : std::optional<Price>{bids.begin()->first};
+    }
+
+    [[nodiscard]] std::optional<Price> best_ask() const {
+        return asks.empty() ? std::nullopt : std::optional<Price>{asks.begin()->first};
+    }
+
+    template <class LevelMap>
+    [[nodiscard]] const Level *find_level(const LevelMap &levels, Price price) const {
+        const auto it = levels.find(price);
+        return it == levels.end() ? nullptr : &it->second;
+    }
+
+    [[nodiscard]] QuantityTotal quantity_at(Side side, Price price) const {
+        const Level *level = side == Side::Buy ? find_level(bids, price) : find_level(asks, price);
+        if (level == nullptr) {
+            return 0;
+        }
+        QuantityTotal total = 0;
+        for (Node *node = level->head; node != nullptr; node = node->next) {
+            total += static_cast<QuantityTotal>(node->order->quantity);
+        }
+        return total;
+    }
+
+    [[nodiscard]] std::size_t order_count() const { return index.size(); }
+    [[nodiscard]] bool contains(OrderId id) const { return index.find(id) != index.end(); }
+
+    template <class OppMap>
+    [[nodiscard]] std::size_t fill_count(const OppMap &opposite, bool taker_is_buy, Price limit,
+                                         bool is_market, Quantity quantity) const {
+        std::size_t count = 0;
+        for (auto level_it = opposite.begin(); quantity > 0 && level_it != opposite.end();
+             ++level_it) {
+            const Price level_price = level_it->first;
+            if (!can_match_level(taker_is_buy, is_market, limit, level_price)) {
+                break;
+            }
+            for (Node *node = level_it->second.head; quantity > 0 && node != nullptr;
+                 node = node->next) {
+                quantity -= std::min(quantity, node->order->quantity);
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    [[nodiscard]] std::size_t fill_count(Side taker_side, Price limit, bool is_market,
+                                         Quantity quantity) const {
+        if (taker_side == Side::Buy) {
+            return fill_count(asks, /*taker_is_buy=*/true, limit, is_market, quantity);
+        }
+        if (taker_side == Side::Sell) {
+            return fill_count(bids, /*taker_is_buy=*/false, limit, is_market, quantity);
+        }
+        return 0;
+    }
+
+    template <class LevelMap>
+    [[nodiscard]] static std::vector<LevelView> collect_levels(const LevelMap &book) {
+        std::vector<LevelView> levels;
+        levels.reserve(book.size());
+        for (const auto &[price, level] : book) {
+            QuantityTotal total = 0;
+            for (Node *node = level.head; node != nullptr; node = node->next) {
+                total += static_cast<QuantityTotal>(node->order->quantity);
+            }
+            levels.push_back(LevelView{price, total});
+        }
+        return levels;
+    }
+
+    [[nodiscard]] std::vector<LevelView> bid_levels() const { return collect_levels(bids); }
+    [[nodiscard]] std::vector<LevelView> ask_levels() const { return collect_levels(asks); }
+};
 
 // Baseline uses the shared new_delete_resource (operator new/delete -> identical to pre-M32).
 // Pooled owns an unsynchronized_pool_resource; resource_ is set before the pmr containers (which
@@ -13,7 +440,11 @@ OrderBook::OrderBook(Storage storage)
                 ? std::optional<std::pmr::unsynchronized_pool_resource>(std::in_place)
                 : std::nullopt),
       resource_(pool_.has_value() ? &pool_.value() : std::pmr::new_delete_resource()),
-      bids_(resource_), asks_(resource_), index_(resource_) {}
+      bids_(resource_), asks_(resource_), index_(resource_),
+      intrusive_(storage == Storage::IntrusivePooled ? std::make_unique<IntrusiveStore>()
+                                                     : nullptr) {}
+
+OrderBook::~OrderBook() = default;
 
 bool OrderBook::can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price) {
     if (is_market) {
@@ -103,6 +534,10 @@ void OrderBook::rest(OrderId id, Side side, Price price, Quantity quantity) {
 
 std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quantity quantity,
                                         TimeInForce tif) {
+    if (intrusive_) {
+        return intrusive_->add_limit(
+            OrderBook::IntrusiveStore::LimitInput{id, side, price, quantity, tif});
+    }
     std::vector<Trade> trades;
     if (contains(id)) {
         return trades;
@@ -120,6 +555,9 @@ std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quan
 }
 
 std::vector<Trade> OrderBook::add_market(OrderId id, Side side, Quantity quantity) {
+    if (intrusive_) {
+        return intrusive_->add_market(id, side, quantity);
+    }
     std::vector<Trade> trades;
     if (contains(id)) {
         return trades;
@@ -148,6 +586,9 @@ void OrderBook::erase_resting_order(const Locator &loc) {
 }
 
 bool OrderBook::cancel(OrderId id) {
+    if (intrusive_) {
+        return intrusive_->cancel(id);
+    }
     const auto found = index_.find(id);
     if (found == index_.end()) {
         return false;
@@ -159,6 +600,9 @@ bool OrderBook::cancel(OrderId id) {
 }
 
 std::vector<Trade> OrderBook::modify(OrderId id, Price new_price, Quantity new_quantity) {
+    if (intrusive_) {
+        return intrusive_->modify(id, new_price, new_quantity);
+    }
     std::vector<Trade> trades;
     const auto found = index_.find(id);
     if (found == index_.end()) {
@@ -180,6 +624,9 @@ std::vector<Trade> OrderBook::modify(OrderId id, Price new_price, Quantity new_q
 }
 
 std::optional<Price> OrderBook::best_bid() const {
+    if (intrusive_) {
+        return intrusive_->best_bid();
+    }
     if (bids_.empty()) {
         return std::nullopt;
     }
@@ -187,6 +634,9 @@ std::optional<Price> OrderBook::best_bid() const {
 }
 
 std::optional<Price> OrderBook::best_ask() const {
+    if (intrusive_) {
+        return intrusive_->best_ask();
+    }
     if (asks_.empty()) {
         return std::nullopt;
     }
@@ -194,6 +644,9 @@ std::optional<Price> OrderBook::best_ask() const {
 }
 
 QuantityTotal OrderBook::quantity_at(Side side, Price price) const {
+    if (intrusive_) {
+        return intrusive_->quantity_at(side, price);
+    }
     const Level *level = find_level(side, price);
     return level == nullptr ? 0 : level_quantity(*level);
 }
@@ -216,15 +669,24 @@ QuantityTotal OrderBook::level_quantity(const Level &level) {
 }
 
 std::size_t OrderBook::order_count() const {
+    if (intrusive_) {
+        return intrusive_->order_count();
+    }
     return index_.size();
 }
 
 bool OrderBook::contains(OrderId id) const {
+    if (intrusive_) {
+        return intrusive_->contains(id);
+    }
     return index_.find(id) != index_.end();
 }
 
 std::size_t OrderBook::fill_count(Side taker_side, Price limit, bool is_market,
                                   Quantity quantity) const {
+    if (intrusive_) {
+        return intrusive_->fill_count(taker_side, limit, is_market, quantity);
+    }
     if (taker_side == Side::Buy) {
         return count_matches(asks_, MatchQuery{/*taker_is_buy=*/true, limit, is_market, quantity});
     }
@@ -232,6 +694,13 @@ std::size_t OrderBook::fill_count(Side taker_side, Price limit, bool is_market,
         return count_matches(bids_, MatchQuery{/*taker_is_buy=*/false, limit, is_market, quantity});
     }
     return 0;
+}
+
+bool OrderBook::can_store_limit(Side side, Price price, Quantity quantity, TimeInForce tif) const {
+    if (intrusive_) {
+        return intrusive_->can_store_limit(side, price, quantity, tif);
+    }
+    return true;
 }
 
 namespace {
@@ -250,10 +719,16 @@ template <class LevelMap> std::vector<LevelView> collect_levels(const LevelMap &
 } // namespace
 
 std::vector<LevelView> OrderBook::bid_levels() const {
+    if (intrusive_) {
+        return intrusive_->bid_levels();
+    }
     return collect_levels(bids_);
 }
 
 std::vector<LevelView> OrderBook::ask_levels() const {
+    if (intrusive_) {
+        return intrusive_->ask_levels();
+    }
     return collect_levels(asks_);
 }
 

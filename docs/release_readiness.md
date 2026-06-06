@@ -48,9 +48,9 @@ demo), and `determinism` (gcc + clang).
 - **Architecture decisions** are recorded in `docs/adr/` (independent OCaml oracle, golden
   fixture regeneration, deterministic shrinker, dynamic concurrency validation limits,
   allocator-vs-storage separation, constrained perf artifacts).
-- **No stale milestone references**: PROGRESS and the milestone tables reflect M0–M22 merged and
-  the tractable backlog (#34–#51) complete; #28–#33 (generic) and #24–#27 (major architecture)
-  remain open/deferred.
+- **No stale milestone references**: PROGRESS and the milestone tables reflect the current merged
+  milestones and clearly distinguish still-open backlog from follow-ups already addressed by later
+  branches.
 
 ## Scope and honesty
 

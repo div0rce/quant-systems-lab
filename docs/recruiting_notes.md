@@ -42,9 +42,9 @@
 
 ## Résumé bullets — Linux Engineering (conservative)
 
-- Implemented a single-threaded TCP order gateway and a UDP market-data feed on POSIX sockets
-  (loopback), with bounded receive timeouts, sequence-gap detection, and
-  disconnect-on-malformed-framing.
+- Implemented TCP order-gateway transports and a UDP market-data feed on POSIX sockets
+  (loopback), with bounded receive timeouts, sequence-gap detection, threaded portable serving,
+  epoll-based Linux serving, and disconnect-on-malformed-framing.
 - Built CLI tools for append-only-log inspection and deterministic replay, plus a demo script
   that orchestrates a loopback gateway round-trip with port-readiness polling and clean
   process teardown.
@@ -78,11 +78,11 @@ allocator tuning — not production throughput or end-to-end latency:
 - **Are the benchmarks meaningful?** As regression/order-of-magnitude signals, yes; they are
   explicitly microbenchmarks and I can enumerate what they exclude. I will not present them as
   production numbers.
-- **Biggest weaknesses?** Single-threaded, synthetic, minimal networking, no real venue or
+- **Biggest weaknesses?** Synthetic, loopback-only, minimal networking, no real venue or
   persistence beyond the flat log — see the README Limitations section.
-- **What would you do next?** Lock-free queues / memory-pool internals, a multithreaded
-  pipeline with ThreadSanitizer, and a richer order-flow model (the cross-language differential
-  testing system and OCaml oracle are already built — see the differential-testing docs).
+- **What would you do next?** NUMA/CPU-locality measurement, persistence/recovery benchmarking,
+  and FIX-like protocol-adapter research (the cross-language differential testing system and OCaml
+  oracle are already built — see the differential-testing docs).
 - **Why OCaml, and what does it actually prove?** It's an independent cross-check: a small
   typed/immutable verifier parses the exported event log and re-derives replay invariants, so
   a bug in a shared C++ assumption is less likely to pass unnoticed. It does not re-implement

@@ -56,8 +56,8 @@ class OrderGateway {
     GatewayResult modify(SymbolId symbol, OrderId id, Price new_price, Quantity new_quantity);
 
     [[nodiscard]] NewOrderPreview preview_new_order(SymbolId symbol, OrderId id, Side side,
-                                                    Price price, Quantity quantity,
-                                                    OrderType type) const;
+                                                    Price price, Quantity quantity, OrderType type,
+                                                    TimeInForce tif) const;
 
   private:
     MatchingEngine &engine_;

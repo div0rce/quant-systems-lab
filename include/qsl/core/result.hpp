@@ -15,6 +15,7 @@ enum class RejectReason : std::uint8_t {
     MaxNotionalExceeded,
     DuplicateOrderId,
     UnknownOrder,
+    StorageExhausted,
 };
 
 [[nodiscard]] constexpr const char *to_string(RejectReason r) noexcept {
@@ -37,6 +38,8 @@ enum class RejectReason : std::uint8_t {
         return "DuplicateOrderId";
     case RejectReason::UnknownOrder:
         return "UnknownOrder";
+    case RejectReason::StorageExhausted:
+        return "StorageExhausted";
     }
     return "Unknown";
 }

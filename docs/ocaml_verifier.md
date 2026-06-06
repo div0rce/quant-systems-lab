@@ -77,7 +77,7 @@ events. It mirrors the C++ semantics so the snapshots can be compared:
 - sequence numbers count emitted events, so `last_seq` matches the C++ engine.
 
 `replay_snapshot <fixture>` prints the OCaml-computed snapshot. On the committed
-`stream_seed7.txt` it independently reproduces the C++ result (`last_seq 47`, `trades 13`, and
+`stream_seed7.txt` it independently reproduces the C++ result (`last_seq 48`, `trades 5`, and
 the same per-symbol best bid/ask and order counts). The **automated** C++-vs-OCaml snapshot
 equality check (with readable diffs, in CI) is M17; M16 provides the engine and unit tests
 covering matching, partial fills, cancel, modify (in-place and repricing), IOC, market,

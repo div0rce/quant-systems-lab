@@ -49,6 +49,7 @@ TEST_CASE("reject reasons stringify deterministically", "[result]") {
             "MaxNotionalExceeded");
     REQUIRE(std::string_view{to_string(RejectReason::DuplicateOrderId)} == "DuplicateOrderId");
     REQUIRE(std::string_view{to_string(RejectReason::UnknownOrder)} == "UnknownOrder");
+    REQUIRE(std::string_view{to_string(RejectReason::StorageExhausted)} == "StorageExhausted");
     REQUIRE(std::string_view{to_string(static_cast<RejectReason>(255))} == "Unknown");
 }
 

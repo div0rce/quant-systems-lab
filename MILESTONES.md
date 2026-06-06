@@ -467,16 +467,18 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 > roadmap** (issue → milestone): **#24 → M24** (ring buffer), **#26 → M26** (threaded pipeline),
 > **#27 → M27** (ThreadSanitizer), **#25 → M28** (memory-pool allocator), **#32 → M29** (Linux
 > perf/flamegraph). M25 (memory-ordering evidence), M30 (socket profiling/hardening), and M31
-> (external review) are new milestones with no prior issue. The genuinely **deferred** items are
-> **#28** (realistic order-flow model), **#29** (FIX adapter), **#30** (web dashboard),
-> **#31** (Docker packaging), and **#33** (Pages site) — do not start them before the Phase III/IV
-> systems roadmap unless the human explicitly reprioritizes.
+> (external review) are new milestones with no prior issue. The post-M42 follow-up branch closes
+> the remaining tractable systems items **#26** (portable TCP serving beyond one-connection-at-a-time
+> accept) and **#28** (realistic synthetic order-flow model). The genuinely **deferred** product/API
+> items remain **#29** (FIX adapter), **#30** (web dashboard), **#31** (Docker packaging), and
+> **#33** (Pages site) — do not start them before the Phase III/IV systems roadmap unless the human
+> explicitly reprioritizes.
 
 Do not pull backlog items into earlier PRs.
 
 - Lock-free queue / ring-buffer internals. (#24)
 - Memory pool allocator. (#25)
-- Multithreaded gateway and market data pipeline. (#26)
+- Multithreaded gateway and market data pipeline, plus portable threaded TCP serving follow-up. (#26)
 - ThreadSanitizer coverage. (#27)
 - More realistic synthetic order-flow model. (#28)
 - FIX-like text protocol adapter. (#29)
@@ -1069,7 +1071,7 @@ These items produce more systems-engineering signal than more isolated microbenc
 
 Forbidden throughout: production-grade/HFT/real-exchange/formally-verified/profitable/guaranteed-
 low-latency/production-networking claims; and dashboards, trading strategies, market-data APIs,
-FIX adapters, Docker packaging, or Pages sites (the deferred #28–#31 and #33) before this arc completes.
+FIX adapters, Docker packaging, or Pages sites (the deferred #29–#31 and #33) before this arc completes.
 
 ---
 
@@ -1314,10 +1316,10 @@ Current state:
   objects, so direct `OrderPool<Capacity>` integration would require an intrusive/custom-node
   redesign.
 
-Future work:
+Post-M42 follow-up:
 
-- integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator
-  experiment;
+- add an explicit intrusive `OrderPool<Capacity>` storage mode for resting orders while preserving
+  the baseline and PMR storage paths;
 - measure end-to-end matching workloads;
 - evaluate cache-locality effects;
 - evaluate replay impact;
@@ -1341,7 +1343,8 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 - Integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator
   experiment.
 - Keep direct M28 `OrderPool<Capacity>` integration out of scope; that requires an
-  intrusive/custom-node order-book redesign.
+  intrusive/custom-node order-book redesign. That direct-storage follow-up is handled after M42 by
+  the #95 feature branch rather than by M32 itself.
 - Benchmark engine-level workloads against the baseline storage.
 - Analyze cache locality and replay impact.
 - Compare against arena, intrusive, and flat-container alternatives at the documentation level.
@@ -1350,7 +1353,8 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 ### Definition of Done
 
 - [ ] Pool-backed storage path is scoped and reversible.
-- [ ] Direct intrusive/custom-node `OrderPool<Capacity>` storage is tracked separately.
+- [ ] Direct intrusive/custom-node `OrderPool<Capacity>` storage is explicitly separated from M32
+      and handled by the later #95 feature follow-up.
 - [ ] Baseline vs integrated engine workload measurements are produced by committed scripts.
 - [ ] Results document cache/locality/replay effects and limitations.
 - [ ] No README/resume claim unless supported by the measured artifact.

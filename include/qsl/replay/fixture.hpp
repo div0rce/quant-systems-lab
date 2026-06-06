@@ -13,7 +13,7 @@ struct FixtureParams {
     std::uint64_t seed = 42;
     core::SymbolId symbols = 4;
     std::size_t orders = 200;
-    core::Quantity max_qty = 8; // generate_flow uses qty 1..10 -> some new orders reject
+    core::Quantity max_qty = 8; // generate_flow can emit qty > 8 -> some new orders reject
     core::QuantityTotal max_notional = 1'000'000;
 };
 

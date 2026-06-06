@@ -141,10 +141,13 @@ ClientCommand -> OrderGateway (risk) -> MatchingEngine -> EngineEvents
   (so the engine's sequence counter and state are untouched); an acceptance carries the
   engine's resulting event stream. Rejections are intentionally *not* part of the engine's
   sequenced event stream because they do not mutate engine state (which keeps replay clean).
+- **Storage-capacity guard** — when the explicit intrusive order-pool storage mode is selected,
+  a GTC limit order that would need to rest but cannot acquire an order node is rejected with
+  `StorageExhausted` before matching mutates state. Baseline and PMR storage are unchanged.
 
 Checks run in a fixed order so the returned reason is deterministic when multiple would
 apply: unknown symbol, duplicate id, then value checks (side, price, quantity, max
-quantity, max notional).
+quantity, max notional), then the opt-in storage-capacity guard.
 
 ## Market data publisher (M6)
 

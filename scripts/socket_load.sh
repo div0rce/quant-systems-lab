@@ -2,8 +2,8 @@
 # Multi-client TCP load / connection-scaling test for the order gateway.
 #
 # Drives N concurrent short-lived clients (qsl-client: connect, NewOrder + Heartbeat, read, close)
-# against qsl-gateway in BOTH transport modes -- the blocking single-connection accept loop (M9)
-# and the epoll event loop (M34) -- and reports how each scales with the client count.
+# against qsl-gateway in BOTH transport modes -- the portable threaded TCP server and the epoll
+# event loop (M34) -- and reports how each scales with the client count.
 #
 # What this isolates: the per-request engine work (matching one order) is sub-microsecond, so the
 # wall time is dominated by connection setup/accept and the socket I/O path. Loopback only,
@@ -35,7 +35,7 @@ CLIENT_COUNTS="${QSL_LOAD_COUNTS-1 4 8 16}"
 TRIALS="${QSL_LOAD_TRIALS:-3}"
 CLIENT_TIMEOUT="${QSL_LOAD_CLIENT_TIMEOUT:-30}" # per-client wall cap; bounds a hang if the gateway dies
 MAX_ATTEMPTS="${QSL_LOAD_MAX_ATTEMPTS:-6}"      # retries (on a fresh port) before a trial is failed
-MAX_CLIENT_COUNT=16 # shared listen backlog: blocking TcpServer=16, epoll>=16; keep comparison fair
+MAX_CLIENT_COUNT=16 # conservative default sweep; both transport backlogs are >= this
 
 if [[ "$(uname -s)" != "Linux" ]]; then
     echo "error: scripts/socket_load.sh requires Linux (epoll mode + high-res timer); current OS is $(uname -s)." >&2
@@ -66,7 +66,7 @@ for count in $CLIENT_COUNTS; do
     fi
     if ((count > MAX_CLIENT_COUNT)); then
         echo "error: QSL_LOAD_COUNTS value '$count' exceeds shared listen backlog $MAX_CLIENT_COUNT." >&2
-        echo "       Use counts <= $MAX_CLIENT_COUNT so blocking and epoll modes have comparable accept queues." >&2
+        echo "       Use counts <= $MAX_CLIENT_COUNT for the committed conservative sweep." >&2
         exit 2
     fi
     CLIENT_COUNT_VALUES+=("$count")
@@ -187,7 +187,7 @@ best_of() {
 }
 
 declare -a ROWS=()
-for mode in blocking epoll; do
+for mode in threaded epoll; do
     for n in "${CLIENT_COUNT_VALUES[@]}"; do
         best_of "$mode" "$n"
         rate="$(awk -v n="$n" -v w="$BEST_WALL" 'BEGIN { if (w > 0) printf "%.0f", n / w; else printf "n/a" }')"
@@ -229,9 +229,10 @@ TMP_OUT="$(mktemp)"
     echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Setup: the same concurrent client load is run against the gateway in each transport mode."
-    echo "blocking = the M9 single-connection accept loop (serves one connection at a time); epoll ="
-    echo "the M34 event loop (multiplexes readiness across all connections). Per-order engine work is"
-    echo "sub-microsecond, so the wall time is the connection-setup/accept/socket path, not matching."
+    echo "threaded = the portable TCP server (one worker per accepted connection, gateway mutation"
+    echo "serialized); epoll = the M34 event loop (multiplexes readiness across all connections)."
+    echo "Per-order engine work is sub-microsecond, so the wall time is the connection-setup/accept/socket"
+    echo "path, not matching."
     echo
     printf '%-9s %8s %14s %14s %10s\n' "mode" "clients" "wall(s,best)" "conns/s(~)" "completed"
     printf '%-9s %8s %14s %14s %10s\n' "-------" "-------" "------------" "----------" "---------"
@@ -241,10 +242,9 @@ TMP_OUT="$(mktemp)"
     done
     echo
     echo "Reading the result: compare how the best wall time grows with the client count within each"
-    echo "mode. In principle the blocking server (one connection at a time) should scale worse than"
-    echo "epoll (which multiplexes), but at these small loopback counts connection setup dominates and"
-    echo "the two modes stay close (same order of magnitude); which is marginally faster varies run to"
-    echo "run. A clear epoll advantage would require higher concurrency or heavier per-connection work."
+    echo "mode. At these small loopback counts connection setup dominates and the two modes can stay close"
+    echo "(same order of magnitude); which is marginally faster varies run to run. A clear transport"
+    echo "advantage would require higher concurrency or heavier per-connection work."
     echo "Absolute conns/s figures are loopback, single-machine, and load dependent -- not a"
     echo "production-capacity or throughput claim. Every 'completed' cell is N/N: a load run that"
     echo "cannot reach full completion writes no artifact and fails, so this table is never partial"
@@ -256,7 +256,7 @@ TMP_OUT="$(mktemp)"
     echo "  long-lived high-throughput session; this measures connection scaling, not steady-state"
     echo "  message throughput."
     echo "- Spawning client processes adds fork/exec cost on the driver side; both modes pay it"
-    echo "  equally, so the blocking-vs-epoll comparison is still meaningful, but absolute conns/s"
+    echo "  equally, so the threaded-vs-epoll comparison is still meaningful, but absolute conns/s"
     echo "  is bounded by client spawn cost, not just the server."
     echo "- Constrained-environment evidence for investigation; not a production-capacity claim."
 } >"$TMP_OUT"

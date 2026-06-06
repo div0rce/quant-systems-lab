@@ -59,8 +59,10 @@ benchmark-only builds.
 
 The matching and replay scenarios use `replay::generate_flow(seed = 42, symbols = 4,
 orders = 5000)` — a fixed `mt19937_64` seed, so the workload is identical run to run and on
-any machine. Changing the seed or sizes changes the workload; the committed results state the
-parameters used.
+any machine. The generator is still synthetic, but it is stateful: per-symbol mid-prices drift,
+orders mostly rest near the book, cancels/modifies preferentially target active orders, and
+occasional market/crossing flow creates trades. Changing the seed, sizes, or generator version
+changes the workload; the committed results state the parameters used.
 
 ## Report format
 
@@ -100,9 +102,9 @@ against a fixed-capacity `OrderPool` acquire/release path and writes full metada
 make bench-allocator   # runs qsl-bench pool, writes results/allocator_experiment.txt
 ```
 
-The M32 storage experiment is separate from the M28 allocator microbenchmark. It replays the same
-deterministic engine flow through baseline order-book storage and PMR-backed container-node
-allocation:
+The storage experiment is separate from the M28 allocator microbenchmark. It replays the same
+deterministic engine flow through baseline order-book storage, PMR-backed container-node
+allocation, and intrusive `OrderPool`-backed resting-order nodes:
 
 ```bash
 make bench-storage   # runs qsl-bench storage, writes results/pool_backed_storage.txt

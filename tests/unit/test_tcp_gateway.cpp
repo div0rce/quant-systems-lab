@@ -7,10 +7,13 @@
 #include <arpa/inet.h>
 #include <array>
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <cstddef>
 #include <netinet/in.h>
 #include <span>
 #include <sys/socket.h>
+#include <sys/time.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -46,6 +49,14 @@ bool is_heartbeat_ack(std::span<const std::byte> bytes, std::uint64_t token) {
     }
     const auto ack = decode_heartbeat_ack(bytes);
     return ack.ok() && ack.value.token == token;
+}
+
+void set_recv_timeout(int fd, std::chrono::milliseconds timeout) {
+    timeval tv{};
+    tv.tv_sec = static_cast<time_t>(timeout.count() / 1000);
+    tv.tv_usec = static_cast<suseconds_t>((timeout.count() % 1000) * 1000);
+    REQUIRE(::setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, static_cast<socklen_t>(sizeof(tv))) ==
+            0);
 }
 } // namespace
 
@@ -146,6 +157,59 @@ TEST_CASE("tcp server bounds high-fanout responses before gateway mutation", "[g
 
     static_cast<void>(::close(fds[0]));
     static_cast<void>(::close(fds[1]));
+}
+
+TEST_CASE("tcp server accepts a second client while the first remains open", "[gateway][tcp]") {
+    const int listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    REQUIRE(listen_fd >= 0);
+    int yes = 1;
+    ::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &yes, static_cast<socklen_t>(sizeof(yes)));
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = 0;
+    ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+    auto *addr_generic = reinterpret_cast<sockaddr *>(&addr); // NOLINT: POSIX socket API
+    REQUIRE(::bind(listen_fd, addr_generic, static_cast<socklen_t>(sizeof(addr))) == 0);
+    REQUIRE(::listen(listen_fd, 2) == 0);
+
+    sockaddr_in bound{};
+    socklen_t bound_len = sizeof(bound);
+    auto *bound_generic = reinterpret_cast<sockaddr *>(&bound); // NOLINT: POSIX socket API
+    REQUIRE(::getsockname(listen_fd, bound_generic, &bound_len) == 0);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    TcpServerOptions options;
+    options.max_accepts = 2;
+    TcpServer server{gateway, options};
+
+    bool server_ok = false;
+    std::thread server_thread([&] { server_ok = server.serve_listen_socket(listen_fd); });
+
+    const int first = ::socket(AF_INET, SOCK_STREAM, 0);
+    REQUIRE(first >= 0);
+    REQUIRE(::connect(first, bound_generic, static_cast<socklen_t>(sizeof(bound))) == 0);
+    write_all(first, encode(Heartbeat{1}));
+
+    const int second = ::socket(AF_INET, SOCK_STREAM, 0);
+    REQUIRE(second >= 0);
+    set_recv_timeout(second, std::chrono::milliseconds(1000));
+    REQUIRE(::connect(second, bound_generic, static_cast<socklen_t>(sizeof(bound))) == 0);
+    write_all(second, encode(Heartbeat{2}));
+    static_cast<void>(::shutdown(second, SHUT_WR));
+
+    const std::vector<std::byte> second_response = read_all(second);
+    REQUIRE(is_heartbeat_ack(second_response, 2));
+
+    static_cast<void>(::shutdown(first, SHUT_WR));
+    static_cast<void>(::close(first));
+    static_cast<void>(::close(second));
+    server_thread.join();
+    static_cast<void>(::close(listen_fd));
+
+    REQUIRE(server_ok);
 }
 
 TEST_CASE("tcp server rejects non-numeric bind hosts", "[gateway][tcp]") {

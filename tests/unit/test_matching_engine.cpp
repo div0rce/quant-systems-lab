@@ -1,8 +1,11 @@
 #include "qsl/engine/matching_engine.hpp"
+#include "qsl/replay/recovery.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <optional>
+#include <tuple>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -28,11 +31,11 @@ void expect_trade(const EngineEvent &ev, const ExpectedTrade &expected) {
     REQUIRE(std::holds_alternative<TradeEvent>(ev));
     const auto &tr = std::get<TradeEvent>(ev);
     CAPTURE(expected.symbol, expected.maker, expected.taker, expected.price, expected.quantity);
-    REQUIRE(tr.symbol == expected.symbol);
-    REQUIRE(tr.maker_id == expected.maker);
-    REQUIRE(tr.taker_id == expected.taker);
-    REQUIRE(tr.price == expected.price);
-    REQUIRE(tr.quantity == expected.quantity);
+    const auto actual_fields =
+        std::tuple{tr.symbol, tr.maker_id, tr.taker_id, tr.price, tr.quantity};
+    const auto expected_fields = std::tuple{expected.symbol, expected.maker, expected.taker,
+                                            expected.price, expected.quantity};
+    REQUIRE(actual_fields == expected_fields);
 }
 
 // An OrderAccepted for `order_id` on `symbol`.
@@ -76,9 +79,10 @@ TEST_CASE("symbol registry assigns stable, distinct ids", "[engine]") {
     REQUIRE(eng.register_symbol("AAPL") == a); // idempotent
     const SymbolId m = eng.register_symbol("MSFT");
     REQUIRE(m != a);
-    REQUIRE(eng.symbol_id("AAPL") == std::optional<SymbolId>{a});
-    REQUIRE(eng.symbol_id("MSFT") == std::optional<SymbolId>{m});
-    REQUIRE_FALSE(eng.symbol_id("NVDA").has_value());
+    const bool lookups_match = eng.symbol_id("AAPL") == std::optional<SymbolId>{a} &&
+                               eng.symbol_id("MSFT") == std::optional<SymbolId>{m} &&
+                               !eng.symbol_id("NVDA").has_value();
+    REQUIRE(lookups_match);
 }
 
 TEST_CASE("multiple symbols trade independently", "[engine]") {
@@ -133,6 +137,27 @@ TEST_CASE("same commands produce identical events and snapshot", "[engine]") {
     REQUIRE(e1.snapshot() == e2.snapshot());
 }
 
+TEST_CASE("storage modes produce identical events and final snapshot", "[engine][storage]") {
+    const auto flow = qsl::replay::generate_flow(/*seed=*/91, /*symbols=*/4, /*orders=*/800);
+    const auto run = [&](OrderBook::Storage storage) {
+        MatchingEngine eng{storage};
+        std::vector<EngineEvent> events;
+        for (const auto &command : flow) {
+            append(events, qsl::replay::apply(eng, command));
+        }
+        return std::pair{events, eng.snapshot()};
+    };
+
+    const auto baseline = run(OrderBook::Storage::Baseline);
+    const auto pmr = run(OrderBook::Storage::Pooled);
+    const auto intrusive = run(OrderBook::Storage::IntrusivePooled);
+
+    REQUIRE(pmr == baseline);
+    REQUIRE(intrusive == baseline);
+    const bool non_vacuous = baseline.second.last_seq > 0 && !baseline.second.symbols.empty();
+    REQUIRE(non_vacuous);
+}
+
 TEST_CASE("engine routes cancel and emits events", "[engine]") {
     MatchingEngine eng;
     const SymbolId a = eng.register_symbol("AAPL");
@@ -141,8 +166,8 @@ TEST_CASE("engine routes cancel and emits events", "[engine]") {
     const auto canceled = eng.cancel(a, 1);
     REQUIRE(canceled.size() == 1);
     REQUIRE(std::holds_alternative<OrderCanceled>(canceled[0]));
-    REQUIRE(eng.cancel(a, 1).empty());   // already gone
-    REQUIRE(eng.cancel(a, 999).empty()); // unknown order
+    const bool later_cancels_noop = eng.cancel(a, 1).empty() && eng.cancel(a, 999).empty();
+    REQUIRE(later_cancels_noop);
 }
 
 TEST_CASE("modify emits OrderModified and any resulting trades", "[engine]") {
