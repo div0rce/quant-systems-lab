@@ -48,6 +48,8 @@ All notable changes to this project. The format is loosely based on
 
 ### Changed
 
+- M42: `qsl-export-stream` now reports clean usage errors for missing or invalid numeric CLI
+  arguments instead of terminating from uncaught parse exceptions.
 - M39: encapsulated order-book matching parameters into private match/query contexts and extracted
   fill, erase, and level-lookup helpers. Public order-book behavior, deterministic matching output,
   integer-tick prices, and wall-clock-independent engine semantics are unchanged.

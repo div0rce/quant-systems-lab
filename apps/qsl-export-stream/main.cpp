@@ -1,10 +1,34 @@
 #include "qsl/replay/fixture.hpp"
 
+#include <charconv>
 #include <cstdint>
+#include <exception>
 #include <iostream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
+#include <system_error>
 
 namespace {
+
+constexpr std::string_view kUsage =
+    "usage: qsl-export-stream [seed] [orders] | version | ioc | prop <seed> | shrink <seed> | "
+    "divergence <seed>";
+
+std::uint64_t parse_u64(std::string_view value, std::string_view name) {
+    std::uint64_t parsed = 0;
+    const auto *begin = value.data();
+    const auto *end = begin + value.size();
+    const auto [ptr, ec] = std::from_chars(begin, end, parsed);
+    if (ec == std::errc::result_out_of_range) {
+        throw std::out_of_range(std::string(name) + " is out of range: " + std::string(value));
+    }
+    if (ec != std::errc{} || ptr != end) {
+        throw std::invalid_argument(std::string(name) +
+                                    " must be an unsigned integer: " + std::string(value));
+    }
+    return parsed;
+}
 
 qsl::replay::FixtureExportRequest parse_request(int argc, char **argv) {
     qsl::replay::FixtureExportRequest request;
@@ -18,25 +42,34 @@ qsl::replay::FixtureExportRequest parse_request(int argc, char **argv) {
             request.mode = qsl::replay::FixtureExportMode::IocScenario;
             return request;
         }
-        if (argc >= 3 && mode == "prop") {
+        if (mode == "prop") {
+            if (argc < 3) {
+                throw std::invalid_argument("prop requires <seed>");
+            }
             request.mode = qsl::replay::FixtureExportMode::Property;
-            request.seed = std::stoull(argv[2]);
+            request.seed = parse_u64(argv[2], "prop seed");
             return request;
         }
-        if (argc >= 3 && mode == "shrink") {
+        if (mode == "shrink") {
+            if (argc < 3) {
+                throw std::invalid_argument("shrink requires <seed>");
+            }
             request.mode = qsl::replay::FixtureExportMode::Shrink;
-            request.seed = std::stoull(argv[2]);
+            request.seed = parse_u64(argv[2], "shrink seed");
             return request;
         }
-        if (argc >= 3 && mode == "divergence") {
+        if (mode == "divergence") {
+            if (argc < 3) {
+                throw std::invalid_argument("divergence requires <seed>");
+            }
             request.mode = qsl::replay::FixtureExportMode::Divergence;
-            request.seed = std::stoull(argv[2]);
+            request.seed = parse_u64(argv[2], "divergence seed");
             return request;
         }
-        request.params.seed = std::stoull(argv[1]);
+        request.params.seed = parse_u64(argv[1], "seed");
     }
     if (argc >= 3) {
-        request.params.orders = std::stoull(argv[2]);
+        request.params.orders = parse_u64(argv[2], "orders");
     }
     return request;
 }
@@ -49,6 +82,11 @@ qsl::replay::FixtureExportRequest parse_request(int argc, char **argv) {
 // rejections + final per-symbol snapshot) to stdout. Deterministic for a given seed; this
 // is the data the independent OCaml replay engine (M16) consumes and M17 compares against.
 int main(int argc, char **argv) {
-    qsl::replay::write_fixture_export(std::cout, parse_request(argc, argv));
-    return 0;
+    try {
+        qsl::replay::write_fixture_export(std::cout, parse_request(argc, argv));
+        return 0;
+    } catch (const std::exception &ex) {
+        std::cerr << "error: " << ex.what() << "\n" << kUsage << "\n";
+        return 2;
+    }
 }

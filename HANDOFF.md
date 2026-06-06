@@ -89,7 +89,8 @@ networking research.
 
 Current priority order:
 
-1. Repository-health refactor phase M36–M42 (currently M39, draft PR #107 open).
+1. Repository-health refactor phase M36–M42 (currently M42, draft PR #111 open on
+   `refactor/m42-shared-shell-script-helpers`).
 2. M43 — NUMA awareness study (original next milestone, now shifted after the refactor phase).
 3. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
 

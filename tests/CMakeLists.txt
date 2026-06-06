@@ -38,6 +38,24 @@ add_test(
           -D "REJECT_OUTPUT=records: 0" -P
           "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
 
+add_test(
+  NAME qsl_export_stream_missing_mode_seed_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-export-stream>" -D "ARGS=prop"
+          -D "EXPECT_OUTPUT=prop requires <seed>" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_export_stream_invalid_seed_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-export-stream>" -D "ARGS=foo"
+          -D "EXPECT_OUTPUT=seed must be an unsigned integer" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_export_stream_invalid_orders_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-export-stream>" -D "ARGS=1;bad"
+          -D "EXPECT_OUTPUT=orders must be an unsigned integer" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
 if(EXISTS "/dev/full")
   add_test(
     NAME qsl_replay_generate_append_failure
