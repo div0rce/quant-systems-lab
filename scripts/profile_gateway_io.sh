@@ -193,7 +193,7 @@ fi
     echo "CLK_TCK:     $CLK"
     echo "Git commit:  $(qsl_git_commit_short)"
     echo "Dirty tree:  $DIRTY"
-    echo "Transport:   TCP over 127.0.0.1 (loopback), one connection at a time"
+    echo "Transport:   TCP over 127.0.0.1 (loopback), portable threaded TcpServer"
     echo "Load:        $CONNECTIONS sequential client round trips (NewOrder + Heartbeat each)"
     echo "Date:        $(qsl_utc_timestamp)"
     echo
@@ -212,8 +212,8 @@ fi
     echo "Caveats:"
     echo "- Loopback only: no NIC, device driver, routing, or real-network behaviour is exercised."
     echo "- strace multiplies syscall cost; use Pass 1 (not Pass 2) for the user/kernel CPU split."
-    echo "- Single-connection-at-a-time gateway (M9): this profiles that design, not a concurrent"
-    echo "  server. epoll/multi-client work is intentionally out of M30 scope (see docs)."
+    echo "- Sequential client workload: this profiles per-round-trip socket/syscall mix, not"
+    echo "  multi-client scaling. Use socket-load for threaded-vs-epoll comparison."
     echo "- Constrained profiling evidence for investigation; not a production-latency claim."
 } >"$TMP_OUT"
 
