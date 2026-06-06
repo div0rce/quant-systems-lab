@@ -1,14 +1,17 @@
 Command:     bash scripts/socket_stress.sh  (make socket-stress)
 Artifact:    UDP socket-buffer / burst-loss experiment (loopback, constrained)
-Hardware:    arm64
-OS:          Darwin 25.2.0
-Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
-Git commit:  62ed01a
-Dirty tree:  yes
+Hardware:    aarch64
+OS:          Linux 6.12.76-linuxkit
+CPU:          Apple aarch64
+rmem_default: 212992
+rmem_max:     212992
+Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Git commit:  a097476
+Dirty tree:  no
 Transport:   UDP unicast over 127.0.0.1 (loopback)
 Dataset:     qsl-mdfeed publish, seed 42, 20000 orders, 3 symbols
 Trials/setting: 4
-Date:        2026-06-02T15:25:02Z
+Date:        2026-06-06T18:54:45Z
 
 Setup: one publisher bursts every market-data datagram back-to-back (no pacing); one
 subscriber drains them and reports how many it received. The only variable is the
@@ -17,9 +20,9 @@ clamp the request, so the effective (granted) size is read back via getsockopt.
 
 setting  requested(B) effective(B)  published  lost/trial      maxlost  seq-gaps/trial 
 -------  ------------ ------------  ---------  ----------      -------  -------------- 
-small            2048         2048      16931  6,0,0,0               6  6,0,0,0        
-default             0       786896      16931  0,0,0,0               0  0,0,0,0        
-large         8388608      8388608      16931  0,0,0,0               0  0,0,0,0        
+small            2048         4096      14820  839,707,615,644     839  839,707,615,644
+default             0       212992      14820  0,0,0,0               0  0,0,0,0        
+large         8388608       425984      14820  0,0,0,0               0  0,0,0,0        
 
 Reading the result: 'lost/trial' is the honest loss metric -- published minus received
 -- so it counts TAIL drops too. 'seq-gaps/trial' is the SequenceTracker count, which
