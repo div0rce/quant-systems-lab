@@ -143,6 +143,29 @@ void write_stream_fixture(std::ostream &os, const FixtureParams &p) {
     run_and_emit(os, p, generate_flow(p.seed, p.symbols, p.orders));
 }
 
+void write_fixture_export(std::ostream &os, const FixtureExportRequest &request) {
+    switch (request.mode) {
+    case FixtureExportMode::Version:
+        os << kGeneratorVersion << "\n";
+        break;
+    case FixtureExportMode::Stream:
+        write_stream_fixture(os, request.params);
+        break;
+    case FixtureExportMode::IocScenario:
+        write_ioc_scenario_fixture(os);
+        break;
+    case FixtureExportMode::Property:
+        write_property_fixture(os, request.seed);
+        break;
+    case FixtureExportMode::Shrink:
+        write_shrunk_fixture(os, request.seed);
+        break;
+    case FixtureExportMode::Divergence:
+        write_divergence_fixture(os, request.seed);
+        break;
+    }
+}
+
 void write_ioc_scenario_fixture(std::ostream &os) {
     using core::Side;
     using core::TimeInForce;

@@ -17,6 +17,25 @@ struct FixtureParams {
     core::QuantityTotal max_notional = 1'000'000;
 };
 
+enum class FixtureExportMode {
+    Version,
+    Stream,
+    IocScenario,
+    Property,
+    Shrink,
+    Divergence,
+};
+
+struct FixtureExportRequest {
+    FixtureExportMode mode = FixtureExportMode::Stream;
+    FixtureParams params{};
+    std::uint64_t seed = 0;
+};
+
+// Stable export-orchestration entrypoint for qsl-export-stream and tests. The CLI parses argv into
+// this request; fixture.cpp owns the export mode semantics and output bytes.
+void write_fixture_export(std::ostream &os, const FixtureExportRequest &request);
+
 // Write a normalized differential-testing fixture for the flow defined by `params`:
 // the symbol-registration + command stream, the emitted engine events, new-order
 // rejections, and the final per-symbol snapshot (best bid/ask, per-price level aggregates,

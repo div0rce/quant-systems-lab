@@ -15,6 +15,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/qsl_common.sh
+source scripts/qsl_common.sh
 
 BIN="${QSL_MDFEED_BIN:-build/dev/qsl-mdfeed}"
 OUT="${QSL_SOCKET_STRESS_OUT:-results/socket_stress_summary.txt}"
@@ -27,42 +29,13 @@ TRIALS="${QSL_STRESS_TRIALS:-4}"
 SMALL_BUF="${QSL_STRESS_SMALL_BUF:-2048}"
 LARGE_BUF="${QSL_STRESS_LARGE_BUF:-8388608}"
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
-
-repo_relative_or_empty() {
-    local path="$1" abs dir base resolved_dir resolved
-    [[ -z "$path" ]] && return
-    if [[ "$path" = /* ]]; then abs="$path"; else abs="$REPO_ROOT/$path"; fi
-    dir="$(dirname "$abs")"
-    base="$(basename "$abs")"
-    resolved_dir="$(cd "$dir" 2>/dev/null && pwd -P)" || return
-    resolved="$resolved_dir/$base"
-    case "$resolved" in
-    "$REPO_ROOT"/*) printf '%s\n' "${resolved#"$REPO_ROOT"/}" ;;
-    esac
-}
-
-dirty_tree_status() {
-    local out_rel status_output
-    local pathspecs=(. ":(exclude)results/socket_stress_summary.txt"
-        ":(exclude)results/socket_profile_loopback.txt")
-    out_rel="$(repo_relative_or_empty "$OUT")"
-    [[ -n "$out_rel" ]] && pathspecs+=(":(exclude)$out_rel")
-    if ! status_output="$(git status --porcelain --untracked-files=all -- "${pathspecs[@]}")"; then
-        echo "error: dirty-tree check failed; refusing to write misleading metadata." >&2
-        exit 2
-    fi
-    if [[ -n "$status_output" ]]; then echo yes; else echo no; fi
-}
-
 if [[ ! -x "$BIN" ]]; then
     echo "error: $BIN not found; build the dev preset first (make build)." >&2
     exit 1
 fi
 
 mkdir -p "$(dirname "$OUT")"
-DIRTY="$(dirty_tree_status)"
+DIRTY="$(qsl_dirty_tree_status results/socket_stress_summary.txt results/socket_profile_loopback.txt "$OUT")"
 
 # Run TRIALS trials for one SO_RCVBUF request. Each trial: start the gap-tracking subscriber
 # (background), let it bind, then burst-publish every datagram with no pacing. Emits one line:
@@ -134,17 +107,17 @@ TMP_OUT="$(mktemp)"
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
     if [[ "$(uname -s)" == "Linux" ]]; then
-        echo "CPU:          $(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ *//' || true)"
+        echo "CPU:          $(qsl_cpu_model)"
         echo "rmem_default: $(cat /proc/sys/net/core/rmem_default 2>/dev/null || echo unknown)"
         echo "rmem_max:     $(cat /proc/sys/net/core/rmem_max 2>/dev/null || echo unknown)"
     fi
-    echo "Compiler:    $(c++ --version | head -1)"
-    echo "Git commit:  $(git rev-parse --short HEAD)"
+    echo "Compiler:    $(qsl_compiler_version)"
+    echo "Git commit:  $(qsl_git_commit_short)"
     echo "Dirty tree:  $DIRTY"
     echo "Transport:   UDP unicast over 127.0.0.1 (loopback)"
     echo "Dataset:     qsl-mdfeed publish, seed $SEED, $ORDERS orders, 3 symbols"
     echo "Trials/setting: $TRIALS"
-    echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Setup: one publisher bursts every market-data datagram back-to-back (no pacing); one"
     echo "subscriber drains them and reports how many it received. The only variable is the"

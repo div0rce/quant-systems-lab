@@ -7,6 +7,14 @@ All notable changes to this project. The format is loosely based on
 
 ### Added
 
+- M42: `scripts/qsl_common.sh`, shared by the socket/perf shell workflows for repo-relative
+  dirty-tree exclusions, metadata helpers, Linux guards, TCP readiness probes, and process-stop
+  handling.
+- Added `FixtureExportRequest` / `FixtureExportMode` and `write_fixture_export` so the replay
+  fixture library owns qsl-export-stream export orchestration while the CLI stays argument parsing
+  only.
+- Added `TcpServerOptions::max_response_bytes` so the blocking TCP transport uses the bounded
+  session path and can reject high-fanout response generation before gateway mutation.
 - M35: `scripts/socket_load.sh` (`make socket-load`, Linux-only) — multi-client TCP
   connection-scaling load coverage comparing the blocking TCP gateway and the epoll gateway under
   bounded loopback pressure, with constrained metadata in `results/socket_load_summary.txt`.
@@ -40,6 +48,8 @@ All notable changes to this project. The format is loosely based on
 
 ### Changed
 
+- M42: `qsl-export-stream` now reports clean usage errors for missing or invalid numeric CLI
+  arguments instead of terminating from uncaught parse exceptions.
 - M39: encapsulated order-book matching parameters into private match/query contexts and extracted
   fill, erase, and level-lookup helpers. Public order-book behavior, deterministic matching output,
   integer-tick prices, and wall-clock-independent engine semantics are unchanged.

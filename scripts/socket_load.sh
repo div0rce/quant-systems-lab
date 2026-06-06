@@ -24,6 +24,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/qsl_common.sh
+source scripts/qsl_common.sh
 
 GATEWAY="${QSL_GATEWAY_BIN:-build/dev/qsl-gateway}"
 CLIENT="${QSL_CLIENT_BIN:-build/dev/qsl-client}"
@@ -34,54 +36,6 @@ TRIALS="${QSL_LOAD_TRIALS:-3}"
 CLIENT_TIMEOUT="${QSL_LOAD_CLIENT_TIMEOUT:-30}" # per-client wall cap; bounds a hang if the gateway dies
 MAX_ATTEMPTS="${QSL_LOAD_MAX_ATTEMPTS:-6}"      # retries (on a fresh port) before a trial is failed
 MAX_CLIENT_COUNT=16 # shared listen backlog: blocking TcpServer=16, epoll>=16; keep comparison fair
-
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
-
-repo_relative_or_empty() {
-    local path="$1" abs dir base resolved_dir resolved
-    [[ -z "$path" ]] && return
-    if [[ "$path" = /* ]]; then abs="$path"; else abs="$REPO_ROOT/$path"; fi
-    dir="$(dirname "$abs")"
-    base="$(basename "$abs")"
-    resolved_dir="$(cd "$dir" 2>/dev/null && pwd -P)" || return
-    resolved="$resolved_dir/$base"
-    case "$resolved" in
-    "$REPO_ROOT"/*) printf '%s\n' "${resolved#"$REPO_ROOT"/}" ;;
-    esac
-}
-
-dirty_tree_status() {
-    local out_rel status_output
-    local pathspecs=(. ":(exclude)results/socket_load_summary.txt")
-    out_rel="$(repo_relative_or_empty "$OUT")"
-    [[ -n "$out_rel" ]] && pathspecs+=(":(exclude)$out_rel")
-    if ! status_output="$(git status --porcelain --untracked-files=all -- "${pathspecs[@]}")"; then
-        echo "error: dirty-tree check failed; refusing to write misleading metadata." >&2
-        exit 2
-    fi
-    if [[ -n "$status_output" ]]; then echo yes; else echo no; fi
-}
-
-cpu_model() {
-    local cpu
-    cpu="$(grep -m1 -E '^(model name|Processor|cpu model|Hardware)[[:space:]]*:' /proc/cpuinfo 2>/dev/null |
-        cut -d: -f2- | sed 's/^ *//' || true)"
-    if [[ -z "$cpu" ]] && command -v lscpu >/dev/null 2>&1; then
-        cpu="$(lscpu 2>/dev/null |
-            awk -F: '
-                /^Architecture:/ { arch = $2; sub(/^[[:space:]]*/, "", arch) }
-                /^Vendor ID:/ { vendor = $2; sub(/^[[:space:]]*/, "", vendor) }
-                /^Model name:/ { model = $2; sub(/^[[:space:]]*/, "", model) }
-                END {
-                    if (model != "" && model != "-") print model;
-                    else if (vendor != "" && arch != "") print vendor " " arch;
-                    else if (arch != "") print arch;
-                }
-            ' || true)"
-    fi
-    printf '%s\n' "${cpu:-unknown}"
-}
 
 if [[ "$(uname -s)" != "Linux" ]]; then
     echo "error: scripts/socket_load.sh requires Linux (epoll mode + high-res timer); current OS is $(uname -s)." >&2
@@ -130,7 +84,7 @@ if ((LAST_PORT > 65535)); then
 fi
 
 mkdir -p "$(dirname "$OUT")"
-DIRTY="$(dirty_tree_status)"
+DIRTY="$(qsl_dirty_tree_status results/socket_load_summary.txt "$OUT")"
 
 NEXT_PORT="$PORT_BASE" # monotonic: every gateway gets a brand-new port, never reused this run
 GW_PID=""
@@ -140,35 +94,9 @@ trap 'if [[ -n "$GW_PID" ]]; then kill -KILL "$GW_PID" 2>/dev/null || true; fi' 
 
 now() { date +%s.%N; }
 
-listen_entry_present() {
-    local port="$1" port_hex
-    printf -v port_hex '%04X' "$port"
-    awk -v want="0100007F:$port_hex" '$2 == want && $4 == "0A" { found = 1 } END { exit !found }' \
-        /proc/net/tcp
-}
-
-wait_ready() {
-    local port="$1" pid="$2" i
-    for i in $(seq 1 100); do
-        kill -0 "$pid" 2>/dev/null || return 1 # gateway exited (e.g. bind failed) -> not ready
-        if listen_entry_present "$port"; then
-            return 0
-        fi
-        sleep 0.05
-    done
-    return 1
-}
-
 stop_gateway() {
     [[ -z "$GW_PID" ]] && return 0
-    local i
-    kill -INT "$GW_PID" 2>/dev/null || true
-    for ((i = 0; i < 20; i++)); do
-        kill -0 "$GW_PID" 2>/dev/null || break
-        sleep 0.05
-    done
-    kill -KILL "$GW_PID" 2>/dev/null || true
-    wait "$GW_PID" 2>/dev/null || true
+    qsl_stop_process_gracefully "$GW_PID" INT 20 0.05
     GW_PID=""
 }
 
@@ -193,7 +121,7 @@ run_load() {
 
         "$GATEWAY" "${gw_args[@]}" >/dev/null 2>&1 &
         GW_PID=$!
-        if ! wait_ready "$port" "$GW_PID"; then
+        if ! qsl_wait_proc_tcp_listen_ready "$port" "$GW_PID"; then
             stop_gateway # gateway failed to start (transient bind, etc.) -> retry on a fresh port
             continue
         fi
@@ -289,16 +217,16 @@ TMP_OUT="$(mktemp)"
     echo "Artifact:    multi-client TCP connection-scaling load (loopback, constrained)"
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
-    echo "CPU:         $(cpu_model)"
+    echo "CPU:         $(qsl_cpu_model)"
     echo "Cores:       $(nproc 2>/dev/null || echo unknown)"
-    echo "Compiler:    $(c++ --version | head -1)"
-    echo "Git commit:  $(git rev-parse --short HEAD)"
+    echo "Compiler:    $(qsl_compiler_version)"
+    echo "Git commit:  $(qsl_git_commit_short)"
     echo "Dirty tree:  $DIRTY"
     echo "Transport:   TCP over 127.0.0.1 (loopback)"
     echo "Load shape:  N concurrent qsl-client connections; each connects, sends NewOrder + Heartbeat, reads replies, closes"
     echo "Client counts: $CLIENT_COUNTS"
     echo "Trials/cell: $TRIALS (best/min wall over trials; each gateway on a fresh port, up to $MAX_ATTEMPTS start attempts)"
-    echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Setup: the same concurrent client load is run against the gateway in each transport mode."
     echo "blocking = the M9 single-connection accept loop (serves one connection at a time); epoll ="

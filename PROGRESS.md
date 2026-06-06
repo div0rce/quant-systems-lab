@@ -20,16 +20,16 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M41 — Simplify gateway session frame dispatch
-- **Status:** ◐ PR #109 open. `src/gateway/session.cpp` CodeScene improved 8.99 → 10.0 by decomposing `Session::process_frame` into per-message dispatch helpers; no public API or protocol behavior changed.
-- **Active branch:** `refactor/m41-session-frame-dispatch`
-- **Last completed milestone:** M40 — Consolidate engine correctness test suites (squash-merged PR #108, commit b939730)
+- **Active milestone:** M42 — Extract shared shell-script helpers
+- **Status:** ◐ draft PR #111 open. Shared Bash helpers extracted for socket/perf scripts; PR scope was expanded by human request to address issue #99 (bounded blocking gateway response generation) and issue #110 (stream fixture export orchestration).
+- **Active branch:** `refactor/m42-shared-shell-script-helpers`
+- **Last completed milestone:** M41 — Simplify gateway session frame dispatch (squash-merged PR #109, commit 68061e6)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M41 verified rebuilt `./build/dev/tests/test_session` 11 cases / 36 assertions, `git diff --check`, `make check` 193/193, and `make asan` 193/193 on 2026-06-05.
-- **Last action:** opened M41 PR #109 after behavior-preserving session dispatch decomposition; CodeScene score for `src/gateway/session.cpp` is 10.0 with no findings.
-- **Next action:** wait for CI, CodeScene, Codex, and normal PR review on PR #109; fix only still-valid M41 feedback. NUMA awareness remains M43.
-- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog includes #99, #95, #94, #32, #29, #28, and #26.
+- **`make check` passing:** M42 verified `bash -n` for shared/socket/perf scripts, helper path-normalization smoke check, focused fixture/TCP tests, `make check-fixtures`, `make check-manifest`, `dune runtest --root ocaml`, `git diff --check`, `make check` 199/199, `make asan` 199/199, and Docker Linux reduced-output `make socket-load`, `make profile-io`, `make socket-stress`, plus partial-mode `make perf-stat` / `make perf-record` constrained by Docker Desktop perf permissions on 2026-06-05.
+- **Last action:** expanded draft M42 PR #111 to address #99 and #110 after Docker became available; local + Docker verification passed.
+- **Next action:** wait for CI/review on PR #111 and fix only still-valid M42 feedback. NUMA awareness remains M43.
+- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. PR #111 is intended to close #99 and #110 when merged. Open backlog still includes #95, #94, #32, #29, #28, and #26.
 
 ---
 
@@ -208,7 +208,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M41 PR #109 is open on `refactor/m41-session-frame-dispatch`. `src/gateway/session.cpp` CodeScene improved 8.99 -> 10.0 with no findings. Rebuilt `./build/dev/tests/test_session`, `git diff --check`, `make check`, and `make asan` passed. Next: wait for CI/review and fix only still-valid feedback._
+- _M42 draft PR #111 is open on `refactor/m42-shared-shell-script-helpers`. Shared helper extraction, issue #99, issue #110, local verification, and Docker reduced Linux validation are complete. Next: wait for CI/review and fix only still-valid M42 feedback._
 
 
 ---
@@ -271,8 +271,8 @@ Lower priority:
 | M38 | Split the command-stream shrinker into named passes | `refactor/m38-shrinker-reduction-passes` | ☑ merged | #106 | Repository-health refactor; `shrink.cpp` 8.15 → 10.0 |
 | M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ☑ merged | #107 | Repository-health refactor; `order_book.cpp` 8.55 → 9.68, determinism preserved |
 | M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☑ merged | #108 | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
-| M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ◐ PR open | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
-| M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☐ not started | — | Repository-health refactor (manual; shell unscored); M35 follow-up |
+| M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☑ merged | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
+| M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ◐ draft PR open | #111 | Repository-health refactor (manual; shell unscored); expanded to address #99/#110 |
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
 | M44 | Lock-free ingress pipeline | `feat/m44-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
@@ -306,6 +306,14 @@ Lower priority:
 - [2026-06-05] M41: started on `refactor/m41-session-frame-dispatch` from updated `main` (b939730). Baseline CodeScene for `src/gateway/session.cpp`: 8.99; finding is `Session::process_frame` complexity 15. Pre-refactor `./build/dev/tests/test_session` passed 11 cases / 36 assertions.
 - [2026-06-05] M41: completed behavior-preserving session dispatch decomposition. `Session::process_frame` now delegates to per-message helpers for new order, cancel, heartbeat, and unexpected-message paths while preserving malformed-body logout, output-limit logout, bounded new-order preview before mutation, and response ordering. CodeScene for `src/gateway/session.cpp`: 8.99 -> 10.0 with no findings. Verification passed rebuilt `./build/dev/tests/test_session` 11 cases / 36 assertions, `git diff --check`, `make check` 193/193, and `make asan` 193/193.
 - [2026-06-05] M41: opened PR #109 (`refactor: simplify gateway session frame dispatch`). No manual CodeRabbit review was requested.
+- [2026-06-05] M41: PR #109 squash-merged to `main` as 68061e6.
+- [2026-06-05] M42: started on `refactor/m42-shared-shell-script-helpers` from updated `main` (68061e6). Initial scope was behavior-preserving shell-helper extraction across `scripts/socket_load.sh`, `scripts/socket_stress.sh`, `scripts/profile_gateway_io.sh`, `scripts/perf_record.sh`, and `scripts/perf_stat.sh`; shell is not CodeScene-scored. The human later expanded PR #111 to address issue #99 and issue #110 in the same PR.
+- [2026-06-05] M42: completed shared shell-helper extraction by adding `scripts/qsl_common.sh` for safe repo-relative dirty-tree exclusions, CPU/compiler/git/date metadata helpers, Linux guard helpers, TCP readiness probes, and process stop escalation. The five target scripts now source that helper while preserving workload logic and artifact fields. Initial local verification passed `bash -n scripts/qsl_common.sh scripts/socket_load.sh scripts/socket_stress.sh scripts/profile_gateway_io.sh scripts/perf_record.sh scripts/perf_stat.sh`, helper external/internal path smoke check, `git diff --check`, `make check` 193/193, `make asan` 193/193, reduced temporary-output `make socket-stress`, direct Linux-only script guard checks, and Makefile Linux-only target guard checks. Later Docker validation is recorded below.
+- [2026-06-05] M42: opened draft PR #111 (`refactor: extract shared shell-script helpers`).
+- [2026-06-05] M42 expanded scope: issue #110 is addressed by adding `FixtureExportRequest` / `FixtureExportMode` and `write_fixture_export`, so `src/replay/fixture.cpp` owns stream fixture export mode semantics while `apps/qsl-export-stream/main.cpp` only parses CLI arguments and calls the library entrypoint. Existing export bytes are covered by fixture-dispatch regression tests and fixture/OCaml checks.
+- [2026-06-05] M42 expanded scope: issue #99 is addressed for the blocking TCP transport by routing `TcpServer::serve_connection` through the bounded `Session::on_bytes` overload with `TcpServerOptions::max_response_bytes` defaulting to the epoll hard cap (8 MiB, 0 disables). The new TCP regression proves an already-accepted heartbeat reply is flushed while an over-budget high-fanout sweep is rejected before gateway mutation.
+- [2026-06-05] M42 Docker validation after Docker became available: copied the current working tree into a fresh in-container git repo to avoid host worktree `.git` indirection, then ran reduced-output Linux `make socket-load`, `make profile-io`, and `make socket-stress` with output redirected to `/tmp`; all produced constrained artifacts with `Dirty tree: no`. `make perf-stat` and `make perf-record` were also exercised in `QSL_PERF_ALLOW_PARTIAL=1` mode using Ubuntu's packaged `perf`; Docker Desktop denied `cycles` and `cpu-clock` events, so the scripts correctly emitted constrained/partial artifacts with `Dirty tree: no` and no PMU/hot-profile claim.
+- [2026-06-05] M42 review fix: `qsl-export-stream` now reports clean usage errors (exit 2) for missing or invalid numeric CLI arguments instead of allowing parse exceptions to abort the process. Added CTest coverage for `prop` without a seed, an invalid seed, and invalid `orders`. `HANDOFF.md` no longer contains the stale M39/PR #107 active-priority line.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -313,7 +321,7 @@ Lower priority:
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
 - [2026-06-02] M34: local verification passed: `make check` 190/190, `make asan` 190/190, `git diff --check`, and Docker Ubuntu Linux `test_epoll_gateway` 3 tests / 36 assertions.
 - [2026-06-02] M34: opened draft PR #98; do not merge from the automation side.
-- [2026-06-03] M34: Codex review of #98 iterated several rounds (CI green throughout), each fix verified on macOS and Linux Docker as noted in the current-state block: read-backpressure; `--epoll` flag-or-port parsing with whole-token/range/duplicate validation; a soft high-water mark (stop reading) plus a hard outbound cap; O(n²) front-erase flush replaced with a write offset; `EINTR`-on-send retry; survival of transient `accept4` errors (`ECONNABORTED`/pending network errors) instead of tearing down the loop; bounded high-fanout `NewOrder` response budgeting before gateway mutation; `EPOLLERR` immediate close; `EPOLLHUP` drain of already-readable bytes before close; no `EPOLLIN` re-arm once a session is closing; fd-generation checks for stale events after fd reuse; and queued-reply preservation when an over-cap frame follows earlier accepted frames in the same read. Issue #99 remains a broader follow-up for shared streaming/byte-budgeted response generation outside the epoll-specific bounded path.
+- [2026-06-03] M34: Codex review of #98 iterated several rounds (CI green throughout), each fix verified on macOS and Linux Docker as noted in the current-state block: read-backpressure; `--epoll` flag-or-port parsing with whole-token/range/duplicate validation; a soft high-water mark (stop reading) plus a hard outbound cap; O(n²) front-erase flush replaced with a write offset; `EINTR`-on-send retry; survival of transient `accept4` errors (`ECONNABORTED`/pending network errors) instead of tearing down the loop; bounded high-fanout `NewOrder` response budgeting before gateway mutation; `EPOLLERR` immediate close; `EPOLLHUP` drain of already-readable bytes before close; no `EPOLLIN` re-arm once a session is closing; fd-generation checks for stale events after fd reuse; and queued-reply preservation when an over-cap frame follows earlier accepted frames in the same read. Issue #99 was opened as a broader follow-up for shared streaming/byte-budgeted response generation outside the epoll-specific bounded path and is addressed later by PR #111.
 - [2026-06-02] M33: PR #97 squash-merged (commit fe8679a); CI passed all 6 jobs and Codex review found no major issues. M33 delivered deterministic pipeline scheduling perturbation, opt-in repeated concurrency stress, and docs framing TSan/perturbation/stress as evidence rather than proof.
 - [2026-06-02] M33: started after M32 (#96) squash-merged (commit f122ee8). Scope: advanced concurrency validation only — deterministic scheduling perturbation and/or longer stress modes, stronger concurrency methodology docs, opt-in long-running/Linux checks where appropriate. Do not claim proof; TSan and stress tests remain dynamic evidence over executed schedules.
 - [2026-06-02] M33: added deterministic `PipelinePerturbation` yield hooks to the threaded pipeline and a regression test that compares perturbed pipeline output against the single-threaded reference across seeded property flows, queue capacities, and per-stage yield patterns.
@@ -391,8 +399,8 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M41 on `refactor/m41-session-frame-dispatch`: wait for CI/review on PR #109
-and fix only still-valid feedback.
+Current action is M42 on `refactor/m42-shared-shell-script-helpers`: wait for CI/review on PR #111
+and fix only still-valid feedback. PR #111 is intended to close #99 and #110 when merged.
 
 NUMA awareness remains M43; do not start it until M36–M42 are done or explicitly skipped.
 
