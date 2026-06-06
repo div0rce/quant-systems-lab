@@ -3,20 +3,20 @@ Hardware:    arm64
 OS:          Darwin 25.2.0
 Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
 Build type:  Release
-Git commit:  fbb8180
-Dirty tree:  yes
+Git commit:  7f7b6aa
+Dirty tree:  no
 Dataset:     synthetic order flow (replay::generate_flow, seed 42, 4 symbols)
 Warmup:      iters/10 (or 1 throughput pass) per benchmark, before timing
 Units:       latency = ns/op + ops/sec; throughput = ns/item + items/sec
-Date:        2026-05-30T11:16:18Z
+Date:        2026-06-06T18:43:11Z
 
 Caveat: single-process synthetic microbenchmarks (hot cache, no network, no disk,
 no kernel/IO path, stock allocator). NOT production exchange throughput or
 end-to-end latency; hardware/compiler/build dependent.
 
 Scenario / Metric / Result:
-order_book add/mod/cancel     200000 ops        126.2 ns/op        7926181 ops/sec
-protocol encode+decode        500000 ops         39.0 ns/op       25616177 ops/sec
-gateway session (fill)        200000 ops        269.9 ns/op        3705182 ops/sec
-matching engine flow            5004 items      121.2 ns/item      8247927 items/sec
-replay command log              5004 items      131.6 ns/item      7599594 items/sec
+order_book add/mod/cancel     200000 ops        117.6 ns/op        8504848 ops/sec
+protocol encode+decode        500000 ops         33.3 ns/op       30057862 ops/sec
+gateway session (fill)        200000 ops        287.8 ns/op        3474052 ops/sec
+matching engine flow            5004 items      151.3 ns/item      6609376 items/sec
+replay command log              5004 items      170.7 ns/item      5859070 items/sec
