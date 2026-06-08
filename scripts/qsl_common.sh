@@ -74,7 +74,7 @@ qsl_build_type() {
         return
     fi
     local build_dir="${1:-build/dev}" bt
-    bt="$(grep -m1 '^CMAKE_BUILD_TYPE:' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2)"
+    bt="$(grep -m1 '^CMAKE_BUILD_TYPE:' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2 || true)"
     printf '%s\n' "${bt:-unknown}"
 }
 

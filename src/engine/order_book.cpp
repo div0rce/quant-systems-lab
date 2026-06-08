@@ -252,29 +252,47 @@ struct OrderBook::IntrusiveStore {
         }
     }
 
+    struct MatchOutcome {
+        Quantity remainder;
+        std::size_t makers_freed;
+    };
+
+    static void simulate_node_match(const Node &node, MatchOutcome &outcome) {
+        const Quantity traded = std::min(outcome.remainder, node.order->quantity);
+        outcome.remainder -= traded;
+        if (traded == node.order->quantity) {
+            ++outcome.makers_freed;
+        }
+    }
+
+    static void simulate_level_match(const Level &level, MatchOutcome &outcome) {
+        for (const Node *node = level.head; outcome.remainder > 0 && node != nullptr;
+             node = node->next) {
+            simulate_node_match(*node, outcome);
+        }
+    }
+
     template <class OppMap>
-    Quantity remaining_after_match(const OppMap &opposite, bool taker_is_buy, Price limit,
-                                   bool is_market, Quantity quantity) const {
-        for (auto level_it = opposite.begin(); quantity > 0 && level_it != opposite.end();
+    MatchOutcome simulate_match(const OppMap &opposite, bool taker_is_buy, Price limit,
+                                bool is_market, Quantity quantity) const {
+        MatchOutcome outcome{quantity, 0};
+        for (auto level_it = opposite.begin(); outcome.remainder > 0 && level_it != opposite.end();
              ++level_it) {
             const Price level_price = level_it->first;
             if (!can_match_level(taker_is_buy, is_market, limit, level_price)) {
                 break;
             }
-            for (Node *node = level_it->second.head; quantity > 0 && node != nullptr;
-                 node = node->next) {
-                quantity -= std::min(quantity, node->order->quantity);
-            }
+            simulate_level_match(level_it->second, outcome);
         }
-        return quantity;
+        return outcome;
     }
 
-    [[nodiscard]] Quantity remaining_after_match(Side side, Price limit, bool is_market,
-                                                 Quantity quantity) const {
+    [[nodiscard]] MatchOutcome simulate_match(Side side, Price limit, bool is_market,
+                                              Quantity quantity) const {
         if (side == Side::Buy) {
-            return remaining_after_match(asks, /*taker_is_buy=*/true, limit, is_market, quantity);
+            return simulate_match(asks, /*taker_is_buy=*/true, limit, is_market, quantity);
         }
-        return remaining_after_match(bids, /*taker_is_buy=*/false, limit, is_market, quantity);
+        return simulate_match(bids, /*taker_is_buy=*/false, limit, is_market, quantity);
     }
 
     [[nodiscard]] bool can_store_limit(Side side, Price price, Quantity quantity,
@@ -282,8 +300,11 @@ struct OrderBook::IntrusiveStore {
         if (tif == TimeInForce::IOC) {
             return true;
         }
-        return remaining_after_match(side, price, /*is_market=*/false, quantity) == 0 ||
-               has_capacity();
+        const MatchOutcome outcome = simulate_match(side, price, /*is_market=*/false, quantity);
+        // A fully filled order rests nothing. Otherwise the remainder needs one order + node slot,
+        // which any fully consumed maker frees during the match before the rest happens -- so a
+        // match that frees at least one maker always fits, regardless of current free capacity.
+        return outcome.remainder == 0 || outcome.makers_freed > 0 || has_capacity();
     }
 
     std::vector<Trade> add_limit(LimitInput input) {
@@ -302,8 +323,11 @@ struct OrderBook::IntrusiveStore {
         } else {
             match_against(bids, ctx);
         }
-        if (input.quantity > 0 && input.tif == TimeInForce::GTC) {
-            static_cast<void>(rest(input.id, input.side, input.price, input.quantity));
+        // Rest only the post-match remainder: match_against reduced ctx.quantity as it filled, so a
+        // fully filled order has ctx.quantity == 0 and must not rest, and a partial fill rests the
+        // leftover, not the original input quantity.
+        if (ctx.quantity > 0 && input.tif == TimeInForce::GTC) {
+            static_cast<void>(rest(input.id, input.side, input.price, ctx.quantity));
         }
         return trades;
     }
