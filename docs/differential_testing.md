@@ -123,7 +123,7 @@ Fixtures under test:
 - `stream_seed7.txt` — the market-like synthetic flow (GTC/IOC limits, market, cancel, modify,
   rejects, 4 symbols);
 - `stream_ioc.txt` — a hand-built scenario from `qsl-export-stream ioc` covering IOC discard
-  (partial and no-cross), market, and partial-maker fills (the synthetic flow uses only GTC);
+  (partial and no-cross), market, and partial-maker fills;
 - `stream_bad_snapshot.txt` — a valid command stream with a deliberately corrupted snapshot
   section; the test asserts the mismatch **is** detected.
 - `bad_snapshot_level_symbol.txt` — a deliberately malformed snapshot where a `level` record

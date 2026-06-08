@@ -189,6 +189,7 @@ fi
     echo "OS:          $(uname -s) $(uname -r)"
     echo "CPU:         $(qsl_cpu_model)"
     echo "Compiler:    $(qsl_compiler_version)"
+    echo "Build type:  $(qsl_build_type)"
     echo "strace:      $(strace -V 2>&1 | head -1)"
     echo "CLK_TCK:     $CLK"
     echo "Git commit:  $(qsl_git_commit_short)"

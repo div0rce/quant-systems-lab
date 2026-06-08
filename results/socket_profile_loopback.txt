@@ -4,6 +4,7 @@ Hardware:    aarch64
 OS:          Linux 6.12.76-linuxkit
 CPU:         Apple aarch64
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Build type:  Debug
 strace:      strace -- version 6.8
 CLK_TCK:     100
 Git commit:  5c2ee79

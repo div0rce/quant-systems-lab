@@ -65,6 +65,19 @@ qsl_compiler_version() {
     c++ --version | head -1
 }
 
+# Build type (CMAKE_BUILD_TYPE) of the binaries under test. Honors a QSL_BUILD_TYPE override (for
+# runs whose build dir is not the default, e.g. containerized regenerations); otherwise reads it
+# from the build's CMakeCache. Falls back to "unknown".
+qsl_build_type() {
+    if [[ -n "${QSL_BUILD_TYPE:-}" ]]; then
+        printf '%s\n' "$QSL_BUILD_TYPE"
+        return
+    fi
+    local build_dir="${1:-build/dev}" bt
+    bt="$(grep -m1 '^CMAKE_BUILD_TYPE:' "$build_dir/CMakeCache.txt" 2>/dev/null | cut -d= -f2)"
+    printf '%s\n' "${bt:-unknown}"
+}
+
 qsl_git_commit_short() {
     git rev-parse --short HEAD
 }

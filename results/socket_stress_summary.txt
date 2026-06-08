@@ -6,6 +6,7 @@ CPU:          Apple aarch64
 rmem_default: 212992
 rmem_max:     212992
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Build type:  Debug
 Git commit:  a097476
 Dirty tree:  no
 Transport:   UDP unicast over 127.0.0.1 (loopback)

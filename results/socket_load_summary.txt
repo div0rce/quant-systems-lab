@@ -5,8 +5,13 @@ OS:          Linux 6.12.76-linuxkit
 CPU:         Apple aarch64
 Cores:       8
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Build type:  Debug
 Git commit:  37191fc
 Dirty tree:  no
+Dataset:     synthetic order flow via qsl-client (NewOrder + Heartbeat per connection)
+Scenario:    concurrent short-lived client sweep across the threaded and epoll transports
+Metric:      best (min) wall time per cell, approximate conns/s, and completion ratio
+Result:      see the per-mode table below
 Transport:   TCP over 127.0.0.1 (loopback)
 Load shape:  N concurrent qsl-client connections; each connects, sends NewOrder + Heartbeat, reads replies, closes
 Client counts: 1 4 8 16
