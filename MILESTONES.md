@@ -1635,7 +1635,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m43-numa-awareness-study`
 - **PR title:** `docs: study NUMA and CPU affinity effects`
 - **Goal:** Document and measure CPU locality tradeoffs where hardware exists.
-- **Status:** ☐ not started.
+- **Status:** ◐ in progress.
 - **Dependencies:** M29/M30 Linux profiling workflow, M35 socket-load evidence, and PR #112
   storage/TCP follow-up. A Linux host with suitable topology information is required for full
   evidence, but constrained-host runs may still proceed when labeled honestly.
@@ -1660,6 +1660,8 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - [ ] CPU affinity and scheduler-migration commands are documented and, where hardware permits,
       measured before/after.
 - [ ] Artifacts are labeled hardware-specific.
+- [ ] The artifact self-classifies as `full-linux-numa`, `linux-constrained`, or
+      `unsupported-host`.
 - [ ] Non-NUMA hosts are treated as unsupported/constrained, not faked.
 - [ ] Docs forbid production-latency claims and distinguish topology evidence from optimization
       claims.

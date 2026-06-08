@@ -29,6 +29,9 @@ All notable changes to this project. The format is loosely based on
 - M35: `scripts/socket_load.sh` (`make socket-load`, Linux-only) — multi-client TCP
   connection-scaling load coverage comparing the portable threaded TCP gateway and the epoll gateway under
   bounded loopback pressure, with constrained metadata in `results/socket_load_summary.txt`.
+- M43: `scripts/numa_affinity_study.sh` (`make numa-study`, Linux-only) — CPU-affinity /
+  scheduler-migration / NUMA-locality study tooling with explicit `full-linux-numa`,
+  `linux-constrained`, or `unsupported-host` evidence classification.
 - M34: Linux-only `EpollServer` gateway transport prototype. It uses one `epoll` loop,
   nonblocking accept/read/write, per-client outbound buffers, and one deterministic `Session` per
   client; `qsl-gateway <port> --epoll` opts in on Linux.

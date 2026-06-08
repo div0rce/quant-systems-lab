@@ -51,11 +51,28 @@ counters without permission or unsupported-counter errors.
 
 ## CPU affinity and locality studies
 
-The future M43 study owns CPU affinity and NUMA/locality evidence. Acceptable measurements may use
-`taskset`, `perf stat` context-switch/migration counters where available, and a tightly scoped
-`pthread_setaffinity_np` probe if code-level pinning is justified. Artifacts must record topology,
-kernel, compiler/build, command lines, git commit, and whether the host exposes the required
-hardware data.
+M43 owns CPU affinity and NUMA/locality evidence. Run:
+
+```bash
+make numa-study
+```
+
+This builds the benchmark preset and runs `scripts/numa_affinity_study.sh`. The script records an
+unpinned benchmark run and a `taskset`-pinned run, then attempts `perf stat` software counters for
+`context-switches` and `cpu-migrations`. It also records `lscpu` output and `numactl --hardware`
+when available.
+
+The artifact self-classifies its evidence:
+
+- `full-linux-numa` — NUMA-capable Linux host with `taskset`, `numactl` topology, and captured
+  scheduler counters.
+- `linux-constrained` — Linux host where at least one required topology or scheduler signal is
+  unavailable. Commit only when intentionally documenting the constraint.
+- `unsupported-host` — non-Linux host; no CPU-affinity, scheduler-migration, or NUMA evidence.
+
+Use `QSL_NUMA_ALLOW_CONSTRAINED=1` only when the committed result is intentionally constrained.
+Use `QSL_NUMA_CPU=<cpu>` to pin a specific CPU; otherwise the script picks the first CPU allowed by
+the current cpuset.
 
 Unsupported or constrained hosts are valid outcomes. macOS, Docker Desktop, restricted CI, and
 single-NUMA-node Linux machines should be labeled as constrained rather than used to imply NUMA or

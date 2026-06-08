@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record profile-io socket-stress socket-load concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record numa-study profile-io socket-stress socket-load concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -56,6 +56,13 @@ perf-record:
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/perf_record.sh
+
+# M43: CPU-affinity / scheduler-migration / NUMA locality study. Linux-only.
+numa-study:
+	@test "$$(uname -s)" = "Linux" || { echo "error: make numa-study requires Linux (taskset/perf/NUMA topology); current OS is $$(uname -s)." >&2; exit 2; }
+	cmake --preset bench
+	cmake --build --preset bench --target qsl-bench
+	QSL_NUMA_BIN=build/bench/qsl-bench bash scripts/numa_affinity_study.sh
 
 # M30: syscall / kernel-socket path profile of the gateway (strace + procfs rusage). Linux-only.
 profile-io:
