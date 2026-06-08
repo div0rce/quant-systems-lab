@@ -101,6 +101,39 @@ to confirm what looks right.
   loopback limitations stated strongly enough? Do the scripts fail safely (no misleading artifact)
   on the error paths they claim to guard?
 
+### 7. CPU locality, false sharing, and concurrency architecture
+
+- **Claim:** future CPU-affinity/NUMA and false-sharing work must produce hardware- and
+  environment-labeled evidence, and must keep memory-ordering correctness separate from
+  performance observations.
+- **Where:** [`linux_performance.md`](linux_performance.md),
+  [`concurrency_model.md`](concurrency_model.md), [`memory_ordering.md`](memory_ordering.md),
+  `MILESTONES.md` (M43/M44).
+- **Questions:** Are the planned CPU-affinity, scheduler-migration, and cache-line contention
+  experiments scoped enough to be credible? Are unsupported-host caveats strong enough? Would any
+  proposed padding/alignment change risk changing queue semantics rather than only contention
+  shape?
+
+### 8. Storage architecture and cache locality
+
+- **Claim:** allocator and storage evidence is intentionally staged: M28 isolated allocator
+  mechanics, M32 PMR node allocation, PR #112 intrusive pooled resting-order storage, and future
+  M47 contiguous storage/cache-locality study.
+- **Where:** [`pool_backed_storage.md`](pool_backed_storage.md),
+  [`allocator_experiment.md`](allocator_experiment.md), `results/pool_backed_storage.txt`,
+  `MILESTONES.md` (M47).
+- **Questions:** Does the documentation clearly distinguish node-allocation experiments from true
+  contiguous-storage architecture? Are replay-equivalence requirements sufficient before comparing
+  flat/direct-price-index layouts? Are cache-locality claims forbidden until measured?
+
+### 9. External review priority
+
+- **Claim:** independent technical review remains one of the highest remaining credibility signals,
+  ahead of speculative DPDK/NIC research.
+- **Where:** this file, [`review_feedback.md`](review_feedback.md), `MILESTONES.md`, `HANDOFF.md`.
+- **Questions:** Is the self-certified status visible enough? Are the review questions targeted at
+  the risks that matter most, or are there higher-value review areas missing?
+
 ## How to give feedback
 
 1. Open an issue using the

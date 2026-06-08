@@ -20,16 +20,23 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Follow-up bundle — intrusive storage, realistic flow, threaded TCP gateway
-- **Status:** ◐ feature branch in verification. This branch addresses issue #95 (intrusive `OrderPool`-backed order-book storage), issue #28 (more realistic synthetic order-flow model), and issue #26 (portable TCP gateway beyond one-connection-at-a-time serving) in one PR.
-- **Active branch:** `feat/close-storage-flow-tcp-followups`
-- **Last completed milestone:** M42 — Extract shared shell-script helpers (squash-merged PR #111, commit 003504f)
+- **Active milestone:** Roadmap audit — systems-engineering signal and agent guidance
+- **Status:** ◐ docs-only PR open. This branch updates future roadmap scope and project
+  memory after PR #112; it does not change code, benchmark artifacts, completed milestone
+  requirements, or merged PR references.
+- **Active branch:** `docs/systems-roadmap-audit`
+- **Last completed milestone:** Post-M42 systems follow-up — intrusive storage, realistic flow,
+  threaded TCP gateway (squash-merged PR #112, commit 2369f84)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** Focused storage/replay/fixture/TCP/session/type tests have passed on this branch; full formatting, CodeScene, benchmark artifact regeneration, `make check`, and `make asan` remain pending before PR.
-- **Last action:** implemented `OrderBook::Storage::IntrusivePooled`, stateful market-like `generate_flow` v2 with regenerated stream fixture/manifest, and threaded portable `TcpServer` accept workers.
-- **Next action:** regenerate affected artifacts, run CodeScene and full verification, then open one PR that closes #95, #28, and #26. NUMA awareness remains M43 after this follow-up lands.
-- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog still includes #94, #32, and #29; #95, #28, and #26 are addressed by the active branch pending PR/merge.
+- **`make check` passing:** yes — `git diff --check` and `make check` passed on
+  `docs/systems-roadmap-audit`.
+- **Last action:** completed docs-only roadmap audit updates, searched stale roadmap/issue
+  references, verified with `git diff --check` plus `make check`, and opened PR #113.
+- **Next action:** keep PR #113 review-clean for human squash-merge.
+- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
+  independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
+  were closed by PR #112.
 
 ---
 
@@ -208,9 +215,8 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _Follow-up branch `feat/close-storage-flow-tcp-followups` is in verification. Implemented
-  intrusive storage, market-like flow generation, and threaded TCP serving; next step is artifact
-  regeneration, CodeScene review, full `make check`/`make asan`, and PR creation._
+- _Docs-only branch `docs/systems-roadmap-audit` has passed stale-reference search,
+  `git diff --check`, and `make check`. PR #113 is open; next step is review cleanup if needed._
 
 
 ---
@@ -264,7 +270,7 @@ Lower priority:
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☑ merged | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☑ merged | #93 | Review-request checklist + feedback template; review request opened as issue #94 |
-| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage handled by the active #95 follow-up |
+| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage later handled by PR #112 |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☑ merged | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☑ merged | #98 | Event-driven multi-client gateway design |
 | M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☑ merged | #100 | TCP connection-scaling load (portable vs epoll) + M30 UDP pressure |
@@ -275,13 +281,15 @@ Lower priority:
 | M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☑ merged | #108 | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
 | M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☑ merged | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
 | M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☑ merged | #111 | Repository-health refactor (manual; shell unscored); expanded to address #99/#110 |
-| Follow-up | Intrusive storage, realistic flow, threaded TCP gateway | `feat/close-storage-flow-tcp-followups` | ◐ in progress | — | One feature PR intended to close #95/#28/#26 |
-| M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
-| M44 | Lock-free ingress pipeline | `feat/m44-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
+| Follow-up | Intrusive storage, realistic flow, threaded TCP gateway | `feat/close-storage-flow-tcp-followups` | ☑ merged | #112 | Closed #95/#28/#26 |
+| Docs | Systems-engineering roadmap audit | `docs/systems-roadmap-audit` | ◐ in progress | — | Docs-only update to future systems roadmap and agent guidance |
+| M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists |
+| M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☐ not started | — | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
-| M47 | DPDK research and prototype | `feat/m47-dpdk-research-prototype` | ☐ not started | — | User-space packet-path research after the networking/recovery milestones |
-| M48 | NIC offload and low-latency networking study | `feat/m48-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
+| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
+| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
+| M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
 ## Decision log additions
 
@@ -290,7 +298,7 @@ Lower priority:
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
 - [2026-06-04] Project-memory sync after M35: PR #101 squash-merged to `main` as 40f9249. It established the `CLAUDE.md` / `AGENTS.md` memory relationship, exact `Branch:` handling for `/start-milestone`, and the guard that repository-health planning happens before original M36 NUMA. No CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
 - [2026-06-04] Post-merge project-memory sync PR #102 squash-merged to `main` as 7092423.
-- [2026-06-04] Repository-health refactor phase inserted after M35 (docs-only roadmap renumber, branch `docs/roadmap-health-refactor-insertion`). A CodeScene Code Health analysis (project 80913, via MCP) of all production and test files found eleven files below 9.0: production `epoll_server.cpp` 5.35, `pipeline.hpp` 7.13, `shrink.cpp` 8.15, `order_book.cpp` 8.55, `session.cpp` 8.99; tests `test_risk_gateway` 6.69, `test_order_book` 7.32, `test_pipeline` 8.28, `test_backpressure` 8.44, `test_invariants` 8.45, `test_matching_engine` 8.54. These became seven refactor milestones M36–M42: M36 epoll decomposition, M37 pipeline stage helpers (+ its concurrency tests), M38 shrinker passes, M39 order-book matching parameters, M40 engine test-suite consolidation (test-only; split out per the human), M41 session frame dispatch, M42 shared shell-script helpers (manual — CodeScene cannot score shell; the M35 deferred follow-up). The original M36–M41 networking/persistence roadmap shifted +7 to M43–M48; original NUMA is now M43. Behavior-preserving refactors only; determinism/replay/differential/integer-tick pricing remain invariants. No implementation started.
+- [2026-06-04] Repository-health refactor phase inserted after M35 (docs-only roadmap renumber, branch `docs/roadmap-health-refactor-insertion`). A CodeScene Code Health analysis (project 80913, via MCP) of all production and test files found eleven files below 9.0: production `epoll_server.cpp` 5.35, `pipeline.hpp` 7.13, `shrink.cpp` 8.15, `order_book.cpp` 8.55, `session.cpp` 8.99; tests `test_risk_gateway` 6.69, `test_order_book` 7.32, `test_pipeline` 8.28, `test_backpressure` 8.44, `test_invariants` 8.45, `test_matching_engine` 8.54. These became seven refactor milestones M36–M42: M36 epoll decomposition, M37 pipeline stage helpers (+ its concurrency tests), M38 shrinker passes, M39 order-book matching parameters, M40 engine test-suite consolidation (test-only; split out per the human), M41 session frame dispatch, M42 shared shell-script helpers (manual — CodeScene cannot score shell; the M35 deferred follow-up). The original networking/persistence roadmap shifted after those refactors; the later systems-roadmap audit extends future scope to M43–M49. Behavior-preserving refactors only; determinism/replay/differential/integer-tick pricing remain invariants. No implementation started.
 - [2026-06-04] M36: decomposed the Linux epoll transport while preserving public API and wire/session behavior. `src/gateway/epoll_server.cpp` now separates listener setup, accept outcome handling, ready-event dispatch, client fd-generation lookup, read/write outcomes, output-budget/backpressure handling, and re-arm/close decisions. CodeScene MCP score improved from 5.35 to 10.0 with no remaining review findings; final verification passed `git diff --check`, Docker Ubuntu Linux `test_epoll_gateway` (8 test cases / 280 assertions), `make check` 191/191, and `make asan` 191/191. PR #104 squash-merged as 0d2b97a.
 - [2026-06-04] M37: started on `refactor/m37-threaded-pipeline-stage-helpers` from updated `main` (0d2b97a). Scope is behavior-preserving threaded-pipeline helper extraction: decompose `include/qsl/concurrency/pipeline.hpp` and reduce assertion duplication/nesting in `tests/concurrency/test_pipeline.cpp` and `tests/concurrency/test_backpressure.cpp`. DoD requires Code Health >= 9.0 for all three files plus `make check`, `make asan`, and `make tsan`.
 - [2026-06-04] M37: completed behavior-preserving threaded-pipeline decomposition and opened draft PR #105. `ThreadedPipeline::run` now uses `PipelineRunOptions`, a run context, and named input/engine/output stage helpers; concurrency tests use shared assertion and producer/consumer helpers without changing scenarios. CodeScene re-score: `pipeline.hpp` 7.13 -> 10.0, `test_pipeline.cpp` 8.28 -> 10.0, `test_backpressure.cpp` 8.44 -> 10.0. PR review feedback fixed reused-probe accounting so shared `PipelineProbe` counters stay live/cumulative while each returned `PipelineResult` reports per-run backpressure deltas. Verification passed `git diff --check`, focused `test_pipeline` (12 cases / 629 assertions), `make check` 192/192, `make asan` 192/192, and `make tsan` 20/20.
@@ -319,6 +327,8 @@ Lower priority:
 - [2026-06-05] M42 review fix: `qsl-export-stream` now reports clean usage errors (exit 2) for missing or invalid numeric CLI arguments instead of allowing parse exceptions to abort the process. Added CTest coverage for `prop` without a seed, an invalid seed, and invalid `orders`. `HANDOFF.md` no longer contains the stale M39/PR #107 active-priority line.
 - [2026-06-06] M42: PR #111 squash-merged to `main` as 003504f.
 - [2026-06-06] Follow-up branch `feat/close-storage-flow-tcp-followups` started from post-M42 `main` to close #95, #28, and #26 in one feature PR. Scope is explicit intrusive `OrderPool`-backed resting-order storage, a richer deterministic synthetic flow model, and a portable threaded TCP accept path. M43 NUMA remains next after this follow-up lands.
+- [2026-06-08] PR #112 squash-merged to `main` as 2369f84, closing #95, #28, and #26.
+- [2026-06-08] Roadmap audit branch `docs/systems-roadmap-audit` started from post-PR #112 `main`. Scope is documentation-only: expand M43 for CPU affinity/scheduler migration/core-cache locality, expand M44 in place for ingress memory ordering and false sharing because it already owned ingress contention, insert M47 for contiguous order-book storage/cache-locality, shift late DPDK/NIC research to M48/M49, keep issue #94 external review highly visible, and document rejected low-signal additions. Completed milestone history and merged PR references are not rewritten.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -404,12 +414,12 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is the feature follow-up branch `feat/close-storage-flow-tcp-followups`: finish
-artifact regeneration, CodeScene review, `make check`, `make asan`, then open one PR that closes
-#95, #28, and #26.
+Current action is the docs-only branch `docs/systems-roadmap-audit`: finish the roadmap and
+agent-guidance documentation updates, verify stale references, run `git diff --check` and
+`make check`, then open one PR.
 
-NUMA awareness remains M43; do not start it until this follow-up branch is merged or explicitly
-skipped.
+NUMA awareness remains M43 after this docs-only audit lands. Do not start implementation work from
+this branch.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.

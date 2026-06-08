@@ -76,5 +76,8 @@ After M28/M29 review, the roadmap distinguishes workflow validation from final e
 - Issue #90 tracks full PMU-backed artifacts on a bare-metal or PMU-capable Linux target.
 - TSan coverage is dynamic-analysis evidence over executed schedules, not proof over all possible
   interleavings.
-- M28 allocator evidence did not change order-book storage architecture; pool-backed order-book
-  integration is a separate roadmap item.
+- M28 allocator evidence did not change order-book storage architecture. M32 later measured
+  PMR-backed node allocation and PR #112 added an opt-in intrusive pooled resting-order storage
+  mode; true contiguous storage/cache-locality study remains future M47 scope.
+- M43-M49 now keep CPU locality, false sharing, contiguous storage, Linux evidence, and external
+  review ahead of late-stage DPDK/NIC research.

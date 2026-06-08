@@ -17,6 +17,9 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
   aware turbo can still move results run to run.
 - **Core sharing / scheduling**: a shared machine adds jitter. Pinning to an isolated core
   (`taskset -c <cpu>`, `isolcpus=`) reduces variance; the committed numbers do **not** do this.
+- **Scheduler migration**: if a benchmark thread moves across cores, cache warmth and run-to-run
+  variance can change independently of application logic. Future M43 work should record migration
+  evidence where Linux exposes it and label hosts that cannot provide it.
 - **Cache and allocator effects**: the order book uses `std::map`/`std::list` and heap
   allocation; cache locality and allocator behavior dominate small-op latency. Custom
   allocators / flat structures (backlog in `MILESTONES.md`) would change the picture.
@@ -45,6 +48,18 @@ Current M29 artifacts are constrained-environment validation from Docker Desktop
 the workflow and metadata path, not real hardware PMU access. Full PMU-backed evidence is tracked
 by issue #90 and requires bare-metal Linux or a Linux VM/server that exposes the required hardware
 counters without permission or unsupported-counter errors.
+
+## CPU affinity and locality studies
+
+The future M43 study owns CPU affinity and NUMA/locality evidence. Acceptable measurements may use
+`taskset`, `perf stat` context-switch/migration counters where available, and a tightly scoped
+`pthread_setaffinity_np` probe if code-level pinning is justified. Artifacts must record topology,
+kernel, compiler/build, command lines, git commit, and whether the host exposes the required
+hardware data.
+
+Unsupported or constrained hosts are valid outcomes. macOS, Docker Desktop, restricted CI, and
+single-NUMA-node Linux machines should be labeled as constrained rather than used to imply NUMA or
+production-latency evidence.
 
 ## What this does not prove
 
