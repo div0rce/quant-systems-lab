@@ -4,11 +4,14 @@
 
 #include <arpa/inet.h>
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <limits>
+#include <memory>
 #include <netinet/in.h>
 #include <span>
 #include <sys/socket.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -45,6 +48,29 @@ bool write_all(int fd, std::span<const std::byte> data) {
     return true;
 }
 
+struct ConnectionWorker {
+    std::thread thread;
+    std::shared_ptr<std::atomic<bool>> done;
+};
+
+void join_finished(std::vector<ConnectionWorker> &workers) {
+    for (auto it = workers.begin(); it != workers.end();) {
+        if (it->done->load(std::memory_order_acquire)) {
+            it->thread.join();
+            it = workers.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+void join_all(std::vector<ConnectionWorker> &workers) {
+    for (auto &worker : workers) {
+        worker.thread.join();
+    }
+    workers.clear();
+}
+
 } // namespace
 
 void TcpServer::serve_connection(int fd) {
@@ -56,9 +82,13 @@ void TcpServer::serve_connection(int fd) {
             break; // EOF (0) or error (<0): graceful disconnect
         }
         std::vector<std::byte> response;
-        const SessionStatus status =
-            session.on_bytes(std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)),
-                             response, response_limit(options_));
+        SessionStatus status = SessionStatus::Ok;
+        {
+            std::lock_guard lock(gateway_mutex_);
+            status = session.on_bytes(
+                std::span<const std::byte>(buffer.data(), static_cast<std::size_t>(n)), response,
+                response_limit(options_));
+        }
         if (!response.empty() && !write_all(fd, response)) {
             break;
         }
@@ -66,6 +96,31 @@ void TcpServer::serve_connection(int fd) {
             break;
         }
     }
+}
+
+bool TcpServer::serve_listen_socket(int listen_fd) {
+    std::vector<ConnectionWorker> workers;
+    std::size_t accepted = 0;
+    while (true) {
+        const int conn = ::accept(listen_fd, nullptr, nullptr);
+        if (conn < 0) {
+            break;
+        }
+        auto done = std::make_shared<std::atomic<bool>>(false);
+        workers.push_back(ConnectionWorker{std::thread([this, conn, done] {
+                                               serve_connection(conn);
+                                               ::close(conn);
+                                               done->store(true, std::memory_order_release);
+                                           }),
+                                           done});
+        ++accepted;
+        join_finished(workers);
+        if (options_.max_accepts != 0 && accepted >= options_.max_accepts) {
+            break;
+        }
+    }
+    join_all(workers);
+    return options_.max_accepts == 0 || accepted == options_.max_accepts;
 }
 
 bool TcpServer::run(const std::string &host, std::uint16_t port) {
@@ -88,20 +143,13 @@ bool TcpServer::run(const std::string &host, std::uint16_t port) {
     // The sockaddr_in* -> sockaddr* cast is required by the POSIX socket API.
     auto *generic = reinterpret_cast<sockaddr *>(&addr); // NOLINT: POSIX socket API
     if (::bind(listen_fd, generic, static_cast<socklen_t>(sizeof(addr))) < 0 ||
-        ::listen(listen_fd, 16) < 0) {
+        ::listen(listen_fd, options_.listen_backlog) < 0) {
         ::close(listen_fd);
         return false;
     }
-    while (true) {
-        const int conn = ::accept(listen_fd, nullptr, nullptr);
-        if (conn < 0) {
-            break;
-        }
-        serve_connection(conn);
-        ::close(conn);
-    }
+    const bool ok = serve_listen_socket(listen_fd);
     ::close(listen_fd);
-    return true;
+    return ok;
 }
 
 } // namespace qsl::gateway

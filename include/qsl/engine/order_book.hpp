@@ -7,6 +7,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <memory>
 #include <memory_resource>
 #include <optional>
 #include <unordered_map>
@@ -21,14 +22,17 @@ using core::TimeInForce;
 /// and FIFO order queues within a level.
 class OrderBook {
   public:
-    // M32 storage-experiment switch. Baseline == operator new/delete
-    // (std::pmr::new_delete_resource), byte-for-byte the pre-M32 behavior. Pooled routes the
-    // book's node storage through a per-book std::pmr::unsynchronized_pool_resource. The choice is
-    // fixed at construction and never changes matching semantics or determinism; it only changes
-    // where nodes live in memory. (See docs/pool_backed_storage.md.)
-    enum class Storage { Baseline, Pooled };
+    // Order-book storage-experiment switch. Baseline == operator new/delete
+    // (std::pmr::new_delete_resource), byte-for-byte the pre-M32 behavior. Pooled routes std::list,
+    // std::map, and std::unordered_map node storage through a per-book
+    // std::pmr::unsynchronized_pool_resource. IntrusivePooled replaces the per-price std::list
+    // nodes with custom FIFO nodes backed by the M28 raw OrderPool experiment; price/index maps
+    // remain standard containers. The choice is fixed at construction and never changes matching
+    // semantics or determinism; it only changes where resting-order nodes live in memory.
+    enum class Storage { Baseline, Pooled, IntrusivePooled };
 
     explicit OrderBook(Storage storage = Storage::Baseline);
+    ~OrderBook();
 
     // The book owns its memory resource and its pmr containers point into it, so it is pinned in
     // place: non-copyable and non-movable. MatchingEngine constructs books in place (map
@@ -62,6 +66,8 @@ class OrderBook {
     [[nodiscard]] bool contains(OrderId id) const;
     [[nodiscard]] std::size_t fill_count(Side taker_side, Price limit, bool is_market,
                                          Quantity quantity) const;
+    [[nodiscard]] bool can_store_limit(Side side, Price price, Quantity quantity,
+                                       TimeInForce tif) const;
 
     // Aggregate resting quantity per price level, best price first.
     [[nodiscard]] std::vector<LevelView> bid_levels() const;
@@ -113,6 +119,7 @@ class OrderBook {
     void erase_resting_order(const Locator &loc);
     static bool can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price);
     static QuantityTotal level_quantity(const Level &level);
+    struct IntrusiveStore;
 
     // Declared before the containers so resource_ is valid when they are constructed. `pool_` is
     // engaged only in Pooled mode; resource_ points at it, otherwise at the shared
@@ -122,6 +129,7 @@ class OrderBook {
     BidMap bids_;
     AskMap asks_;
     std::pmr::unordered_map<OrderId, Locator> index_;
+    std::unique_ptr<IntrusiveStore> intrusive_;
 };
 
 } // namespace qsl::engine

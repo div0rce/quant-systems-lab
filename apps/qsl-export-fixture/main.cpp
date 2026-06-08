@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     const std::uint64_t seed = (argc >= 2) ? std::stoull(argv[1]) : 42;
     const std::size_t orders = (argc >= 3) ? std::stoull(argv[2]) : 200;
     const core::SymbolId symbols = 4;
-    const core::Quantity max_qty = 8; // generate_flow uses qty 1..10 -> qty 9/10 reject
+    const core::Quantity max_qty = 8; // generate_flow can emit qty > 8 -> some orders reject
 
     engine::MatchingEngine engine;
     gateway::OrderGateway gateway{engine, gateway::RiskConfig{max_qty, /*max_notional=*/1'000'000}};

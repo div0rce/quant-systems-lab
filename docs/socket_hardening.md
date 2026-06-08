@@ -66,9 +66,10 @@ stated plainly so the gap counter is not mistaken for reliability.
 
 ## Intentionally out of scope (and why)
 
-- **Event-driven load evidence.** M34 adds a Linux `epoll` gateway architecture prototype, but
-  M30's socket-profile artifacts still describe the original blocking gateway path. Multi-client
-  load, socket-pressure measurements, and capacity conclusions remain **M35** scope.
+- **Event-driven load evidence.** M34 added a Linux `epoll` gateway architecture prototype and M35
+  added bounded multi-client loopback load evidence. The portable TCP path now uses threaded
+  per-connection workers; the artifacts remain constrained loopback evidence, not production
+  capacity claims.
 - **`io_uring`.** Discussed only. It could reduce syscall overhead on the gateway path, but it is
   a substantial, kernel-version-sensitive dependency and is not justified by any measured
   bottleneck here. No `io_uring` code exists; none is claimed.

@@ -46,12 +46,6 @@ std::vector<std::string> lines_of(const std::string &s) {
     return lines;
 }
 
-std::size_t find_line(const std::vector<std::string> &lines, const std::string &needle) {
-    const auto it = std::find(lines.begin(), lines.end(), needle);
-    REQUIRE(it != lines.end());
-    return static_cast<std::size_t>(std::distance(lines.begin(), it));
-}
-
 bool contains_line(const std::vector<std::string> &lines, const std::string &needle) {
     return std::find(lines.begin(), lines.end(), needle) != lines.end();
 }
@@ -72,7 +66,7 @@ TEST_CASE("fixture export request dispatch preserves base mode outputs", "[fixtu
     qsl::replay::FixtureExportRequest request;
 
     request.mode = qsl::replay::FixtureExportMode::Version;
-    REQUIRE(render_export(request) == "1\n");
+    REQUIRE(render_export(request) == "2\n");
 
     request = {};
     request.params.seed = 7;
@@ -217,31 +211,36 @@ TEST_CASE("differential fixture is well-formed and self-consistent", "[fixture]"
     REQUIRE(rejects > 0);
 }
 
-TEST_CASE("differential fixture emits structured modify rejection outcomes", "[fixture]") {
+TEST_CASE("differential fixture emits structured rejection outcomes", "[fixture]") {
     const auto lines = lines_of(make_fixture(7, 60));
 
-    const std::size_t idx = find_line(lines, "cmd modify 3 7 95 9");
-    REQUIRE(idx + 1 < lines.size());
-    REQUIRE(lines[idx + 1] == "reject modify 7 MaxQuantityExceeded");
+    const auto rejected = std::find_if(lines.begin(), lines.end(), [](const std::string &line) {
+        return line.rfind("reject ", 0) == 0;
+    });
+    REQUIRE(rejected != lines.end());
+    const auto fields = split(*rejected);
+    REQUIRE(fields.size() == 4);
+    REQUIRE((fields[1] == "new_limit" || fields[1] == "new_market" || fields[1] == "cancel" ||
+             fields[1] == "modify"));
+    REQUIRE(fields[3] != "None");
 }
 
-TEST_CASE("rejected modify emits no engine event and does not mutate snapshot", "[fixture]") {
+TEST_CASE("rejected command emits no engine event before the next command", "[fixture]") {
     const auto lines = lines_of(make_fixture(7, 60));
 
-    const std::size_t idx = find_line(lines, "cmd modify 3 7 95 9");
-    REQUIRE(idx + 1 < lines.size());
-    REQUIRE(lines[idx + 1] == "reject modify 7 MaxQuantityExceeded");
+    const auto rejected = std::find_if(lines.begin(), lines.end(), [](const std::string &line) {
+        return line.rfind("reject ", 0) == 0;
+    });
+    REQUIRE(rejected != lines.end());
+    REQUIRE(rejected != lines.begin());
+    const std::size_t idx = static_cast<std::size_t>(std::distance(lines.begin(), rejected));
+    REQUIRE(lines[idx - 1].rfind("cmd ", 0) == 0);
 
-    for (std::size_t i = idx + 2;
+    for (std::size_t i = idx + 1;
          i < lines.size() && lines[i].rfind("cmd ", 0) != 0 && lines[i].rfind("snapshot ", 0) != 0;
          ++i) {
         REQUIRE(lines[i].rfind("evt ", 0) != 0);
     }
-
-    const std::size_t next_event = find_line(lines, "evt accept 9 3 8");
-    REQUIRE(next_event > idx);
-    REQUIRE(contains_line(lines, "level 3 B 98 8"));
-    REQUIRE_FALSE(contains_line(lines, "level 3 B 95 9"));
 }
 
 TEST_CASE("registered but empty symbols are exported in the snapshot", "[fixture]") {

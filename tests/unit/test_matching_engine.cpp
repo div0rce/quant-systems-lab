@@ -1,8 +1,11 @@
 #include "qsl/engine/matching_engine.hpp"
+#include "qsl/replay/recovery.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <optional>
+#include <tuple>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -28,11 +31,11 @@ void expect_trade(const EngineEvent &ev, const ExpectedTrade &expected) {
     REQUIRE(std::holds_alternative<TradeEvent>(ev));
     const auto &tr = std::get<TradeEvent>(ev);
     CAPTURE(expected.symbol, expected.maker, expected.taker, expected.price, expected.quantity);
-    REQUIRE(tr.symbol == expected.symbol);
-    REQUIRE(tr.maker_id == expected.maker);
-    REQUIRE(tr.taker_id == expected.taker);
-    REQUIRE(tr.price == expected.price);
-    REQUIRE(tr.quantity == expected.quantity);
+    const auto actual_fields =
+        std::tuple{tr.symbol, tr.maker_id, tr.taker_id, tr.price, tr.quantity};
+    const auto expected_fields = std::tuple{expected.symbol, expected.maker, expected.taker,
+                                            expected.price, expected.quantity};
+    REQUIRE(actual_fields == expected_fields);
 }
 
 // An OrderAccepted for `order_id` on `symbol`.
@@ -68,6 +71,31 @@ SeqNo expect_strictly_increasing(const std::vector<EngineEvent> &events) {
     }
     return prev;
 }
+
+OrderId fill_intrusive_pool_with_one_crossable_maker(MatchingEngine &eng, SymbolId symbol) {
+    REQUIRE(eng.new_limit(symbol, 1, Side::Sell, 100, 1, TimeInForce::GTC).size() == 1);
+
+    OrderId next_id = 2;
+    for (; next_id < 100'000; ++next_id) {
+        const auto ev = eng.new_limit(symbol, next_id, Side::Sell, 101, 1, TimeInForce::GTC);
+        if (ev.empty()) {
+            break;
+        }
+        REQUIRE(ev.size() == 1);
+    }
+    REQUIRE(next_id < 100'000); // the intrusive pool is full
+    return next_id;
+}
+
+void expect_residual_bid_after_capacity_free(const MatchingEngine &eng, SymbolId symbol,
+                                             OrderId taker_id) {
+    REQUIRE(eng.contains(symbol, taker_id));
+    const auto snap = eng.snapshot();
+    REQUIRE(snap.symbols.size() == 1);
+    const auto actual = std::tuple{snap.symbols[0].best_bid, snap.symbols[0].best_ask};
+    const auto expected = std::tuple{std::optional<Price>{100}, std::optional<Price>{101}};
+    REQUIRE(actual == expected);
+}
 } // namespace
 
 TEST_CASE("symbol registry assigns stable, distinct ids", "[engine]") {
@@ -76,9 +104,10 @@ TEST_CASE("symbol registry assigns stable, distinct ids", "[engine]") {
     REQUIRE(eng.register_symbol("AAPL") == a); // idempotent
     const SymbolId m = eng.register_symbol("MSFT");
     REQUIRE(m != a);
-    REQUIRE(eng.symbol_id("AAPL") == std::optional<SymbolId>{a});
-    REQUIRE(eng.symbol_id("MSFT") == std::optional<SymbolId>{m});
-    REQUIRE_FALSE(eng.symbol_id("NVDA").has_value());
+    const bool lookups_match = eng.symbol_id("AAPL") == std::optional<SymbolId>{a} &&
+                               eng.symbol_id("MSFT") == std::optional<SymbolId>{m} &&
+                               !eng.symbol_id("NVDA").has_value();
+    REQUIRE(lookups_match);
 }
 
 TEST_CASE("multiple symbols trade independently", "[engine]") {
@@ -133,6 +162,62 @@ TEST_CASE("same commands produce identical events and snapshot", "[engine]") {
     REQUIRE(e1.snapshot() == e2.snapshot());
 }
 
+TEST_CASE("storage modes produce identical events and final snapshot", "[engine][storage]") {
+    const auto flow = qsl::replay::generate_flow(/*seed=*/91, /*symbols=*/4, /*orders=*/800);
+    const auto run = [&](OrderBook::Storage storage) {
+        MatchingEngine eng{storage};
+        std::vector<EngineEvent> events;
+        for (const auto &command : flow) {
+            append(events, qsl::replay::apply(eng, command));
+        }
+        return std::pair{events, eng.snapshot()};
+    };
+
+    const auto baseline = run(OrderBook::Storage::Baseline);
+    const auto pmr = run(OrderBook::Storage::Pooled);
+    const auto intrusive = run(OrderBook::Storage::IntrusivePooled);
+
+    REQUIRE(pmr == baseline);
+    REQUIRE(intrusive == baseline);
+    const bool non_vacuous = baseline.second.last_seq > 0 && !baseline.second.symbols.empty();
+    REQUIRE(non_vacuous);
+}
+
+TEST_CASE("intrusive storage rests only the post-match remainder", "[engine][storage]") {
+    // Regression: a partially filled GTC limit must rest its leftover quantity, not the original
+    // input, and a fully filled one must rest nothing. A 4-lot maker against a 10-lot taker leaves
+    // a 6-lot resting taker (not 10); a later 6-lot opposite order then clears the book entirely.
+    const auto run = [](OrderBook::Storage storage) {
+        MatchingEngine eng{storage};
+        const SymbolId a = eng.register_symbol("AAPL");
+        eng.new_limit(a, 1, Side::Sell, 100, 4, TimeInForce::GTC); // maker: 4 lots
+        eng.new_limit(a, 2, Side::Buy, 100, 10, TimeInForce::GTC); // fills 4, must rest 6 (not 10)
+        eng.new_limit(a, 3, Side::Sell, 100, 6, TimeInForce::GTC); // fully clears the resting 6
+        return eng.snapshot();
+    };
+
+    const auto baseline = run(OrderBook::Storage::Baseline);
+    const auto intrusive = run(OrderBook::Storage::IntrusivePooled);
+    REQUIRE(intrusive == baseline);
+    // Resting 10 (the bug) would leave a 4-lot bid after order 3 and a wrongly-rested ask; the
+    // correct remainder of 6 is fully traded, so the book ends empty.
+    REQUIRE(intrusive.symbols.size() == 1);
+    REQUIRE(intrusive.symbols[0].order_count == 0);
+}
+
+TEST_CASE("intrusive storage accepts residual when a match frees capacity", "[engine][storage]") {
+    MatchingEngine eng{OrderBook::Storage::IntrusivePooled};
+    const SymbolId a = eng.register_symbol("AAPL");
+
+    const OrderId taker_id = fill_intrusive_pool_with_one_crossable_maker(eng, a) + 1;
+    const auto ev = eng.new_limit(a, taker_id, Side::Buy, 100, 2, TimeInForce::GTC);
+    REQUIRE(ev.size() == 2);
+    expect_accepted(ev[0], a, taker_id);
+    expect_trade(ev[1], ExpectedTrade{a, /*maker=*/1, /*taker=*/taker_id, /*price=*/100,
+                                      /*quantity=*/1});
+    expect_residual_bid_after_capacity_free(eng, a, taker_id);
+}
+
 TEST_CASE("engine routes cancel and emits events", "[engine]") {
     MatchingEngine eng;
     const SymbolId a = eng.register_symbol("AAPL");
@@ -141,8 +226,8 @@ TEST_CASE("engine routes cancel and emits events", "[engine]") {
     const auto canceled = eng.cancel(a, 1);
     REQUIRE(canceled.size() == 1);
     REQUIRE(std::holds_alternative<OrderCanceled>(canceled[0]));
-    REQUIRE(eng.cancel(a, 1).empty());   // already gone
-    REQUIRE(eng.cancel(a, 999).empty()); // unknown order
+    const bool later_cancels_noop = eng.cancel(a, 1).empty() && eng.cancel(a, 999).empty();
+    REQUIRE(later_cancels_noop);
 }
 
 TEST_CASE("modify emits OrderModified and any resulting trades", "[engine]") {

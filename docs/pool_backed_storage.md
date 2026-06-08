@@ -15,7 +15,7 @@ This design is simple and deterministic. Price maps preserve best-price traversa
 preserves FIFO priority inside each level, and the unordered locator is never iterated for matching
 or snapshot generation.
 
-## Why Not Direct OrderPool Integration
+## Why M32 Did Not Directly Use OrderPool
 
 M28 introduced `OrderPool<Capacity>`, a raw-storage pool for constructing and destroying
 `engine::Order` objects with explicit lifetime management. That pool manages bare `engine::Order`
@@ -27,7 +27,7 @@ bookkeeping. A raw `OrderPool<Capacity>` cannot honestly back those list-node al
 
 Direct `OrderPool<Capacity>` integration would require a custom or intrusive order-node design:
 pool-owned nodes, explicit links, locator rewrites, and careful preservation of price-time
-priority. That follow-up is tracked in issue #95.
+priority. M32 deliberately avoided that larger storage-architecture change and used PMR instead.
 
 ## M32 PMR Design
 
@@ -43,6 +43,21 @@ M32 keeps the container design and changes only the allocator source:
 The storage mode is fixed at construction. It does not change matching rules, sequencing, replay,
 or snapshot ordering.
 
+## Intrusive OrderPool Mode
+
+The follow-up intrusive experiment adds `OrderBook::Storage::IntrusivePooled`. It keeps the same
+public `OrderBook` and `MatchingEngine(OrderBook::Storage)` surface, but replaces the per-price
+`std::list<Order>` FIFO queues with custom linked nodes:
+
+- each resting `engine::Order` is constructed in the M28 `OrderPool<Capacity>`;
+- each FIFO link node is allocated from a fixed raw node pool;
+- price levels still live in ordered maps, so best-price traversal is unchanged;
+- the active-order locator maps `OrderId` to the custom node, side, and price;
+- the storage mode is explicit and opt-in; `Baseline` remains the default.
+
+This closes issue #95's direct-storage follow-up at the order-node level without claiming a full
+flat/contiguous order book. Level maps and locator maps are still standard containers.
+
 ## Affected Allocations
 
 `Storage::Pooled` affects container node allocation inside each `OrderBook`:
@@ -52,6 +67,12 @@ or snapshot ordering.
 - unordered-map nodes/buckets for order locators;
 - allocator bookkeeping inside the PMR pool resource.
 
+`Storage::IntrusivePooled` affects:
+
+- resting `engine::Order` lifetime and storage through `OrderPool<Capacity>`;
+- per-price FIFO link nodes through a fixed raw node pool;
+- locator entries, which now point to custom nodes instead of `std::list<Order>` iterators.
+
 It does not affect:
 
 - protocol frame allocation;
@@ -60,10 +81,11 @@ It does not affect:
 - market-data publisher allocation;
 - `std::vector<EngineEvent>` result allocation;
 - `std::map<SymbolId, OrderBook>` nodes owned by `MatchingEngine`.
+- price-level map allocation or locator hash-table allocation in intrusive mode.
 
 ## Correctness Gate
 
-The invariant test replays deterministic generated flows through both storage modes and asserts:
+The invariant test replays deterministic generated flows through all storage modes and asserts:
 
 - identical per-command event streams;
 - identical aggregate event stream;
@@ -83,42 +105,37 @@ make bench-storage
 
 The script builds the release benchmark preset and writes `results/pool_backed_storage.txt`. The
 workload is a deterministic generated flow (`seed = 42`, `symbols = 4`, `orders = 5000`) replayed
-through `MatchingEngine` in baseline and pooled modes. The metric is `ns/command` and
-`commands/sec`.
+through `MatchingEngine` in baseline, PMR pooled, and intrusive pooled modes. The metric is
+`ns/command` and `commands/sec`.
 
 This benchmark exercises the engine path. It is not isolated allocator acquire/release and does not
 include network, disk, Linux kernel path, or perf/PMU counters.
 
 ## Result Interpretation
 
-On the committed macOS/Apple-clang run, pooled PMR storage measured faster than baseline for this
-synthetic engine flow. Treat that as a local measurement, not a general speedup claim. Allocator
-behavior depends on CPU, compiler, standard library, allocation pattern, cache state, and build
-mode.
+Treat committed results as local measurements, not general speedup claims. Allocator behavior
+depends on CPU, compiler, standard library, allocation pattern, cache state, and build mode.
 
-If future runs show neutral or slower PMR performance, that is still a valid M32 result. The
-question is whether pooled node allocation improves this specific engine workload without changing
+If future runs show neutral or slower pooled performance, that is still a valid result. The
+question is whether a storage mode improves this specific engine workload without changing
 semantics.
 
 ## Cache, Locality, And Replay
 
 PMR pooling can improve locality by drawing repeated container node allocations from pooled
-chunks, but it does not make the order book contiguous. The book is still map/list based, with
-pointer-heavy traversal and cache misses typical of node containers.
+chunks, but it does not make the order book contiguous. Intrusive pooled storage removes
+`std::list` nodes from the hot FIFO path, but it still traverses linked nodes and ordered price
+maps; it is not a flat-array book.
 
 Replay determinism is unchanged because allocation addresses are not part of the domain state,
 snapshot output, event ordering, or sequence assignment.
 
 ## Limitations
 
-- PMR is not an intrusive order-node design.
 - PMR does not eliminate all allocations in the engine path.
+- Intrusive pooled storage does not eliminate price-level or locator-map allocations.
+- The intrusive pool has fixed order-node capacity and no heap fallback; committed workloads stay
+  within that capacity.
 - The benchmark is synthetic and single-process.
 - The result is not a production-latency claim.
 - The experiment does not prove that pooled allocation should be retained for every workload.
-
-## Future Work
-
-Issue #95 tracks direct intrusive/custom-node order-book storage. That work would replace the
-`std::list<Order>` node model with explicit pool-owned order nodes, preserve price-time priority
-and locator correctness, and benchmark against both baseline and M32 PMR storage.

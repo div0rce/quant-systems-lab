@@ -25,13 +25,13 @@ All integers are big-endian (reusing the M2 protocol byte helpers). A record is 
 | Offset      | Size   | Field               | Type  | Notes                              |
 | ----------: | -----: | ------------------- | ----- | ---------------------------------- |
 |           0 |      8 | `seq_no`            | u64   | record sequence number             |
-|           8 |      2 | `record_type`       | u16   | `Command` (1) or `Event` (2)       |
+|           8 |      2 | `record_type`       | u16   | `CommandRecord` (1) or `EventRecord` (2) |
 |          10 |      8 | `logical_timestamp` | u64   | deterministic logical time         |
 |          18 |      4 | `size`              | u32   | payload byte count                 |
 |          22 | `size` | `payload`           | bytes | serialized command/event           |
 | 22 + `size` |      4 | `checksum`          | u32   | FNV-1a over the header + payload   |
 
-- `record_type`: `Command` (1) or `Event` (2).
+- `record_type`: `CommandRecord` (1) or `EventRecord` (2).
 - `payload`: the message's serialized bytes, opaque to the log (e.g. a binary-protocol
   command frame). Capped at `kMaxPayload` (1 MiB). The writer rejects records above this
   cap before writing, so a successful append remains readable by this implementation.
@@ -96,9 +96,11 @@ fresh engine + replay(log) == original engine final state
 
 plus the engine's **last sequence number**. The **emitted trade/event sequence** is compared
 separately by replaying and checking the event stream equals the original. The
-replay-equivalence test drives a deterministic synthetic flow (fixed RNG seed,
-`generate_flow`) of limit/market/cancel/modify commands across several symbols, then asserts
-both the final snapshot and the full event sequence match.
+replay-equivalence test drives a deterministic market-like synthetic flow (fixed RNG seed,
+`generate_flow`) of limit/market/cancel/modify commands across several symbols, then asserts both
+the final snapshot and the full event sequence match. The generator is still synthetic: it uses
+drifting per-symbol mid-prices, mostly resting liquidity, active-order cancels/modifies, and
+occasional market/crossing flow. It is not real market data.
 
 ### Recovery CLI
 

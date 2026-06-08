@@ -51,6 +51,9 @@ std::vector<EngineEvent> MatchingEngine::new_limit(SymbolId symbol, OrderId id, 
     if (book->contains(id)) {
         return events; // duplicate active id: structured rejection is added in M5
     }
+    if (!book->can_store_limit(side, price, quantity, tif)) {
+        return events;
+    }
     events.push_back(OrderAccepted{next_seq(), symbol, id});
     for (const Trade &t : book->add_limit(id, side, price, quantity, tif)) {
         events.push_back(
@@ -130,6 +133,12 @@ std::size_t MatchingEngine::fill_count(SymbolId symbol, Side side, Price price, 
         return 0;
     }
     return it->second.fill_count(side, price, type == OrderType::Market, quantity);
+}
+
+bool MatchingEngine::can_store_limit(SymbolId symbol, Side side, Price price, Quantity quantity,
+                                     TimeInForce tif) const {
+    const auto it = books_.find(symbol);
+    return it != books_.end() && it->second.can_store_limit(side, price, quantity, tif);
 }
 
 EngineSnapshot MatchingEngine::snapshot() const {

@@ -20,16 +20,16 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M42 — Extract shared shell-script helpers
-- **Status:** ◐ draft PR #111 open. Shared Bash helpers extracted for socket/perf scripts; PR scope was expanded by human request to address issue #99 (bounded blocking gateway response generation) and issue #110 (stream fixture export orchestration).
-- **Active branch:** `refactor/m42-shared-shell-script-helpers`
-- **Last completed milestone:** M41 — Simplify gateway session frame dispatch (squash-merged PR #109, commit 68061e6)
+- **Active milestone:** Follow-up bundle — intrusive storage, realistic flow, threaded TCP gateway
+- **Status:** ◐ feature branch in verification. This branch addresses issue #95 (intrusive `OrderPool`-backed order-book storage), issue #28 (more realistic synthetic order-flow model), and issue #26 (portable TCP gateway beyond one-connection-at-a-time serving) in one PR.
+- **Active branch:** `feat/close-storage-flow-tcp-followups`
+- **Last completed milestone:** M42 — Extract shared shell-script helpers (squash-merged PR #111, commit 003504f)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** M42 verified `bash -n` for shared/socket/perf scripts, helper path-normalization smoke check, focused fixture/TCP tests, `make check-fixtures`, `make check-manifest`, `dune runtest --root ocaml`, `git diff --check`, `make check` 199/199, `make asan` 199/199, and Docker Linux reduced-output `make socket-load`, `make profile-io`, `make socket-stress`, plus partial-mode `make perf-stat` / `make perf-record` constrained by Docker Desktop perf permissions on 2026-06-05.
-- **Last action:** expanded draft M42 PR #111 to address #99 and #110 after Docker became available; local + Docker verification passed.
-- **Next action:** wait for CI/review on PR #111 and fix only still-valid M42 feedback. NUMA awareness remains M43.
-- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. PR #111 is intended to close #99 and #110 when merged. Open backlog still includes #95, #94, #32, #29, #28, and #26.
+- **`make check` passing:** Focused storage/replay/fixture/TCP/session/type tests have passed on this branch; full formatting, CodeScene, benchmark artifact regeneration, `make check`, and `make asan` remain pending before PR.
+- **Last action:** implemented `OrderBook::Storage::IntrusivePooled`, stateful market-like `generate_flow` v2 with regenerated stream fixture/manifest, and threaded portable `TcpServer` accept workers.
+- **Next action:** regenerate affected artifacts, run CodeScene and full verification, then open one PR that closes #95, #28, and #26. NUMA awareness remains M43 after this follow-up lands.
+- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Open backlog still includes #94, #32, and #29; #95, #28, and #26 are addressed by the active branch pending PR/merge.
 
 ---
 
@@ -208,7 +208,9 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M42 draft PR #111 is open on `refactor/m42-shared-shell-script-helpers`. Shared helper extraction, issue #99, issue #110, local verification, and Docker reduced Linux validation are complete. Next: wait for CI/review and fix only still-valid M42 feedback._
+- _Follow-up branch `feat/close-storage-flow-tcp-followups` is in verification. Implemented
+  intrusive storage, market-like flow generation, and threaded TCP serving; next step is artifact
+  regeneration, CodeScene review, full `make check`/`make asan`, and PR creation._
 
 
 ---
@@ -262,17 +264,18 @@ Lower priority:
 | M29 | Linux perf profiling workflow and artifacts | `feat/m29-linux-perf-profiling` | ☑ merged | #89 | perf workflow + constrained validation; full PMU evidence backlogged in #90 |
 | M30 | Kernel/socket path profiling and Linux socket hardening | `feat/m30-socket-profiling-hardening` | ☑ merged | #92 | syscall/socket-buffer/UDP pressure evidence; epoll deferred to M34/M35 |
 | M31 | External review / maintainer signal | `docs/m31-external-review` | ☑ merged | #93 | Review-request checklist + feedback template; review request opened as issue #94 |
-| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage deferred to #95 |
+| M32 | Pool-backed order-book storage experiment | `feat/m32-pool-backed-order-book-storage` | ☑ merged | #96 | PMR-backed node allocation in order-book paths; direct intrusive `OrderPool` storage handled by the active #95 follow-up |
 | M33 | Advanced concurrency validation | `feat/m33-advanced-concurrency-validation` | ☑ merged | #97 | Scheduling perturbation, longer stress, and stronger concurrency methodology |
 | M34 | epoll gateway architecture | `feat/m34-epoll-gateway-architecture` | ☑ merged | #98 | Event-driven multi-client gateway design |
-| M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☑ merged | #100 | TCP connection-scaling load (blocking vs epoll) + M30 UDP pressure |
+| M35 | Multi-client load and socket-pressure testing | `feat/m35-multi-client-socket-pressure` | ☑ merged | #100 | TCP connection-scaling load (portable vs epoll) + M30 UDP pressure |
 | M36 | Decompose the epoll event loop and connection lifecycle | `refactor/m36-epoll-event-loop-decomposition` | ☑ merged | #104 | Repository-health refactor; `epoll_server.cpp` Code Health 5.35 → 10.0 |
 | M37 | Extract threaded-pipeline stage helpers | `refactor/m37-threaded-pipeline-stage-helpers` | ☑ merged | #105 | Repository-health refactor; CodeScene 10.0 for `pipeline.hpp`, `test_pipeline`, and `test_backpressure` |
 | M38 | Split the command-stream shrinker into named passes | `refactor/m38-shrinker-reduction-passes` | ☑ merged | #106 | Repository-health refactor; `shrink.cpp` 8.15 → 10.0 |
 | M39 | Encapsulate order-book matching parameters | `refactor/m39-order-book-matching-parameters` | ☑ merged | #107 | Repository-health refactor; `order_book.cpp` 8.55 → 9.68, determinism preserved |
 | M40 | Consolidate engine correctness test suites | `refactor/m40-engine-test-consolidation` | ☑ merged | #108 | Repository-health refactor (test-only); `test_order_book`/`matching_engine`/`invariants`/`risk_gateway` |
 | M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☑ merged | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
-| M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ◐ draft PR open | #111 | Repository-health refactor (manual; shell unscored); expanded to address #99/#110 |
+| M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☑ merged | #111 | Repository-health refactor (manual; shell unscored); expanded to address #99/#110 |
+| Follow-up | Intrusive storage, realistic flow, threaded TCP gateway | `feat/close-storage-flow-tcp-followups` | ◐ in progress | — | One feature PR intended to close #95/#28/#26 |
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity and NUMA locality measurements where hardware exists |
 | M44 | Lock-free ingress pipeline | `feat/m44-lock-free-ingress-pipeline` | ☐ not started | — | Ingress contention experiment; not lock-free matching |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
@@ -282,7 +285,7 @@ Lower priority:
 
 ## Decision log additions
 
-- [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the blocking (M9) and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim was softened to match the evidence — at these loopback connection counts the blocking and epoll transports are comparable (connection-setup bound), not a demonstrated win for either. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
+- [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
 - [2026-06-04] Project-memory sync after M35: PR #101 squash-merged to `main` as 40f9249. It established the `CLAUDE.md` / `AGENTS.md` memory relationship, exact `Branch:` handling for `/start-milestone`, and the guard that repository-health planning happens before original M36 NUMA. No CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
@@ -311,9 +314,11 @@ Lower priority:
 - [2026-06-05] M42: completed shared shell-helper extraction by adding `scripts/qsl_common.sh` for safe repo-relative dirty-tree exclusions, CPU/compiler/git/date metadata helpers, Linux guard helpers, TCP readiness probes, and process stop escalation. The five target scripts now source that helper while preserving workload logic and artifact fields. Initial local verification passed `bash -n scripts/qsl_common.sh scripts/socket_load.sh scripts/socket_stress.sh scripts/profile_gateway_io.sh scripts/perf_record.sh scripts/perf_stat.sh`, helper external/internal path smoke check, `git diff --check`, `make check` 193/193, `make asan` 193/193, reduced temporary-output `make socket-stress`, direct Linux-only script guard checks, and Makefile Linux-only target guard checks. Later Docker validation is recorded below.
 - [2026-06-05] M42: opened draft PR #111 (`refactor: extract shared shell-script helpers`).
 - [2026-06-05] M42 expanded scope: issue #110 is addressed by adding `FixtureExportRequest` / `FixtureExportMode` and `write_fixture_export`, so `src/replay/fixture.cpp` owns stream fixture export mode semantics while `apps/qsl-export-stream/main.cpp` only parses CLI arguments and calls the library entrypoint. Existing export bytes are covered by fixture-dispatch regression tests and fixture/OCaml checks.
-- [2026-06-05] M42 expanded scope: issue #99 is addressed for the blocking TCP transport by routing `TcpServer::serve_connection` through the bounded `Session::on_bytes` overload with `TcpServerOptions::max_response_bytes` defaulting to the epoll hard cap (8 MiB, 0 disables). The new TCP regression proves an already-accepted heartbeat reply is flushed while an over-budget high-fanout sweep is rejected before gateway mutation.
+- [2026-06-05] M42 expanded scope: issue #99 is addressed for the portable TCP transport by routing `TcpServer::serve_connection` through the bounded `Session::on_bytes` overload with `TcpServerOptions::max_response_bytes` defaulting to the epoll hard cap (8 MiB, 0 disables). The new TCP regression proves an already-accepted heartbeat reply is flushed while an over-budget high-fanout sweep is rejected before gateway mutation.
 - [2026-06-05] M42 Docker validation after Docker became available: copied the current working tree into a fresh in-container git repo to avoid host worktree `.git` indirection, then ran reduced-output Linux `make socket-load`, `make profile-io`, and `make socket-stress` with output redirected to `/tmp`; all produced constrained artifacts with `Dirty tree: no`. `make perf-stat` and `make perf-record` were also exercised in `QSL_PERF_ALLOW_PARTIAL=1` mode using Ubuntu's packaged `perf`; Docker Desktop denied `cycles` and `cpu-clock` events, so the scripts correctly emitted constrained/partial artifacts with `Dirty tree: no` and no PMU/hot-profile claim.
 - [2026-06-05] M42 review fix: `qsl-export-stream` now reports clean usage errors (exit 2) for missing or invalid numeric CLI arguments instead of allowing parse exceptions to abort the process. Added CTest coverage for `prop` without a seed, an invalid seed, and invalid `orders`. `HANDOFF.md` no longer contains the stale M39/PR #107 active-priority line.
+- [2026-06-06] M42: PR #111 squash-merged to `main` as 003504f.
+- [2026-06-06] Follow-up branch `feat/close-storage-flow-tcp-followups` started from post-M42 `main` to close #95, #28, and #26 in one feature PR. Scope is explicit intrusive `OrderPool`-backed resting-order storage, a richer deterministic synthetic flow model, and a portable threaded TCP accept path. M43 NUMA remains next after this follow-up lands.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -329,8 +334,8 @@ Lower priority:
 - [2026-06-02] M33: local verification passed: `make check` 189/189, `make asan` 189/189, `make tsan` 19/19 concurrency tests, `QSL_CONCURRENCY_STRESS_LOOPS=2 make concurrency-stress` 2/2 loops, `bash -n scripts/concurrency_stress.sh`, and `git diff --check`.
 - [2026-06-02] M33: opened draft PR #97 and triggered `@codex review`; do not merge from the automation side.
 - [2026-06-02] M33: PR #97 CI passed all 6 jobs (`build-test`, `sanitizers`, `thread-sanitizer`, `determinism`, `differential-sweep`, `ocaml-verifier`) and Codex review found no major issues.
-- [2026-06-02] M32: PR #96 squash-merged (commit f122ee8); Codex review found no major issues and CI passed all jobs. M32 delivered PMR-backed order-book node allocation, an engine-level storage benchmark, docs/ADR, and issue #95 for future intrusive/custom-node `OrderPool<Capacity>` storage.
-- [2026-06-02] M32: started after M31 (#93) squash-merged (commit b7926ac). Corrected scope: integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator experiment, and measure baseline-vs-pool-backed engine-level workloads — not another allocator microbenchmark. Direct `OrderPool<Capacity>` order-book integration is deferred because the current `std::list<Order>` design allocates implementation-defined list nodes, not bare `engine::Order` objects; intrusive/custom-node storage is tracked separately in issue #95. Matching must remain deterministic (replay/differential tests stay green); no storage-architecture claim beyond what the committed measured artifact supports; document even a negative result.
+- [2026-06-02] M32: PR #96 squash-merged (commit f122ee8); Codex review found no major issues and CI passed all jobs. M32 delivered PMR-backed order-book node allocation, an engine-level storage benchmark, docs/ADR, and issue #95 for the later intrusive/custom-node `OrderPool<Capacity>` storage path now handled by `feat/close-storage-flow-tcp-followups`.
+- [2026-06-02] M32: started after M31 (#93) squash-merged (commit b7926ac). Corrected scope: integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator experiment, and measure baseline-vs-pool-backed engine-level workloads — not another allocator microbenchmark. Direct `OrderPool<Capacity>` order-book integration was deferred because the current `std::list<Order>` design allocated implementation-defined list nodes, not bare `engine::Order` objects; the later #95 follow-up handles the intrusive/custom-node path separately. Matching must remain deterministic (replay/differential tests stay green); no storage-architecture claim beyond what the committed measured artifact supports; document even a negative result.
 - [2026-06-02] M32: implemented the scoped PMR path: `OrderBook::Storage::{Baseline,Pooled}`, per-book `std::pmr::unsynchronized_pool_resource`, PMR list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation via `books_.try_emplace(id, book_storage_)`. Baseline remains the default.
 - [2026-06-02] M32: added a generated-flow equivalence invariant test proving baseline and pooled storage produce identical per-command event streams, final `EngineSnapshot`, and `last_seq`; the test includes non-vacuity guards for real trades and resting liquidity.
 - [2026-06-02] M32: added engine-level storage benchmarking (`make bench-storage`, `qsl-bench storage`, `scripts/run_storage_benchmarks.sh`, `results/pool_backed_storage.txt`). This compares baseline engine storage against PMR pooled node allocation; it is not an isolated allocator-only benchmark and not a production-latency claim.
@@ -399,10 +404,12 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M42 on `refactor/m42-shared-shell-script-helpers`: wait for CI/review on PR #111
-and fix only still-valid feedback. PR #111 is intended to close #99 and #110 when merged.
+Current action is the feature follow-up branch `feat/close-storage-flow-tcp-followups`: finish
+artifact regeneration, CodeScene review, `make check`, `make asan`, then open one PR that closes
+#95, #28, and #26.
 
-NUMA awareness remains M43; do not start it until M36–M42 are done or explicitly skipped.
+NUMA awareness remains M43; do not start it until this follow-up branch is merged or explicitly
+skipped.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.

@@ -1,7 +1,7 @@
 # qsl fixture reproducibility manifest (issue #47)
 # columns: <exporter-args> <sha256-of-committed-fixture>
-generator_version 1
-7 60 6f4e2a0a37261bf407316423c5108452b75343648786dcb77f21f507c4630d33
+generator_version 2
+7 60 6e7ca5338fbbc9ebd2e3d658e52690fd1b5d3a18bd16f189e56f9caa32c2ea7c
 ioc 6bfb3837db166a294f4e7e1ca77029aa58f5b4abdb2dbc83590ff0aa24c683e0
 prop 1 5740a2d89e4ef4f24f1ba88ef104c4c0177991d41d2e09cfd3f9f08ffd09a47b
 prop 2 45f3bace2597bc94b0ddea624b85e194c0976600a6b3cdc31f0acef2e2321a97

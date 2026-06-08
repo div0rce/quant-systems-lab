@@ -86,8 +86,9 @@ SessionStatus emit_result(core::OrderId order_id, const GatewayResult &result,
 
 SessionStatus ensure_new_order_budget(const OrderGateway &gateway, const protocol::NewOrder &order,
                                       std::vector<std::byte> &out, std::size_t max_output_bytes) {
-    const NewOrderPreview preview = gateway.preview_new_order(
-        order.symbol, order.order_id, order.side, order.price, order.quantity, order.type);
+    const NewOrderPreview preview =
+        gateway.preview_new_order(order.symbol, order.order_id, order.side, order.price,
+                                  order.quantity, order.type, order.tif);
     const std::size_t required =
         preview.accepted
             ? add_saturating(kAckFrameBytes, mul_saturating(preview.fill_count, kFillFrameBytes))

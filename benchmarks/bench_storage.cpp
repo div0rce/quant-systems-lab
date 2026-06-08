@@ -77,6 +77,8 @@ void run_storage_benchmarks() {
                 kSymbols, kOrders, kReps);
     engine_flow("engine flow pooled pmr storage", engine::OrderBook::Storage::Pooled, kSeed,
                 kSymbols, kOrders, kReps);
+    engine_flow("engine flow intrusive pool storage", engine::OrderBook::Storage::IntrusivePooled,
+                kSeed, kSymbols, kOrders, kReps);
 }
 
 } // namespace qsl::bench

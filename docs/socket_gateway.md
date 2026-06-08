@@ -9,7 +9,8 @@ the M2 binary protocol. It is split into two pieces:
   deterministically.
 - **`TcpServer`** (`include/qsl/gateway/tcp_server.hpp`) — a thin POSIX-socket transport:
   `serve_connection(fd)` runs a `Session` over one connected socket; `run(host, port)` binds,
-  listens, and accepts connections one at a time.
+  listens, accepts connections, and serves each accepted connection on a worker thread while
+  serializing gateway mutation.
 - **`EpollServer`** (`include/qsl/gateway/epoll_server.hpp`) — a Linux-only event-driven
   transport prototype: one `epoll` loop accepts multiple clients and drives one `Session` per
   connection with nonblocking reads and writes.
@@ -33,7 +34,7 @@ The wire is a byte stream, not a message stream. `Session` accumulates bytes in 
 only processes a frame once the 16-byte header plus the declared `body_len` are present; a
 frame split across multiple `read()`s is held until complete.
 
-The blocking `TcpServer` writes responses with a send-all loop that tolerates partial writes.
+The portable `TcpServer` writes responses with a send-all loop that tolerates partial writes.
 The Linux `EpollServer` keeps a per-client outbound buffer and leaves the connection registered
 for `EPOLLOUT` until all pending response bytes are accepted by the kernel. Both write paths use
 `send(..., MSG_NOSIGNAL)` where available, and the platform socket option where available, so a
@@ -88,10 +89,15 @@ induces an over-cap response is disconnected.
   is still drained before the connection is removed.
 - Heartbeats are a liveness round-trip only; the gateway does not yet time out idle peers.
 
-## Event-driven gateway mode
+## Gateway transport modes
 
-The default demo still uses `TcpServer` because it is portable and easiest to inspect. On Linux,
-`qsl-gateway` can run the epoll prototype explicitly:
+The default demo uses `TcpServer` because it is portable and easiest to inspect. The accept loop
+spawns one worker per accepted connection, so a slow or still-open client no longer prevents the
+server from accepting a later client. The shared `OrderGateway` remains protected by an internal
+mutex; network I/O can overlap across clients, but matching-engine mutation stays serialized and
+deterministic.
+
+On Linux, `qsl-gateway` can run the epoll prototype explicitly:
 
 ```bash
 ./build/dev/qsl-gateway 9009 --epoll   # explicit port
@@ -100,20 +106,21 @@ The default demo still uses `TcpServer` because it is portable and easiest to in
 
 This mode is single-threaded and event-driven: it does not create one thread per connection.
 Each connected client owns its own `Session`, so deterministic framing, malformed-frame handling,
-risk checks, and response encoding are shared with the blocking transport. M34 tests the real
+risk checks, and response encoding are shared with the portable transport. M34 tests the real
 loopback socket path with two simultaneous clients (and a backpressure case under a small
 high-water mark) and verifies every client receives correct, in-order responses through one event
 loop.
 
 This is architecture validation, not a production-capacity claim. Multi-client load, socket
-pressure, connection scaling, and throughput measurements remain M35 scope.
+pressure, connection scaling, and throughput measurements are covered by the constrained M35
+artifacts.
 
 ## Why it is still intentionally simple
 
-The blocking path remains a single-threaded accept-and-serve loop (one connection at a time).
-The epoll path is also single-threaded, but it multiplexes readiness across multiple clients.
-There is still no thread pool, no TLS, no authentication, no rate limiting, and no real venue
-connectivity.
+The portable path uses worker threads for connection I/O, but it deliberately keeps gateway/engine
+mutation serialized. The epoll path is single-threaded and multiplexes readiness across multiple
+clients. There is still no TLS, no authentication, no rate limiting, no multi-core matching engine,
+and no real venue connectivity.
 
 ## Security
 

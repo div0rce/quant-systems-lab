@@ -76,6 +76,8 @@ class MatchingEngine {
     [[nodiscard]] std::optional<Price> best_ask(SymbolId symbol) const;
     [[nodiscard]] std::size_t fill_count(SymbolId symbol, Side side, Price price, OrderType type,
                                          Quantity quantity) const;
+    [[nodiscard]] bool can_store_limit(SymbolId symbol, Side side, Price price, Quantity quantity,
+                                       TimeInForce tif) const;
 
   private:
     OrderBook *find_book(SymbolId symbol) noexcept;

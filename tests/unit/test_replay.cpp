@@ -3,16 +3,90 @@
 #include "qsl/replay/event_log.hpp"
 #include "qsl/replay/recovery.hpp"
 
+#include <algorithm>
+#include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <set>
 #include <span>
 #include <variant>
 #include <vector>
 
 using namespace qsl::replay;
 using namespace qsl::engine;
+
+namespace {
+
+struct FlowChurnCoverage {
+    std::set<SymbolId> touched_symbols;
+    std::size_t limits = 0;
+    std::size_t ioc_limits = 0;
+    std::size_t markets = 0;
+    std::size_t cancels = 0;
+    std::size_t modifies = 0;
+    std::size_t active_cancel_targets = 0;
+    std::size_t active_modify_targets = 0;
+    std::size_t trades = 0;
+
+    [[nodiscard]] bool is_market_like() const {
+        const std::array checks{touched_symbols.size() > 1,
+                                limits > 0,
+                                ioc_limits > 0,
+                                markets > 0,
+                                cancels > 0,
+                                modifies > 0,
+                                active_cancel_targets > 0,
+                                active_modify_targets > 0,
+                                trades > 0};
+        return std::all_of(checks.begin(), checks.end(), [](bool ok) { return ok; });
+    }
+};
+
+void observe_command(const Command &command, const MatchingEngine &model,
+                     FlowChurnCoverage &coverage) {
+    if (const auto *limit = std::get_if<NewLimit>(&command)) {
+        coverage.touched_symbols.insert(limit->symbol);
+        ++coverage.limits;
+        coverage.ioc_limits += limit->tif == TimeInForce::IOC ? 1U : 0U;
+        return;
+    }
+    if (const auto *market = std::get_if<NewMarket>(&command)) {
+        coverage.touched_symbols.insert(market->symbol);
+        ++coverage.markets;
+        return;
+    }
+    if (const auto *cancel = std::get_if<Cancel>(&command)) {
+        coverage.touched_symbols.insert(cancel->symbol);
+        coverage.active_cancel_targets += model.contains(cancel->symbol, cancel->id) ? 1U : 0U;
+        ++coverage.cancels;
+        return;
+    }
+    if (const auto *modify = std::get_if<Modify>(&command)) {
+        coverage.touched_symbols.insert(modify->symbol);
+        coverage.active_modify_targets += model.contains(modify->symbol, modify->id) ? 1U : 0U;
+        ++coverage.modifies;
+    }
+}
+
+void observe_events(const std::vector<EngineEvent> &events, FlowChurnCoverage &coverage) {
+    for (const auto &event : events) {
+        coverage.trades += std::holds_alternative<TradeEvent>(event) ? 1U : 0U;
+    }
+}
+
+FlowChurnCoverage measure_churn(const std::vector<Command> &flow) {
+    MatchingEngine model;
+    FlowChurnCoverage coverage;
+    for (const auto &command : flow) {
+        observe_command(command, model, coverage);
+        observe_events(qsl::replay::apply(model, command), coverage);
+    }
+    return coverage;
+}
+
+} // namespace
 
 TEST_CASE("replay rebuilds identical final state and event sequence", "[replay]") {
     const auto flow = generate_flow(/*seed=*/7, /*symbols=*/3, /*orders=*/400);
@@ -82,6 +156,11 @@ TEST_CASE("file-backed replay uses event-log framing before rebuilding state", "
 TEST_CASE("synthetic flow is deterministic in its seed", "[replay]") {
     REQUIRE(generate_flow(7, 3, 300) == generate_flow(7, 3, 300));
     REQUIRE_FALSE(generate_flow(7, 3, 300) == generate_flow(8, 3, 300));
+}
+
+TEST_CASE("synthetic flow includes market-like order churn", "[replay]") {
+    const auto flow = generate_flow(/*seed=*/11, /*symbols=*/4, /*orders=*/1000);
+    REQUIRE(measure_churn(flow).is_market_like());
 }
 
 TEST_CASE("commands round-trip through the codec", "[replay]") {

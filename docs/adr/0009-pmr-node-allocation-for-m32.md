@@ -22,8 +22,8 @@ M32 uses `std::pmr::unsynchronized_pool_resource` to back order-book container n
 `OrderBook::Storage::Pooled` routes the book's PMR list/map/unordered-map allocations through a
 per-book pool resource.
 
-Direct intrusive/custom-node `OrderPool<Capacity>` order-book storage is deferred and tracked in
-issue #95.
+Direct intrusive/custom-node `OrderPool<Capacity>` order-book storage was deferred from M32 and
+tracked in issue #95. A later post-M42 follow-up implements that opt-in path separately.
 
 ## Consequences
 
@@ -31,5 +31,6 @@ M32 is reversible, small, and measurable against engine-level workloads without 
 semantics. It evaluates whether pooled node allocation helps the existing map/list order-book
 architecture.
 
-It does not prove that M28's raw `OrderPool` improves the matching engine, and it does not settle
-the future intrusive/custom-node design question.
+It does not prove that M28's raw `OrderPool` improves the matching engine. The later #95 follow-up
+keeps that question separate by adding an explicit opt-in intrusive storage mode and measuring it
+against the baseline and PMR modes.

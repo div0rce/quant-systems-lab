@@ -112,6 +112,7 @@ TMP_OUT="$(mktemp)"
         echo "rmem_max:     $(cat /proc/sys/net/core/rmem_max 2>/dev/null || echo unknown)"
     fi
     echo "Compiler:    $(qsl_compiler_version)"
+    echo "Build type:  $(qsl_build_type)"
     echo "Git commit:  $(qsl_git_commit_short)"
     echo "Dirty tree:  $DIRTY"
     echo "Transport:   UDP unicast over 127.0.0.1 (loopback)"

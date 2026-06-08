@@ -16,12 +16,13 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M38 are merged. PR #101 (40f9249) and PR #102 (7092423)
+The repo is released at `v0.1.0`. M0–M42 are merged. PR #101 (40f9249) and PR #102 (7092423)
 synchronized project-memory files after M35. PR #103 (0f2ceb7) inserted the repository-health
 refactor phase **M36–M42** and renumbered the original networking/persistence roadmap to
-**M43–M48** (NUMA is now **M43**). M36 landed as PR #104 (0d2b97a), M37 landed as PR #105
-(a8c0485), and M38 landed as PR #106 (9ccf157). Current active work is M39: draft PR #107 is open
-for the order-book matching-parameter decomposition.
+**M43–M48** (NUMA is now **M43**). M36–M42 landed as PR #104 (0d2b97a), PR #105 (a8c0485),
+PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109 (68061e6), and PR #111
+(003504f). Current active work is the feature follow-up branch
+`feat/close-storage-flow-tcp-followups`, intended to close issues #95, #28, and #26 in one PR.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -34,8 +35,8 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-Current work is `/start-milestone 39` (Encapsulate order-book matching parameters). To
-resume:
+Current work is not a numbered milestone. It is the post-M42 feature follow-up for intrusive
+storage, realistic flow generation, and threaded portable TCP serving. To resume:
 
 ```text
 /resume
@@ -62,22 +63,20 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `68061e6` (PR #109, M41 session frame dispatch)
-- current active branch, if active: `refactor/m42-shared-shell-script-helpers`
-- current active status: M42 draft PR #111 open; wait for CI/review
+- latest synced main baseline: `003504f` (PR #111, M42 shared shell-script helpers)
+- current active branch, if active: `feat/close-storage-flow-tcp-followups`
+- current active status: feature follow-up in verification; PR pending
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
-- open follow-up issue: #95 for future intrusive/custom-node `OrderPool<Capacity>` order-book
-  storage
-- follow-up issues #99 and #110 are addressed by PR #111 and should close when that PR merges
+- issues #95, #28, and #26 are addressed by the active branch and should close when its PR merges
 - open review request issue: #94
-- legacy backlog still open: #26, #28, #29, #32
+- legacy backlog still open: #29 and #32
 
 ### Next milestone
 
-The repository-health refactor phase (M36–M42) has been analyzed and confirmed. M36 through M41 are
-merged. M42 draft PR #111 is open on `refactor/m42-shared-shell-script-helpers`; the next step is
-waiting for CI/review. Original NUMA awareness is now **M43**.
+The repository-health refactor phase (M36–M42) is complete and merged. The active
+`feat/close-storage-flow-tcp-followups` branch should land before starting original NUMA awareness,
+which is now **M43**.
 
 ### Phase III / IV purpose
 
@@ -89,8 +88,7 @@ networking research.
 
 Current priority order:
 
-1. Repository-health refactor phase M36–M42 (currently M42, draft PR #111 open on
-   `refactor/m42-shared-shell-script-helpers`).
+1. Feature follow-up branch `feat/close-storage-flow-tcp-followups` for #95/#28/#26.
 2. M43 — NUMA awareness study (original next milestone, now shifted after the refactor phase).
 3. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
 
