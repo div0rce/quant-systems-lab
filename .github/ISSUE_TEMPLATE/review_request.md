@@ -14,7 +14,9 @@ valuable, and note that **no external review has happened yet** (every claim is 
 
 <!-- One of: SPSC memory ordering / backpressure semantics / threaded ownership model /
 event-log integrity under concurrency / benchmark + profiling methodology /
-Linux + socket profiling methodology / other. -->
+Linux + socket profiling methodology / CPU affinity + scheduler migration /
+false sharing + cache-line contention / storage architecture + cache locality /
+external review process / other. -->
 
 ## What is wrong or unclear
 

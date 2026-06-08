@@ -18,11 +18,13 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 
 The repo is released at `v0.1.0`. M0–M42 are merged. PR #101 (40f9249) and PR #102 (7092423)
 synchronized project-memory files after M35. PR #103 (0f2ceb7) inserted the repository-health
-refactor phase **M36–M42** and renumbered the original networking/persistence roadmap to
-**M43–M48** (NUMA is now **M43**). M36–M42 landed as PR #104 (0d2b97a), PR #105 (a8c0485),
+refactor phase **M36–M42** and shifted the original networking/persistence roadmap after those
+refactors. This audit extends the future roadmap to **M43–M49**. M36–M42 landed as PR #104
+(0d2b97a), PR #105 (a8c0485),
 PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109 (68061e6), and PR #111
-(003504f). Current active work is the feature follow-up branch
-`feat/close-storage-flow-tcp-followups`, intended to close issues #95, #28, and #26 in one PR.
+(003504f). PR #112 (2369f84) closed issues #95, #28, and #26. Current active work is the
+docs-only branch `docs/systems-roadmap-audit`, which updates future systems-engineering roadmap
+scope and agent guidance without changing completed milestone history.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -35,8 +37,8 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-Current work is not a numbered milestone. It is the post-M42 feature follow-up for intrusive
-storage, realistic flow generation, and threaded portable TCP serving. To resume:
+Current work is not a numbered milestone. It is a post-PR #112 roadmap and project-memory audit. To
+resume:
 
 ```text
 /resume
@@ -63,34 +65,35 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `003504f` (PR #111, M42 shared shell-script helpers)
-- current active branch, if active: `feat/close-storage-flow-tcp-followups`
-- current active status: feature follow-up in verification; PR pending
+- latest synced main baseline: `2369f84` (PR #112, intrusive storage / realistic flow / threaded TCP follow-up)
+- current active branch, if active: `docs/systems-roadmap-audit`
+- current active status: docs-only roadmap audit PR #113 open; keep review-clean for human squash-merge
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
-- issues #95, #28, and #26 are addressed by the active branch and should close when its PR merges
+- issues #95, #28, and #26 were closed by PR #112
 - open review request issue: #94
 - legacy backlog still open: #29 and #32
 
 ### Next milestone
 
-The repository-health refactor phase (M36–M42) is complete and merged. The active
-`feat/close-storage-flow-tcp-followups` branch should land before starting original NUMA awareness,
-which is now **M43**.
+The repository-health refactor phase (M36–M42) and the post-M42 feature follow-up (PR #112) are
+complete and merged. After the docs-only roadmap audit lands, the next implementation milestone is
+**M43 — NUMA awareness study**.
 
 ### Phase III / IV purpose
 
 The current arc exists to address remaining systems-signal gaps: full hardware PMU evidence,
-kernel/socket profiling, external review signal, pool-backed order-book storage integration,
-advanced concurrency validation, event-driven gateway architecture, multi-client socket pressure,
-NUMA/affinity studies, ingress contention, persistence/recovery benchmarking, and low-latency
-networking research.
+kernel/socket profiling, external review signal, pool-backed and contiguous order-book storage
+studies, advanced concurrency validation, event-driven gateway architecture, multi-client socket
+pressure, NUMA/affinity and scheduler-migration studies, ingress memory ordering and false-sharing
+evidence, persistence/recovery benchmarking, and late-stage low-latency networking research.
 
 Current priority order:
 
-1. Feature follow-up branch `feat/close-storage-flow-tcp-followups` for #95/#28/#26.
-2. M43 — NUMA awareness study (original next milestone, now shifted after the refactor phase).
+1. Docs-only roadmap audit branch `docs/systems-roadmap-audit`.
+2. M43 — NUMA awareness study with CPU affinity, scheduler migration, and locality caveats.
 3. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
+4. Issue #94 — independent external technical review remains one of the highest credibility gaps.
 
 ### Forbidden shortcuts
 

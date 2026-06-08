@@ -11,6 +11,8 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   allocation against PMR-backed `std::list`/`std::map`/`std::unordered_map` node allocation and the
   opt-in intrusive `OrderPool`-backed resting-order storage mode (`make bench-storage`,
   `qsl-bench storage`).
+  Future M47 contiguous-storage artifacts should make the compared layouts explicit and must not
+  be described as cache-locality evidence unless generated from the corresponding code and tooling.
 - `perf_stat_linux.txt` — Linux `perf stat` output for the benchmark harness (`make perf-stat`).
   It is full hardware-counter evidence only when the file says `Artifact: hardware PMU evidence`
   and `Unsupported counters detected: no`; otherwise it is constrained-environment validation.
@@ -24,3 +26,5 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - Results include hardware, compiler, build type, and git commit.
 - No estimated or fabricated numbers. They are synthetic microbenchmarks, hardware/compiler/
   build-dependent — not production throughput.
+- Future storage, CPU-affinity, false-sharing, DPDK, or NIC artifacts must state whether they are
+  full hardware evidence, constrained-environment validation, or research notes only.

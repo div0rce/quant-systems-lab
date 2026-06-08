@@ -103,6 +103,65 @@ non-overclaiming rules, and benchmark rules.
 
 After interruption, never rely on conversation memory. Reconstruct state from files and git.
 
+## Architecture map and evidence philosophy
+
+Contributor orientation:
+
+```text
+Client
+  ↓
+Gateway
+  ↓
+Risk
+  ↓
+Matching Engine
+  ↓
+Replay Log
+  ↓
+Recovery
+  ↓
+Verification / Differential Testing
+```
+
+The runtime path is a deterministic state machine with integer-tick prices and logical sequencing.
+The verification path exists to challenge that state machine: replay, property fixtures,
+cross-language OCaml differential testing, fuzzing, sanitizers, and benchmark/profiling artifacts.
+
+Testing philosophy:
+
+- Characterize behavior before refactoring deterministic logic.
+- Engine, replay, protocol, concurrency, and storage changes need focused tests plus `make check`;
+  runtime C++ changes generally also need `make asan`.
+- Concurrency evidence is layered: memory-ordering reasoning, stress/perturbation tests, and TSan
+  are evidence over implemented schedules, not proof over all interleavings.
+- A milestone is valid only when its DoD is met, `PROGRESS.md` is updated, and the result is
+  reviewable in one scoped PR.
+
+Performance philosophy:
+
+- No performance claim exists until a committed script generates metadata-rich evidence.
+- Benchmark artifacts must record hardware/OS/compiler/build/commit/dirty-tree state.
+- Negative, neutral, or constrained-environment results are acceptable when labeled honestly.
+- Do not infer production latency, HFT readiness, or general speedups from synthetic benchmarks.
+
+Roadmap philosophy:
+
+- Higher-value systems signals: memory ordering, concurrency correctness, cache locality, storage
+  architecture, Linux performance evidence, and independent external review.
+- Lower-priority late-stage research: DPDK exploration, NIC offload exploration, and isolated
+  micro-optimization experiments. These remain in the roadmap, but after evidence that exercises
+  the current codebase directly.
+- Future milestone metadata should explain dependencies, signal gained, evidence required,
+  forbidden claims, and what would count as a weak or fake implementation.
+
+Known constraints:
+
+- The gateway and feed are loopback-only, unauthenticated simulator surfaces.
+- The core engine cannot depend on wall-clock time or floating-point prices.
+- M29 perf artifacts are constrained-environment evidence until issue #90 is completed.
+- Issue #94 external review remains one of the highest remaining credibility signals; do not imply
+  independent review has happened until `docs/review_feedback.md` records it.
+
 ## Local MCP/tooling memory
 
 Local Codex client MCP servers currently configured:
@@ -1032,7 +1091,7 @@ Phase IV focuses on:
 7. advanced concurrency validation.
 
 Do not add dashboards, strategies, market-data APIs, FIX adapters, Docker packaging, or
-aesthetic product work before M24-M48 unless the human explicitly changes priorities.
+aesthetic product work before M24-M49 unless the human explicitly changes priorities.
 
 The correct claim after this arc is:
 
@@ -1059,9 +1118,9 @@ validates executed schedules and can detect races that occur during tested execu
 prove correctness across all possible thread interleavings.
 
 M28 allocator evidence is allocator evidence only. M32 delivered a scoped PMR-backed order-book
-node-allocation experiment measured on engine-level workloads. The active post-M42 follow-up branch
-adds an explicit intrusive `OrderPool<Capacity>` order-book storage mode to close issue #95 without
-claiming that M28 itself changed engine storage.
+node-allocation experiment measured on engine-level workloads. PR #112 added an explicit intrusive
+`OrderPool<Capacity>` order-book storage mode to close issue #95 without claiming that M28 itself
+changed engine storage.
 
 ---
 
@@ -1111,24 +1170,29 @@ M28 implemented a raw-storage `OrderPool` and benchmarked allocator acquire/rele
 M28 did **not** integrate pool storage into the order book. Matching engine storage architecture is
 unchanged. Current M28 evidence is allocator evidence, not engine-storage evidence.
 
-M32 delivered a scoped PMR-backed order-book node-allocation experiment. The active post-M42
-follow-up branch adds an explicit intrusive `OrderPool<Capacity>` order-book storage mode to close
-issue #95 without rewriting the baseline or PMR storage paths.
+M32 delivered a scoped PMR-backed order-book node-allocation experiment. PR #112 added an explicit
+intrusive `OrderPool<Capacity>` order-book storage mode without rewriting the baseline or PMR
+storage paths.
 
 ## Current post-M35 roadmap memory
 
 Current landed state on `main`: M42 is merged (PR #111, 003504f) after M35 (PR #100, a86b701), the
 project-memory syncs (PR #101 40f9249, PR #102 7092423), the repository-health refactor phase
 insertion (PR #103 0f2ceb7), M36 (PR #104, 0d2b97a), M37 (PR #105, a8c0485), M38 (PR #106,
-9ccf157), M39 (PR #107, 880fbc7), M40 (PR #108, b939730), and M41 (PR #109, 68061e6). The active
-branch is `feat/close-storage-flow-tcp-followups`, a feature follow-up intended to close #95, #28,
-and #26 in one PR.
+9ccf157), M39 (PR #107, 880fbc7), M40 (PR #108, b939730), M41 (PR #109, 68061e6), and the
+post-M42 follow-up (PR #112, 2369f84).
 
-Original roadmap after M35 shifted +7 to **M43–M48**: M43 NUMA awareness study; M44 lock-free
-ingress pipeline (not lock-free matching); M45 exchange-grade persistence prototype; M46 recovery
-benchmarking; M47 DPDK research/prototype; M48 NIC offload and low-latency networking study. NUMA is
-now M43; do not start it until the inserted M36–M42 refactors are done or the human reprioritizes.
+PR #112 closed issues #95, #28, and #26 by adding intrusive pooled order-book storage, a more
+realistic deterministic synthetic flow model, and portable threaded TCP serving. The current
+docs-only roadmap audit branch updates future systems-engineering scope; it does not rewrite
+completed milestone history.
+
+Original roadmap after M35 shifted +7 and this audit extends it to **M43–M49**: M43 NUMA/CPU
+affinity and scheduler-migration study; M44 ingress queue memory-ordering and false-sharing study;
+M45 exchange-grade persistence prototype; M46 recovery benchmarking; M47 contiguous order-book
+storage and cache-locality study; M48 DPDK research/prototype; M49 NIC offload and low-latency
+networking study.
 
 Issue #90 remains the full hardware-PMU evidence debt. Issues #99 and #110 were addressed by PR
-#111. Issues #95, #28, and #26 are addressed by the active follow-up branch and should close when
-its PR merges. Issue #94 is the external technical review request.
+#111. Issues #95, #28, and #26 were addressed by PR #112. Issue #94 is the external technical
+review request and remains one of the highest remaining credibility signals.

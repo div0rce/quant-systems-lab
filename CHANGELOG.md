@@ -46,7 +46,7 @@ All notable changes to this project. The format is loosely based on
   `std::pmr::unsynchronized_pool_resource`; baseline storage remains the default.
 - M32: `make bench-storage` / `scripts/run_storage_benchmarks.sh` / `qsl-bench storage`, an
   engine-level benchmark comparing baseline order-book storage against PMR pooled node allocation.
-- M32: the later #95 follow-up adds the separate intrusive/custom-node `OrderPool<Capacity>`
+- PR #112: the later #95 follow-up adds the separate intrusive/custom-node `OrderPool<Capacity>`
   integration path that M32 intentionally kept out of its PMR scope.
 - M30: optional UDP receive-buffer (`SO_RCVBUF`) sizing on the market-data client, with the
   granted size read back via `getsockopt`. `qsl-mdfeed subscribe` gains a `[rcvbuf_bytes]`
@@ -87,8 +87,13 @@ All notable changes to this project. The format is loosely based on
   analysis (5 production + 6 test files below 9.0) plus one manually-identified shell-maintainability
   milestone: seven refactor milestones M36–M42 (epoll decomposition; threaded-pipeline stage helpers;
   shrinker passes; order-book matching parameters; engine test-suite consolidation; session frame
-  dispatch; shared shell-script helpers). The original M36–M41 networking/persistence roadmap is
-  renumbered to M43–M48; NUMA awareness is now M43.
+  dispatch; shared shell-script helpers). The original networking/persistence roadmap was shifted
+  after those refactors; the later systems-roadmap audit extends future scope to M43–M49.
+- Updated the future systems-engineering roadmap after PR #112: M43 now covers NUMA plus CPU
+  affinity, scheduler migration, and locality caveats; M44 is expanded in place for ingress
+  memory-ordering and false-sharing evidence; M47 is inserted for contiguous order-book
+  storage/cache-locality; DPDK and NIC offload shift to M48/M49 as late-stage research. Completed
+  milestone history and merged PR references are unchanged.
 - M34: updated socket-gateway docs and added ADR 0010 to distinguish the Linux epoll architecture
   prototype from M35 multi-client load/socket-pressure evidence. The docs cover EAGAIN/EWOULDBLOCK,
   partial writes, half-close flushing, and bounded outbound buffering.
@@ -113,10 +118,10 @@ All notable changes to this project. The format is loosely based on
   full hardware PMU evidence.
 - Recorded issue #90 as the follow-up for full Linux hardware PMU perf artifacts on a PMU-capable
   Linux target.
-- Expanded the post-M29 roadmap through M41, covering pool-backed order-book storage, advanced
-  concurrency validation, epoll gateway work, multi-client socket pressure, NUMA studies,
-  lock-free ingress, stronger persistence, recovery benchmarking, DPDK research, and NIC offload
-  study.
+- Expanded the post-M29 roadmap through M49, covering pool-backed and contiguous order-book
+  storage, advanced concurrency validation, epoll gateway work, multi-client socket pressure, NUMA
+  and CPU-affinity studies, ingress memory-ordering/false-sharing validation, stronger persistence,
+  recovery benchmarking, late-stage DPDK research, and NIC offload study.
 - Added explicit backlog distinctions: TSan coverage is dynamic-analysis evidence rather than
   proof, and M28 allocator results are allocator evidence rather than engine-storage evidence.
 

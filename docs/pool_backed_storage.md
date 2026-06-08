@@ -130,6 +130,17 @@ maps; it is not a flat-array book.
 Replay determinism is unchanged because allocation addresses are not part of the domain state,
 snapshot output, event ordering, or sequence assignment.
 
+## Future Contiguous Storage Study
+
+M47 owns the next storage-architecture question: whether flat/contiguous order-book layouts provide
+better cache-locality tradeoffs than the baseline, PMR pooled, or intrusive pooled modes. Candidate
+approaches include flat-vector-style price levels, direct price-index storage where price domains
+are explicit, and other contiguous layouts that preserve price-time priority.
+
+That work must be an engine-level study, not another isolated allocator benchmark. It needs replay
+or differential equivalence, benchmark artifacts, and cache-locality discussion. A slower or neutral
+result is acceptable if it explains the tradeoff honestly.
+
 ## Limitations
 
 - PMR does not eliminate all allocations in the engine path.

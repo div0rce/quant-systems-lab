@@ -467,7 +467,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 > roadmap** (issue → milestone): **#24 → M24** (ring buffer), **#26 → M26** (threaded pipeline),
 > **#27 → M27** (ThreadSanitizer), **#25 → M28** (memory-pool allocator), **#32 → M29** (Linux
 > perf/flamegraph). M25 (memory-ordering evidence), M30 (socket profiling/hardening), and M31
-> (external review) are new milestones with no prior issue. The post-M42 follow-up branch closes
+> (external review) are new milestones with no prior issue. PR #112 closed
 > the remaining tractable systems items **#26** (portable TCP serving beyond one-connection-at-a-time
 > accept) and **#28** (realistic synthetic order-flow model). The genuinely **deferred** product/API
 > items remain **#29** (FIX adapter), **#30** (web dashboard), **#31** (Docker packaging), and
@@ -1026,7 +1026,7 @@ hardening, and external review signal — not more product surface area.
 
 ## Phase III / IV execution rule
 
-Do M24–M48 **in order**, except that issue #90 can be worked as an evidence follow-up as soon as a
+Do M24–M49 **in order**, except that issue #90 can be worked as an evidence follow-up as soon as a
 PMU-capable Linux host is available. Do not skip to Linux perf/socket work before the concurrency
 primitive and threaded pipeline exist. Do not start external review before there is enough evidence
 to review.
@@ -1051,11 +1051,12 @@ to review.
 18. M41 simplify gateway session frame dispatch
 19. M42 extract shared shell-script helpers
 20. M43 NUMA awareness study
-21. M44 lock-free ingress pipeline
+21. M44 ingress queue memory-ordering and false-sharing study
 22. M45 exchange-grade persistence prototype
 23. M46 recovery benchmarking
-24. M47 DPDK research and prototype
-25. M48 NIC offload and low-latency networking study
+24. M47 contiguous order-book storage and cache-locality study
+25. M48 DPDK research and prototype
+26. M49 NIC offload and low-latency networking study
 
 ## Post-M29 priority order
 
@@ -1068,10 +1069,40 @@ After PR #89, prioritize:
 5. M33 — advanced concurrency validation.
 
 These items produce more systems-engineering signal than more isolated microbenchmarks.
+Future CPU locality, false-sharing, contiguous-storage, and external-review evidence should remain
+ahead of speculative DPDK/NIC exploration because they exercise the current codebase directly.
 
 Forbidden throughout: production-grade/HFT/real-exchange/formally-verified/profitable/guaranteed-
 low-latency/production-networking claims; and dashboards, trading strategies, market-data APIs,
 FIX adapters, Docker packaging, or Pages sites (the deferred #29–#31 and #33) before this arc completes.
+
+## Roadmap audit decisions after PR #112
+
+PR #112 closed the post-M42 follow-ups for issue #95 (intrusive `OrderPool`-backed order-book
+storage), issue #28 (more realistic deterministic synthetic order-flow model), and issue #26
+(portable TCP serving beyond one-connection-at-a-time). The remaining roadmap now prioritizes
+systems-engineering evidence that applies directly to the implemented simulator:
+
+- M43 expands the existing NUMA milestone to include CPU affinity, scheduler migration, and
+  core/cache locality evidence.
+- M44 already owned ingress contention, so it is expanded in place into memory-ordering and
+  false-sharing validation rather than creating a duplicate concurrency milestone.
+- M47 is inserted for contiguous order-book storage and cache-locality study because PMR and
+  intrusive pooled storage still leave price levels and locators in node-based containers.
+- DPDK and NIC offload remain late research milestones, shifted to M48/M49. They are lower
+  priority than memory ordering, cache locality, storage architecture, Linux evidence, and
+  independent external review.
+
+Rejected additions:
+
+- `mmap` artifact logging: current artifact-bundle/replay evidence is sufficient; the complexity
+  is higher than the current systems-signal value.
+- Bitwise float sanitization: the project uses integer ticks by design, so the problem is
+  intentionally avoided.
+- `constexpr` string hashing: low signal relative to concurrency, storage, Linux evidence, and
+  review work.
+- SIMD liquidation engine: no liquidation engine exists; adding one would be synthetic
+  optimization work.
 
 ---
 
@@ -1343,8 +1374,8 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 - Integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator
   experiment.
 - Keep direct M28 `OrderPool<Capacity>` integration out of scope; that requires an
-  intrusive/custom-node order-book redesign. That direct-storage follow-up is handled after M42 by
-  the #95 feature branch rather than by M32 itself.
+  intrusive/custom-node order-book redesign. That direct-storage follow-up was later handled by
+  PR #112 rather than by M32 itself.
 - Benchmark engine-level workloads against the baseline storage.
 - Analyze cache locality and replay impact.
 - Compare against arena, intrusive, and flat-container alternatives at the documentation level.
@@ -1354,7 +1385,7 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 - [ ] Pool-backed storage path is scoped and reversible.
 - [ ] Direct intrusive/custom-node `OrderPool<Capacity>` storage is explicitly separated from M32
-      and handled by the later #95 feature follow-up.
+      and handled by the later PR #112 feature follow-up.
 - [ ] Baseline vs integrated engine workload measurements are produced by committed scripts.
 - [ ] Results document cache/locality/replay effects and limitations.
 - [ ] No README/resume claim unless supported by the measured artifact.
@@ -1434,7 +1465,7 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 After M35, a CodeScene Code Health analysis (project 80913) of all production and test files
 identified eleven files below 9.0. They are addressed by the seven behavior-preserving refactor
 milestones **M36–M42** below, inserted before the original networking/persistence roadmap (which
-shifts to **M43–M48**; NUMA is now **M43**). M36–M39 and M41 come from production findings; M40
+shifts to **M43–M49**; NUMA is now **M43**). M36–M39 and M41 come from production findings; M40
 consolidates the engine test suites (a CodeScene test finding, kept as its own milestone); M42
 (shell-script helpers) was identified manually because CodeScene cannot score shell. Determinism,
 replay, the differential suite, and integer-tick pricing remain invariants, not refactor targets.
@@ -1604,43 +1635,76 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m43-numa-awareness-study`
 - **PR title:** `docs: study NUMA and CPU affinity effects`
 - **Goal:** Document and measure CPU locality tradeoffs where hardware exists.
+- **Status:** ☐ not started.
+- **Dependencies:** M29/M30 Linux profiling workflow, M35 socket-load evidence, and PR #112
+  storage/TCP follow-up. A Linux host with suitable topology information is required for full
+  evidence, but constrained-host runs may still proceed when labeled honestly.
+- **Signal gained:** Scheduler behavior, core locality, NUMA/CPU-affinity reasoning, and honest
+  Linux performance engineering.
+- **Evidence required:** Metadata-rich artifacts or documented constrained-host output that record
+  hardware topology, kernel, compiler/build, git commit, command lines, and dirty-tree state.
 
 ### Scope
 
-- CPU affinity.
-- NUMA locality experiments.
-- Documentation and measurements.
+- CPU affinity experiments using `taskset` where available and `pthread_setaffinity_np` only if a
+  scoped code probe is justified.
+- Scheduler migration measurements and documentation.
+- Core pinning / isolated-core workflow notes.
+- NUMA locality experiments on NUMA-capable Linux hosts.
+- Cache-locality discussion that distinguishes core locality from storage-layout locality.
+- Unsupported-host caveats for macOS, Docker Desktop, non-NUMA Linux, and restricted CI.
 
 ### Definition of Done
 
 - [ ] Scripts or docs describe how to run the study on NUMA-capable Linux.
+- [ ] CPU affinity and scheduler-migration commands are documented and, where hardware permits,
+      measured before/after.
 - [ ] Artifacts are labeled hardware-specific.
 - [ ] Non-NUMA hosts are treated as unsupported/constrained, not faked.
+- [ ] Docs forbid production-latency claims and distinguish topology evidence from optimization
+      claims.
 - [ ] `make check` passes; `PROGRESS.md` updated.
 
 ---
 
-## M44 — Lock-free ingress pipeline
+## M44 — Ingress queue memory-ordering and false-sharing study
 
-- **Branch:** `feat/m44-lock-free-ingress-pipeline`
-- **PR title:** `perf: evaluate lock-free ingress pipeline`
-- **Goal:** Explore ingress contention without changing deterministic matching ownership.
+- **Branch:** `feat/m44-ingress-memory-ordering-false-sharing`
+- **PR title:** `perf: study ingress memory ordering and false sharing`
+- **Goal:** Evaluate ingress queue contention, memory ordering, and cache-line sharing without
+  changing deterministic matching ownership.
+- **Status:** ☐ not started.
+- **Dependencies:** M24 SPSC ring, M25 memory-ordering docs, M26 threaded pipeline, M27 TSan, M33
+  advanced concurrency validation, and M37 pipeline helper refactor.
+- **Signal gained:** Acquire/release reasoning, queue ownership, cache-line contention evidence,
+  and concurrency-architecture clarity.
+- **Evidence required:** A committed benchmark or stress artifact with metadata, plus docs that
+  explain whether padding/alignment changed behavior or only measured contention shape.
 
 ### Scope
 
-- Lock-free ingress experiments.
-- Preserve single-owner deterministic matching.
-- Measure contention effects.
+- Existing ingress queues, backpressure, and SPSC ownership model.
+- False-sharing benchmark or stress mode comparing packed vs cache-line-padded queue indices or
+  counters.
+- Optional `alignas(64)` padding experiment only when guarded by tests and documentation.
+- Acquire/release ordering re-validation after any padding/layout change.
+- Shared-cache contention discussion and scheduler-noise caveats.
 
-### Explicit non-goal
+### Non-goals
 
-This is **not** lock-free matching.
+- Not lock-free matching.
+- Not MPMC.
+- Not a production throughput or latency claim.
+- A weak/fake implementation would add padding without measuring packed-vs-padded behavior or
+  without documenting the concurrency ownership model.
 
 ### Definition of Done
 
 - [ ] Matching engine ownership remains deterministic and single-owner where required.
-- [ ] Lock-free claims are scoped to the ingress experiment only.
-- [ ] Contention measurements are produced by committed scripts.
+- [ ] Any lock-free/wait-free wording is scoped to the queue protocol and payload assumptions only.
+- [ ] False-sharing or shared-cache contention measurements are produced by committed scripts, or
+      the host limitation is recorded honestly.
+- [ ] Docs distinguish memory-ordering correctness from performance evidence.
 - [ ] `make check` passes; `PROGRESS.md` updated.
 
 ---
@@ -1650,6 +1714,13 @@ This is **not** lock-free matching.
 - **Branch:** `feat/m45-persistence-prototype`
 - **PR title:** `feat: prototype stronger persistence strategy`
 - **Goal:** Investigate durability strategy beyond the current append-only lab log.
+- **Status:** ☐ not started.
+- **Dependencies:** M7/M8 event log and replay plus M30 socket/kernel profiling. M45 should define
+  durability/recovery assumptions that M46 can benchmark later; it must not depend on M46 being
+  complete.
+- **Signal gained:** Durability failure-model reasoning and recovery-path engineering.
+- **Evidence required:** Crash/recovery validation commands or documented limits, with no claim of
+  production durability.
 
 ### Scope
 
@@ -1671,6 +1742,13 @@ This is **not** lock-free matching.
 - **Branch:** `feat/m46-recovery-benchmarking`
 - **PR title:** `perf: benchmark recovery paths`
 - **Goal:** Measure recovery objectives from replay and snapshot restoration.
+- **Status:** ☐ not started.
+- **Dependencies:** M8 replay/recovery, M15–M20 differential fixtures, M45 persistence prototype if
+  it lands first, and the benchmark metadata policy from M11/M29.
+- **Signal gained:** Recovery objective framing, replay-cost visibility, and benchmark
+  interpretation.
+- **Evidence required:** Committed recovery benchmark artifacts with hardware/compiler/build/commit
+  metadata and dirty-tree state.
 
 ### Scope
 
@@ -1687,12 +1765,52 @@ This is **not** lock-free matching.
 
 ---
 
-## M47 — DPDK research and prototype
+## M47 — Contiguous order-book storage and cache-locality study
 
-- **Branch:** `feat/m47-dpdk-research-prototype`
+- **Branch:** `feat/m47-contiguous-order-book-storage`
+- **PR title:** `perf: study contiguous order-book storage`
+- **Goal:** Evaluate flat/contiguous order-book storage alternatives against the existing
+  node-based baseline, PMR pooled mode, and intrusive pooled mode.
+- **Status:** ☐ not started.
+- **Dependencies:** M32 PMR-backed node allocation, PR #112 intrusive `OrderPool` storage, M39
+  matching-parameter refactor, M40 engine test consolidation, and M43/M44 locality evidence when
+  available.
+- **Signal gained:** Cache locality, memory-layout tradeoffs, benchmark interpretation, and replay
+  equivalence for alternative storage architectures.
+- **Evidence required:** Engine-level benchmark artifacts, replay/differential equivalence, and
+  documentation of negative or neutral results.
+
+### Scope
+
+- Flat-array / flat-vector-style storage sketches or prototype path.
+- Direct price-index storage study where symbol/price-domain assumptions are explicit.
+- Comparison against `std::map`/`std::list`, PMR pooled, and intrusive pooled storage modes.
+- Cache-miss/cache-locality analysis using available Linux tooling where supported.
+- Replay impact evaluation: identical event streams, final `EngineSnapshot`, and `last_seq`.
+
+### Definition of Done
+
+- [ ] Benchmark artifacts are generated by committed scripts and include metadata.
+- [ ] Docs state what allocation/layout changed and what did not.
+- [ ] Negative or slower results are documented honestly.
+- [ ] No speedup/cache-locality claim without measured evidence.
+- [ ] `make check` passes; `PROGRESS.md` updated.
+
+---
+
+## M48 — DPDK research and prototype
+
+- **Branch:** `feat/m48-dpdk-research-prototype`
 - **PR title:** `docs: research DPDK packet-path tradeoffs`
-- **Goal:** User-space networking investigation only after the earlier socket, persistence, and
-  recovery milestones.
+- **Goal:** Late-stage user-space networking investigation only after CPU locality, false sharing,
+  storage architecture, Linux profiling, persistence/recovery, and external-review visibility are in
+  place.
+- **Status:** ☐ not started.
+- **Dependencies:** M30/M35 socket evidence, M43 CPU locality, M44 false-sharing/ingress evidence,
+  M47 storage locality, M45/M46 persistence/recovery, and issue #94 external-review visibility.
+- **Signal gained:** Late-stage networking context and packet-path tradeoff literacy.
+- **Evidence required:** Research notes and optional prototype artifacts that clearly separate
+  measured behavior from studied design constraints.
 
 ### Scope
 
@@ -1700,20 +1818,33 @@ This is **not** lock-free matching.
 - Packet-path investigation.
 - Comparison against kernel networking.
 
+### Non-goals
+
+- No kernel-bypass performance claim without real measurements.
+- A weak/fake implementation would add DPDK terminology without environment checks, buildability,
+  or measured packet-path evidence.
+
 ### Definition of Done
 
 - [ ] Research distinguishes what was measured from what was only studied.
 - [ ] Prototype is optional and only if environment support exists.
-- [ ] No kernel-bypass performance claim without real measurements.
+- [ ] Docs explain why this remains late-stage research rather than core project evidence.
 - [ ] `make check` passes; `PROGRESS.md` updated.
 
 ---
 
-## M48 — NIC offload and low-latency networking study
+## M49 — NIC offload and low-latency networking study
 
-- **Branch:** `feat/m48-nic-offload-study`
+- **Branch:** `feat/m49-nic-offload-study`
 - **PR title:** `docs: study NIC offload and low-latency networking`
 - **Goal:** Research-heavy networking study unless suitable hardware exists.
+- **Status:** ☐ not started.
+- **Dependencies:** M48 DPDK research, M43 CPU locality, M44 false-sharing/ingress evidence, and
+  real NIC/hardware access for any measurement.
+- **Signal gained:** Late-stage NIC/offload context, hardware timestamping literacy, and limits of
+  offload claims.
+- **Evidence required:** Hardware-specific measurements only when real hardware exists; otherwise
+  research notes must be labeled as non-measured.
 
 ### Scope
 

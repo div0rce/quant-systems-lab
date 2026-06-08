@@ -12,6 +12,8 @@
 5. Invariant + fuzz testing beyond happy-path demos, under ASan/UBSan
 6. Reproducible benchmark methodology
 7. Clean incremental engineering process (one milestone = one reviewed PR)
+8. Systems-evidence discipline: concurrency correctness, memory ordering, storage-layout tradeoffs,
+   Linux profiling caveats, and explicit external-review status
 
 ## What this project is NOT
 
@@ -78,11 +80,12 @@ allocator tuning — not production throughput or end-to-end latency:
 - **Are the benchmarks meaningful?** As regression/order-of-magnitude signals, yes; they are
   explicitly microbenchmarks and I can enumerate what they exclude. I will not present them as
   production numbers.
-- **Biggest weaknesses?** Synthetic, loopback-only, minimal networking, no real venue or
-  persistence beyond the flat log — see the README Limitations section.
-- **What would you do next?** NUMA/CPU-locality measurement, persistence/recovery benchmarking,
-  and FIX-like protocol-adapter research (the cross-language differential testing system and OCaml
-  oracle are already built — see the differential-testing docs).
+- **Biggest weaknesses?** Synthetic, loopback-only, no real venue, no external review yet, and no
+  full PMU evidence until a suitable Linux host is available — see the README Limitations section.
+- **What would you do next?** CPU-affinity/scheduler-migration measurement, ingress false-sharing
+  validation, contiguous order-book storage/cache-locality study, persistence/recovery
+  benchmarking, and independent external review. DPDK/NIC research remains late-stage because the
+  stronger signal is evidence that exercises the current simulator directly.
 - **Why OCaml, and what does it actually prove?** It's an independent cross-check: a small
   typed/immutable verifier parses the exported event log and re-derives replay invariants, so
   a bug in a shared C++ assumption is less likely to pass unnoticed. It does not re-implement

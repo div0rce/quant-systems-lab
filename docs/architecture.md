@@ -6,6 +6,17 @@ the matching core never depends on wall-clock time or floating point.
 
 ## Overview
 
+Concise system flow:
+
+```text
+Client -> Gateway -> Risk -> Matching Engine -> Replay Log -> Recovery -> Verification / Differential Testing
+```
+
+The gateway and risk layer define the protocol boundary and deterministic rejection behavior. The
+matching engine owns price-time-priority state. The replay log and recovery path make state
+reconstruction auditable, while the C++/OCaml differential and property tests challenge the same
+command semantics through an independent implementation.
+
 ```mermaid
 flowchart LR
     subgraph Runtime["Runtime simulator"]
