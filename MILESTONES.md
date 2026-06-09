@@ -1679,7 +1679,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **PR title:** `perf: study ingress memory ordering and false sharing`
 - **Goal:** Evaluate ingress queue contention, memory ordering, and cache-line sharing without
   changing deterministic matching ownership.
-- **Status:** ◐ in progress.
+- **Status:** ◐ PR-ready.
 - **Dependencies:** M24 SPSC ring, M25 memory-ordering docs, M26 threaded pipeline, M27 TSan, M33
   advanced concurrency validation, and M37 pipeline helper refactor.
 - **Signal gained:** Acquire/release reasoning, queue ownership, cache-line contention evidence,
