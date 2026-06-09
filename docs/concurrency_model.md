@@ -139,9 +139,12 @@ little memory for avoiding that cross-core coherence traffic.
 
 M44 adds a benchmark-only control layout for this point: `make false-sharing-study` runs
 `qsl-bench false-sharing`, which compares packed queue indices against cache-line-padded indices
-under the same producer-owned `tail` / consumer-owned `head` access pattern. The production
-`SpscRing` layout is not changed by that study; it measures contention shape and records the
-hardware/compiler/build metadata in `results/false_sharing_study.txt`. The result is
+under the same producer-owned `tail` / consumer-owned `head` access pattern. The benchmark-only
+padded control separates indices by 128 bytes so it stays separated on Apple Silicon-style
+128-byte coherency lines. The production `SpscRing` layout is not changed by that study and still
+uses `alignas(64)`, so the artifact should not be read as validating production cursor separation
+on hosts with wider coherency lines. It measures contention shape and records the
+hardware/compiler/build metadata in `results/false_sharing_study.txt`; the result is
 host-dependent cache-line evidence, not a production throughput claim.
 
 ## Limits (honest)
