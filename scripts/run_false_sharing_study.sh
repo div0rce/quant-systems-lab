@@ -8,6 +8,7 @@ source scripts/qsl_common.sh
 
 BIN="${QSL_FALSE_SHARING_BIN:-${QSL_BENCH_BIN:-build/bench/qsl-bench}}"
 OUT="${QSL_FALSE_SHARING_OUT:-results/false_sharing_study.txt}"
+DATASET="${QSL_FALSE_SHARING_DATASET:-synthetic SPSC cursor exchange (producer tail / consumer head)}"
 
 if [[ ! -x "$BIN" ]]; then
     echo "error: $BIN not found; build the benchmark preset first (make false-sharing-study)." >&2
@@ -25,8 +26,10 @@ DIRTY="$(qsl_dirty_tree_status "$OUT")"
     echo "Compiler:       $(qsl_compiler_version)"
     echo "Build type:     $(qsl_build_type build/bench)"
     echo "Git commit:     $(qsl_git_commit_short)"
+    echo "Dataset:        $DATASET"
     echo "Dirty tree:     $DIRTY (excluding this generated output)"
-    echo "Artifact provenance: generated from the source commit above; output path excluded from dirty-tree check: $OUT"
+    echo "Artifact provenance: generated from the clean source commit above; this output is committed in a later artifact-only commit."
+    echo "Output excluded from dirty-tree check: $OUT"
     echo "Date:           $(qsl_utc_timestamp)"
     echo "Output path:    $OUT"
     echo
