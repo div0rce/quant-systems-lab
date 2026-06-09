@@ -65,6 +65,24 @@ qsl_compiler_version() {
     c++ --version | head -1
 }
 
+qsl_build_compiler_version() {
+    local build_dir="${1:-build/dev}" compiler resolved
+    compiler="$(awk -F= '/^CMAKE_CXX_COMPILER:/ { print $2; exit }' \
+        "$build_dir/CMakeCache.txt" 2>/dev/null || true)"
+    if [[ -n "$compiler" ]]; then
+        if [[ -x "$compiler" ]]; then
+            "$compiler" --version | head -1
+            return
+        fi
+        resolved="$(command -v "$compiler" 2>/dev/null || true)"
+        if [[ -n "$resolved" ]]; then
+            "$resolved" --version | head -1
+            return
+        fi
+    fi
+    qsl_compiler_version
+}
+
 # Build type (CMAKE_BUILD_TYPE) of the binaries under test. Honors a QSL_BUILD_TYPE override (for
 # runs whose build dir is not the default, e.g. containerized regenerations); otherwise reads it
 # from the build's CMakeCache. Falls back to "unknown".
