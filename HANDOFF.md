@@ -67,7 +67,7 @@ Current state:
 
 - latest synced main baseline: `29ed491` (PR #114, M43 NUMA/CPU-affinity study)
 - current active branch, if active: `feat/m44-ingress-memory-ordering-false-sharing`
-- current active status: M44 PR-ready; benchmark-only false-sharing tooling, research-note
+- current active status: M44 PR #115 open; benchmark-only false-sharing tooling, research-note
   artifact, and evidence docs are in place
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence

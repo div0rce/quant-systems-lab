@@ -21,7 +21,7 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M44 — Ingress queue memory-ordering and false-sharing study
-- **Status:** ◐ PR-ready. This branch adds a benchmark-only packed-vs-padded SPSC queue-cursor
+- **Status:** ◐ PR #115 open. This branch adds a benchmark-only packed-vs-padded SPSC queue-cursor
   contention study and documents it as host-local cache-line evidence, not a production
   throughput/latency claim.
 - **Active branch:** `feat/m44-ingress-memory-ordering-false-sharing`
@@ -33,7 +33,7 @@ Do not rely on prior chat memory.
   passed 20/20 concurrency-labelled tests.
 - **Last action:** implemented M44 false-sharing study tooling/docs and regenerated
   `results/false_sharing_study.txt` from clean source commit e15a4ed with `Dirty tree: no`.
-- **Next action:** open the scoped M44 PR.
+- **Next action:** wait for PR #115 review/CI and address only M44-scoped feedback.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -215,7 +215,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _No mid-milestone scratch is pending; M44 is ready for PR._
+- _M44 PR #115 is open. No mid-milestone scratch is pending._
 
 
 ---
@@ -283,7 +283,7 @@ Lower priority:
 | Follow-up | Intrusive storage, realistic flow, threaded TCP gateway | `feat/close-storage-flow-tcp-followups` | ☑ merged | #112 | Closed #95/#28/#26 |
 | Docs | Systems-engineering roadmap audit | `docs/systems-roadmap-audit` | ☑ merged | #113 | Docs-only update to future systems roadmap and agent guidance |
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☑ merged | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
-| M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ◐ PR ready | — | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
+| M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ◐ PR open | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
@@ -336,6 +336,7 @@ Lower priority:
 - [2026-06-09] M43 provenance follow-up: `numa_affinity_study.sh` now writes `Artifact provenance: generated from the clean source commit above; output path excluded from dirty-tree check: ...` in both supported and unsupported artifacts. Regenerated `results/numa_affinity_study.txt` from clean source commit b3f316f with `Dirty tree: no` and the explicit output-path exclusion. Verification passed parser checks, unsupported-host provenance through `make numa-study`, Docker failing-benchmark regression, Docker synthetic `numactl` fallback, Docker constrained artifact regeneration, `git diff --check`, and `make check` 204/204.
 - [2026-06-09] PR #114 squash-merged to `main` as 29ed491; M44 started on `feat/m44-ingress-memory-ordering-false-sharing`. Scope is benchmark-only packed-vs-padded SPSC queue-cursor contention evidence plus memory-ordering/false-sharing documentation. The production `SpscRing` layout and deterministic matching ownership must remain unchanged.
 - [2026-06-09] M44: added `make false-sharing-study`, `scripts/run_false_sharing_study.sh`, and `qsl-bench false-sharing`. The benchmark compares benchmark-only packed vs cache-line-padded SPSC queue cursor layouts with producer-owned `tail` / consumer-owned `head` release/acquire traffic; production `SpscRing` layout and matching ownership are unchanged. Regenerated `results/false_sharing_study.txt` from clean source commit e15a4ed with `Dirty tree: no` and `Evidence class: research-notes`. Verification passed `bash -n scripts/run_false_sharing_study.sh`, `make false-sharing-study`, `git diff --check`, `make check` 204/204, `make asan` 204/204, and `make tsan` 20/20 concurrency-labelled tests.
+- [2026-06-09] M44: opened PR #115 (`perf: study ingress memory ordering and false sharing`).
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -421,7 +422,8 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M44 on `feat/m44-ingress-memory-ordering-false-sharing`: open the scoped M44 PR.
+Current action is M44 on `feat/m44-ingress-memory-ordering-false-sharing`: wait for PR #115
+review/CI and address only M44-scoped feedback.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
