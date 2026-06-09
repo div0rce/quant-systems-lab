@@ -59,7 +59,10 @@ perf-record:
 
 # M43: CPU-affinity / scheduler-migration / NUMA locality study. Linux-only.
 numa-study:
-	@test "$$(uname -s)" = "Linux" || { echo "error: make numa-study requires Linux (taskset/perf/NUMA topology); current OS is $$(uname -s)." >&2; exit 2; }
+	@if test "$$(uname -s)" != "Linux"; then \
+		bash scripts/numa_affinity_study.sh; \
+		exit $$?; \
+	fi
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_NUMA_BIN=build/bench/qsl-bench bash scripts/numa_affinity_study.sh

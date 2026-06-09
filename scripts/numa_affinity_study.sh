@@ -145,7 +145,11 @@ if command -v numactl >/dev/null 2>&1 && numactl --hardware >"$NUMACTL_OUT" 2>&1
     NUMACTL_TOPOLOGY_AVAILABLE=yes
 fi
 
+mapfile -t NUMA_NODE_IDS < <(numa_node_ids || true)
 NUMA_NODES="$(numa_node_count || true)"
+if [[ "${#NUMA_NODE_IDS[@]}" -gt 0 ]]; then
+    NUMA_NODES="${#NUMA_NODE_IDS[@]}"
+fi
 [[ -z "$NUMA_NODES" ]] && NUMA_NODES="unknown"
 
 ALLOWED_CPUS="$(allowed_cpu_list || true)"
@@ -188,7 +192,6 @@ SECOND_NUMA_NODE=unknown
 NUMA_BINDING_SUCCEEDED=no
 NUMA_LOCAL_STATUS=127
 NUMA_REMOTE_STATUS=127
-mapfile -t NUMA_NODE_IDS < <(numa_node_ids || true)
 if [[ "$NUMACTL_TOPOLOGY_AVAILABLE" == "yes" && "${#NUMA_NODE_IDS[@]}" -ge 2 ]]; then
     FIRST_NUMA_NODE="${NUMA_NODE_IDS[0]}"
     SECOND_NUMA_NODE="${NUMA_NODE_IDS[1]}"
