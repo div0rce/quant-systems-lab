@@ -15,7 +15,10 @@ constexpr std::uint64_t kIterations = 2'000'000;
 
 using clock_type = std::chrono::steady_clock;
 
-struct PackedQueueIndices {
+// Aligned to a cache line so the struct starts on a line boundary: the two adjacent atomics then
+// provably share one coherency line (the false-sharing baseline), rather than risking a straddle
+// across two lines depending on stack/ABI placement.
+struct alignas(kCacheLine) PackedQueueIndices {
     std::atomic<std::size_t> head{0};
     std::atomic<std::size_t> tail{0};
 };
@@ -113,7 +116,12 @@ template <class Indices> void report(const char *name) {
 void run_false_sharing_benchmarks() {
     std::printf("SPSC cursor false-sharing study (benchmark-only control layout)\n");
     std::printf("Each thread owns one queue index, stores it with release, and samples the peer\n");
-    std::printf("index with acquire. The production SpscRing already uses padded indices.\n\n");
+    std::printf(
+        "index with acquire. Benchmark-only control: the padded layout puts each index on a\n");
+    std::printf(
+        "128-byte boundary, so the two cursors sit on distinct coherency lines even on hosts\n");
+    std::printf(
+        "with 128-byte cache lines (Apple Silicon); the production SpscRing pads to 64 bytes.\n\n");
     report<PackedQueueIndices>("packed indices");
     report<PaddedQueueIndices>("padded indices");
 }
