@@ -8,7 +8,9 @@
 namespace qsl::bench {
 namespace {
 
-constexpr std::size_t kCacheLine = 64;
+// 128 bytes conservatively places the padded indices on distinct coherency lines for hosts with
+// 64- or 128-byte cache lines (Apple Silicon uses 128), so the "padded" case is genuinely unshared.
+constexpr std::size_t kCacheLine = 128;
 constexpr std::uint64_t kIterations = 2'000'000;
 
 using clock_type = std::chrono::steady_clock;
