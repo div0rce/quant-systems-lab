@@ -5,10 +5,10 @@ CPU:            Apple M2
 OS:             Darwin 25.2.0
 Compiler:       Apple clang version 17.0.0 (clang-1700.3.19.1)
 Build type:     Release
-Git commit:     e15a4ed
+Git commit:     65d960c
 Dirty tree:     no (excluding this generated output)
 Artifact provenance: generated from the source commit above; output path excluded from dirty-tree check: results/false_sharing_study.txt
-Date:           2026-06-09T03:20:11Z
+Date:           2026-06-09T04:00:50Z
 Output path:    results/false_sharing_study.txt
 
 Host support summary: portable two-thread C++ benchmark; no PMU counters required.
@@ -24,5 +24,5 @@ SPSC cursor false-sharing study (benchmark-only control layout)
 Each thread owns one queue index, stores it with release, and samples the peer
 index with acquire. The production SpscRing already uses padded indices.
 
-packed indices              4000000 cursor updates        9.7 ns/update    102939348 updates/sec checksum=3999883694881
-padded indices              4000000 cursor updates        7.3 ns/update    137268360 updates/sec checksum=3999902746464
+packed indices              4000000 cursor updates       13.2 ns/update     76025512 updates/sec checksum=3999898705608
+padded indices              4000000 cursor updates        7.9 ns/update    126349372 updates/sec checksum=3999897068115
