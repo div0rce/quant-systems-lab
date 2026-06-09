@@ -1642,7 +1642,9 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Signal gained:** Scheduler behavior, core locality, NUMA/CPU-affinity reasoning, and honest
   Linux performance engineering.
 - **Evidence required:** Metadata-rich artifacts or documented constrained-host output that record
-  hardware topology, kernel, compiler/build, git commit, command lines, and dirty-tree state.
+  hardware topology, kernel, compiler/build, git commit, command lines, dirty-tree state, pinned
+  and unpinned scheduler counters where available, and whether node-local/remote NUMA binding
+  actually succeeded.
 
 ### Scope
 
@@ -1662,6 +1664,8 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - [ ] Artifacts are labeled hardware-specific.
 - [ ] The artifact self-classifies as `full-linux-numa`, `linux-constrained`, or
       `unsupported-host`.
+- [ ] Full NUMA evidence requires successful local/remote NUMA binding plus pinned and unpinned
+      migration/context-switch counter capture; single-CPU pinning alone is constrained evidence.
 - [ ] Non-NUMA hosts are treated as unsupported/constrained, not faked.
 - [ ] Docs forbid production-latency claims and distinguish topology evidence from optimization
       claims.

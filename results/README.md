@@ -32,5 +32,5 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - Future storage, CPU-affinity, false-sharing, DPDK, or NIC artifacts must state whether they are
   full hardware evidence, constrained-environment validation, or research notes only.
 - CPU-affinity and NUMA artifacts must include the chosen CPU, whether `taskset` and `perf` ran,
-  whether migration/context-switch counters were captured, whether `numactl` topology was
-  available, and a caveat line.
+  whether unpinned and pinned migration/context-switch counters were captured, whether `numactl`
+  topology was available, whether node-local/remote NUMA binding succeeded, and a caveat line.
