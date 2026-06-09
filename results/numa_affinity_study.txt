@@ -1,4 +1,4 @@
-Command:     make numa-study
+Command:     QSL_NUMA_ALLOW_CONSTRAINED=1 QSL_NUMA_BIN=build/bench/qsl-bench make numa-study
 Evidence class: linux-constrained
 Host support summary: Linux host, constrained evidence
 Hardware:    aarch64
@@ -6,7 +6,7 @@ OS:          Linux 6.12.76-linuxkit
 CPU:         Apple aarch64
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 Build type:  Release
-Git commit:  40919de
+Git commit:  4e7c598
 Dirty tree:  no
 Benchmark binary: build/bench/qsl-bench
 Allowed CPUs: 0-7
@@ -14,6 +14,9 @@ CPU chosen:  0
 NUMA nodes:  unknown
 lscpu topology available: yes
 numactl topology available: no
+NUMA node-local/remote binding succeeded: no
+NUMA local node: unknown
+NUMA remote node: unknown
 taskset available: yes
 taskset succeeded: yes
 perf available: no
@@ -21,11 +24,18 @@ perf ran:     no
 perf events:  context-switches,cpu-migrations
 context-switches captured: no
 cpu-migrations captured: no
+unpinned context-switches captured: no
+pinned context-switches captured: no
+unpinned cpu-migrations captured: no
+pinned cpu-migrations captured: no
+Benchmark runs completed:  yes
 Unpinned benchmark status: 0
 Pinned benchmark status:   0
+NUMA local benchmark status:  127
+NUMA remote benchmark status: 127
 Unpinned perf status:      127
 Pinned perf status:        127
-Date:        2026-06-08T23:40:42Z
+Date:        2026-06-09T02:16:15Z
 
 Caveat: CPU-affinity and NUMA measurements are host-specific systems evidence, not a production-latency or speedup claim.
 
@@ -36,18 +46,24 @@ Pinned command:
 taskset -c 0 build/bench/qsl-bench
 
 Unpinned benchmark output:
-order_book add/mod/cancel     200000 ops         81.6 ns/op       12255308 ops/sec
-protocol encode+decode        500000 ops         23.9 ns/op       41797863 ops/sec
-gateway session (fill)        200000 ops        132.2 ns/op        7563891 ops/sec
-matching engine flow            5004 items      111.9 ns/item      8940138 items/sec
-replay command log              5004 items      151.1 ns/item      6615966 items/sec
+order_book add/mod/cancel     200000 ops         83.6 ns/op       11957253 ops/sec
+protocol encode+decode        500000 ops         22.9 ns/op       43581690 ops/sec
+gateway session (fill)        200000 ops        138.2 ns/op        7237723 ops/sec
+matching engine flow            5004 items      114.2 ns/item      8753162 items/sec
+replay command log              5004 items      149.9 ns/item      6669370 items/sec
 
 Pinned benchmark output:
-order_book add/mod/cancel     200000 ops         81.6 ns/op       12252931 ops/sec
-protocol encode+decode        500000 ops         30.9 ns/op       32315223 ops/sec
-gateway session (fill)        200000 ops        145.9 ns/op        6856281 ops/sec
-matching engine flow            5004 items      118.1 ns/item      8465304 items/sec
-replay command log              5004 items      154.2 ns/item      6486241 items/sec
+order_book add/mod/cancel     200000 ops         79.2 ns/op       12627159 ops/sec
+protocol encode+decode        500000 ops         21.9 ns/op       45558605 ops/sec
+gateway session (fill)        200000 ops        126.7 ns/op        7890454 ops/sec
+matching engine flow            5004 items      112.6 ns/item      8880246 items/sec
+replay command log              5004 items      134.0 ns/item      7463064 items/sec
+
+NUMA local benchmark output:
+NUMA node-local/remote binding skipped: numactl topology unavailable
+
+NUMA remote benchmark output:
+NUMA node-local/remote binding skipped: numactl topology unavailable
 
 Unpinned perf stat output:
 
