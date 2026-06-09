@@ -1,0 +1,107 @@
+Command:     QSL_NUMA_ALLOW_CONSTRAINED=1 QSL_NUMA_BIN=build/bench/qsl-bench make numa-study
+Evidence class: linux-constrained
+Host support summary: Linux host, constrained evidence
+Hardware:    aarch64
+OS:          Linux 6.12.76-linuxkit
+CPU:         Apple aarch64
+Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Build type:  Release
+Git commit:  b3f316f
+Dirty tree:  no
+Artifact provenance: generated from the clean source commit above; output path excluded from dirty-tree check: results/numa_affinity_study.txt
+Benchmark binary: build/bench/qsl-bench
+Allowed CPUs: 0-7
+CPU chosen:  0
+NUMA nodes:  unknown
+lscpu topology available: yes
+numactl topology available: no
+NUMA node-local/remote binding succeeded: no
+NUMA local node: unknown
+NUMA remote node: unknown
+taskset available: yes
+taskset succeeded: yes
+perf available: no
+perf ran:     no
+perf events:  context-switches,cpu-migrations
+context-switches captured: no
+cpu-migrations captured: no
+unpinned context-switches captured: no
+pinned context-switches captured: no
+unpinned cpu-migrations captured: no
+pinned cpu-migrations captured: no
+Benchmark runs completed:  yes
+Unpinned benchmark status: 0
+Pinned benchmark status:   0
+NUMA local benchmark status:  127
+NUMA remote benchmark status: 127
+Unpinned perf status:      127
+Pinned perf status:        127
+Date:        2026-06-09T02:53:53Z
+
+Caveat: CPU-affinity and NUMA measurements are host-specific systems evidence, not a production-latency or speedup claim.
+
+Unpinned command:
+build/bench/qsl-bench
+
+Pinned command:
+taskset -c 0 build/bench/qsl-bench
+
+Unpinned benchmark output:
+order_book add/mod/cancel     200000 ops        100.3 ns/op        9974772 ops/sec
+protocol encode+decode        500000 ops         23.5 ns/op       42598357 ops/sec
+gateway session (fill)        200000 ops        147.2 ns/op        6791402 ops/sec
+matching engine flow            5004 items      138.6 ns/item      7215552 items/sec
+replay command log              5004 items      191.4 ns/item      5223495 items/sec
+
+Pinned benchmark output:
+order_book add/mod/cancel     200000 ops        100.6 ns/op        9944683 ops/sec
+protocol encode+decode        500000 ops         25.8 ns/op       38699690 ops/sec
+gateway session (fill)        200000 ops        157.8 ns/op        6335162 ops/sec
+matching engine flow            5004 items      136.5 ns/item      7325048 items/sec
+replay command log              5004 items      171.6 ns/item      5825929 items/sec
+
+NUMA local benchmark output:
+NUMA node-local/remote binding skipped: numactl topology unavailable
+
+NUMA remote benchmark output:
+NUMA node-local/remote binding skipped: numactl topology unavailable
+
+Unpinned perf stat output:
+
+Pinned perf stat output:
+
+lscpu output:
+Architecture:                            aarch64
+CPU op-mode(s):                          64-bit
+Byte Order:                              Little Endian
+CPU(s):                                  8
+On-line CPU(s) list:                     0-7
+Vendor ID:                               Apple
+Model name:                              -
+Model:                                   0
+Thread(s) per core:                      1
+Core(s) per cluster:                     8
+Socket(s):                               -
+Cluster(s):                              1
+Stepping:                                0x0
+BogoMIPS:                                48.00
+Flags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 asimddp sha512 asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp flagm2 frint bf16 bti
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Not affected
+Vulnerability Spec rstack overflow:      Not affected
+Vulnerability Spec store bypass:         Vulnerable
+Vulnerability Spectre v1:                Mitigation; __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; CSV2, but not BHB
+Vulnerability Srbds:                     Not affected
+Vulnerability Tsa:                       Not affected
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Not affected
+
+numactl --hardware output:

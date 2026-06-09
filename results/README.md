@@ -19,6 +19,9 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `perf_report_linux.txt` — Linux `perf record/report` hot-symbol output for the benchmark
   harness (`make perf-record`). It is useful as a hot-symbol profile only when the file says
   `No samples: no`, `Insufficient samples: no`, and the sample count meets the reported minimum.
+- `numa_affinity_study.txt` — Linux CPU-affinity / scheduler-migration / NUMA-locality study
+  output (`make numa-study`). It must self-classify as `full-linux-numa`, `linux-constrained`, or
+  `unsupported-host`; only `full-linux-numa` is full NUMA evidence.
 
 ## Policy
 
@@ -28,3 +31,6 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   build-dependent — not production throughput.
 - Future storage, CPU-affinity, false-sharing, DPDK, or NIC artifacts must state whether they are
   full hardware evidence, constrained-environment validation, or research notes only.
+- CPU-affinity and NUMA artifacts must include the chosen CPU, whether `taskset` and `perf` ran,
+  whether unpinned and pinned migration/context-switch counters were captured, whether `numactl`
+  topology was available, whether node-local/remote NUMA binding succeeded, and a caveat line.

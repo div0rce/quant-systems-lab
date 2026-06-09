@@ -20,20 +20,19 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Roadmap audit — systems-engineering signal and agent guidance
-- **Status:** ◐ docs-only PR open. This branch updates future roadmap scope and project
-  memory after PR #112; it does not change code, benchmark artifacts, completed milestone
-  requirements, or merged PR references.
-- **Active branch:** `docs/systems-roadmap-audit`
-- **Last completed milestone:** Post-M42 systems follow-up — intrusive storage, realistic flow,
-  threaded TCP gateway (squash-merged PR #112, commit 2369f84)
+- **Active milestone:** M43 — NUMA awareness study
+- **Status:** ◐ PR #114 open. This branch adds Linux CPU-affinity / scheduler-migration /
+  NUMA-locality study tooling and documentation, with constrained Docker evidence labeled honestly
+  as `linux-constrained`.
+- **Active branch:** `feat/m43-numa-awareness-study`
+- **Last completed milestone:** Systems-engineering roadmap audit (squash-merged PR #113, commit
+  f3cc4dd)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes — `git diff --check` and `make check` passed on
-  `docs/systems-roadmap-audit`.
-- **Last action:** completed docs-only roadmap audit updates, searched stale roadmap/issue
-  references, verified with `git diff --check` plus `make check`, and opened PR #113.
-- **Next action:** keep PR #113 review-clean for human squash-merge.
+- **`make check` passing:** yes, 204/204 for M43.
+- **Last action:** clarified NUMA artifact provenance, regenerated the constrained Docker artifact
+  from clean source commit b3f316f, and re-ran verification for PR #114.
+- **Next action:** wait for PR #114 review/CI and address only M43-scoped feedback.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -215,8 +214,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _Docs-only branch `docs/systems-roadmap-audit` has passed stale-reference search,
-  `git diff --check`, and `make check`. PR #113 is open; next step is review cleanup if needed._
+- _M43 PR #114 is open. No mid-milestone scratch is pending._
 
 
 ---
@@ -282,8 +280,8 @@ Lower priority:
 | M41 | Simplify gateway session frame dispatch | `refactor/m41-session-frame-dispatch` | ☑ merged | #109 | Repository-health refactor; `session.cpp` 8.99 → 10.0 |
 | M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☑ merged | #111 | Repository-health refactor (manual; shell unscored); expanded to address #99/#110 |
 | Follow-up | Intrusive storage, realistic flow, threaded TCP gateway | `feat/close-storage-flow-tcp-followups` | ☑ merged | #112 | Closed #95/#28/#26 |
-| Docs | Systems-engineering roadmap audit | `docs/systems-roadmap-audit` | ◐ in progress | — | Docs-only update to future systems roadmap and agent guidance |
-| M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☐ not started | — | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists |
+| Docs | Systems-engineering roadmap audit | `docs/systems-roadmap-audit` | ☑ merged | #113 | Docs-only update to future systems roadmap and agent guidance |
+| M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ◐ PR open | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
 | M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☐ not started | — | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
@@ -329,6 +327,12 @@ Lower priority:
 - [2026-06-06] Follow-up branch `feat/close-storage-flow-tcp-followups` started from post-M42 `main` to close #95, #28, and #26 in one feature PR. Scope is explicit intrusive `OrderPool`-backed resting-order storage, a richer deterministic synthetic flow model, and a portable threaded TCP accept path. M43 NUMA remains next after this follow-up lands.
 - [2026-06-08] PR #112 squash-merged to `main` as 2369f84, closing #95, #28, and #26.
 - [2026-06-08] Roadmap audit branch `docs/systems-roadmap-audit` started from post-PR #112 `main`. Scope is documentation-only: expand M43 for CPU affinity/scheduler migration/core-cache locality, expand M44 in place for ingress memory ordering and false sharing because it already owned ingress contention, insert M47 for contiguous order-book storage/cache-locality, shift late DPDK/NIC research to M48/M49, keep issue #94 external review highly visible, and document rejected low-signal additions. Completed milestone history and merged PR references are not rewritten.
+- [2026-06-08] PR #113 squash-merged to `main` as f3cc4dd; M43 started on `feat/m43-numa-awareness-study`. Scope is Linux CPU-affinity / scheduler-migration / NUMA-locality study tooling and docs, with artifacts self-classified as `full-linux-numa`, `linux-constrained`, or `unsupported-host`.
+- [2026-06-08] M43: implemented `make numa-study` and `scripts/numa_affinity_study.sh` with early env validation, repo-local output exclusion for dirty-tree metadata, Linux-only Makefile guard, `taskset` pinned/unpinned attempts, optional `perf stat` for `context-switches,cpu-migrations`, topology capture via `lscpu`/`numactl` where available, and artifact self-classification. Docker Desktop/LinuxKit generated `results/numa_affinity_study.txt` as `Evidence class: linux-constrained` from clean source commit 40919de: `taskset` succeeded, `numactl` topology was unavailable, `perf` was unavailable, and no full NUMA or production-latency claim is made. Verification passed `bash -n scripts/numa_affinity_study.sh`, bad-env parser checks, macOS Linux-only guard, Docker constrained `make numa-study`, Docker absolute-output dirty-tree check, `git diff --check`, and `make check` 204/204. `make asan` was not run because M43 changed Bash/docs/results only.
+- [2026-06-08] M43: opened PR #114 (`docs: study NUMA and CPU affinity effects`).
+- [2026-06-09] M43 review fixes: `numa_affinity_study.sh` now records dynamic build-type metadata, refuses to bless constrained artifacts when benchmark runs fail, requires pinned and unpinned perf counter capture before full evidence, and requires actual node-local/remote NUMA binding before `full-linux-numa` classification. `AGENTS.md` and `CLAUDE.md` command lists now include `make numa-study`. Regenerated `results/numa_affinity_study.txt` from clean source commit 4e7c598 with `Dirty tree: no`, `Evidence class: linux-constrained`, explicit constrained rerun command, benchmark completion status, and NUMA binding status. Verification passed parser checks, macOS Linux-only guard, Docker failing-benchmark regression, Docker absolute-output dirty-tree/rerun-command check, Docker constrained artifact regeneration, `git diff --check`, and `make check` 204/204.
+- [2026-06-09] M43 review follow-up: `make numa-study` now lets `scripts/numa_affinity_study.sh` emit the promised `unsupported-host` artifact on non-Linux hosts instead of stopping at a Makefile guard, while still exiting 2. `NUMA_NODES` now falls back to the parsed `numactl --hardware` node list when `lscpu` lacks `NUMA node(s)`, so valid local/remote binding evidence is not mislabeled solely because `lscpu` is incomplete. Regenerated `results/numa_affinity_study.txt` from clean source commit d77c98a with `Dirty tree: no`. Verification passed parser checks, `QSL_NUMA_OUT=/tmp/... make numa-study` unsupported-host artifact check, Docker failing-benchmark regression, Docker synthetic `numactl` node-count fallback, Docker constrained artifact regeneration, `git diff --check`, and `make check` 204/204.
+- [2026-06-09] M43 provenance follow-up: `numa_affinity_study.sh` now writes `Artifact provenance: generated from the clean source commit above; output path excluded from dirty-tree check: ...` in both supported and unsupported artifacts. Regenerated `results/numa_affinity_study.txt` from clean source commit b3f316f with `Dirty tree: no` and the explicit output-path exclusion. Verification passed parser checks, unsupported-host provenance through `make numa-study`, Docker failing-benchmark regression, Docker synthetic `numactl` fallback, Docker constrained artifact regeneration, `git diff --check`, and `make check` 204/204.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -414,12 +418,8 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is the docs-only branch `docs/systems-roadmap-audit`: finish the roadmap and
-agent-guidance documentation updates, verify stale references, run `git diff --check` and
-`make check`, then open one PR.
-
-NUMA awareness remains M43 after this docs-only audit lands. Do not start implementation work from
-this branch.
+Current action is M43 on `feat/m43-numa-awareness-study`: wait for PR #114 review/CI and address
+only M43-scoped feedback.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
