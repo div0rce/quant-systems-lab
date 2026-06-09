@@ -5,10 +5,12 @@ CPU:            Apple M2
 OS:             Darwin 25.2.0
 Compiler:       Apple clang version 17.0.0 (clang-1700.3.19.1)
 Build type:     Release
-Git commit:     d564298
+Git commit:     2838a90
+Dataset:        synthetic SPSC cursor exchange (producer tail / consumer head)
 Dirty tree:     no (excluding this generated output)
-Artifact provenance: generated from the source commit above; output path excluded from dirty-tree check: results/false_sharing_study.txt
-Date:           2026-06-09T20:20:46Z
+Artifact provenance: generated from the clean source commit above; this output is committed in a later artifact-only commit.
+Output excluded from dirty-tree check: results/false_sharing_study.txt
+Date:           2026-06-09T21:48:40Z
 Output path:    results/false_sharing_study.txt
 
 Host support summary: portable two-thread C++ benchmark; no PMU counters required.
@@ -26,5 +28,5 @@ index with acquire. Benchmark-only control: the padded layout puts each index on
 128-byte boundary, so the two cursors sit on distinct coherency lines even on hosts
 with 128-byte cache lines (Apple Silicon); the production SpscRing pads to 64 bytes.
 
-packed indices              4000000 cursor updates        8.6 ns/update    116105249 updates/sec checksum=3999937575156
-padded indices              4000000 cursor updates        5.9 ns/update    170477855 updates/sec checksum=3999960155368
+packed indices              4000000 cursor updates        8.2 ns/update    122484288 updates/sec checksum=3999940225067
+padded indices              4000000 cursor updates        5.6 ns/update    178976258 updates/sec checksum=3999949424868
