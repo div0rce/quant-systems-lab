@@ -22,6 +22,9 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `numa_affinity_study.txt` — Linux CPU-affinity / scheduler-migration / NUMA-locality study
   output (`make numa-study`). It must self-classify as `full-linux-numa`, `linux-constrained`, or
   `unsupported-host`; only `full-linux-numa` is full NUMA evidence.
+- `false_sharing_study.txt` — benchmark-only packed-vs-padded SPSC queue-cursor contention study
+  (`make false-sharing-study`). It is research-note evidence about cache-line sharing shape, not
+  a production throughput or latency claim.
 
 ## Policy
 

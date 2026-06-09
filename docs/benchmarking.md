@@ -110,11 +110,21 @@ allocation, and intrusive `OrderPool`-backed resting-order nodes:
 make bench-storage   # runs qsl-bench storage, writes results/pool_backed_storage.txt
 ```
 
+M44 adds a benchmark-only cache-line contention study for the SPSC queue cursors. It compares a
+packed control layout against a cache-line-padded layout using the same release/acquire cursor
+ownership pattern as the production queue. It does not change production queue layout or matching
+behavior:
+
+```bash
+make false-sharing-study   # runs qsl-bench false-sharing, writes results/false_sharing_study.txt
+```
+
 ## What these numbers do and do not prove
 
 - They **do** give a reproducible, order-of-magnitude picture of the core's latency/throughput
   on a stated machine, useful for spotting regressions and for honest résumé framing.
 - They **do not** represent production trading latency. There is no kernel-bypass networking,
   no CPU pinning or isolation, no hugepages, and timing includes allocator and `std::map`
-  overhead. CPU frequency scaling/turbo and a shared machine add noise. See
-  `docs/linux_performance.md` for how to reason about and tighten such measurements.
+  overhead. CPU frequency scaling/turbo and a shared machine add noise. The false-sharing study is
+  host-local cache-line evidence only. See `docs/linux_performance.md` for how to reason about and
+  tighten such measurements.

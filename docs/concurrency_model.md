@@ -135,8 +135,14 @@ is realized in M26 (see *Realized pipeline* below).
 consumer's hot store to `head_` do not sit on the same cache line and ping-pong it between cores.
 Without the padding, every push would invalidate the cache line the consumer reads `head_` from
 (and vice versa), turning two independent cursors into one contended line. The padding trades a
-little memory for avoiding that cross-core coherence traffic. (This is a structural choice; no
-latency delta is *claimed* here — see Limits.)
+little memory for avoiding that cross-core coherence traffic.
+
+M44 adds a benchmark-only control layout for this point: `make false-sharing-study` runs
+`qsl-bench false-sharing`, which compares packed queue indices against cache-line-padded indices
+under the same producer-owned `tail` / consumer-owned `head` access pattern. The production
+`SpscRing` layout is not changed by that study; it measures contention shape and records the
+hardware/compiler/build metadata in `results/false_sharing_study.txt`. The result is
+host-dependent cache-line evidence, not a production throughput claim.
 
 ## Limits (honest)
 
@@ -157,7 +163,8 @@ latency delta is *claimed* here — see Limits.)
   ASan/UBSan do not detect data races, so the concurrent tests are also run under ThreadSanitizer
   (`make tsan`, M27 — see *ThreadSanitizer* below).
 - This is a correctness-first primitive; **no latency/throughput numbers are claimed here.** Any
-  such numbers will come only from the committed benchmark harness with full metadata.
+  such numbers will come only from the committed benchmark harness with full metadata. The M44
+  false-sharing study is benchmark-only and must not be generalized beyond its recorded host.
 
 ## Realized pipeline (M26)
 

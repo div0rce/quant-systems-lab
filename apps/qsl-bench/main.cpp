@@ -19,6 +19,7 @@
 namespace qsl::bench {
 void run_order_pool_benchmarks();
 void run_storage_benchmarks();
+void run_false_sharing_benchmarks();
 } // namespace qsl::bench
 
 namespace {
@@ -114,6 +115,10 @@ int main(int argc, char **argv) {
     }
     if (argc >= 2 && std::string(argv[1]) == "storage") {
         qsl::bench::run_storage_benchmarks();
+        return 0;
+    }
+    if (argc >= 2 && std::string(argv[1]) == "false-sharing") {
+        qsl::bench::run_false_sharing_benchmarks();
         return 0;
     }
     using namespace qsl;

@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record numa-study profile-io socket-stress socket-load concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record numa-study false-sharing-study profile-io socket-stress socket-load concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -66,6 +66,12 @@ numa-study:
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_NUMA_BIN=build/bench/qsl-bench bash scripts/numa_affinity_study.sh
+
+# M44: benchmark-only packed-vs-padded SPSC cursor false-sharing study.
+false-sharing-study:
+	cmake --preset bench
+	cmake --build --preset bench --target qsl-bench
+	QSL_FALSE_SHARING_BIN=build/bench/qsl-bench bash scripts/run_false_sharing_study.sh
 
 # M30: syscall / kernel-socket path profile of the gateway (strace + procfs rusage). Linux-only.
 profile-io:

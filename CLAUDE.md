@@ -347,6 +347,7 @@ Keep this synchronized with the Makefile.
 - `make perf-stat` — run Linux `perf stat` workflow where supported
 - `make perf-record` — run Linux `perf record/report` workflow where supported
 - `make numa-study` — run Linux CPU-affinity / scheduler-migration / NUMA-locality study where supported
+- `make false-sharing-study` — run benchmark-only packed-vs-padded SPSC cursor contention study
 - `make profile-io` — run Linux syscall/socket-path profiling where supported
 - `make socket-load` — Linux multi-client TCP connection-scaling load experiment
 - `make asan` — build/run sanitizer preset

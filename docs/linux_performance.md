@@ -18,8 +18,8 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
 - **Core sharing / scheduling**: a shared machine adds jitter. Pinning to an isolated core
   (`taskset -c <cpu>`, `isolcpus=`) reduces variance; the committed numbers do **not** do this.
 - **Scheduler migration**: if a benchmark thread moves across cores, cache warmth and run-to-run
-  variance can change independently of application logic. Future M43 work should record migration
-  evidence where Linux exposes it and label hosts that cannot provide it.
+  variance can change independently of application logic. M43 records migration evidence where
+  Linux exposes it and labels hosts that cannot provide it.
 - **Cache and allocator effects**: the order book uses `std::map`/`std::list` and heap
   allocation; cache locality and allocator behavior dominate small-op latency. Custom
   allocators / flat structures (backlog in `MILESTONES.md`) would change the picture.
@@ -79,6 +79,21 @@ Unsupported or constrained hosts are valid outcomes. macOS, Docker Desktop, rest
 single-NUMA-node Linux machines, and hosts that can pin a CPU but cannot bind local/remote NUMA
 memory should be labeled as constrained rather than used to imply full NUMA or production-latency
 evidence.
+
+## False-sharing studies
+
+M44 owns the SPSC cursor false-sharing study. Run:
+
+```bash
+make false-sharing-study
+```
+
+This builds the benchmark preset and runs `scripts/run_false_sharing_study.sh`, which records a
+benchmark-only packed-vs-padded SPSC queue-cursor comparison in
+`results/false_sharing_study.txt`. The study uses the same producer-owned `tail` /
+consumer-owned `head` release/acquire observation pattern as the production `SpscRing`, but it does
+not change the production ring layout. Treat the artifact as host-local cache-line contention
+evidence; scheduler placement, CPU topology, and OS behavior can move the result.
 
 ## What this does not prove
 
