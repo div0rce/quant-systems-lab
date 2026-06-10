@@ -69,22 +69,26 @@ template <class Indices> Sample run_index_study() {
 
     std::thread producer{[&] {
         wait_for_start(ready, start);
+        std::uint64_t checksum = 0;
         for (std::uint64_t i = 1; i <= kIterations; ++i) {
             const auto value = static_cast<std::size_t>(i);
             tail_index(indices).store(value, std::memory_order_release);
-            producer_checksum +=
+            checksum +=
                 static_cast<std::uint64_t>(head_index(indices).load(std::memory_order_acquire));
         }
+        producer_checksum = checksum;
     }};
 
     std::thread consumer{[&] {
         wait_for_start(ready, start);
+        std::uint64_t checksum = 0;
         for (std::uint64_t i = 1; i <= kIterations; ++i) {
             const auto value = static_cast<std::size_t>(i);
             head_index(indices).store(value, std::memory_order_release);
-            consumer_checksum +=
+            checksum +=
                 static_cast<std::uint64_t>(tail_index(indices).load(std::memory_order_acquire));
         }
+        consumer_checksum = checksum;
     }};
 
     while (ready.load(std::memory_order_acquire) != 2) {
