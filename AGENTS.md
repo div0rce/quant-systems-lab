@@ -713,12 +713,18 @@ OS:
 Compiler:
 Build type:
 Git commit:
+Source tree:   # required when the generated output is excluded from dirty-tree checks
 Dataset:
 Scenario:
 Metric:
 Result:
 Date:
 ```
+
+If a benchmark/profiling artifact is reviewed before a squash merge, regenerate it from the final
+reviewed source state and include machine-checkable source-tree provenance when the committed
+artifact cannot yet name the eventual squash commit. After the human squash-merges, regenerate any
+kept artifact from updated `main` before treating it as final merged evidence.
 
 Synthetic flow scenarios:
 

@@ -100,6 +100,19 @@ qsl_git_commit_short() {
     git rev-parse --short HEAD
 }
 
+qsl_source_tree_hash_excluding() {
+    local rel skip blob
+    skip="$(qsl_repo_relative_or_empty "$1")"
+    git ls-files -z |
+        while IFS= read -r -d '' rel; do
+            [[ -n "$skip" && "$rel" == "$skip" ]] && continue
+            blob="$(git hash-object "$rel")"
+            printf '%s  %s\n' "$blob" "$rel"
+        done |
+        shasum -a 256 |
+        awk '{ print $1 }'
+}
+
 qsl_utc_timestamp() {
     date -u +%Y-%m-%dT%H:%M:%SZ
 }
