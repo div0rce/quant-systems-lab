@@ -74,13 +74,21 @@ Hardware:    <arch>
 OS:          <kernel>
 Compiler:    <version>
 Build type:  Release
-Git commit:  <short sha>
+Provenance version: 1
+Git commit (informational): <short sha>
+Source digest: sha256:<declared-source-input digest>
+Source digest scope: <artifact scope>
+Dirty inputs: no
+Generated output: results/latest.txt
 Dataset:     synthetic order flow (seed 42, 4 symbols)
 Date:        <UTC timestamp>
 
 Scenario / Metric / Result:
 <one line per benchmark: ns/op + ops/sec, or ns/item + items/sec>
 ```
+
+For migrated artifacts, `Source digest` is the stable provenance identity. Commit hashes are
+informational because review branches are normally rebased and squash-merged.
 
 ## Running
 

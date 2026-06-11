@@ -712,8 +712,12 @@ Hardware:
 OS:
 Compiler:
 Build type:
-Git commit:
-Source tree:   # required when the generated output is excluded from dirty-tree checks
+Provenance version:
+Git commit (informational):
+Source digest:
+Source digest scope:
+Dirty inputs:
+Generated output:
 Dataset:
 Scenario:
 Metric:
@@ -721,10 +725,11 @@ Result:
 Date:
 ```
 
-If a benchmark/profiling artifact is reviewed before a squash merge, regenerate it from the final
-reviewed source state and include machine-checkable source-tree provenance when the committed
-artifact cannot yet name the eventual squash commit. After the human squash-merges, regenerate any
-kept artifact from updated `main` before treating it as final merged evidence.
+For migrated benchmark/profiling artifacts, `Source digest` is the authoritative identity and
+`Git commit (informational)` is not. Squash merges and rebases may change the commit hash without
+invalidating an artifact when the declared source inputs and digest are unchanged. The valid stale
+artifact checks are `Source digest` mismatch or `Dirty inputs: yes`, not commit-hash equality.
+Migrated generators must not emit `Source commit:` or `Generated from commit:`.
 
 Synthetic flow scenarios:
 

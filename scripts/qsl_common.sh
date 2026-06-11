@@ -100,17 +100,78 @@ qsl_git_commit_short() {
     git rev-parse --short HEAD
 }
 
-qsl_source_tree_hash_excluding() {
-    local rel skip blob
-    skip="$(qsl_repo_relative_or_empty "$1")"
-    git ls-files -z |
-        while IFS= read -r -d '' rel; do
-            [[ -n "$skip" && "$rel" == "$skip" ]] && continue
-            blob="$(git hash-object "$rel")"
+qsl_source_digest() {
+    local scope="$1" output="$2" output_rel files rel blob
+    shift 2
+    if [[ -z "$scope" || -z "$output" || "$#" -eq 0 ]]; then
+        echo "error: qsl_source_digest requires scope, output, and at least one input path" >&2
+        exit 2
+    fi
+
+    local pathspecs=("$@")
+    output_rel="$(qsl_repo_relative_or_empty "$output")"
+    [[ -n "$output_rel" ]] && pathspecs+=(":(exclude)$output_rel")
+
+    if ! files="$(git ls-files -- "${pathspecs[@]}" | LC_ALL=C sort)"; then
+        echo "error: source-digest input pathspec failed for scope $scope" >&2
+        exit 2
+    fi
+    if [[ -z "$files" ]]; then
+        echo "error: source-digest scope $scope matched no tracked inputs" >&2
+        exit 2
+    fi
+
+    {
+        printf 'scope %s\n' "$scope"
+        while IFS= read -r rel; do
+            [[ -z "$rel" ]] && continue
+            blob="$(git hash-object -- "$rel")"
             printf '%s  %s\n' "$blob" "$rel"
-        done |
+        done <<<"$files"
+    } |
         shasum -a 256 |
-        awk '{ print $1 }'
+        awk '{ printf "sha256:%s\n", $1 }'
+}
+
+qsl_dirty_inputs_status() {
+    local output="$1" output_rel status_output
+    shift
+    if [[ -z "$output" || "$#" -eq 0 ]]; then
+        echo "error: qsl_dirty_inputs_status requires output and at least one input path" >&2
+        exit 2
+    fi
+
+    local pathspecs=("$@")
+    output_rel="$(qsl_repo_relative_or_empty "$output")"
+    [[ -n "$output_rel" ]] && pathspecs+=(":(exclude)$output_rel")
+
+    if ! status_output="$(git status --porcelain --untracked-files=all -- "${pathspecs[@]}")"; then
+        echo "error: dirty-input check failed; refusing to write misleading metadata." >&2
+        exit 2
+    fi
+    if [[ -n "$status_output" ]]; then echo yes; else echo no; fi
+}
+
+qsl_emit_provenance() {
+    local scope="$1" output="$2" generated_output source_digest dirty_inputs
+    shift 2
+    if [[ -z "$scope" || -z "$output" || "$#" -eq 0 ]]; then
+        echo "error: qsl_emit_provenance requires scope, output, and at least one input path" >&2
+        exit 2
+    fi
+
+    generated_output="$(qsl_repo_relative_or_empty "$output" || true)"
+    [[ -z "$generated_output" ]] && generated_output="$output"
+    source_digest="$(qsl_source_digest "$scope" "$output" "$@")"
+    dirty_inputs="$(qsl_dirty_inputs_status "$output" "$@")"
+
+    echo "Provenance version: 1"
+    echo "Git commit (informational): $(qsl_git_commit_short)"
+    echo "Source digest: $source_digest"
+    echo "Source digest scope: $scope"
+    echo "Dirty inputs: $dirty_inputs"
+    echo "Generated output: $generated_output"
+    echo "Date: $(qsl_utc_timestamp)"
 }
 
 qsl_utc_timestamp() {

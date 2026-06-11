@@ -29,14 +29,25 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 ## Policy
 
 - No results are committed until produced by the benchmark harness (M11).
-- Results include hardware, compiler, build type, git commit, and source-tree provenance when a
-  generated artifact excludes itself from the dirty-tree check.
+- Results include hardware, compiler, build type, and provenance metadata. New or migrated
+  artifact generators should use:
+  - `Provenance version: 1`
+  - `Git commit (informational): ...`
+  - `Source digest: sha256:...`
+  - `Source digest scope: ...`
+  - `Dirty inputs: no|yes`
+  - `Generated output: ...`
 - No estimated or fabricated numbers. They are synthetic microbenchmarks, hardware/compiler/
   build-dependent — not production throughput.
-- For PRs that will be squash-merged, regenerated artifacts must be rerun from the final reviewed
-  source state. During review, include a machine-checkable source-tree hash when the artifact cannot
-  contain the eventual squash commit. After squash merge, rerun the artifact from `main` before
-  treating it as final merged evidence.
+- For migrated artifacts, `Source digest` is the authoritative provenance identity. `Git commit
+  (informational)` may change after rebase or squash merge; reviewers should treat a source-digest
+  mismatch or `Dirty inputs: yes` as stale evidence, not commit-hash drift alone.
+- Migrated generators must not emit `Source commit:` or `Generated from commit:`. Existing
+  historical artifacts may remain on the older schema until a deliberate migration PR converts their
+  generators and regenerates them.
+- M45A converts only the currently active provenance pain points: `numa_affinity_study.txt` and
+  `false_sharing_study.txt`. A follow-up migration should convert the perf, socket, allocator,
+  storage, and core benchmark artifacts once the schema is proven.
 - Future storage, CPU-affinity, false-sharing, DPDK, or NIC artifacts must state whether they are
   full hardware evidence, constrained-environment validation, or research notes only.
 - CPU-affinity and NUMA artifacts must include the chosen CPU, whether `taskset` and `perf` ran,

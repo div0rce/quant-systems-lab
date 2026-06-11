@@ -31,10 +31,11 @@ Do not rely on prior chat memory.
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** yes, 204/204 for M44. `make asan` also passed 204/204; `make tsan`
   passed 20/20 concurrency-labelled tests.
-- **Last action:** addressed PR #115 review feedback by recording the configured benchmark
-  compiler from `build/bench/CMakeCache.txt` and regenerating `results/false_sharing_study.txt`
-  from clean source commit f02b8ac with `Dirty tree: no`.
-- **Next action:** wait for PR #115 review/CI and address only M44-scoped feedback.
+- **Last action:** folded a narrow artifact-provenance hardening slice into PR #115: shared
+  `Source digest` helpers now make false-sharing and NUMA artifacts identify declared source inputs
+  rather than branch-only commit objects.
+- **Next action:** verify the new provenance helpers, regenerate migrated artifacts, then push PR
+  #115 for review.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -351,14 +352,20 @@ Lower priority:
 - [2026-06-09] M44 review fixes: `scripts/run_false_sharing_study.sh` now records the compiler
   from the bench preset's `CMAKE_CXX_COMPILER` rather than `c++` from `PATH`. Regenerated
   `results/false_sharing_study.txt` from clean source commit f02b8ac with `Dirty tree: no`.
-- [2026-06-10] M44 review fixes: false-sharing artifacts now include a machine-checkable source-tree
-  hash when the generated output is excluded from the dirty-tree check, and repo policy now requires
-  regenerating kept benchmark artifacts from post-squash `main` before treating them as final merged
-  evidence.
+- [2026-06-10] M44 review fixes: false-sharing artifacts temporarily added a machine-checkable
+  source-tree hash while the generated output was excluded from dirty-tree checks. This
+  commit-hash-oriented workaround is superseded by the 2026-06-11 source-digest provenance policy.
 - [2026-06-11] M44 review follow-up: `results/false_sharing_study.txt` was regenerated from the
-  current PR head source commit with the source-tree hash recorded. Because a generated artifact
-  cannot contain the hash of the commit that will contain itself, the post-squash `main`
-  regeneration remains required before treating the result as final merged evidence.
+  current PR head as an interim fix. This is superseded by the source-digest policy below, which
+  makes declared source inputs, not branch-only commit objects, the authoritative provenance
+  identity.
+- [2026-06-11] Artifact provenance process fix: to eliminate repeated stale-commit review churn,
+  migrated artifacts use `Provenance version: 1` with `Source digest` as the authoritative identity
+  and `Git commit (informational)` as non-authoritative context. The valid stale-artifact checks are
+  source-digest mismatch or `Dirty inputs: yes`, not commit-hash equality after rebase/squash.
+  M45A is intentionally narrow and converts only the current pain points (`make false-sharing-study`
+  and `make numa-study`); a follow-up migration should convert perf, socket, allocator, storage,
+  and core benchmark artifacts after the schema is proven.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.

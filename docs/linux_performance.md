@@ -32,8 +32,9 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
 - Report `p50`/`p95`/`p99`, not just a mean, when latency distribution matters. The current
   harness reports mean ns/op over many iterations as a first-order baseline; percentile
   reporting is a documented follow-up.
-- Always record hardware, OS, compiler, build type, and git commit alongside the numbers —
-  `scripts/run_benchmarks.sh` does this automatically.
+- Always record hardware, OS, compiler, build type, and artifact provenance alongside the
+  numbers. For migrated artifacts, `Source digest` is the stable identity and `Git commit
+  (informational)` is not a stale-artifact signal by itself.
 
 ## Measuring deeper
 
