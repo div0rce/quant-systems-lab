@@ -34,12 +34,14 @@ Do not rely on prior chat memory.
 - **`make check` passing:** yes, 214/214 on the M45 branch; `make asan` 214/214; `make
   check-fixtures` and `make check-manifest` clean (replay-library changes did not alter export
   bytes); `make crash-recovery` regenerated `results/crash_recovery_validation.txt` with
-  `Dirty inputs: no`; CodeScene pre-commit safeguard passed.
+  `Dirty inputs: no`; local CodeScene review of `apps/qsl-replay/main.cpp` is 10.0 with no
+  findings and CodeScene pre-commit safeguard passed.
 - **Last action:** fixed the CodeScene delta findings in PR #117 by splitting `qsl-replay` command
-  dispatch, deduplicating event-log file loading, simplifying the durability constructor condition,
-  and collapsing repetitive event-log test assertion blocks. Regenerated the crash-recovery
-  artifact from clean declared inputs and verified targeted CLI checks, `test_event_log`,
-  `git diff --check`, `make check`, and `make asan`.
+  dispatch, wrapping replay CLI arguments/requests to clear primitive/string-heavy function
+  argument findings, deduplicating event-log file loading, simplifying the durability constructor
+  condition, and collapsing repetitive event-log test assertion blocks. Regenerated the
+  crash-recovery artifact from clean declared inputs and verified targeted CLI checks,
+  `test_event_log`, `git diff --check`, `make check`, and `make asan`.
 - **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
   Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -424,6 +426,11 @@ Lower priority:
   `append-loop <file> <buffered|flush|fsync> [max_records]` subcommands; argument parsing moved to
   exception-free `from_chars` (fixing the previously unguarded `std::stoull` generate-seed parse,
   the same bug class M42 review fixed in `qsl-export-stream`).
+- [2026-06-11] M45 CodeScene cleanup: `qsl-replay` command dispatch now uses local command-line,
+  request, path, seed, repair, and max-record value objects instead of raw primitive/string
+  helper arguments. Local CodeScene review scores `apps/qsl-replay/main.cpp` 10.0 with no findings,
+  addressing the hosted primitive-obsession and string-heavy argument findings without changing the
+  CLI or persistence semantics.
 - [2026-06-11] M45: added `make crash-recovery` / `scripts/crash_recovery_validation.sh`
   (portable Linux/macOS): SIGKILLs live `append-loop` writers mid-stream per durability mode and
   asserts recovered records ∈ [acked, acked+1] for flush/fsync, torn-tail repair to a clean
