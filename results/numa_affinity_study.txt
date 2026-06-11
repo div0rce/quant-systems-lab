@@ -7,12 +7,12 @@ CPU:         Apple aarch64
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 Build type:  Release
 Provenance version: 1
-Git commit (informational): 0cd2357
-Source digest: sha256:705ddbafd16f51affcb24b3852b45f11deb6b042703cb37c8be2b3cd69fede78
+Git commit (informational): beddfb0
+Source digest: sha256:6911d551c2d1aa247fe16004d577693b8e192057179939126db47bbc8b3fedca
 Source digest scope: numa-affinity-study
 Dirty inputs: no
 Generated output: results/numa_affinity_study.txt
-Date: 2026-06-11T14:34:16Z
+Date: 2026-06-11T14:49:33Z
 Benchmark binary: build/bench/qsl-bench
 Allowed CPUs: 0-7
 CPU chosen:  0
@@ -50,18 +50,18 @@ Pinned command:
 taskset -c 0 build/bench/qsl-bench
 
 Unpinned benchmark output:
-order_book add/mod/cancel     200000 ops         83.8 ns/op       11931246 ops/sec
-protocol encode+decode        500000 ops         23.1 ns/op       43375638 ops/sec
-gateway session (fill)        200000 ops        149.7 ns/op        6678279 ops/sec
-matching engine flow            5004 items      112.5 ns/item      8890501 items/sec
-replay command log              5004 items      133.1 ns/item      7515865 items/sec
+order_book add/mod/cancel     200000 ops         78.4 ns/op       12755848 ops/sec
+protocol encode+decode        500000 ops         20.8 ns/op       48038815 ops/sec
+gateway session (fill)        200000 ops        157.8 ns/op        6337161 ops/sec
+matching engine flow            5004 items      108.6 ns/item      9209922 items/sec
+replay command log              5004 items      140.0 ns/item      7141239 items/sec
 
 Pinned benchmark output:
-order_book add/mod/cancel     200000 ops         82.1 ns/op       12179712 ops/sec
-protocol encode+decode        500000 ops         22.8 ns/op       43876488 ops/sec
-gateway session (fill)        200000 ops        130.5 ns/op        7661808 ops/sec
-matching engine flow            5004 items      108.0 ns/item      9256061 items/sec
-replay command log              5004 items      126.8 ns/item      7884014 items/sec
+order_book add/mod/cancel     200000 ops         79.8 ns/op       12525704 ops/sec
+protocol encode+decode        500000 ops         21.6 ns/op       46243134 ops/sec
+gateway session (fill)        200000 ops        122.7 ns/op        8151523 ops/sec
+matching engine flow            5004 items      107.0 ns/item      9343338 items/sec
+replay command log              5004 items      134.9 ns/item      7410269 items/sec
 
 NUMA local benchmark output:
 NUMA node-local/remote binding skipped: numactl topology unavailable
