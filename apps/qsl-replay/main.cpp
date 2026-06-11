@@ -202,6 +202,10 @@ int main(int argc, char **argv) {
         return recover(std::string(argv[2]), repair);
     }
     if (argc >= 4 && std::string(argv[1]) == "append-loop") {
+        if (argc > 5) {
+            std::cerr << kUsage;
+            return 2;
+        }
         const auto mode = parse_mode(argv[3]);
         if (!mode) {
             std::cerr << "mode must be buffered, flush, or fsync: " << argv[3] << "\n" << kUsage;
