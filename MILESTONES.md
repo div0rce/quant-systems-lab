@@ -1635,7 +1635,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m43-numa-awareness-study`
 - **PR title:** `docs: study NUMA and CPU affinity effects`
 - **Goal:** Document and measure CPU locality tradeoffs where hardware exists.
-- **Status:** ◐ in progress.
+- **Status:** ☑ merged via PR #114 (`29ed491`).
 - **Dependencies:** M29/M30 Linux profiling workflow, M35 socket-load evidence, and PR #112
   storage/TCP follow-up. A Linux host with suitable topology information is required for full
   evidence, but constrained-host runs may still proceed when labeled honestly.
@@ -1679,13 +1679,15 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **PR title:** `perf: study ingress memory ordering and false sharing`
 - **Goal:** Evaluate ingress queue contention, memory ordering, and cache-line sharing without
   changing deterministic matching ownership.
-- **Status:** ☐ not started.
+- **Status:** ◐ PR #115 open.
 - **Dependencies:** M24 SPSC ring, M25 memory-ordering docs, M26 threaded pipeline, M27 TSan, M33
   advanced concurrency validation, and M37 pipeline helper refactor.
 - **Signal gained:** Acquire/release reasoning, queue ownership, cache-line contention evidence,
   and concurrency-architecture clarity.
 - **Evidence required:** A committed benchmark or stress artifact with metadata, plus docs that
-  explain whether padding/alignment changed behavior or only measured contention shape.
+  explain whether padding/alignment changed behavior or only measured contention shape. If the
+  study is benchmark-only, it must explicitly say the production `SpscRing` layout and matching
+  ownership were not changed.
 
 ### Scope
 

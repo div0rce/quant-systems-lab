@@ -32,6 +32,9 @@ All notable changes to this project. The format is loosely based on
 - M43: `scripts/numa_affinity_study.sh` (`make numa-study`, Linux-only) — CPU-affinity /
   scheduler-migration / NUMA-locality study tooling with explicit `full-linux-numa`,
   `linux-constrained`, or `unsupported-host` evidence classification.
+- M44: `scripts/run_false_sharing_study.sh` (`make false-sharing-study`) — benchmark-only
+  packed-vs-padded SPSC queue-cursor contention study with metadata in
+  `results/false_sharing_study.txt`.
 - M34: Linux-only `EpollServer` gateway transport prototype. It uses one `epoll` loop,
   nonblocking accept/read/write, per-client outbound buffers, and one deterministic `Session` per
   client; `qsl-gateway <port> --epoll` opts in on Linux.

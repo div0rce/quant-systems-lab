@@ -10,6 +10,18 @@ BIN="${QSL_NUMA_BIN:-build/bench/qsl-bench}"
 OUT="${QSL_NUMA_OUT:-results/numa_affinity_study.txt}"
 ALLOW_CONSTRAINED="${QSL_NUMA_ALLOW_CONSTRAINED:-0}"
 PERF_EVENTS="context-switches,cpu-migrations"
+PROVENANCE_SCOPE="numa-affinity-study"
+PROVENANCE_INPUTS=(
+    scripts/numa_affinity_study.sh
+    scripts/qsl_common.sh
+    apps/qsl-bench
+    benchmarks
+    include
+    src
+    CMakeLists.txt
+    CMakePresets.json
+    Makefile
+)
 
 shell_quote() {
     printf '%q' "$1"
@@ -48,9 +60,6 @@ fi
 COMMAND_LINE="$(recorded_command)"
 
 mkdir -p "$(dirname "$OUT")"
-DIRTY="$(qsl_dirty_tree_status "$OUT")"
-OUTPUT_PATH="$(qsl_repo_relative_or_empty "$OUT" || true)"
-[[ -z "$OUTPUT_PATH" ]] && OUTPUT_PATH="$OUT"
 
 TMP_OUT="$(mktemp)"
 UNPINNED_OUT="$(mktemp)"
@@ -107,9 +116,7 @@ write_unsupported_artifact() {
         echo "CPU:         $(qsl_cpu_model)"
         echo "Compiler:    $(qsl_compiler_version)"
         echo "Build type:  $(qsl_build_type build/bench)"
-        echo "Git commit:  $(qsl_git_commit_short)"
-        echo "Dirty tree:  $DIRTY"
-        echo "Artifact provenance: generated from the clean source commit above; output path excluded from dirty-tree check: $OUTPUT_PATH"
+        qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
         echo "Benchmark binary: $BIN"
         echo "CPU chosen:  none"
         echo "taskset available: no"
@@ -119,7 +126,6 @@ write_unsupported_artifact() {
         echo "context-switches captured: no"
         echo "cpu-migrations captured: no"
         echo "numactl topology available: no"
-        echo "Date:        $(qsl_utc_timestamp)"
         echo
         echo "Caveat: This host is not Linux, so no CPU-affinity, scheduler-migration, or NUMA evidence was collected."
     } >"$TMP_OUT"
@@ -284,9 +290,7 @@ fi
     echo "CPU:         $(qsl_cpu_model)"
     echo "Compiler:    $(qsl_compiler_version)"
     echo "Build type:  $(qsl_build_type build/bench)"
-    echo "Git commit:  $(qsl_git_commit_short)"
-    echo "Dirty tree:  $DIRTY"
-    echo "Artifact provenance: generated from the clean source commit above; output path excluded from dirty-tree check: $OUTPUT_PATH"
+    qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
     echo "Benchmark binary: $BIN"
     echo "Allowed CPUs: $ALLOWED_CPUS"
     echo "CPU chosen:  $CPU_CHOSEN"
@@ -314,7 +318,6 @@ fi
     echo "NUMA remote benchmark status: $NUMA_REMOTE_STATUS"
     echo "Unpinned perf status:      $PERF_UNPINNED_STATUS"
     echo "Pinned perf status:        $PERF_PINNED_STATUS"
-    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Caveat: CPU-affinity and NUMA measurements are host-specific systems evidence, not a production-latency or speedup claim."
     echo

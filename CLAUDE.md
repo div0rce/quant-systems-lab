@@ -347,6 +347,7 @@ Keep this synchronized with the Makefile.
 - `make perf-stat` — run Linux `perf stat` workflow where supported
 - `make perf-record` — run Linux `perf record/report` workflow where supported
 - `make numa-study` — run Linux CPU-affinity / scheduler-migration / NUMA-locality study where supported
+- `make false-sharing-study` — run benchmark-only packed-vs-padded SPSC cursor contention study
 - `make profile-io` — run Linux syscall/socket-path profiling where supported
 - `make socket-load` — Linux multi-client TCP connection-scaling load experiment
 - `make asan` — build/run sanitizer preset
@@ -711,13 +712,24 @@ Hardware:
 OS:
 Compiler:
 Build type:
-Git commit:
+Provenance version:
+Git commit (informational):
+Source digest:
+Source digest scope:
+Dirty inputs:
+Generated output:
 Dataset:
 Scenario:
 Metric:
 Result:
 Date:
 ```
+
+For migrated benchmark/profiling artifacts, `Source digest` is the authoritative identity and
+`Git commit (informational)` is not. Squash merges and rebases may change the commit hash without
+invalidating an artifact when the declared source inputs and digest are unchanged. The valid stale
+artifact checks are `Source digest` mismatch or `Dirty inputs: yes`, not commit-hash equality.
+Migrated generators must not emit `Source commit:` or `Generated from commit:`.
 
 Synthetic flow scenarios:
 

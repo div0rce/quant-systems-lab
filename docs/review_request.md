@@ -103,16 +103,15 @@ to confirm what looks right.
 
 ### 7. CPU locality, false sharing, and concurrency architecture
 
-- **Claim:** future CPU-affinity/NUMA and false-sharing work must produce hardware- and
+- **Claim:** CPU-affinity/NUMA and false-sharing work must produce hardware- and
   environment-labeled evidence, and must keep memory-ordering correctness separate from
   performance observations.
 - **Where:** [`linux_performance.md`](linux_performance.md),
   [`concurrency_model.md`](concurrency_model.md), [`memory_ordering.md`](memory_ordering.md),
   `MILESTONES.md` (M43/M44).
-- **Questions:** Are the planned CPU-affinity, scheduler-migration, and cache-line contention
-  experiments scoped enough to be credible? Are unsupported-host caveats strong enough? Would any
-  proposed padding/alignment change risk changing queue semantics rather than only contention
-  shape?
+- **Questions:** Are the CPU-affinity, scheduler-migration, and cache-line contention experiments
+  scoped enough to be credible? Are unsupported-host caveats strong enough? Does the M44
+  packed-vs-padded cursor study avoid implying production latency or changing queue semantics?
 
 ### 8. Storage architecture and cache locality
 

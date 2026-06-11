@@ -1,0 +1,33 @@
+Command:        make false-sharing-study
+Evidence class: research-notes
+Hardware:       arm64
+CPU:            Apple M2
+OS:             Darwin 25.2.0
+Compiler:       Apple clang version 17.0.0 (clang-1700.3.19.1)
+Build type:     Release
+Provenance version: 1
+Git commit (informational): beddfb0
+Source digest: sha256:09985bd498ed456c73afca0f2a3d845546f5f9925823daf9b3d6750ae58b8c60
+Source digest scope: false-sharing-study
+Dirty inputs: no
+Generated output: results/false_sharing_study.txt
+Date: 2026-06-11T14:49:20Z
+Dataset:        synthetic SPSC cursor exchange (producer tail / consumer head)
+
+Host support summary: portable two-thread C++ benchmark; no PMU counters required.
+Scenario: benchmark-only SPSC queue cursor layout, packed indices vs cache-line-padded indices.
+Memory ordering: owner stores use release; peer observations use acquire, matching the
+production SpscRing cursor hand-off pattern.
+Production impact: none; this study does not change SpscRing layout or matching ownership.
+Caveat: cache-line contention measurements are scheduler-, CPU-, OS-, and topology-dependent;
+do not report these numbers as production latency or general speedup evidence.
+
+Scenario / Metric / Result:
+SPSC cursor false-sharing study (benchmark-only control layout)
+Each thread owns one queue index, stores it with release, and samples the peer
+index with acquire. Benchmark-only control: the padded layout puts each index on a
+128-byte boundary, so the two cursors sit on distinct coherency lines even on hosts
+with 128-byte cache lines (Apple Silicon); the production SpscRing pads to 64 bytes.
+
+packed indices              4000000 cursor updates        0.8 ns/update   1182309808 updates/sec checksum=3999995323406
+padded indices              4000000 cursor updates        1.0 ns/update    976542712 updates/sec checksum=3999976361791

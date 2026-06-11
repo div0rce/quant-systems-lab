@@ -53,6 +53,11 @@ The observational helpers `empty()` and `full()` load both indices with `acquire
 intentionally conservative and are only authoritative when called from the thread that owns the
 relevant cursor (see `concurrency_model.md` → *Visibility*).
 
+M44's false-sharing benchmark uses the same cursor ownership and release/acquire observation
+pattern in a benchmark-only packed-vs-padded control. That study does not change the correctness
+argument here: padding can reduce cache-line contention, but the happens-before edges still come
+from the release/acquire pairs on `tail_` and `head_`, not from cache-line placement.
+
 ## Why two `acquire` loads, not one
 
 Both directions need a release/acquire pair, because the buffer is shared in **both** directions:

@@ -19,6 +19,7 @@
 namespace qsl::bench {
 void run_order_pool_benchmarks();
 void run_storage_benchmarks();
+void run_false_sharing_benchmarks();
 } // namespace qsl::bench
 
 namespace {
@@ -101,19 +102,30 @@ void run_diff_benchmarks() {
     }
 }
 
+// Run a named benchmark subcommand (argv[1]); returns true if one matched and ran, so main exits.
+bool run_subcommand(int argc, char **argv) {
+    if (argc < 2) {
+        return false;
+    }
+    const std::string command = argv[1];
+    if (command == "diff") {
+        run_diff_benchmarks();
+    } else if (command == "pool") {
+        qsl::bench::run_order_pool_benchmarks();
+    } else if (command == "storage") {
+        qsl::bench::run_storage_benchmarks();
+    } else if (command == "false-sharing") {
+        qsl::bench::run_false_sharing_benchmarks();
+    } else {
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
-    if (argc >= 2 && std::string(argv[1]) == "diff") {
-        run_diff_benchmarks();
-        return 0;
-    }
-    if (argc >= 2 && std::string(argv[1]) == "pool") {
-        qsl::bench::run_order_pool_benchmarks();
-        return 0;
-    }
-    if (argc >= 2 && std::string(argv[1]) == "storage") {
-        qsl::bench::run_storage_benchmarks();
+    if (run_subcommand(argc, argv)) {
         return 0;
     }
     using namespace qsl;

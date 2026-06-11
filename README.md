@@ -63,9 +63,9 @@ Other targets: `make check` (format-check + build + test), `make fmt`, `make asa
 `make bench-diff` / `make bench-storage` (committed benchmark harnesses), `make check-fixtures`
 (regenerate the differential fixtures and verify they match current C++ output),
 `make check-manifest` (verify the fixture provenance manifest), and `make determinism` (assert
-fixtures are byte-identical across compilers). Linux-only profiling/load targets include
-`make profile-io`, `make socket-load`, and `make numa-study`; `make socket-stress` runs the UDP
-socket-buffer experiment where supported.
+fixtures are byte-identical across compilers). Systems evidence targets include
+`make false-sharing-study`, plus Linux-only `make profile-io`, `make socket-load`, and
+`make numa-study`; `make socket-stress` runs the UDP socket-buffer experiment where supported.
 
 ## Demo
 
@@ -114,8 +114,8 @@ the core numbers above.
   Linux builds also include an opt-in `epoll` gateway prototype for event-driven readiness. These
   are architecture and pressure-validation paths, not a production event loop or capacity claim.
 - **Benchmarks are microbenchmarks**, not end-to-end or production latency (see above).
-  Current committed numbers exclude CPU-affinity/scheduler-migration studies, false-sharing
-  experiments, and contiguous order-book storage architecture work.
+  CPU-affinity/scheduler-migration and false-sharing studies are separate hardware-dependent
+  artifacts; contiguous order-book storage architecture work remains future M47 scope.
 - **Networking is minimal**: loopback TCP order entry and a UDP market-data feed,
   unauthenticated, no TLS, no framing recovery beyond disconnect-on-malformed. The socket path is
   profiled and its hardening posture documented in

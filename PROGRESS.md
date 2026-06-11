@@ -20,19 +20,24 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M43 — NUMA awareness study
-- **Status:** ◐ PR #114 open. This branch adds Linux CPU-affinity / scheduler-migration /
-  NUMA-locality study tooling and documentation, with constrained Docker evidence labeled honestly
-  as `linux-constrained`.
-- **Active branch:** `feat/m43-numa-awareness-study`
-- **Last completed milestone:** Systems-engineering roadmap audit (squash-merged PR #113, commit
-  f3cc4dd)
+- **Active milestone:** M44 — Ingress queue memory-ordering and false-sharing study
+- **Status:** ◐ PR #115 open. This branch adds a benchmark-only packed-vs-padded SPSC queue-cursor
+  contention study and documents it as host-local cache-line evidence, not a production
+  throughput/latency claim.
+- **Active branch:** `feat/m44-ingress-memory-ordering-false-sharing`
+- **Last completed milestone:** M43 — NUMA awareness study (squash-merged PR #114, commit
+  29ed491)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes, 204/204 for M43.
-- **Last action:** clarified NUMA artifact provenance, regenerated the constrained Docker artifact
-  from clean source commit b3f316f, and re-ran verification for PR #114.
-- **Next action:** wait for PR #114 review/CI and address only M43-scoped feedback.
+- **`make check` passing:** yes, 204/204 for M44. `make asan` also passed 204/204; `make tsan`
+  passed 20/20 concurrency-labelled tests.
+- **Last action:** folded a narrow artifact-provenance hardening slice into PR #115: shared
+  `Source digest` helpers now make false-sharing and NUMA artifacts identify declared source inputs
+  rather than branch-only commit objects, and both migrated artifacts were regenerated with
+  `Dirty inputs: no`; latest Codex review feedback fixed the digest helper to use `sha256sum`
+  when available and fall back to `shasum -a 256`.
+- **Next action:** push PR #115, request a fresh `@codex review`, then wait for Codex no-bugs and
+  human merge before starting M45B.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -214,7 +219,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M43 PR #114 is open. No mid-milestone scratch is pending._
+- _M44 PR #115 is open. No mid-milestone scratch is pending._
 
 
 ---
@@ -281,8 +286,8 @@ Lower priority:
 | M42 | Extract shared shell-script helpers | `refactor/m42-shared-shell-script-helpers` | ☑ merged | #111 | Repository-health refactor (manual; shell unscored); expanded to address #99/#110 |
 | Follow-up | Intrusive storage, realistic flow, threaded TCP gateway | `feat/close-storage-flow-tcp-followups` | ☑ merged | #112 | Closed #95/#28/#26 |
 | Docs | Systems-engineering roadmap audit | `docs/systems-roadmap-audit` | ☑ merged | #113 | Docs-only update to future systems roadmap and agent guidance |
-| M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ◐ PR open | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
-| M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☐ not started | — | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
+| M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☑ merged | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
+| M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ◐ PR open | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
@@ -333,6 +338,47 @@ Lower priority:
 - [2026-06-09] M43 review fixes: `numa_affinity_study.sh` now records dynamic build-type metadata, refuses to bless constrained artifacts when benchmark runs fail, requires pinned and unpinned perf counter capture before full evidence, and requires actual node-local/remote NUMA binding before `full-linux-numa` classification. `AGENTS.md` and `CLAUDE.md` command lists now include `make numa-study`. Regenerated `results/numa_affinity_study.txt` from clean source commit 4e7c598 with `Dirty tree: no`, `Evidence class: linux-constrained`, explicit constrained rerun command, benchmark completion status, and NUMA binding status. Verification passed parser checks, macOS Linux-only guard, Docker failing-benchmark regression, Docker absolute-output dirty-tree/rerun-command check, Docker constrained artifact regeneration, `git diff --check`, and `make check` 204/204.
 - [2026-06-09] M43 review follow-up: `make numa-study` now lets `scripts/numa_affinity_study.sh` emit the promised `unsupported-host` artifact on non-Linux hosts instead of stopping at a Makefile guard, while still exiting 2. `NUMA_NODES` now falls back to the parsed `numactl --hardware` node list when `lscpu` lacks `NUMA node(s)`, so valid local/remote binding evidence is not mislabeled solely because `lscpu` is incomplete. Regenerated `results/numa_affinity_study.txt` from clean source commit d77c98a with `Dirty tree: no`. Verification passed parser checks, `QSL_NUMA_OUT=/tmp/... make numa-study` unsupported-host artifact check, Docker failing-benchmark regression, Docker synthetic `numactl` node-count fallback, Docker constrained artifact regeneration, `git diff --check`, and `make check` 204/204.
 - [2026-06-09] M43 provenance follow-up: `numa_affinity_study.sh` now writes `Artifact provenance: generated from the clean source commit above; output path excluded from dirty-tree check: ...` in both supported and unsupported artifacts. Regenerated `results/numa_affinity_study.txt` from clean source commit b3f316f with `Dirty tree: no` and the explicit output-path exclusion. Verification passed parser checks, unsupported-host provenance through `make numa-study`, Docker failing-benchmark regression, Docker synthetic `numactl` fallback, Docker constrained artifact regeneration, `git diff --check`, and `make check` 204/204.
+- [2026-06-09] PR #114 squash-merged to `main` as 29ed491; M44 started on `feat/m44-ingress-memory-ordering-false-sharing`. Scope is benchmark-only packed-vs-padded SPSC queue-cursor contention evidence plus memory-ordering/false-sharing documentation. The production `SpscRing` layout and deterministic matching ownership must remain unchanged.
+- [2026-06-09] M44: added `make false-sharing-study`, `scripts/run_false_sharing_study.sh`, and `qsl-bench false-sharing`. The benchmark compares benchmark-only packed vs cache-line-padded SPSC queue cursor layouts with producer-owned `tail` / consumer-owned `head` release/acquire traffic; production `SpscRing` layout and matching ownership are unchanged. Regenerated `results/false_sharing_study.txt` from clean source commit e15a4ed with `Dirty tree: no` and `Evidence class: research-notes`. Verification passed `bash -n scripts/run_false_sharing_study.sh`, `make false-sharing-study`, `git diff --check`, `make check` 204/204, `make asan` 204/204, and `make tsan` 20/20 concurrency-labelled tests.
+- [2026-06-09] M44: opened PR #115 (`perf: study ingress memory ordering and false sharing`).
+- [2026-06-09] M44 review fixes: `scripts/run_false_sharing_study.sh` now emits the required
+  `Dataset` metadata line and clarifies that the committed artifact is generated from the clean
+  source commit above in a later artifact-only commit. Regenerated
+  `results/false_sharing_study.txt` from clean source commit 2838a90 with `Dirty tree: no`.
+- [2026-06-09] M44 review fixes: `qsl-bench` now links `Threads::Threads` when benchmarks are
+  enabled, so the two-thread false-sharing benchmark has portable pthread flags on Linux/libstdc++
+  toolchains. `docs/concurrency_model.md` now states that the benchmark-only padded control uses
+  128-byte separation, while production `SpscRing` still pads to 64 bytes and is not validated by
+  this artifact on wider-coherency-line hosts. Regenerated `results/false_sharing_study.txt` from
+  clean source commit 1b2f342 with `Dirty tree: no`.
+- [2026-06-09] M44 review fixes: `scripts/run_false_sharing_study.sh` now records the compiler
+  from the bench preset's `CMAKE_CXX_COMPILER` rather than `c++` from `PATH`. Regenerated
+  `results/false_sharing_study.txt` from clean source commit f02b8ac with `Dirty tree: no`.
+- [2026-06-10] M44 review fixes: false-sharing artifacts temporarily added a machine-checkable
+  source-tree hash while the generated output was excluded from dirty-tree checks. This
+  commit-hash-oriented workaround is superseded by the 2026-06-11 source-digest provenance policy.
+- [2026-06-11] M44 review follow-up: `results/false_sharing_study.txt` was regenerated from the
+  current PR head as an interim fix. This is superseded by the source-digest policy below, which
+  makes declared source inputs, not branch-only commit objects, the authoritative provenance
+  identity.
+- [2026-06-11] Artifact provenance process fix: to eliminate repeated stale-commit review churn,
+  migrated artifacts use `Provenance version: 1` with `Source digest` as the authoritative identity
+  and `Git commit (informational)` as non-authoritative context. The valid stale-artifact checks are
+  source-digest mismatch or `Dirty inputs: yes`, not commit-hash equality after rebase/squash.
+  M45A is intentionally narrow and converts only the current pain points (`make false-sharing-study`
+  and `make numa-study`); a follow-up migration should convert perf, socket, allocator, storage,
+  and core benchmark artifacts after the schema is proven.
+- [2026-06-11] M45A verification in PR #115: `bash -n scripts/qsl_common.sh
+  scripts/run_false_sharing_study.sh scripts/numa_affinity_study.sh`, helper regressions for stable
+  output exclusion / dirty-input detection / external output paths, `make false-sharing-study`,
+  Docker `QSL_NUMA_ALLOW_CONSTRAINED=1 make numa-study`, `git diff --check`, and `make check`
+  204/204 passed. `make asan` was not rerun because this slice changed Bash/docs/results only.
+- [2026-06-11] M45A Codex review fix in PR #115: `qsl_source_digest` now uses a portable SHA-256
+  stdin helper (`sha256sum` first, `shasum -a 256` fallback) so Linux/coreutils containers without
+  Perl `shasum` can still generate provenance. Regenerated `results/false_sharing_study.txt` and
+  Docker `results/numa_affinity_study.txt` from the fixed source with `Dirty inputs: no`.
+  Verification re-ran shell syntax checks, helper regressions, `make false-sharing-study`, Docker
+  constrained `make numa-study`, `git diff --check`, and `make check` 204/204.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -418,8 +464,8 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M43 on `feat/m43-numa-awareness-study`: wait for PR #114 review/CI and address
-only M43-scoped feedback.
+Current action is M44 on `feat/m44-ingress-memory-ordering-false-sharing`: wait for PR #115
+review/CI and address only M44-scoped feedback.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
