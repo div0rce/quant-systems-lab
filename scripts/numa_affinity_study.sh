@@ -126,7 +126,6 @@ write_unsupported_artifact() {
         echo "context-switches captured: no"
         echo "cpu-migrations captured: no"
         echo "numactl topology available: no"
-        echo "Date:        $(qsl_utc_timestamp)"
         echo
         echo "Caveat: This host is not Linux, so no CPU-affinity, scheduler-migration, or NUMA evidence was collected."
     } >"$TMP_OUT"
@@ -319,7 +318,6 @@ fi
     echo "NUMA remote benchmark status: $NUMA_REMOTE_STATUS"
     echo "Unpinned perf status:      $PERF_UNPINNED_STATUS"
     echo "Pinned perf status:        $PERF_PINNED_STATUS"
-    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Caveat: CPU-affinity and NUMA measurements are host-specific systems evidence, not a production-latency or speedup claim."
     echo
