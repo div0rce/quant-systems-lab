@@ -21,20 +21,24 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M45 — Exchange-grade persistence prototype
-- **Status:** ◐ in progress. Scope: durability strategy beyond the current append-only lab log,
-  WAL analysis, and crash/recovery validation. No production-durability claims.
+- **Status:** ◐ implementation complete locally; PR not yet opened. Delivered: explicit event-log
+  durability modes + sync() group commit, torn-tail recovery classification and conservative
+  repair, `qsl-replay recover`/`append-loop` subcommands, `make crash-recovery` SIGKILL
+  validation harness with a clean-provenance artifact, and docs/persistence.md + ADR 0011. No
+  production-durability claims.
 - **Active branch:** `feat/m45-persistence-prototype`
 - **Last completed milestone:** M45B — Artifact provenance migration follow-up (squash-merged
   PR #116, commit b9ea27a), after M44 — Ingress queue memory-ordering and false-sharing study
   (squash-merged PR #115, commit cd05b37)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes, 204/204 as of the M45B merge (b9ea27a); not yet re-run on the M45
-  branch.
-- **Last action:** started M45 on `feat/m45-persistence-prototype` from updated `main` (b9ea27a).
-- **Next action:** characterize the existing event-log durability semantics (M7/M8 append path,
-  flush behavior, checksum/truncation handling), document the persistence failure model, then
-  prototype WAL/durability improvements with automated crash/recovery validation where feasible.
+- **`make check` passing:** yes, 214/214 on the M45 branch; `make asan` 214/214; `make
+  check-fixtures` and `make check-manifest` clean (replay-library changes did not alter export
+  bytes).
+- **Last action:** finished the M45 implementation slices (durability/recovery code + tests, crash
+  harness + artifact, persistence docs/ADR) and verified check/asan/fixtures/manifest.
+- **Next action:** run `/review`, then `/finish-milestone` to open the M45 PR
+  (`feat: prototype stronger persistence strategy`). Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -216,8 +220,8 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M45 just started on `feat/m45-persistence-prototype`; no implementation yet. Next step:
-  characterize current M7/M8 event-log durability semantics before writing any persistence code._
+- _M45 implementation is complete and verified locally (check 214/214, asan 214/214,
+  fixtures/manifest clean). Remaining: `/review`, then `/finish-milestone` to open the PR._
 
 
 ---
@@ -400,6 +404,44 @@ Lower priority:
   log, WAL analysis, and automated crash/recovery validation. Constraints: no production-durability
   claims; deterministic replay, integer-tick prices, and wall-clock-independent core remain
   invariants; M46 recovery benchmarking is out of scope here.
+- [2026-06-11] M45: `EventLogWriter` gains an explicit caller-chosen `DurabilityMode`
+  (`BufferedOnly` / `FlushOnAppend` / `FsyncOnAppend`) plus a `sync()` group-commit point; the
+  default `FlushOnAppend` preserves pre-M45 behavior so existing call sites are unchanged. Fsync
+  uses `F_FULLFSYNC` on macOS with `fsync` fallback, and `FsyncOnAppend` also fsyncs the parent
+  directory at open so a new log's directory entry is durable, not just its bytes.
+- [2026-06-11] M45: recovery classifies a log tail as `CleanTail` / `TornTail` / `Corrupt`
+  (`recover_log`, `recover_log_file`). `Truncated` is always torn (it can only occur at end of
+  buffer); `BadChecksum` is torn only when the failing frame ends exactly at end of file;
+  `PayloadTooLarge` headers are never trusted. `repair_log_file` truncates torn tails to the last
+  valid record boundary and fsyncs the truncation; it refuses `Corrupt` logs because truncating
+  mid-file damage would silently discard acknowledged records beyond it — a human decision, not
+  automation. The fsync-mode contract: an acknowledged append is never removed by tail repair
+  unless the storage stack lied.
+- [2026-06-11] M45: `qsl-replay` gains `recover <file> [--repair]` and
+  `append-loop <file> <buffered|flush|fsync> [max_records]` subcommands; argument parsing moved to
+  exception-free `from_chars` (fixing the previously unguarded `std::stoull` generate-seed parse,
+  the same bug class M42 review fixed in `qsl-export-stream`).
+- [2026-06-11] M45: added `make crash-recovery` / `scripts/crash_recovery_validation.sh`
+  (portable Linux/macOS): SIGKILLs live `append-loop` writers mid-stream per durability mode and
+  asserts recovered records ∈ [acked, acked+1] for flush/fsync, torn-tail repair to a clean
+  appendable log, and never-corrupt classification; the buffered trial demonstrates (without
+  asserting) acknowledged-data loss. Committed `results/crash_recovery_validation.txt` with
+  `Provenance version: 1` and `Dirty inputs: no`; the run showed buffered mode losing 88
+  acknowledged records under SIGKILL while all flush/fsync trials preserved every acknowledged
+  record. The artifact is explicitly process-kill evidence only: SIGKILL leaves the page cache
+  intact, so power-loss/OS-crash durability is exercised but not falsifiable and is not claimed.
+- [2026-06-11] M45: unit tests extend `test_event_log.cpp` with a truncation sweep at every byte
+  offset (exact valid-prefix recovery + classification), final-record vs mid-file checksum-damage
+  classification, untrusted-header corruption, repair semantics (torn repaired/appendable, corrupt
+  refused/untouched, clean no-op), durability-mode round trips, and missing-file recovery. 214/214
+  with `make check` and `make asan`.
+- [2026-06-11] M45: docs/persistence.md documents the buffering-layer ladder per mode, the
+  tail-classification/repair contract, the residual final-record-BadChecksum-vs-bit-rot ambiguity,
+  and a WAL analysis: the lab log is log-behind (gateway acks are not coupled to durability), and
+  closing that gap was deliberately rejected for M45 as a pipeline rearchitecture for a durability
+  property the simulator does not claim. ADR 0011 records the durability-mode and
+  repair-only-provably-torn decisions. M46 will measure full-replay recovery cost before any
+  segmentation/snapshot design.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -485,9 +527,10 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M45 on `feat/m45-persistence-prototype`: document persistence semantics and the
-failure model, prototype the WAL/durability strategy, and automate crash/recovery validation where
-feasible. M45B (PR #116, b9ea27a) is merged; the provenance schema is now the project-wide policy.
+Current action is M45 on `feat/m45-persistence-prototype`: implementation is complete and verified
+(durability modes, torn-tail recovery/repair, crash harness + artifact, persistence docs/ADR);
+run `/review` and `/finish-milestone` to open the PR. M45B (PR #116, b9ea27a) is merged; the
+provenance schema is now the project-wide policy.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
