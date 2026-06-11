@@ -6,9 +6,13 @@ OS:          Linux 6.12.76-linuxkit
 CPU:         Apple aarch64
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 Build type:  Release
-Git commit:  b3f316f
-Dirty tree:  no
-Artifact provenance: generated from the clean source commit above; output path excluded from dirty-tree check: results/numa_affinity_study.txt
+Provenance version: 1
+Git commit (informational): 0cd2357
+Source digest: sha256:705ddbafd16f51affcb24b3852b45f11deb6b042703cb37c8be2b3cd69fede78
+Source digest scope: numa-affinity-study
+Dirty inputs: no
+Generated output: results/numa_affinity_study.txt
+Date: 2026-06-11T14:34:16Z
 Benchmark binary: build/bench/qsl-bench
 Allowed CPUs: 0-7
 CPU chosen:  0
@@ -36,7 +40,6 @@ NUMA local benchmark status:  127
 NUMA remote benchmark status: 127
 Unpinned perf status:      127
 Pinned perf status:        127
-Date:        2026-06-09T02:53:53Z
 
 Caveat: CPU-affinity and NUMA measurements are host-specific systems evidence, not a production-latency or speedup claim.
 
@@ -47,18 +50,18 @@ Pinned command:
 taskset -c 0 build/bench/qsl-bench
 
 Unpinned benchmark output:
-order_book add/mod/cancel     200000 ops        100.3 ns/op        9974772 ops/sec
-protocol encode+decode        500000 ops         23.5 ns/op       42598357 ops/sec
-gateway session (fill)        200000 ops        147.2 ns/op        6791402 ops/sec
-matching engine flow            5004 items      138.6 ns/item      7215552 items/sec
-replay command log              5004 items      191.4 ns/item      5223495 items/sec
+order_book add/mod/cancel     200000 ops         83.8 ns/op       11931246 ops/sec
+protocol encode+decode        500000 ops         23.1 ns/op       43375638 ops/sec
+gateway session (fill)        200000 ops        149.7 ns/op        6678279 ops/sec
+matching engine flow            5004 items      112.5 ns/item      8890501 items/sec
+replay command log              5004 items      133.1 ns/item      7515865 items/sec
 
 Pinned benchmark output:
-order_book add/mod/cancel     200000 ops        100.6 ns/op        9944683 ops/sec
-protocol encode+decode        500000 ops         25.8 ns/op       38699690 ops/sec
-gateway session (fill)        200000 ops        157.8 ns/op        6335162 ops/sec
-matching engine flow            5004 items      136.5 ns/item      7325048 items/sec
-replay command log              5004 items      171.6 ns/item      5825929 items/sec
+order_book add/mod/cancel     200000 ops         82.1 ns/op       12179712 ops/sec
+protocol encode+decode        500000 ops         22.8 ns/op       43876488 ops/sec
+gateway session (fill)        200000 ops        130.5 ns/op        7661808 ops/sec
+matching engine flow            5004 items      108.0 ns/item      9256061 items/sec
+replay command log              5004 items      126.8 ns/item      7884014 items/sec
 
 NUMA local benchmark output:
 NUMA node-local/remote binding skipped: numactl topology unavailable
