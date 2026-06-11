@@ -355,6 +355,10 @@ Lower priority:
   hash when the generated output is excluded from the dirty-tree check, and repo policy now requires
   regenerating kept benchmark artifacts from post-squash `main` before treating them as final merged
   evidence.
+- [2026-06-11] M44 review follow-up: `results/false_sharing_study.txt` was regenerated from the
+  current PR head source commit with the source-tree hash recorded. Because a generated artifact
+  cannot contain the hash of the commit that will contain itself, the post-squash `main`
+  regeneration remains required before treating the result as final merged evidence.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
