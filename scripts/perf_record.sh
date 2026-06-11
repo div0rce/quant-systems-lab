@@ -30,6 +30,10 @@ PROVENANCE_INPUTS=(
     scripts/qsl_common.sh
 )
 
+perf_version_line() {
+    perf --version 2>&1 | head -1 || true
+}
+
 parse_sample_count_token() {
     local token="$1"
     awk -v raw="$token" '
@@ -83,7 +87,7 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
         echo "OS:            $(uname -s) $(uname -r)"
         echo "CPU:           $(qsl_cpu_model)"
         echo "Compiler:      $(qsl_build_compiler_version "$BUILD_DIR")"
-        echo "Perf:          $(perf --version)"
+        echo "Perf:          $(perf_version_line)"
         echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
         echo "Build type:    $(qsl_build_type "$BUILD_DIR")"
         qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
@@ -115,12 +119,12 @@ if [[ "$RECORD_STATUS" -eq 0 ]]; then
 fi
 
 NO_SAMPLES=no
-if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operation not permitted' "$RECORD_ERR" "$REPORT_OUT" "$REPORT_ERR"; then
+if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operation not permitted|perf not found for kernel|linux-tools' "$RECORD_ERR" "$REPORT_OUT" "$REPORT_ERR"; then
     NO_SAMPLES=yes
 fi
 
 PERF_LIMITATION=no
-if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operation not permitted|perf_event_open|not supported|Operation not supported' "$RECORD_ERR" "$REPORT_OUT" "$REPORT_ERR"; then
+if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operation not permitted|perf_event_open|not supported|Operation not supported|perf not found for kernel|linux-tools' "$RECORD_ERR" "$REPORT_OUT" "$REPORT_ERR"; then
     PERF_LIMITATION=yes
 fi
 
@@ -155,7 +159,7 @@ fi
     echo "OS:            $(uname -s) $(uname -r)"
     echo "CPU:           $(qsl_cpu_model)"
     echo "Compiler:      $(qsl_build_compiler_version "$BUILD_DIR")"
-    echo "Perf:          $(perf --version)"
+    echo "Perf:          $(perf_version_line)"
     echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
     echo "Build type:    $(qsl_build_type "$BUILD_DIR")"
     qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"

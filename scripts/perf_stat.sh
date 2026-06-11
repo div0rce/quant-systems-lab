@@ -25,6 +25,10 @@ PROVENANCE_INPUTS=(
     scripts/qsl_common.sh
 )
 
+perf_version_line() {
+    perf --version 2>&1 | head -1 || true
+}
+
 qsl_require_linux "scripts/perf_stat.sh" "perf"
 
 if ! command -v perf >/dev/null 2>&1; then
@@ -56,7 +60,7 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
         echo "OS:          $(uname -s) $(uname -r)"
         echo "CPU:         $(qsl_cpu_model)"
         echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
-        echo "Perf:        $(perf --version)"
+        echo "Perf:        $(perf_version_line)"
         echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
         echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
         qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
@@ -79,7 +83,7 @@ PERF_STATUS=0
 perf stat -e "$EVENTS" -- "$BIN" >"$PERF_BENCH_OUT" 2>"$PERF_OUT" || PERF_STATUS=$?
 
 UNSUPPORTED=no
-if grep -Eiq '<not supported>|not supported|No permission|not counted|Operation not permitted|Permission denied' "$PERF_OUT"; then
+if grep -Eiq '<not supported>|not supported|No permission|not counted|Operation not permitted|Permission denied|perf not found for kernel|linux-tools' "$PERF_OUT"; then
     UNSUPPORTED=yes
 fi
 
@@ -99,7 +103,7 @@ fi
     echo "OS:          $(uname -s) $(uname -r)"
     echo "CPU:         $(qsl_cpu_model)"
     echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
-    echo "Perf:        $(perf --version)"
+    echo "Perf:        $(perf_version_line)"
     echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
     echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
     qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
