@@ -100,6 +100,17 @@ qsl_git_commit_short() {
     git rev-parse --short HEAD
 }
 
+qsl_sha256_stdin() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum | awk '{ printf "sha256:%s\n", $1 }'
+    elif command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 | awk '{ printf "sha256:%s\n", $1 }'
+    else
+        echo "error: sha256sum or shasum is required for source digest metadata." >&2
+        return 127
+    fi
+}
+
 qsl_source_digest() {
     local scope="$1" output="$2" output_rel files rel blob
     shift 2
@@ -129,8 +140,7 @@ qsl_source_digest() {
             printf '%s  %s\n' "$blob" "$rel"
         done <<<"$files"
     } |
-        shasum -a 256 |
-        awk '{ printf "sha256:%s\n", $1 }'
+        qsl_sha256_stdin
 }
 
 qsl_dirty_inputs_status() {
