@@ -34,10 +34,12 @@ Do not rely on prior chat memory.
 - **`make check` passing:** yes, 214/214 on the M45 branch; `make asan` 214/214; `make
   check-fixtures` and `make check-manifest` clean (replay-library changes did not alter export
   bytes); `make crash-recovery` regenerated `results/crash_recovery_validation.txt` with
-  `Dirty inputs: no`.
-- **Last action:** fixed the review-found `append-loop` extra-argument handling, regenerated the
-  crash-recovery artifact from clean declared inputs, and verified the targeted CLI checks,
-  `test_event_log`, `git diff --check`, and `make check`.
+  `Dirty inputs: no`; CodeScene pre-commit safeguard passed.
+- **Last action:** fixed the CodeScene delta findings in PR #117 by splitting `qsl-replay` command
+  dispatch, deduplicating event-log file loading, simplifying the durability constructor condition,
+  and collapsing repetitive event-log test assertion blocks. Regenerated the crash-recovery
+  artifact from clean declared inputs and verified targeted CLI checks, `test_event_log`,
+  `git diff --check`, `make check`, and `make asan`.
 - **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
   Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -531,8 +533,9 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 Current action is M45 on `feat/m45-persistence-prototype`: PR #117 is open for review
 (`feat: prototype stronger persistence strategy`). Implementation is complete and verified
 (durability modes, torn-tail recovery/repair, crash harness + clean-provenance artifact,
-persistence docs/ADR, and the `append-loop` CLI review fix). Do not merge from automation. M45B
-(PR #116, b9ea27a) is merged; the provenance schema is now the project-wide policy.
+persistence docs/ADR, the `append-loop` CLI review fix, and the CodeScene delta cleanup). Do not
+merge from automation. M45B (PR #116, b9ea27a) is merged; the provenance schema is now the
+project-wide policy.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
