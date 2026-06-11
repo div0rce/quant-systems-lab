@@ -2,37 +2,46 @@ Command:     make perf-stat
 Artifact:    constrained-environment validation (partial; not full hardware PMU evidence)
 Hardware:    aarch64
 OS:          Linux 6.12.76-linuxkit
-CPU:         
-Compiler:    c++ (Debian 12.2.0-14+deb12u1) 12.2.0
-Perf:        perf version 6.1.174
+CPU:         Apple aarch64
+Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Perf:        WARNING: perf not found for kernel 6.12.76
 Perf paranoid: 2
 Build type:  Release
-Git commit:  6024b30
-Dirty tree:  no
+Provenance version: 1
+Git commit (informational): fc35787
+Source digest: sha256:1d4eb19cb39fb5c57a37e04eb77d017ce3474f6a3070d948702997a77cdc7ab6
+Source digest scope: perf-stat-benchmark
+Dirty inputs: no
+Generated output: results/perf_stat_linux.txt
+Date: 2026-06-11T15:15:25Z
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
 Dataset:     qsl-bench default synthetic benchmark suite
 Events:      cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches,page-faults
-Perf status: 255
+Perf status: 2
 Unsupported counters detected: yes
 Hardware counters supported: no
-Date:        2026-06-02T05:44:39Z
 
 Caveat: Linux perf counters are hardware/kernel/permission dependent.
 Partial artifacts document environment behavior only; they are not full PMU evidence.
 This is profiling evidence for investigation, not a production-latency claim.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops         68.6 ns/op       14566819 ops/sec
-protocol encode+decode        500000 ops         22.1 ns/op       45211873 ops/sec
-gateway session (fill)        200000 ops        115.9 ns/op        8625476 ops/sec
-matching engine flow            5004 items       98.8 ns/item     10119228 items/sec
-replay command log              5004 items      112.5 ns/item      8887606 items/sec
+order_book add/mod/cancel     200000 ops         81.4 ns/op       12283566 ops/sec
+protocol encode+decode        500000 ops         22.0 ns/op       45468153 ops/sec
+gateway session (fill)        200000 ops        128.7 ns/op        7768662 ops/sec
+matching engine flow            5004 items      126.0 ns/item      7935510 items/sec
+replay command log              5004 items      162.7 ns/item      6147373 items/sec
 
 Benchmark output under perf:
 
 perf stat output:
-Error:
-No permission to enable cycles event.
+WARNING: perf not found for kernel 6.12.76
 
+  You may need to install the following packages for this specific kernel:
+    linux-tools-6.12.76-linuxkit
+    linux-cloud-tools-6.12.76-linuxkit
 
+  You may also want to install one of the following packages to keep up to date:
+    linux-tools-linuxkit
+    linux-cloud-tools-linuxkit

@@ -3,13 +3,17 @@ Hardware:    arm64
 OS:          Darwin 25.2.0
 Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
 Build type:  Release
-Git commit:  f661cd9
-Dirty tree:  no (excluding this generated output)
+Provenance version: 1
+Git commit (informational): 2497d76
+Source digest: sha256:8f528a98a408e813ebecbb5eb3b2f0621039541e78cac27c9e2f34705446550f
+Source digest scope: pool-backed-storage-benchmark
+Dirty inputs: no
+Generated output: results/pool_backed_storage.txt
+Date: 2026-06-11T15:11:54Z
 Dataset:     deterministic generated engine flow (seed 42, 4 symbols, 5000 commands)
 Scenario:    baseline OrderBook storage vs PMR pooled node allocation vs intrusive OrderPool nodes
 Warmup:      one full engine replay per storage mode before timing
 Units:       throughput = ns/command + commands/sec
-Date:        2026-06-06T18:42:53Z
 
 Caveat: engine-level synthetic benchmark (single process, release build, no network/disk).
 M32 uses std::pmr::unsynchronized_pool_resource for list/map/unordered_map node allocation.
@@ -18,6 +22,6 @@ price and index maps remain standard containers. Hardware/compiler/build depende
 A neutral or negative result is acceptable and should not be reported as a speedup.
 
 Scenario / Metric / Result:
-engine flow baseline storage            5004 cmds       30 reps      158.3 ns/cmd      6318913 cmds/sec events=214650 resting=1110 last_seq=214650
-engine flow pooled pmr storage          5004 cmds       30 reps      125.3 ns/cmd      7980543 cmds/sec events=214650 resting=1110 last_seq=214650
-engine flow intrusive pool storage      5004 cmds       30 reps      293.9 ns/cmd      3403040 cmds/sec events=214650 resting=1110 last_seq=214650
+engine flow baseline storage            5004 cmds       30 reps      167.8 ns/cmd      5959784 cmds/sec events=214650 resting=1110 last_seq=214650
+engine flow pooled pmr storage          5004 cmds       30 reps      155.1 ns/cmd      6449285 cmds/sec events=214650 resting=1110 last_seq=214650
+engine flow intrusive pool storage      5004 cmds       30 reps      292.9 ns/cmd      3414279 cmds/sec events=214650 resting=1110 last_seq=214650

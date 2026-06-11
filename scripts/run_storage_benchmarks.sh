@@ -4,33 +4,42 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/qsl_common.sh
+source scripts/qsl_common.sh
 
 BIN="${QSL_BENCH_BIN:-build/bench/qsl-bench}"
 OUT="${QSL_STORAGE_BENCH_OUT:-results/pool_backed_storage.txt}"
+BUILD_DIR="$(dirname "$BIN")"
+PROVENANCE_SCOPE="pool-backed-storage-benchmark"
+PROVENANCE_INPUTS=(
+    Makefile
+    CMakeLists.txt
+    CMakePresets.json
+    cmake
+    include
+    src
+    apps/qsl-bench
+    benchmarks
+    scripts/run_storage_benchmarks.sh
+    scripts/qsl_common.sh
+)
 
 if [[ ! -x "$BIN" ]]; then
     echo "error: $BIN not found; build the benchmark preset first (make bench-storage)." >&2
     exit 1
 fi
 
-DIRTY=no
-if [[ -n "$(git status --porcelain -- . ":(exclude)$OUT")" ]]; then
-    DIRTY=yes
-fi
-
 {
     echo "Command:     make bench-storage"
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
-    echo "Compiler:    $(c++ --version | head -1)"
-    echo "Build type:  Release"
-    echo "Git commit:  $(git rev-parse --short HEAD)"
-    echo "Dirty tree:  $DIRTY (excluding this generated output)"
+    echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
+    echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
+    qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
     echo "Dataset:     deterministic generated engine flow (seed 42, 4 symbols, 5000 commands)"
     echo "Scenario:    baseline OrderBook storage vs PMR pooled node allocation vs intrusive OrderPool nodes"
     echo "Warmup:      one full engine replay per storage mode before timing"
     echo "Units:       throughput = ns/command + commands/sec"
-    echo "Date:        $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo
     echo "Caveat: engine-level synthetic benchmark (single process, release build, no network/disk)."
     echo "M32 uses std::pmr::unsynchronized_pool_resource for list/map/unordered_map node allocation."

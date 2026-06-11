@@ -140,7 +140,8 @@ Testing philosophy:
 Performance philosophy:
 
 - No performance claim exists until a committed script generates metadata-rich evidence.
-- Benchmark artifacts must record hardware/OS/compiler/build/commit/dirty-tree state.
+- Benchmark artifacts must record hardware/OS/compiler/build context and source-digest provenance;
+  `Git commit (informational)` is not the artifact identity after the M45A/M45B migration.
 - Negative, neutral, or constrained-environment results are acceptable when labeled honestly.
 - Do not infer production latency, HFT readiness, or general speedups from synthetic benchmarks.
 

@@ -3,20 +3,24 @@ Hardware:    arm64
 OS:          Darwin 25.2.0
 Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
 Build type:  Release
-Git commit:  7f7b6aa
-Dirty tree:  no
+Provenance version: 1
+Git commit (informational): 2497d76
+Source digest: sha256:037885748f5cff81e822865039db9ce662f7f5e52256d01ca7ba9933b70ebd16
+Source digest scope: core-benchmark-suite
+Dirty inputs: no
+Generated output: results/latest.txt
+Date: 2026-06-11T15:11:34Z
 Dataset:     synthetic order flow (replay::generate_flow, seed 42, 4 symbols)
 Warmup:      iters/10 (or 1 throughput pass) per benchmark, before timing
 Units:       latency = ns/op + ops/sec; throughput = ns/item + items/sec
-Date:        2026-06-06T18:43:11Z
 
 Caveat: single-process synthetic microbenchmarks (hot cache, no network, no disk,
 no kernel/IO path, stock allocator). NOT production exchange throughput or
 end-to-end latency; hardware/compiler/build dependent.
 
 Scenario / Metric / Result:
-order_book add/mod/cancel     200000 ops        117.6 ns/op        8504848 ops/sec
-protocol encode+decode        500000 ops         33.3 ns/op       30057862 ops/sec
-gateway session (fill)        200000 ops        287.8 ns/op        3474052 ops/sec
-matching engine flow            5004 items      151.3 ns/item      6609376 items/sec
-replay command log              5004 items      170.7 ns/item      5859070 items/sec
+order_book add/mod/cancel     200000 ops        111.2 ns/op        8992755 ops/sec
+protocol encode+decode        500000 ops         29.0 ns/op       34455729 ops/sec
+gateway session (fill)        200000 ops        323.3 ns/op        3093282 ops/sec
+matching engine flow            5004 items      164.6 ns/item      6074044 items/sec
+replay command log              5004 items      159.2 ns/item      6280005 items/sec

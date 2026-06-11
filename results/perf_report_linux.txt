@@ -2,13 +2,18 @@ Command:       make perf-record
 Artifact:      constrained-environment validation (partial; no clean sample report)
 Hardware:      aarch64
 OS:            Linux 6.12.76-linuxkit
-CPU:           
-Compiler:      c++ (Debian 12.2.0-14+deb12u1) 12.2.0
-Perf:          perf version 6.1.174
+CPU:           Apple aarch64
+Compiler:      c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Perf:          WARNING: perf not found for kernel 6.12.76
 Perf paranoid: 2
 Build type:    Release
-Git commit:    6024b30
-Dirty tree:    no
+Provenance version: 1
+Git commit (informational): fc35787
+Source digest: sha256:4b3fec34f4210fca865b3f4b404bb457de9eeb554528c913a06c90158081fd22
+Source digest scope: perf-record-benchmark
+Dirty inputs: no
+Generated output: results/perf_report_linux.txt
+Date: 2026-06-11T15:15:25Z
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
 Dataset:       qsl-bench default synthetic benchmark suite
@@ -18,33 +23,35 @@ Sample count:  0
 Minimum samples for hot profile: 100
 Insufficient samples: no
 Report limit:  1%
-Record status: 255
+Record status: 2
 Report status: 0
 No samples:    yes
 Perf access limitation: yes
 Perf data:     build/perf/qsl-bench.perf.data (generated, not intended for commit)
-Date:          2026-06-02T05:44:40Z
 
 Caveat: this is constrained/partial perf-record validation, not hot-symbol
 evidence. Treat symbol ordering as unusable until sampling succeeds and
 Sample count meets Minimum samples for hot profile.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops         62.1 ns/op       16097821 ops/sec
-protocol encode+decode        500000 ops         22.2 ns/op       44978016 ops/sec
-gateway session (fill)        200000 ops        115.1 ns/op        8684340 ops/sec
-matching engine flow            5004 items       81.7 ns/item     12238646 items/sec
-replay command log              5004 items      109.0 ns/item      9174041 items/sec
+order_book add/mod/cancel     200000 ops         84.0 ns/op       11900983 ops/sec
+protocol encode+decode        500000 ops         23.6 ns/op       42408821 ops/sec
+gateway session (fill)        200000 ops        135.1 ns/op        7402712 ops/sec
+matching engine flow            5004 items      109.7 ns/item      9111642 items/sec
+replay command log              5004 items      143.3 ns/item      6979850 items/sec
 
 Benchmark output under perf:
 
 perf record stderr:
-perf_event_open(..., PERF_FLAG_FD_CLOEXEC) failed with unexpected error 1 (Operation not permitted)
-perf_event_open(..., 0) failed unexpectedly with error 1 (Operation not permitted)
-Error:
-No permission to enable cpu-clock event.
+WARNING: perf not found for kernel 6.12.76
 
+  You may need to install the following packages for this specific kernel:
+    linux-tools-6.12.76-linuxkit
+    linux-cloud-tools-6.12.76-linuxkit
 
+  You may also want to install one of the following packages to keep up to date:
+    linux-tools-linuxkit
+    linux-cloud-tools-linuxkit
 
 perf report stderr:
 

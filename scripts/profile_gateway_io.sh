@@ -27,6 +27,20 @@ CLIENT="${QSL_CLIENT_BIN:-build/dev/qsl-client}"
 OUT="${QSL_SOCKET_PROFILE_OUT:-results/socket_profile_loopback.txt}"
 PORT="${QSL_PROFILE_PORT:-39200}"
 CONNECTIONS="${QSL_PROFILE_CONNECTIONS:-500}"
+BUILD_DIR="$(dirname "$GATEWAY")"
+PROVENANCE_SCOPE="gateway-io-profile"
+PROVENANCE_INPUTS=(
+    Makefile
+    CMakeLists.txt
+    CMakePresets.json
+    cmake
+    include
+    src
+    apps/qsl-gateway
+    apps/qsl-client
+    scripts/profile_gateway_io.sh
+    scripts/qsl_common.sh
+)
 
 qsl_require_linux "scripts/profile_gateway_io.sh" "procfs + strace"
 if ! command -v strace >/dev/null 2>&1; then
@@ -39,7 +53,6 @@ if [[ ! -x "$GATEWAY" || ! -x "$CLIENT" ]]; then
 fi
 
 mkdir -p "$(dirname "$OUT")"
-DIRTY="$(qsl_dirty_tree_status results/socket_profile_loopback.txt results/socket_stress_summary.txt "$OUT")"
 
 RUSAGE_OUT="$(mktemp)"
 STRACE_OUT="$(mktemp)"
@@ -188,15 +201,13 @@ fi
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
     echo "CPU:         $(qsl_cpu_model)"
-    echo "Compiler:    $(qsl_compiler_version)"
-    echo "Build type:  $(qsl_build_type)"
+    echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
+    echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
     echo "strace:      $(strace -V 2>&1 | head -1)"
     echo "CLK_TCK:     $CLK"
-    echo "Git commit:  $(qsl_git_commit_short)"
-    echo "Dirty tree:  $DIRTY"
+    qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
     echo "Transport:   TCP over 127.0.0.1 (loopback), portable threaded TcpServer"
     echo "Load:        $CONNECTIONS sequential client round trips (NewOrder + Heartbeat each)"
-    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "== Pass 1: gateway rusage from procfs (user vs system CPU, ctx switches, page faults) =="
     echo "User (engine-side) vs System (kernel/socket) CPU time splits user-space matching work"

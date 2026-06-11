@@ -3,18 +3,22 @@ Hardware:    arm64
 OS:          Darwin 25.2.0
 Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
 Build type:  Release
-Git commit:  9f65ddb
-Dirty tree:  no
+Provenance version: 1
+Git commit (informational): 2497d76
+Source digest: sha256:553945b4eb6eb45141d1859c34d5b9d719546a54911b75611aef1cc9aadb7ac0
+Source digest scope: differential-benchmark-suite
+Dirty inputs: no
+Generated output: results/differential.txt
+Date: 2026-06-11T15:11:42Z
 Dataset:     property command streams (generate_property_flow, 3 symbols, 120 orders)
 Warmup:      iters/10 (or 1 throughput pass) per benchmark, before timing
 Units:       latency = ns/op + ops/sec; throughput = ns/item + items/sec
-Date:        2026-05-31T04:17:23Z
 
 Caveat: single-process synthetic microbenchmarks (hot cache, no network/disk). These
 measure the differential-testing harness (generation, gateway replay, shrinking), not
 production throughput; hardware/compiler/build dependent.
 
 Scenario / Metric / Result:
-property flow generation         123 items       58.0 ns/item     17242491 items/sec
-differential gateway replay       123 items       60.3 ns/item     16572632 items/sec
-shrink property flow             300 ops      30450.6 ns/op          32840 ops/sec
+property flow generation         123 items       57.9 ns/item     17262649 items/sec
+differential gateway replay       123 items       67.6 ns/item     14785129 items/sec
+shrink property flow             300 ops      41501.4 ns/op          24096 ops/sec
