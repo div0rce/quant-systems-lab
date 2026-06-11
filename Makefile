@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record numa-study false-sharing-study profile-io socket-stress socket-load concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage perf-stat perf-record numa-study false-sharing-study profile-io socket-stress socket-load crash-recovery concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -83,6 +83,12 @@ profile-io:
 # M30: UDP burst/gap + receive-socket-buffer experiment over loopback. Portable (Linux/macOS).
 socket-stress: build
 	bash scripts/socket_stress.sh
+
+# M45: SIGKILL crash / torn-tail recovery validation for the event log. Portable (Linux/macOS).
+crash-recovery:
+	cmake --preset dev
+	cmake --build --preset dev --target qsl-replay
+	bash scripts/crash_recovery_validation.sh
 
 # M35: multi-client TCP connection-scaling load (blocking vs epoll gateway). Linux-only.
 socket-load:

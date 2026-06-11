@@ -355,6 +355,7 @@ Keep this synchronized with the Makefile.
 - `make tsan` — build/run ThreadSanitizer concurrency tests
 - `make concurrency-stress` — opt-in repeated concurrency validation loop
 - `make socket-stress` — UDP socket-buffer / burst-loss experiment
+- `make crash-recovery` — SIGKILL crash / torn-tail recovery validation for the event log
 - `make demo` — run local replay + TCP gateway demo
 - `make check-fixtures` — regenerate and verify differential fixtures
 - `make check-manifest` — verify fixture provenance manifest
