@@ -54,6 +54,13 @@ bool sync_parent_directory(const std::filesystem::path &path) noexcept {
     return ok;
 }
 
+bool sync_parent_directory_if_needed(const std::filesystem::path &path, DurabilityMode mode) {
+    if (mode != DurabilityMode::FsyncOnAppend) {
+        return true;
+    }
+    return sync_parent_directory(path);
+}
+
 } // namespace
 
 bool encode_record(const LogRecord &record, std::vector<std::byte> &out) {
@@ -124,6 +131,31 @@ LogReadResult read_log(std::span<const std::byte> bytes) {
 
 namespace {
 
+struct FileBytesRead {
+    LogError error;
+    std::vector<std::byte> bytes;
+};
+
+FileBytesRead read_file_bytes(const std::filesystem::path &path) {
+    std::vector<std::byte> buf;
+    FilePtr file(std::fopen(path.string().c_str(), "rb"));
+    if (!file) {
+        return {LogError::OpenFailed, {}};
+    }
+    while (true) {
+        std::byte chunk[4096];
+        const std::size_t got = std::fread(chunk, 1, sizeof(chunk), file.get());
+        buf.insert(buf.end(), chunk, chunk + got);
+        if (got < sizeof(chunk)) {
+            if (std::ferror(file.get()) != 0) {
+                return {LogError::OpenFailed, {}};
+            }
+            break;
+        }
+    }
+    return {LogError::None, std::move(buf)};
+}
+
 // A BadChecksum record still has complete framing, so its total size is known; the failure
 // is "torn" only when that frame is the final thing in the buffer.
 bool checksum_failure_confined_to_tail(std::span<const std::byte> bytes, std::size_t offset) {
@@ -177,23 +209,11 @@ LogRecovery recover_log(std::span<const std::byte> bytes) {
 }
 
 LogRecovery recover_log_file(const std::filesystem::path &path) {
-    std::vector<std::byte> buf;
-    FilePtr file(std::fopen(path.string().c_str(), "rb"));
-    if (!file) {
-        return {LogError::OpenFailed, TailState::Corrupt, LogError::None, {}, 0};
+    FileBytesRead read = read_file_bytes(path);
+    if (read.error != LogError::None) {
+        return {read.error, TailState::Corrupt, LogError::None, {}, 0};
     }
-    while (true) {
-        std::byte chunk[4096];
-        const std::size_t got = std::fread(chunk, 1, sizeof(chunk), file.get());
-        buf.insert(buf.end(), chunk, chunk + got);
-        if (got < sizeof(chunk)) {
-            if (std::ferror(file.get()) != 0) {
-                return {LogError::OpenFailed, TailState::Corrupt, LogError::None, {}, 0};
-            }
-            break;
-        }
-    }
-    return recover_log(buf);
+    return recover_log(read.bytes);
 }
 
 bool repair_log_file(const std::filesystem::path &path, const LogRecovery &recovery) {
@@ -223,7 +243,10 @@ void FileCloser::operator()(std::FILE *file) const noexcept {
 EventLogWriter::EventLogWriter(const std::filesystem::path &path, DurabilityMode mode)
     : file_(std::fopen(path.string().c_str(), "ab")), mode_(mode) {
     // Durability of a newly created log includes its directory entry, not just its bytes.
-    if (file_ && mode_ == DurabilityMode::FsyncOnAppend && !sync_parent_directory(path)) {
+    if (!file_) {
+        return;
+    }
+    if (!sync_parent_directory_if_needed(path, mode_)) {
         file_.reset();
     }
 }
@@ -262,24 +285,11 @@ bool EventLogWriter::sync() {
 EventLogReader::EventLogReader(std::filesystem::path path) : path_(std::move(path)) {}
 
 LogReadResult EventLogReader::read_all() const {
-    std::vector<std::byte> buf;
-    FilePtr file(std::fopen(path_.string().c_str(), "rb"));
-    if (!file) {
+    FileBytesRead read = read_file_bytes(path_);
+    if (read.error != LogError::None) {
         return {{}, LogError::OpenFailed};
     }
-
-    while (true) {
-        std::byte chunk[4096];
-        const std::size_t got = std::fread(chunk, 1, sizeof(chunk), file.get());
-        buf.insert(buf.end(), chunk, chunk + got);
-        if (got < sizeof(chunk)) {
-            if (std::ferror(file.get()) != 0) {
-                return {{}, LogError::OpenFailed};
-            }
-            break;
-        }
-    }
-    return read_log(buf);
+    return read_log(read.bytes);
 }
 
 } // namespace qsl::replay

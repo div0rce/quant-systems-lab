@@ -27,6 +27,61 @@ std::vector<std::byte> bytes_of(std::initializer_list<std::uint8_t> values) {
 
 const LogRecord kR1{1, RecordType::CommandRecord, 10, bytes_of({1, 2, 3})};
 const LogRecord kR2{2, RecordType::EventRecord, 11, bytes_of({4, 5})};
+
+std::vector<LogRecord> records_of(std::initializer_list<LogRecord> records) {
+    return {records};
+}
+
+void expect_record_read(const RecordRead &read, const LogRecord &record, std::size_t next_offset) {
+    REQUIRE(read.error == LogError::None);
+    REQUIRE(read.record == record);
+    REQUIRE(read.next_offset == next_offset);
+}
+
+std::size_t encoded_size(const LogRecord &record) {
+    std::vector<std::byte> buf;
+    REQUIRE(encode_record(record, buf));
+    return buf.size();
+}
+
+void expect_log_read(const LogReadResult &result, LogError error,
+                     std::initializer_list<LogRecord> records) {
+    REQUIRE(result.error == error);
+    REQUIRE(result.records == records_of(records));
+}
+
+void expect_file_records(const std::filesystem::path &path,
+                         std::initializer_list<LogRecord> records) {
+    expect_log_read(EventLogReader(path).read_all(), LogError::None, records);
+}
+
+struct RecoverySummary {
+    LogError error;
+    TailState tail;
+    LogError tail_error;
+    std::size_t record_count;
+    std::size_t valid_bytes;
+
+    bool operator==(const RecoverySummary &) const = default;
+};
+
+RecoverySummary summarize(const LogRecovery &recovery) {
+    return {recovery.error, recovery.tail, recovery.tail_error, recovery.records.size(),
+            recovery.valid_bytes};
+}
+
+void expect_recovery(const LogRecovery &recovery, const RecoverySummary &summary,
+                     std::initializer_list<LogRecord> records) {
+    REQUIRE(summarize(recovery) == summary);
+    REQUIRE(recovery.records == records_of(records));
+}
+
+void write_raw_file(const std::filesystem::path &path, std::span<const std::byte> bytes) {
+    std::FILE *file = std::fopen(path.string().c_str(), "wb");
+    REQUIRE(file != nullptr);
+    REQUIRE(std::fwrite(bytes.data(), 1, bytes.size(), file) == bytes.size());
+    REQUIRE(std::fclose(file) == 0);
+}
 } // namespace
 
 TEST_CASE("a record round-trips through the byte codec", "[log]") {
@@ -35,9 +90,7 @@ TEST_CASE("a record round-trips through the byte codec", "[log]") {
     REQUIRE(encode_record(rec, buf));
 
     const auto rr = decode_record(buf, 0);
-    REQUIRE(rr.error == LogError::None);
-    REQUIRE(rr.record == rec);
-    REQUIRE(rr.next_offset == buf.size());
+    expect_record_read(rr, rec, buf.size());
 }
 
 TEST_CASE("read_log reconstructs multiple appended records", "[log]") {
@@ -45,11 +98,7 @@ TEST_CASE("read_log reconstructs multiple appended records", "[log]") {
     REQUIRE(encode_record(kR1, buf));
     REQUIRE(encode_record(kR2, buf));
 
-    const auto result = read_log(buf);
-    REQUIRE(result.error == LogError::None);
-    REQUIRE(result.records.size() == 2);
-    REQUIRE(result.records[0] == kR1);
-    REQUIRE(result.records[1] == kR2);
+    expect_log_read(read_log(buf), LogError::None, {kR1, kR2});
 }
 
 TEST_CASE("records round-trip through an append-only file", "[log]") {
@@ -61,12 +110,7 @@ TEST_CASE("records round-trip through an append-only file", "[log]") {
         REQUIRE(writer.append(kR1));
         REQUIRE(writer.append(kR2));
     }
-    const EventLogReader reader(path);
-    const auto result = reader.read_all();
-    REQUIRE(result.error == LogError::None);
-    REQUIRE(result.records.size() == 2);
-    REQUIRE(result.records[0] == kR1);
-    REQUIRE(result.records[1] == kR2);
+    expect_file_records(path, {kR1, kR2});
     std::filesystem::remove(path);
 }
 
@@ -74,9 +118,7 @@ TEST_CASE("missing log paths report open failure", "[log]") {
     const auto path = std::filesystem::temp_directory_path() / "qsl_eventlog_missing.bin";
     std::filesystem::remove(path);
 
-    const auto result = EventLogReader(path).read_all();
-    REQUIRE(result.error == LogError::OpenFailed);
-    REQUIRE(result.records.empty());
+    expect_log_read(EventLogReader(path).read_all(), LogError::OpenFailed, {});
 }
 
 TEST_CASE("an existing empty log reads cleanly as zero records", "[log]") {
@@ -87,9 +129,7 @@ TEST_CASE("an existing empty log reads cleanly as zero records", "[log]") {
         REQUIRE(writer.good());
     }
 
-    const auto result = EventLogReader(path).read_all();
-    REQUIRE(result.error == LogError::None);
-    REQUIRE(result.records.empty());
+    expect_file_records(path, {});
     std::filesystem::remove(path);
 }
 
@@ -99,10 +139,7 @@ TEST_CASE("a truncated log fails safely, keeping intact records", "[log]") {
     REQUIRE(encode_record(kR2, buf));
     buf.resize(buf.size() - 1); // chop the last byte of the second record
 
-    const auto result = read_log(buf);
-    REQUIRE(result.error == LogError::Truncated);
-    REQUIRE(result.records.size() == 1);
-    REQUIRE(result.records[0] == kR1);
+    expect_log_read(read_log(buf), LogError::Truncated, {kR1});
 }
 
 TEST_CASE("a corrupted payload fails the checksum", "[log]") {
@@ -111,9 +148,7 @@ TEST_CASE("a corrupted payload fails the checksum", "[log]") {
     const auto orig = std::to_integer<std::uint8_t>(buf[kRecordHeaderSize]);
     buf[kRecordHeaderSize] = static_cast<std::byte>(static_cast<std::uint8_t>(orig ^ 0xFF));
 
-    const auto result = read_log(buf);
-    REQUIRE(result.error == LogError::BadChecksum);
-    REQUIRE(result.records.empty());
+    expect_log_read(read_log(buf), LogError::BadChecksum, {});
 }
 
 TEST_CASE("appending is append-only: prior records are unchanged", "[log]") {
@@ -127,10 +162,7 @@ TEST_CASE("appending is append-only: prior records are unchanged", "[log]") {
         EventLogWriter writer(path); // reopen -> append, must not rewrite kR1
         REQUIRE(writer.append(kR2));
     }
-    const auto result = EventLogReader(path).read_all();
-    REQUIRE(result.records.size() == 2);
-    REQUIRE(result.records[0] == kR1);
-    REQUIRE(result.records[1] == kR2);
+    expect_file_records(path, {kR1, kR2});
     std::filesystem::remove(path);
 }
 
@@ -146,10 +178,7 @@ TEST_CASE("writer rejects oversized payload without appending", "[log]") {
                             std::vector<std::byte>(kMaxPayload + 1)};
         REQUIRE_FALSE(writer.append(oversized));
     }
-    const auto result = EventLogReader(path).read_all();
-    REQUIRE(result.error == LogError::None);
-    REQUIRE(result.records.size() == 1);
-    REQUIRE(result.records[0] == kR1);
+    expect_file_records(path, {kR1});
     std::filesystem::remove(path);
 }
 
@@ -183,9 +212,7 @@ TEST_CASE("declared oversized payload decodes as PayloadTooLarge", "[log]") {
     qsl::protocol::store_be<std::uint64_t>(buf.data() + 10, 10);
     qsl::protocol::store_be<std::uint32_t>(buf.data() + 18, kMaxPayload + 1);
 
-    const auto result = read_log(buf);
-    REQUIRE(result.error == LogError::PayloadTooLarge);
-    REQUIRE(result.records.empty());
+    expect_log_read(read_log(buf), LogError::PayloadTooLarge, {});
 }
 
 TEST_CASE("header corruption fails the checksum", "[log]") {
@@ -194,9 +221,7 @@ TEST_CASE("header corruption fails the checksum", "[log]") {
     const auto orig = std::to_integer<std::uint8_t>(buf[0]);
     buf[0] = static_cast<std::byte>(static_cast<std::uint8_t>(orig ^ 0x01));
 
-    const auto result = read_log(buf);
-    REQUIRE(result.error == LogError::BadChecksum);
-    REQUIRE(result.records.empty());
+    expect_log_read(read_log(buf), LogError::BadChecksum, {});
 }
 
 TEST_CASE("decode_record rejects offsets beyond the buffer", "[log]") {
@@ -220,11 +245,7 @@ TEST_CASE("every durability mode produces an identical readable log", "[log]") {
             REQUIRE(writer.append(kR2));
             REQUIRE(writer.sync()); // explicit group-commit point works in every mode
         }
-        const auto result = EventLogReader(path).read_all();
-        REQUIRE(result.error == LogError::None);
-        REQUIRE(result.records.size() == 2);
-        REQUIRE(result.records[0] == kR1);
-        REQUIRE(result.records[1] == kR2);
+        expect_file_records(path, {kR1, kR2});
         std::filesystem::remove(path);
     }
 }
@@ -234,12 +255,9 @@ TEST_CASE("recover_log classifies a boundary-aligned log as clean", "[log][recov
     REQUIRE(encode_record(kR1, buf));
     REQUIRE(encode_record(kR2, buf));
 
-    const auto recovery = recover_log(buf);
-    REQUIRE(recovery.error == LogError::None);
-    REQUIRE(recovery.tail == TailState::CleanTail);
-    REQUIRE(recovery.tail_error == LogError::None);
-    REQUIRE(recovery.records.size() == 2);
-    REQUIRE(recovery.valid_bytes == buf.size());
+    expect_recovery(recover_log(buf),
+                    {LogError::None, TailState::CleanTail, LogError::None, 2, buf.size()},
+                    {kR1, kR2});
 }
 
 TEST_CASE("recovery of a log cut at every byte yields the exact valid prefix", "[log][recovery]") {
@@ -264,13 +282,14 @@ TEST_CASE("recovery of a log cut at every byte yields the exact valid prefix", "
                 whole_records = i; // boundaries[0] == 0 -> zero whole records
             }
         }
-        REQUIRE(recovery.records.size() == whole_records);
-        REQUIRE(recovery.valid_bytes == last_boundary);
         if (cut == last_boundary) {
-            REQUIRE(recovery.tail == TailState::CleanTail);
+            REQUIRE(summarize(recovery) == RecoverySummary{LogError::None, TailState::CleanTail,
+                                                           LogError::None, whole_records,
+                                                           last_boundary});
         } else {
-            REQUIRE(recovery.tail == TailState::TornTail);
-            REQUIRE(recovery.tail_error == LogError::Truncated);
+            REQUIRE(summarize(recovery) == RecoverySummary{LogError::None, TailState::TornTail,
+                                                           LogError::Truncated, whole_records,
+                                                           last_boundary});
         }
     }
 }
@@ -284,12 +303,9 @@ TEST_CASE("a checksum failure confined to the final record is a torn tail", "[lo
     buf[second_start + kRecordHeaderSize] =
         static_cast<std::byte>(static_cast<std::uint8_t>(orig ^ 0xFF));
 
-    const auto recovery = recover_log(buf);
-    REQUIRE(recovery.tail == TailState::TornTail);
-    REQUIRE(recovery.tail_error == LogError::BadChecksum);
-    REQUIRE(recovery.records.size() == 1);
-    REQUIRE(recovery.records[0] == kR1);
-    REQUIRE(recovery.valid_bytes == second_start);
+    expect_recovery(recover_log(buf),
+                    {LogError::None, TailState::TornTail, LogError::BadChecksum, 1, second_start},
+                    {kR1});
 }
 
 TEST_CASE("a checksum failure followed by more records is corruption", "[log][recovery]") {
@@ -302,10 +318,9 @@ TEST_CASE("a checksum failure followed by more records is corruption", "[log][re
     buf[second_start + kRecordHeaderSize] =
         static_cast<std::byte>(static_cast<std::uint8_t>(orig ^ 0xFF));
 
-    const auto recovery = recover_log(buf);
-    REQUIRE(recovery.tail == TailState::Corrupt);
-    REQUIRE(recovery.tail_error == LogError::BadChecksum);
-    REQUIRE(recovery.records.size() == 1);
+    expect_recovery(recover_log(buf),
+                    {LogError::None, TailState::Corrupt, LogError::BadChecksum, 1, second_start},
+                    {kR1});
 }
 
 TEST_CASE("an untrustworthy header is corruption, not a torn tail", "[log][recovery]") {
@@ -319,15 +334,14 @@ TEST_CASE("an untrustworthy header is corruption, not a torn tail", "[log][recov
     qsl::protocol::store_be<std::uint64_t>(buf.data() + bad_start + 10, 11);
     qsl::protocol::store_be<std::uint32_t>(buf.data() + bad_start + 18, kMaxPayload + 1);
 
-    const auto recovery = recover_log(buf);
-    REQUIRE(recovery.tail == TailState::Corrupt);
-    REQUIRE(recovery.tail_error == LogError::PayloadTooLarge);
-    REQUIRE(recovery.records.size() == 1);
-    REQUIRE(recovery.valid_bytes == bad_start);
+    expect_recovery(recover_log(buf),
+                    {LogError::None, TailState::Corrupt, LogError::PayloadTooLarge, 1, bad_start},
+                    {kR1});
 }
 
 TEST_CASE("repair truncates a torn tail and the log accepts appends again", "[log][recovery]") {
     const auto path = std::filesystem::temp_directory_path() / "qsl_eventlog_repair.bin";
+    const std::size_t first_record_size = encoded_size(kR1);
     std::filesystem::remove(path);
     {
         EventLogWriter writer(path, DurabilityMode::FsyncOnAppend);
@@ -339,23 +353,21 @@ TEST_CASE("repair truncates a torn tail and the log accepts appends again", "[lo
     std::filesystem::resize_file(path, torn_size);
 
     const auto recovery = recover_log_file(path);
-    REQUIRE(recovery.tail == TailState::TornTail);
-    REQUIRE(recovery.records.size() == 1);
+    expect_recovery(
+        recovery, {LogError::None, TailState::TornTail, LogError::Truncated, 1, first_record_size},
+        {kR1});
     REQUIRE(repair_log_file(path, recovery));
 
     const auto repaired = recover_log_file(path);
-    REQUIRE(repaired.tail == TailState::CleanTail);
-    REQUIRE(repaired.records.size() == 1);
-    REQUIRE(repaired.records[0] == kR1);
+    expect_recovery(repaired,
+                    {LogError::None, TailState::CleanTail, LogError::None, 1, recovery.valid_bytes},
+                    {kR1});
 
     {
         EventLogWriter writer(path, DurabilityMode::FsyncOnAppend);
         REQUIRE(writer.append(kR2));
     }
-    const auto result = EventLogReader(path).read_all();
-    REQUIRE(result.error == LogError::None);
-    REQUIRE(result.records.size() == 2);
-    REQUIRE(result.records[1] == kR2);
+    expect_file_records(path, {kR1, kR2});
     std::filesystem::remove(path);
 }
 
@@ -370,15 +382,12 @@ TEST_CASE("repair refuses a corrupt log and leaves it untouched", "[log][recover
     const auto orig = std::to_integer<std::uint8_t>(buf[second_start + kRecordHeaderSize]);
     buf[second_start + kRecordHeaderSize] =
         static_cast<std::byte>(static_cast<std::uint8_t>(orig ^ 0xFF));
-    {
-        std::FILE *file = std::fopen(path.string().c_str(), "wb");
-        REQUIRE(file != nullptr);
-        REQUIRE(std::fwrite(buf.data(), 1, buf.size(), file) == buf.size());
-        REQUIRE(std::fclose(file) == 0);
-    }
+    write_raw_file(path, buf);
 
     const auto recovery = recover_log_file(path);
-    REQUIRE(recovery.tail == TailState::Corrupt);
+    expect_recovery(recovery,
+                    {LogError::None, TailState::Corrupt, LogError::BadChecksum, 1, second_start},
+                    {kR1});
     REQUIRE_FALSE(repair_log_file(path, recovery));
     REQUIRE(std::filesystem::file_size(path) == buf.size());
     std::filesystem::remove(path);
@@ -393,7 +402,8 @@ TEST_CASE("repair of a clean log is a no-op", "[log][recovery]") {
     }
     const auto before = std::filesystem::file_size(path);
     const auto recovery = recover_log_file(path);
-    REQUIRE(recovery.tail == TailState::CleanTail);
+    expect_recovery(recovery, {LogError::None, TailState::CleanTail, LogError::None, 1, before},
+                    {kR1});
     REQUIRE(repair_log_file(path, recovery));
     REQUIRE(std::filesystem::file_size(path) == before);
     std::filesystem::remove(path);
@@ -404,8 +414,7 @@ TEST_CASE("recovery of a missing log reports open failure", "[log][recovery]") {
     std::filesystem::remove(path);
 
     const auto recovery = recover_log_file(path);
-    REQUIRE(recovery.error == LogError::OpenFailed);
-    REQUIRE(recovery.records.empty());
+    expect_recovery(recovery, {LogError::OpenFailed, TailState::Corrupt, LogError::None, 0, 0}, {});
     REQUIRE_FALSE(repair_log_file(path, recovery));
 }
 

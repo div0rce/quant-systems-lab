@@ -75,6 +75,23 @@ std::optional<qsl::replay::DurabilityMode> parse_mode(std::string_view value) {
     return std::nullopt;
 }
 
+bool is_command(int argc, char **argv, std::string_view name) {
+    if (argc <= 1) {
+        return false;
+    }
+    return std::string_view(argv[1]) == name;
+}
+
+int usage_error() {
+    std::cerr << kUsage;
+    return 2;
+}
+
+int unsigned_arg_error(std::string_view name, const char *value) {
+    std::cerr << name << " must be an unsigned integer: " << value << "\n" << kUsage;
+    return 2;
+}
+
 int generate(const std::string &path, std::uint64_t seed) {
     const auto flow = qsl::replay::generate_flow(seed, /*symbols=*/4, /*orders=*/500);
     qsl::replay::EventLogWriter writer{path};
@@ -93,6 +110,18 @@ int generate(const std::string &path, std::uint64_t seed) {
     }
     std::cout << "wrote " << flow.size() << " command records to " << path << "\n";
     return 0;
+}
+
+int run_generate_command(int argc, char **argv) {
+    std::uint64_t seed = 42;
+    if (argc >= 4) {
+        const auto parsed = parse_u64(argv[3]);
+        if (!parsed) {
+            return unsigned_arg_error("seed", argv[3]);
+        }
+        seed = *parsed;
+    }
+    return generate(std::string(argv[2]), seed);
 }
 
 // Crash-recovery inspection: report the longest valid prefix and the tail classification,
@@ -127,6 +156,27 @@ int recover(const std::string &path, bool repair) {
     return 0;
 }
 
+std::optional<bool> parse_repair_arg(int argc, char **argv) {
+    if (argc == 3) {
+        return false;
+    }
+    if (argc != 4) {
+        return std::nullopt;
+    }
+    if (std::string_view(argv[3]) != "--repair") {
+        return std::nullopt;
+    }
+    return true;
+}
+
+int run_recover_command(int argc, char **argv) {
+    const auto repair = parse_repair_arg(argc, argv);
+    if (!repair) {
+        return usage_error();
+    }
+    return recover(std::string(argv[2]), *repair);
+}
+
 // Append deterministic records until killed (or until max_records when nonzero), printing an
 // `ack <seq>` line after each append the writer reported as complete. A crash harness can
 // SIGKILL this process mid-stream and compare the acknowledged count against what recovery
@@ -152,6 +202,26 @@ int append_loop(const std::string &path, qsl::replay::DurabilityMode mode,
     return 0;
 }
 
+int run_append_loop_command(int argc, char **argv) {
+    if (argc > 5) {
+        return usage_error();
+    }
+    const auto mode = parse_mode(argv[3]);
+    if (!mode) {
+        std::cerr << "mode must be buffered, flush, or fsync: " << argv[3] << "\n" << kUsage;
+        return 2;
+    }
+    std::uint64_t max_records = 0;
+    if (argc >= 5) {
+        const auto parsed = parse_u64(argv[4]);
+        if (!parsed) {
+            return unsigned_arg_error("max_records", argv[4]);
+        }
+        max_records = *parsed;
+    }
+    return append_loop(std::string(argv[2]), *mode, max_records);
+}
+
 int replay(const std::string &path) {
     const qsl::replay::EventLogReader reader{path};
     const auto log = reader.read_all();
@@ -174,6 +244,22 @@ int replay(const std::string &path) {
     return 0;
 }
 
+int dispatch(int argc, char **argv) {
+    if (argc >= 3 && is_command(argc, argv, "generate")) {
+        return run_generate_command(argc, argv);
+    }
+    if (argc >= 3 && is_command(argc, argv, "recover")) {
+        return run_recover_command(argc, argv);
+    }
+    if (argc >= 4 && is_command(argc, argv, "append-loop")) {
+        return run_append_loop_command(argc, argv);
+    }
+    if (argc == 2) {
+        return replay(std::string(argv[1]));
+    }
+    return usage_error();
+}
+
 } // namespace
 
 // qsl-replay generate <file> [seed]                        -> write a synthetic-flow command log
@@ -181,51 +267,5 @@ int replay(const std::string &path) {
 // qsl-replay append-loop <file> <mode> [max_records]       -> append until killed (crash harness)
 // qsl-replay <file>                                        -> rebuild engine state from the log
 int main(int argc, char **argv) {
-    if (argc >= 3 && std::string(argv[1]) == "generate") {
-        std::uint64_t seed = 42;
-        if (argc >= 4) {
-            const auto parsed = parse_u64(argv[3]);
-            if (!parsed) {
-                std::cerr << "seed must be an unsigned integer: " << argv[3] << "\n" << kUsage;
-                return 2;
-            }
-            seed = *parsed;
-        }
-        return generate(std::string(argv[2]), seed);
-    }
-    if (argc >= 3 && std::string(argv[1]) == "recover") {
-        const bool repair = argc >= 4 && std::string(argv[3]) == "--repair";
-        if (argc > 4 || (argc == 4 && !repair)) {
-            std::cerr << kUsage;
-            return 2;
-        }
-        return recover(std::string(argv[2]), repair);
-    }
-    if (argc >= 4 && std::string(argv[1]) == "append-loop") {
-        if (argc > 5) {
-            std::cerr << kUsage;
-            return 2;
-        }
-        const auto mode = parse_mode(argv[3]);
-        if (!mode) {
-            std::cerr << "mode must be buffered, flush, or fsync: " << argv[3] << "\n" << kUsage;
-            return 2;
-        }
-        std::uint64_t max_records = 0;
-        if (argc >= 5) {
-            const auto parsed = parse_u64(argv[4]);
-            if (!parsed) {
-                std::cerr << "max_records must be an unsigned integer: " << argv[4] << "\n"
-                          << kUsage;
-                return 2;
-            }
-            max_records = *parsed;
-        }
-        return append_loop(std::string(argv[2]), *mode, max_records);
-    }
-    if (argc == 2) {
-        return replay(std::string(argv[1]));
-    }
-    std::cerr << kUsage;
-    return 2;
+    return dispatch(argc, argv);
 }
