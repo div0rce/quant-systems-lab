@@ -26,7 +26,7 @@ PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109 (68061e6), and 
 future systems-engineering roadmap and agent guidance. PR #114 (29ed491) added the M43
 CPU-affinity / scheduler-migration / NUMA-locality study. PR #115 (cd05b37) landed M44 plus the
 M45A source-digest provenance slice for false-sharing and NUMA artifacts. Current active work is
-the M45B provenance follow-up on `perf/m45b-artifact-provenance-migration`.
+PR #116, the M45B provenance follow-up on `perf/m45b-artifact-provenance-migration`.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -69,7 +69,7 @@ Current state:
 
 - latest synced main baseline: `cd05b37` (PR #115, M44 false-sharing study plus M45A provenance)
 - current active branch, if active: `perf/m45b-artifact-provenance-migration`
-- current active status: M45B process PR in progress; remaining perf, socket, allocator, storage,
+- current active status: M45B PR #116 open; remaining perf, socket, allocator, storage,
   differential, and core benchmark artifact generators are being migrated to source-digest
   provenance
 - release tag: `v0.1.0`
