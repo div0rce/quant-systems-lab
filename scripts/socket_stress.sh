@@ -135,13 +135,13 @@ TMP_OUT="$(mktemp)"
     echo "subscriber's requested SO_RCVBUF. Requested 0 = OS default; the kernel may round up or"
     echo "clamp the request, so the effective (granted) size is read back via getsockopt."
     echo
-    printf '%-8s %12s %12s %10s  %-15s %7s  %-15s\n' \
+    printf '%-8s %12s %12s %10s  %-15s %7s  %s\n' \
         "setting" "requested(B)" "effective(B)" "published" "lost/trial" "maxlost" "seq-gaps/trial"
-    printf '%-8s %12s %12s %10s  %-15s %7s  %-15s\n' \
+    printf '%-8s %12s %12s %10s  %-15s %7s  %s\n' \
         "-------" "------------" "------------" "---------" "----------" "-------" "--------------"
     for line in "$SMALL_LINE" "$DEFAULT_LINE" "$LARGE_LINE"; do
         IFS='|' read -r label req eff pub loss_csv maxl gaps_csv <<<"$line"
-        printf '%-8s %12s %12s %10s  %-15s %7s  %-15s\n' "$label" "$req" "$eff" "$pub" "$loss_csv" "$maxl" "$gaps_csv"
+        printf '%-8s %12s %12s %10s  %-15s %7s  %s\n' "$label" "$req" "$eff" "$pub" "$loss_csv" "$maxl" "$gaps_csv"
     done
     echo
     echo "Reading the result: 'lost/trial' is the honest loss metric -- published minus received"
