@@ -21,11 +21,10 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M45 — Exchange-grade persistence prototype
-- **Status:** ◐ implementation complete and review-clean locally; PR not yet opened. Delivered:
-  explicit event-log durability modes + sync() group commit, torn-tail recovery classification and
-  conservative repair, `qsl-replay recover`/`append-loop` subcommands, `make crash-recovery`
-  SIGKILL validation harness with a clean-provenance artifact, and docs/persistence.md + ADR 0011.
-  No production-durability claims.
+- **Status:** ◐ PR #117 open for review. Delivered: explicit event-log durability modes + sync()
+  group commit, torn-tail recovery classification and conservative repair, `qsl-replay
+  recover`/`append-loop` subcommands, `make crash-recovery` SIGKILL validation harness with a
+  clean-provenance artifact, and docs/persistence.md + ADR 0011. No production-durability claims.
 - **Active branch:** `feat/m45-persistence-prototype`
 - **Last completed milestone:** M45B — Artifact provenance migration follow-up (squash-merged
   PR #116, commit b9ea27a), after M44 — Ingress queue memory-ordering and false-sharing study
@@ -39,8 +38,8 @@ Do not rely on prior chat memory.
 - **Last action:** fixed the review-found `append-loop` extra-argument handling, regenerated the
   crash-recovery artifact from clean declared inputs, and verified the targeted CLI checks,
   `test_event_log`, `git diff --check`, and `make check`.
-- **Next action:** open the M45 PR (`feat: prototype stronger persistence strategy`). Do not merge
-  from automation.
+- **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
+  Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -293,7 +292,7 @@ Lower priority:
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☑ merged | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
 | M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☑ merged | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
-| M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ◐ ready for PR | — | WAL/durability/crash-recovery prototype verified locally |
+| M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ◐ PR open | #117 | WAL/durability/crash-recovery prototype verified locally |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
@@ -529,11 +528,11 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M45 on `feat/m45-persistence-prototype`: implementation is complete and verified
+Current action is M45 on `feat/m45-persistence-prototype`: PR #117 is open for review
+(`feat: prototype stronger persistence strategy`). Implementation is complete and verified
 (durability modes, torn-tail recovery/repair, crash harness + clean-provenance artifact,
-persistence docs/ADR, and the `append-loop` CLI review fix); open the PR and do not merge from
-automation. M45B (PR #116, b9ea27a) is merged; the provenance schema is now the project-wide
-policy.
+persistence docs/ADR, and the `append-loop` CLI review fix). Do not merge from automation. M45B
+(PR #116, b9ea27a) is merged; the provenance schema is now the project-wide policy.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
