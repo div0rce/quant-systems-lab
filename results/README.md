@@ -43,11 +43,11 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   (informational)` may change after rebase or squash merge; reviewers should treat a source-digest
   mismatch or `Dirty inputs: yes` as stale evidence, not commit-hash drift alone.
 - Migrated generators must not emit `Source commit:` or `Generated from commit:`. Existing
-  historical artifacts may remain on the older schema until a deliberate migration PR converts their
-  generators and regenerates them.
-- M45A converts only the currently active provenance pain points: `numa_affinity_study.txt` and
-  `false_sharing_study.txt`. A follow-up migration should convert the perf, socket, allocator,
-  storage, and core benchmark artifacts once the schema is proven.
+  historical artifacts may remain on the older schema only until their generator is deliberately
+  migrated and the corresponding artifact is regenerated.
+- The M45A/M45B provenance migration converts the active NUMA and false-sharing artifacts first,
+  then the perf, socket, allocator, storage, differential, and core benchmark artifacts. Future
+  artifact generators should use the same source-digest schema from the start.
 - Future storage, CPU-affinity, false-sharing, DPDK, or NIC artifacts must state whether they are
   full hardware evidence, constrained-environment validation, or research notes only.
 - CPU-affinity and NUMA artifacts must include the chosen CPU, whether `taskset` and `perf` ran,

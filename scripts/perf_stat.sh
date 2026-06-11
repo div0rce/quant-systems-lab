@@ -10,6 +10,20 @@ source scripts/qsl_common.sh
 BIN="${QSL_BENCH_BIN:-build/bench/qsl-bench}"
 OUT="${QSL_PERF_STAT_OUT:-results/perf_stat_linux.txt}"
 EVENTS="${QSL_PERF_STAT_EVENTS:-cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches,page-faults}"
+BUILD_DIR="$(dirname "$BIN")"
+PROVENANCE_SCOPE="perf-stat-benchmark"
+PROVENANCE_INPUTS=(
+    Makefile
+    CMakeLists.txt
+    CMakePresets.json
+    cmake
+    include
+    src
+    apps/qsl-bench
+    benchmarks
+    scripts/perf_stat.sh
+    scripts/qsl_common.sh
+)
 
 qsl_require_linux "scripts/perf_stat.sh" "perf"
 
@@ -24,8 +38,6 @@ if [[ ! -x "$BIN" ]]; then
 fi
 
 mkdir -p "$(dirname "$OUT")"
-
-DIRTY="$(qsl_dirty_tree_status results/perf_stat_linux.txt results/perf_report_linux.txt "$OUT")"
 
 BENCH_OUT="$(mktemp)"
 PERF_BENCH_OUT="$(mktemp)"
@@ -43,17 +55,15 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
         echo "Hardware:    $(uname -m)"
         echo "OS:          $(uname -s) $(uname -r)"
         echo "CPU:         $(qsl_cpu_model)"
-        echo "Compiler:    $(qsl_compiler_version)"
+        echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
         echo "Perf:        $(perf --version)"
         echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
-        echo "Build type:  Release"
-        echo "Git commit:  $(qsl_git_commit_short)"
-        echo "Dirty tree:  $DIRTY"
+        echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
+        qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
         echo "Benchmark binary: $BIN"
         echo "Benchmark status: $BENCH_STATUS"
         echo "Dataset:     qsl-bench default synthetic benchmark suite"
         echo "Events:      $EVENTS"
-        echo "Date:        $(qsl_utc_timestamp)"
         echo
         echo "Benchmark output:"
         cat "$BENCH_OUT"
@@ -88,12 +98,11 @@ fi
     echo "Hardware:    $(uname -m)"
     echo "OS:          $(uname -s) $(uname -r)"
     echo "CPU:         $(qsl_cpu_model)"
-    echo "Compiler:    $(qsl_compiler_version)"
+    echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
     echo "Perf:        $(perf --version)"
     echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
-    echo "Build type:  Release"
-    echo "Git commit:  $(qsl_git_commit_short)"
-    echo "Dirty tree:  $DIRTY"
+    echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
+    qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
     echo "Benchmark binary: $BIN"
     echo "Benchmark status: $BENCH_STATUS"
     echo "Dataset:     qsl-bench default synthetic benchmark suite"
@@ -101,7 +110,6 @@ fi
     echo "Perf status: $PERF_STATUS"
     echo "Unsupported counters detected: $UNSUPPORTED"
     echo "Hardware counters supported: $HARDWARE_COUNTERS_SUPPORTED"
-    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Caveat: Linux perf counters are hardware/kernel/permission dependent."
     echo "Partial artifacts document environment behavior only; they are not full PMU evidence."

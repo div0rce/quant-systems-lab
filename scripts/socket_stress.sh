@@ -24,6 +24,19 @@ PORT_BASE="${QSL_STRESS_PORT:-39100}"
 SEED="${QSL_STRESS_SEED:-42}"
 ORDERS="${QSL_STRESS_ORDERS:-20000}"
 TRIALS="${QSL_STRESS_TRIALS:-4}"
+BUILD_DIR="$(dirname "$BIN")"
+PROVENANCE_SCOPE="socket-stress"
+PROVENANCE_INPUTS=(
+    Makefile
+    CMakeLists.txt
+    CMakePresets.json
+    cmake
+    include
+    src
+    apps/qsl-mdfeed
+    scripts/socket_stress.sh
+    scripts/qsl_common.sh
+)
 # Receive-buffer requests in bytes: 0 means "leave the OS default". The kernel may round up
 # (Linux roughly doubles) or clamp to a system maximum; the effective value is read back.
 SMALL_BUF="${QSL_STRESS_SMALL_BUF:-2048}"
@@ -35,7 +48,6 @@ if [[ ! -x "$BIN" ]]; then
 fi
 
 mkdir -p "$(dirname "$OUT")"
-DIRTY="$(qsl_dirty_tree_status results/socket_stress_summary.txt results/socket_profile_loopback.txt "$OUT")"
 
 # Run TRIALS trials for one SO_RCVBUF request. Each trial: start the gap-tracking subscriber
 # (background), let it bind, then burst-publish every datagram with no pacing. Emits one line:
@@ -111,14 +123,12 @@ TMP_OUT="$(mktemp)"
         echo "rmem_default: $(cat /proc/sys/net/core/rmem_default 2>/dev/null || echo unknown)"
         echo "rmem_max:     $(cat /proc/sys/net/core/rmem_max 2>/dev/null || echo unknown)"
     fi
-    echo "Compiler:    $(qsl_compiler_version)"
-    echo "Build type:  $(qsl_build_type)"
-    echo "Git commit:  $(qsl_git_commit_short)"
-    echo "Dirty tree:  $DIRTY"
+    echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
+    echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
+    qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
     echo "Transport:   UDP unicast over 127.0.0.1 (loopback)"
     echo "Dataset:     qsl-mdfeed publish, seed $SEED, $ORDERS orders, 3 symbols"
     echo "Trials/setting: $TRIALS"
-    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Setup: one publisher bursts every market-data datagram back-to-back (no pacing); one"
     echo "subscriber drains them and reports how many it received. The only variable is the"

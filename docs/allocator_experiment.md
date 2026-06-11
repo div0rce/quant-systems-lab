@@ -39,7 +39,7 @@ qsl-bench pool
 ```
 
 `scripts/run_allocator_experiment.sh` writes `results/allocator_experiment.txt` with hardware,
-OS, compiler, build type, git commit, dirty-tree state, date, and the measured scenarios:
+OS, compiler, build type, source-digest provenance, date, and the measured scenarios:
 
 - `order new/delete` — baseline heap allocation for one `engine::Order`;
 - `order pool acquire/release` — one acquire and release against a fixed pool;

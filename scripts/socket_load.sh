@@ -36,6 +36,20 @@ TRIALS="${QSL_LOAD_TRIALS:-3}"
 CLIENT_TIMEOUT="${QSL_LOAD_CLIENT_TIMEOUT:-30}" # per-client wall cap; bounds a hang if the gateway dies
 MAX_ATTEMPTS="${QSL_LOAD_MAX_ATTEMPTS:-6}"      # retries (on a fresh port) before a trial is failed
 MAX_CLIENT_COUNT=16 # conservative default sweep; both transport backlogs are >= this
+BUILD_DIR="$(dirname "$GATEWAY")"
+PROVENANCE_SCOPE="socket-load"
+PROVENANCE_INPUTS=(
+    Makefile
+    CMakeLists.txt
+    CMakePresets.json
+    cmake
+    include
+    src
+    apps/qsl-gateway
+    apps/qsl-client
+    scripts/socket_load.sh
+    scripts/qsl_common.sh
+)
 
 if [[ "$(uname -s)" != "Linux" ]]; then
     echo "error: scripts/socket_load.sh requires Linux (epoll mode + high-res timer); current OS is $(uname -s)." >&2
@@ -84,7 +98,6 @@ if ((LAST_PORT > 65535)); then
 fi
 
 mkdir -p "$(dirname "$OUT")"
-DIRTY="$(qsl_dirty_tree_status results/socket_load_summary.txt "$OUT")"
 
 NEXT_PORT="$PORT_BASE" # monotonic: every gateway gets a brand-new port, never reused this run
 GW_PID=""
@@ -219,10 +232,9 @@ TMP_OUT="$(mktemp)"
     echo "OS:          $(uname -s) $(uname -r)"
     echo "CPU:         $(qsl_cpu_model)"
     echo "Cores:       $(nproc 2>/dev/null || echo unknown)"
-    echo "Compiler:    $(qsl_compiler_version)"
-    echo "Build type:  $(qsl_build_type)"
-    echo "Git commit:  $(qsl_git_commit_short)"
-    echo "Dirty tree:  $DIRTY"
+    echo "Compiler:    $(qsl_build_compiler_version "$BUILD_DIR")"
+    echo "Build type:  $(qsl_build_type "$BUILD_DIR")"
+    qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
     echo "Dataset:     synthetic order flow via qsl-client (NewOrder + Heartbeat per connection)"
     echo "Scenario:    concurrent short-lived client sweep across the threaded and epoll transports"
     echo "Metric:      best (min) wall time per cell, approximate conns/s, and completion ratio"
@@ -231,7 +243,6 @@ TMP_OUT="$(mktemp)"
     echo "Load shape:  N concurrent qsl-client connections; each connects, sends NewOrder + Heartbeat, reads replies, closes"
     echo "Client counts: $CLIENT_COUNTS"
     echo "Trials/cell: $TRIALS (best/min wall over trials; each gateway on a fresh port, up to $MAX_ATTEMPTS start attempts)"
-    echo "Date:        $(qsl_utc_timestamp)"
     echo
     echo "Setup: the same concurrent client load is run against the gateway in each transport mode."
     echo "threaded = the portable TCP server (one worker per accepted connection, gateway mutation"

@@ -15,6 +15,20 @@ EVENT="${QSL_PERF_RECORD_EVENT:-cpu-clock}"
 FREQ="${QSL_PERF_RECORD_FREQ:-2000}"
 LIMIT="${QSL_PERF_REPORT_PERCENT_LIMIT:-1}"
 MIN_SAMPLES="${QSL_PERF_MIN_SAMPLES:-100}"
+BUILD_DIR="$(dirname "$BIN")"
+PROVENANCE_SCOPE="perf-record-benchmark"
+PROVENANCE_INPUTS=(
+    Makefile
+    CMakeLists.txt
+    CMakePresets.json
+    cmake
+    include
+    src
+    apps/qsl-bench
+    benchmarks
+    scripts/perf_record.sh
+    scripts/qsl_common.sh
+)
 
 parse_sample_count_token() {
     local token="$1"
@@ -50,8 +64,6 @@ fi
 
 mkdir -p "$(dirname "$OUT")" "$(dirname "$DATA")"
 
-DIRTY="$(qsl_dirty_tree_status results/perf_stat_linux.txt results/perf_report_linux.txt "$OUT" "$DATA")"
-
 BENCH_OUT="$(mktemp)"
 RECORD_BENCH_OUT="$(mktemp)"
 RECORD_ERR="$(mktemp)"
@@ -70,19 +82,17 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
         echo "Hardware:      $(uname -m)"
         echo "OS:            $(uname -s) $(uname -r)"
         echo "CPU:           $(qsl_cpu_model)"
-        echo "Compiler:      $(qsl_compiler_version)"
+        echo "Compiler:      $(qsl_build_compiler_version "$BUILD_DIR")"
         echo "Perf:          $(perf --version)"
         echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
-        echo "Build type:    Release"
-        echo "Git commit:    $(qsl_git_commit_short)"
-        echo "Dirty tree:    $DIRTY"
+        echo "Build type:    $(qsl_build_type "$BUILD_DIR")"
+        qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
         echo "Benchmark binary: $BIN"
         echo "Benchmark status: $BENCH_STATUS"
         echo "Dataset:       qsl-bench default synthetic benchmark suite"
         echo "Record event:  $EVENT"
         echo "Sample freq:   $FREQ Hz"
         echo "Minimum samples for hot profile: $MIN_SAMPLES"
-        echo "Date:          $(qsl_utc_timestamp)"
         echo
         echo "Benchmark output:"
         cat "$BENCH_OUT"
@@ -144,12 +154,11 @@ fi
     echo "Hardware:      $(uname -m)"
     echo "OS:            $(uname -s) $(uname -r)"
     echo "CPU:           $(qsl_cpu_model)"
-    echo "Compiler:      $(qsl_compiler_version)"
+    echo "Compiler:      $(qsl_build_compiler_version "$BUILD_DIR")"
     echo "Perf:          $(perf --version)"
     echo "Perf paranoid: $(cat /proc/sys/kernel/perf_event_paranoid 2>/dev/null || echo unknown)"
-    echo "Build type:    Release"
-    echo "Git commit:    $(qsl_git_commit_short)"
-    echo "Dirty tree:    $DIRTY"
+    echo "Build type:    $(qsl_build_type "$BUILD_DIR")"
+    qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT" "${PROVENANCE_INPUTS[@]}"
     echo "Benchmark binary: $BIN"
     echo "Benchmark status: $BENCH_STATUS"
     echo "Dataset:       qsl-bench default synthetic benchmark suite"
@@ -164,7 +173,6 @@ fi
     echo "No samples:    $NO_SAMPLES"
     echo "Perf access limitation: $PERF_LIMITATION"
     echo "Perf data:     $DATA (generated, not intended for commit)"
-    echo "Date:          $(qsl_utc_timestamp)"
     echo
     if [[ "$ARTIFACT_TYPE" == "software sampling hot-symbol profile" ]]; then
         echo "Caveat: perf report is hardware/kernel/compiler/build dependent. The default"

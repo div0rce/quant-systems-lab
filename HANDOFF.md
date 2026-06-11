@@ -24,8 +24,9 @@ refactors. PR #113 extended the future roadmap to **M43–M49**. M36–M42 lande
 PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109 (68061e6), and PR #111
 (003504f). PR #112 (2369f84) closed issues #95, #28, and #26. PR #113 (f3cc4dd) updated the
 future systems-engineering roadmap and agent guidance. PR #114 (29ed491) added the M43
-CPU-affinity / scheduler-migration / NUMA-locality study. Current active work is M44 on
-`feat/m44-ingress-memory-ordering-false-sharing`.
+CPU-affinity / scheduler-migration / NUMA-locality study. PR #115 (cd05b37) landed M44 plus the
+M45A source-digest provenance slice for false-sharing and NUMA artifacts. Current active work is
+the M45B provenance follow-up on `perf/m45b-artifact-provenance-migration`.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -38,7 +39,8 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-Current work is M44, an ingress queue memory-ordering and false-sharing study. To resume:
+Current work is M45B, the process follow-up that migrates the remaining artifact generators from
+commit-hash identity to source-digest provenance. To resume:
 
 ```text
 /resume
@@ -65,10 +67,11 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `29ed491` (PR #114, M43 NUMA/CPU-affinity study)
-- current active branch, if active: `feat/m44-ingress-memory-ordering-false-sharing`
-- current active status: M44 PR #115 open; benchmark-only false-sharing tooling, research-note
-  artifact, and evidence docs are in place
+- latest synced main baseline: `cd05b37` (PR #115, M44 false-sharing study plus M45A provenance)
+- current active branch, if active: `perf/m45b-artifact-provenance-migration`
+- current active status: M45B process PR in progress; remaining perf, socket, allocator, storage,
+  differential, and core benchmark artifact generators are being migrated to source-digest
+  provenance
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - issues #95, #28, and #26 were closed by PR #112
@@ -79,8 +82,8 @@ Current state:
 
 The repository-health refactor phase (M36–M42), the post-M42 feature follow-up (PR #112), and the
 roadmap audit (PR #113), and M43 NUMA awareness study (PR #114) are complete and merged. The
-current implementation milestone is **M44 — Ingress queue memory-ordering and false-sharing
-study**.
+current process follow-up is **M45B — Artifact provenance migration**. It is not M45 persistence
+work and does not renumber the roadmap.
 
 ### Phase III / IV purpose
 
@@ -92,7 +95,7 @@ evidence, persistence/recovery benchmarking, and late-stage low-latency networki
 
 Current priority order:
 
-1. M44 — Ingress queue memory-ordering and false-sharing study.
+1. M45B — Artifact provenance migration follow-up.
 2. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
 3. Issue #94 — independent external technical review remains one of the highest credibility gaps.
 
