@@ -121,8 +121,11 @@ the core numbers above.
   profiled and its hardening posture documented in
   [docs/socket_profiling.md](docs/socket_profiling.md) and
   [docs/socket_hardening.md](docs/socket_hardening.md) (loopback-only, constrained evidence).
-- **Not production-hardened**: no persistence beyond the flat event log, no clustering,
-  no exchange-grade risk/clearing.
+- **Not production-hardened**: persistence is a single append-only event log — now with
+  explicit durability modes and SIGKILL-validated torn-tail recovery
+  ([docs/persistence.md](docs/persistence.md)), but no power-loss/OS-crash validation, no
+  segmentation or snapshots, and acks are not coupled to durability. No clustering, no
+  exchange-grade risk/clearing.
 
 ## Differential testing (OCaml)
 
