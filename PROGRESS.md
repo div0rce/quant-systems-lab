@@ -21,20 +21,21 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M45B process follow-up — migrate remaining artifact provenance metadata
-- **Status:** ◐ in progress on a process PR. This branch converts the remaining perf, socket,
-  allocator, storage, differential, and core benchmark artifact generators to source-digest
-  provenance after M45A landed with M44.
+- **Status:** ◐ PR-ready. This branch converts the remaining perf, socket, allocator, storage,
+  differential, and core benchmark artifact generators to source-digest provenance after M45A
+  landed with M44.
 - **Active branch:** `perf/m45b-artifact-provenance-migration`
 - **Last completed milestone:** M44 — Ingress queue memory-ordering and false-sharing study
   (squash-merged PR #115, commit cd05b37)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** pending for M45B; last known passing run was 204/204 on M44.
-- **Last action:** PR #115 landed M44 plus M45A: source-digest provenance helpers and conversion of
-  the active false-sharing and NUMA artifacts. M45B started from the merged `main`.
-- **Next action:** finish M45B script/docs conversion, commit source changes, regenerate migrated
-  artifacts from the committed source inputs, open a PR, trigger `@codex review`, and iterate until
-  Codex reports no issues.
+- **`make check` passing:** yes, 204/204 for M45B. `make asan` was not run because M45B changes
+  Bash/docs/results only.
+- **Last action:** migrated the remaining artifact generators to source-digest provenance, fixed
+  constrained perf wrapper classification, regenerated migrated artifacts with `Dirty inputs: no`,
+  and verified the branch.
+- **Next action:** open the M45B PR, trigger `@codex review`, and iterate until Codex reports no
+  issues. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -287,7 +288,7 @@ Lower priority:
 | Docs | Systems-engineering roadmap audit | `docs/systems-roadmap-audit` | ☑ merged | #113 | Docs-only update to future systems roadmap and agent guidance |
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☑ merged | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
 | M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☑ merged | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
-| M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ◐ in progress | — | Convert remaining artifact generators from commit identity to source-digest provenance |
+| M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ◐ PR-ready | — | Convert remaining artifact generators from commit identity to source-digest provenance |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
@@ -383,6 +384,17 @@ Lower priority:
   `perf/m45b-artifact-provenance-migration` to migrate the remaining perf, socket, allocator,
   storage, differential, and core benchmark artifact generators to the source-digest provenance
   schema. This follow-up is not M45 persistence work and does not renumber the roadmap.
+- [2026-06-11] M45B migrated `run_benchmarks.sh`, `run_diff_benchmarks.sh`,
+  `run_allocator_experiment.sh`, `run_storage_benchmarks.sh`, `perf_stat.sh`, `perf_record.sh`,
+  `profile_gateway_io.sh`, `socket_load.sh`, and `socket_stress.sh` to `Provenance version: 1`.
+  Regenerated `results/latest.txt`, `differential.txt`, `allocator_experiment.txt`,
+  `pool_backed_storage.txt`, `perf_stat_linux.txt`, `perf_report_linux.txt`,
+  `socket_profile_loopback.txt`, `socket_load_summary.txt`, and `socket_stress_summary.txt` with
+  `Dirty inputs: no`. Verification passed shell syntax checks, source-digest helper regressions,
+  old-provenance scan over `results/*.txt`, `make bench`, `make bench-diff`,
+  `make bench-allocator`, `make bench-storage`, `make socket-stress`, Docker constrained
+  `make perf-stat`, Docker constrained `make perf-record`, Docker `make profile-io`, Docker
+  `make socket-load`, `git diff --check`, and `make check` 204/204.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -468,9 +480,9 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M45B on `perf/m45b-artifact-provenance-migration`: finish the artifact
-provenance migration, open a PR, trigger `@codex review`, and iterate until Codex reports no
-issues. Do not start M45 persistence work from the roadmap until this process follow-up lands.
+Current action is M45B on `perf/m45b-artifact-provenance-migration`: open the artifact provenance
+migration PR, trigger `@codex review`, and iterate until Codex reports no issues. Do not start M45
+persistence work from the roadmap until this process follow-up lands.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
