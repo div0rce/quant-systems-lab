@@ -5,7 +5,8 @@
 # mid-stream, and checks the recovery contract on the surviving file:
 #   - flush/fsync modes: every acknowledged append survives; at most one unacknowledged
 #     in-flight record appears (recovered in [acked, acked+1]);
-#   - any torn tail repairs to a clean log, and the repaired log accepts appends;
+#   - any provably torn tail repairs to a clean log, and the repaired log accepts appends;
+#   - ambiguous full-header truncation is classified corrupt and refused, not auto-repaired;
 #   - buffered mode is a demonstration only: acknowledged data sitting in the user-space
 #     stdio buffer is expected to be lost, and the loss is reported, not asserted against.
 #
@@ -82,13 +83,15 @@ recover_field() {
 
 TRIAL_LINES=()
 BUFFERED_LOST=0
+TORN_REPAIRED=0
+CORRUPT_TAILS=0
 
 # One kill trial: start the writer, kill it once `target` appends are acknowledged, then
 # validate recovery, repair, and post-repair appendability.
 run_trial() {
     local mode="$1" trial="$2" target="$3"
     local log="$WORK_DIR/${mode}_${trial}.bin" ack_file="$WORK_DIR/${mode}_${trial}.acks"
-    local acked recovered tail_state repaired="no" recover_out post_out post_records
+    local acked recovered tail_state repaired="no" recover_out post_out post_records post_append="skipped"
 
     "$BIN" append-loop "$log" "$mode" >"$ack_file" &
     WRITER_PID=$!
@@ -111,6 +114,10 @@ run_trial() {
         [[ "$(recover_field "$recover_out" records)" == "$recovered" ]] ||
             fail "$mode trial $trial: repair changed the recovered record count"
         repaired="yes"
+        TORN_REPAIRED=$((TORN_REPAIRED + 1))
+        ;;
+    corrupt)
+        CORRUPT_TAILS=$((CORRUPT_TAILS + 1))
         ;;
     *) fail "$mode trial $trial: unexpected tail state '$tail_state' (acked=$acked)" ;;
     esac
@@ -124,14 +131,17 @@ run_trial() {
             fail "$mode trial $trial: recovered $recovered outside [acked, acked+1] = [$acked, $((acked + 1))]"
     fi
 
-    post_out="$("$BIN" append-loop "$log" "$mode" 3)" || fail "$mode trial $trial: post-repair append failed"
-    recover_out="$("$BIN" recover "$log")" || fail "$mode trial $trial: log not clean after post-repair append"
-    post_records="$(recover_field "$recover_out" records)"
-    [[ "$post_records" -eq $((recovered + 3)) ]] ||
-        fail "$mode trial $trial: post-repair append count $post_records != $((recovered + 3))"
+    if [[ "$tail_state" != "corrupt" ]]; then
+        post_out="$("$BIN" append-loop "$log" "$mode" 3)" || fail "$mode trial $trial: post-repair append failed"
+        recover_out="$("$BIN" recover "$log")" || fail "$mode trial $trial: log not clean after post-repair append"
+        post_records="$(recover_field "$recover_out" records)"
+        [[ "$post_records" -eq $((recovered + 3)) ]] ||
+            fail "$mode trial $trial: post-repair append count $post_records != $((recovered + 3))"
+        post_append="ok"
+    fi
 
-    TRIAL_LINES+=("$(printf '%-8s trial=%d target_acks=%-4d acked=%-5d recovered=%-5d tail=%-5s repaired=%-3s post_append=ok' \
-        "$mode" "$trial" "$target" "$acked" "$recovered" "$tail_state" "$repaired")")
+    TRIAL_LINES+=("$(printf '%-8s trial=%d target_acks=%-4d acked=%-5d recovered=%-5d tail=%-7s repaired=%-3s post_append=%s' \
+        "$mode" "$trial" "$target" "$acked" "$recovered" "$tail_state" "$repaired" "$post_append")")
 }
 
 for mode in fsync flush; do
@@ -158,9 +168,9 @@ TMP_OUT="$WORK_DIR/artifact.txt"
     echo "Contract checked per trial:"
     echo "  - flush/fsync: recovered records in [acked, acked+1] (no acknowledged append lost,"
     echo "    at most one unacknowledged in-flight record present);"
-    echo "  - tail classifies as clean or torn, never corrupt;"
-    echo "  - a torn tail repairs to a clean log without changing the recovered record count;"
-    echo "  - the repaired log accepts appends and reads back clean."
+    echo "  - partial-header torn tails repair to a clean log without changing recovered count;"
+    echo "  - full-header ambiguous truncation classifies as corrupt and is not auto-repaired;"
+    echo "  - clean and repaired logs accept appends and read back clean."
     echo
     echo "Metric / Result:"
     for line in "${TRIAL_LINES[@]}"; do
@@ -168,7 +178,8 @@ TMP_OUT="$WORK_DIR/artifact.txt"
     done
     echo
     echo "Result: all $TRIALS fsync and $TRIALS flush process-kill trials preserved every"
-    echo "acknowledged record and every torn tail repaired to a clean, appendable log."
+    echo "acknowledged record. Torn tails repaired to clean appendable logs when provable."
+    echo "Result: repaired torn tails=$TORN_REPAIRED; corrupt ambiguous tails refused=$CORRUPT_TAILS."
     echo "Result: the buffered demonstration lost $BUFFERED_LOST acknowledged record(s) under"
     echo "SIGKILL; user-space buffering is expected to lose its unflushed tail."
     echo

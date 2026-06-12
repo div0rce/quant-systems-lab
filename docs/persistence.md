@@ -121,8 +121,9 @@ Two layers of automated evidence, each labeled with what it does and does not pr
    `scripts/crash_recovery_validation.sh`, artifact
    `results/crash_recovery_validation.txt`): SIGKILLs a live writer mid-stream per mode and
    checks that flush/fsync modes preserve every acknowledged record (with at most one
-   unacknowledged in-flight record appearing), that torn tails repair to clean appendable
-   logs, and that buffered mode demonstrably loses its unflushed tail.
+   unacknowledged in-flight record appearing), that provably torn tails repair to clean
+   appendable logs, that ambiguous full-header truncations are refused as corrupt rather
+   than auto-repaired, and that buffered mode demonstrably loses its unflushed tail.
 
 What this validation **cannot** show: SIGKILL leaves the kernel page cache intact, so the
 harness validates crash-mid-append recovery and process-death retention only. Power-loss
