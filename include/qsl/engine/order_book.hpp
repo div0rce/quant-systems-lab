@@ -134,6 +134,11 @@ class OrderBook {
     static MatchResult match_incoming(OrderId id, Side side, Price limit, bool is_market,
                                       Quantity quantity, ContainsFn &&contains_fn,
                                       MatchFn &&match_fn);
+    template <class OppMap, class FillLevelFn, class EraseEmptyFn>
+    static void match_ordered_levels(OppMap &opposite, MatchContext &ctx,
+                                     FillLevelFn &&fill_level_fn, EraseEmptyFn &&erase_empty_fn);
+    template <class Index, class RemoveFn>
+    static bool cancel_indexed_order(Index &index, OrderId id, RemoveFn &&remove_fn);
     template <class BaselineFn, class IntrusiveFn, class ContiguousFn>
     decltype(auto) dispatch_storage(BaselineFn &&baseline_fn, IntrusiveFn &&intrusive_fn,
                                     ContiguousFn &&contiguous_fn);
@@ -153,6 +158,7 @@ class OrderBook {
     void erase_resting_order(const Locator &loc);
     static bool fill_maker(MatchContext &ctx, OrderId maker_id, Quantity &maker_quantity,
                            Price level_price);
+    static bool should_rest_limit(const MatchResult &result, TimeInForce tif) noexcept;
     static bool can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price);
     static QuantityTotal level_quantity(const Level &level);
     struct IntrusiveStore;

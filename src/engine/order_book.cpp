@@ -114,6 +114,32 @@ OrderBook::MatchResult OrderBook::match_incoming(OrderId id, Side side, Price li
     return result;
 }
 
+template <class OppMap, class FillLevelFn, class EraseEmptyFn>
+void OrderBook::match_ordered_levels(OppMap &opposite, MatchContext &ctx,
+                                     FillLevelFn &&fill_level_fn, EraseEmptyFn &&erase_empty_fn) {
+    while (ctx.quantity > 0 && !opposite.empty()) {
+        auto level_it = opposite.begin();
+        const Price level_price = level_it->first;
+        if (!can_match_level(ctx.taker_is_buy, ctx.is_market, ctx.limit, level_price)) {
+            break;
+        }
+        fill_level_fn(level_it->second, level_price);
+        erase_empty_fn(level_it);
+    }
+}
+
+template <class Index, class RemoveFn>
+bool OrderBook::cancel_indexed_order(Index &index, OrderId id, RemoveFn &&remove_fn) {
+    const auto found = index.find(id);
+    if (found == index.end()) {
+        return false;
+    }
+    const auto loc = found->second;
+    index.erase(found);
+    std::forward<RemoveFn>(remove_fn)(loc);
+    return true;
+}
+
 bool OrderBook::fill_maker(MatchContext &ctx, OrderId maker_id, Quantity &maker_quantity,
                            Price level_price) {
     const Quantity traded = std::min(ctx.quantity, maker_quantity);
@@ -121,6 +147,16 @@ bool OrderBook::fill_maker(MatchContext &ctx, OrderId maker_id, Quantity &maker_
     ctx.quantity -= traded;
     maker_quantity -= traded;
     return maker_quantity == 0;
+}
+
+bool OrderBook::should_rest_limit(const MatchResult &result, TimeInForce tif) noexcept {
+    if (!result.accepted) {
+        return false;
+    }
+    if (result.remainder == 0) {
+        return false;
+    }
+    return tif == TimeInForce::GTC;
 }
 
 struct OrderBook::IntrusiveStore {
@@ -261,15 +297,10 @@ struct OrderBook::IntrusiveStore {
     }
 
     template <class OppMap> void match_against(OppMap &opposite, OrderBook::MatchContext &ctx) {
-        while (ctx.quantity > 0 && !opposite.empty()) {
-            auto level_it = opposite.begin();
-            const Price level_price = level_it->first;
-            if (!can_match_level(ctx.taker_is_buy, ctx.is_market, ctx.limit, level_price)) {
-                break;
-            }
-            fill_level(level_it->second, level_price, ctx);
-            erase_level_if_empty(opposite, level_it);
-        }
+        OrderBook::match_ordered_levels(
+            opposite, ctx,
+            [&](Level &level, Price level_price) { fill_level(level, level_price, ctx); },
+            [&](typename OppMap::iterator level_it) { erase_level_if_empty(opposite, level_it); });
     }
 
     void match_opposite(Side side, OrderBook::MatchContext &ctx) {
@@ -343,7 +374,7 @@ struct OrderBook::IntrusiveStore {
         // Rest only the post-match remainder: match_against reduced ctx.quantity as it filled, so a
         // fully filled order has ctx.quantity == 0 and must not rest, and a partial fill rests the
         // leftover, not the original input quantity.
-        if (result.accepted && result.remainder > 0 && input.tif == TimeInForce::GTC) {
+        if (OrderBook::should_rest_limit(result, input.tif)) {
             static_cast<void>(rest(input.id, input.side, input.price, result.remainder));
         }
         return result.trades;
@@ -360,14 +391,8 @@ struct OrderBook::IntrusiveStore {
     }
 
     bool cancel(OrderId id) {
-        const auto found = index.find(id);
-        if (found == index.end()) {
-            return false;
-        }
-        const Locator loc = found->second;
-        erase_resting_order(loc);
-        index.erase(found);
-        return true;
+        return OrderBook::cancel_indexed_order(
+            index, id, [&](const Locator &loc) { erase_resting_order(loc); });
     }
 
     std::vector<Trade> modify(OrderId id, Price new_price, Quantity new_quantity) {
@@ -699,7 +724,7 @@ struct OrderBook::ContiguousStore {
             [&](Side taker_side, OrderBook::MatchContext &ctx) {
                 match_opposite(taker_side, ctx);
             });
-        if (result.accepted && result.remainder > 0 && tif == TimeInForce::GTC) {
+        if (OrderBook::should_rest_limit(result, tif)) {
             static_cast<void>(rest(id, side, price, result.remainder));
         }
         return result.trades;
@@ -732,14 +757,8 @@ struct OrderBook::ContiguousStore {
     }
 
     bool cancel(OrderId id) {
-        const auto found = index.find(id);
-        if (found == index.end()) {
-            return false;
-        }
-        const Locator loc = found->second;
-        index.erase(found);
-        remove_resting(loc);
-        return true;
+        return OrderBook::cancel_indexed_order(index, id,
+                                               [&](const Locator &loc) { remove_resting(loc); });
     }
 
     std::vector<Trade> modify(OrderId id, Price new_price, Quantity new_quantity) {
@@ -940,15 +959,10 @@ void OrderBook::erase_level_if_empty(LevelMap &levels, typename LevelMap::iterat
 }
 
 template <class OppMap> void OrderBook::match_against(OppMap &opposite, MatchContext &ctx) {
-    while (ctx.quantity > 0 && !opposite.empty()) {
-        auto level_it = opposite.begin(); // best price on the opposite side
-        const Price level_price = level_it->first;
-        if (!can_match_level(ctx.taker_is_buy, ctx.is_market, ctx.limit, level_price)) {
-            break;
-        }
-        fill_level(level_it->second, level_price, ctx);
-        erase_level_if_empty(opposite, level_it);
-    }
+    match_ordered_levels(
+        opposite, ctx,
+        [&](Level &level, Price level_price) { fill_level(level, level_price, ctx); },
+        [&](typename OppMap::iterator level_it) { erase_level_if_empty(opposite, level_it); });
 }
 
 void OrderBook::match_baseline(Side side, MatchContext &ctx) {
@@ -1041,7 +1055,7 @@ std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quan
             MatchResult result = match_incoming(
                 id, side, price, /*is_market=*/false, quantity, [&] { return contains(id); },
                 [&](Side taker_side, MatchContext &ctx) { match_baseline(taker_side, ctx); });
-            if (result.accepted && result.remainder > 0 && tif == TimeInForce::GTC) {
+            if (should_rest_limit(result, tif)) {
                 rest(id, side, price, result.remainder);
             }
             return result.trades;
@@ -1082,14 +1096,8 @@ void OrderBook::erase_resting_order(const Locator &loc) {
 bool OrderBook::cancel(OrderId id) {
     return dispatch_storage(
         [&] {
-            const auto found = index_.find(id);
-            if (found == index_.end()) {
-                return false;
-            }
-            const Locator loc = found->second;
-            erase_resting_order(loc);
-            index_.erase(found);
-            return true;
+            return cancel_indexed_order(index_, id,
+                                        [&](const Locator &loc) { erase_resting_order(loc); });
         },
         [&](IntrusiveStore &store) { return store.cancel(id); },
         [&](ContiguousStore &store) { return store.cancel(id); });
