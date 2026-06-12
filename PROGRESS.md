@@ -20,32 +20,25 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M45 — Exchange-grade persistence prototype
-- **Status:** ◐ PR #117 open for review. Delivered: explicit event-log durability modes + sync()
-  group commit, torn-tail recovery classification and conservative repair, `qsl-replay
-  recover`/`append-loop` subcommands, `make crash-recovery` SIGKILL validation harness with a
-  clean-provenance artifact, and docs/persistence.md + ADR 0011. No production-durability claims.
-- **Active branch:** `feat/m45-persistence-prototype`
-- **Last completed milestone:** M45B — Artifact provenance migration follow-up (squash-merged
-  PR #116, commit b9ea27a), after M44 — Ingress queue memory-ordering and false-sharing study
-  (squash-merged PR #115, commit cd05b37)
+- **Active milestone:** M46 — Recovery benchmarking
+- **Status:** ◐ in progress (started; no implementation committed yet)
+- **Active branch:** `feat/m46-recovery-benchmarking`
+- **Last completed milestone:** M45 — Exchange-grade persistence prototype (squash-merged PR #117,
+  commit d10bfb0), after M45B — Artifact provenance migration follow-up (squash-merged PR #116,
+  commit b9ea27a)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes, 219/219 on the M45 branch; `make asan` 219/219; `make
-  check-fixtures` and `make check-manifest` clean (replay-library changes did not alter export
-  bytes); `make crash-recovery` regenerated `results/crash_recovery_validation.txt` with
-  `Dirty inputs: no`; local CodeScene reviews of `apps/qsl-replay/main.cpp` and
-  `src/replay/event_log.cpp` are 10.0 with no findings.
-- **Last action:** fixed PR #117 replay/crash-harness review findings: known `qsl-replay`
-  subcommands now reject missing/extra operands with usage instead of falling through to replay or
-  ignoring extras, crash-recovery provenance includes the endian serialization helper, and the
-  crash harness now builds an explicit in-range full-header corrupt-tail fixture, enforces
-  `qsl-replay recover` exit-status semantics, and proves corrupt repair is refused. Regenerated
-  the crash-recovery artifact from clean declared inputs and verified focused CLI tests,
-  `bash -n scripts/crash_recovery_validation.sh`, `git diff --check`, `make check`, `make asan`,
-  and `make crash-recovery`.
-- **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
-  Do not merge from automation.
+- **`make check` passing:** yes, 223/223 on the M46 branch; `make asan` 223/223;
+  `make check-fixtures` and `make check-manifest` clean; `git diff --check` clean; CodeScene
+  `bench_recovery.cpp` 10.0, `order_book.cpp` 9.68 and `matching_engine.cpp` 9.09 (both equal to
+  their pre-M46 baselines).
+- **Last action:** implemented M46 — `resting_orders` enumeration API + tests, `qsl-bench
+  recovery`, `scripts/run_recovery_benchmarks.sh`, `make bench-recovery`, the committed
+  clean-provenance `results/recovery_benchmarks.txt` artifact (regenerated after the CodeScene
+  helper decomposition), and recovery-objective docs in `docs/replay_and_recovery.md` /
+  `docs/persistence.md` / `docs/benchmarking.md`.
+- **Next action:** `/review` the branch against the M46 DoD, then `/finish-milestone` to open PR
+  `perf: benchmark recovery paths`.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -227,8 +220,9 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M45 implementation is complete and verified locally (check 214/214, asan 214/214,
-  fixtures/manifest clean). Remaining: `/review`, then `/finish-milestone` to open the PR._
+- _M46 implementation is complete and verified locally (check 223/223, asan 223/223,
+  fixtures/manifest clean, CodeScene 10.0/9.68/9.09). Remaining: `/review`, then
+  `/finish-milestone` to open the PR._
 
 
 ---
@@ -298,8 +292,8 @@ Lower priority:
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☑ merged | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
 | M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☑ merged | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
-| M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ◐ PR open | #117 | WAL/durability/crash-recovery prototype verified locally |
-| M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
+| M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
+| M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ◐ in progress | — | Replay and snapshot restoration performance |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
@@ -466,6 +460,41 @@ Lower priority:
   the simulator does not claim. ADR 0011 records the durability-mode and
   repair-only-provably-torn decisions. M46 will measure full-replay recovery cost before any
   segmentation/snapshot design.
+- [2026-06-11] PR #117 squash-merged to `main` as d10bfb0, completing M45. M46 started on
+  `feat/m46-recovery-benchmarking`. Scope: recovery benchmarking — replay performance, snapshot
+  restoration performance, and recovery-objective framing. Constraints: benchmarks generated only
+  by committed scripts with `Provenance version: 1` metadata and dirty-inputs state; docs must
+  state exactly what recovery objective was measured; no production-recovery or RTO claims beyond
+  the measured synthetic workloads.
+- [2026-06-12] M46: added `OrderBook::resting_orders()` / `MatchingEngine::resting_orders(symbol)`
+  — deterministic priority-order enumeration of resting state (bids best-first then asks, FIFO
+  within level) across all three storage modes, with `Order::operator==`. Re-adding the sequence
+  into an empty book reproduces levels and intra-level time priority exactly; unit tests cover
+  per-mode enumeration, partial-fill/cancel/priority-losing-modify effects, and a generated-flow
+  rebuild-equivalence test. This is the minimal read-only API a snapshot path needs; no snapshot
+  persistence was added.
+- [2026-06-12] M46: added `qsl-bench recovery` (`benchmarks/bench_recovery.cpp`),
+  `scripts/run_recovery_benchmarks.sh`, and `make bench-recovery` producing
+  `results/recovery_benchmarks.txt`. Measured phases per log length (5k/20k/80k commands):
+  `recover_log_file` read+verify+classify, replay decode+apply into a fresh engine, and the
+  combined full restart; plus a benchmark-only in-memory snapshot-restoration prototype
+  (capture resting state, rebuild book) at the flow's live state and at controlled synthetic
+  depths (1k/10k/50k resting orders), because the realistic flow leaves only ~24–37 resting
+  orders and per-order timings on such small books are noisy. Every phase self-verifies against
+  the reference snapshot and the harness aborts rather than report numbers from a wrong rebuild.
+  The committed artifact (clean declared inputs, `Dirty inputs: no`) shows full-replay restart
+  cost linear in history (237–286 ns/command end-to-end on this host; ~23 ms at 80k commands)
+  while book rebuild is linear in live state (109–187 ns/order; ~5.4 ms at 50k resting orders).
+  Explicitly framed: restart cost (RTO-style) measured here; loss bounds (RPO-style) belong to
+  the M45 durability modes; prototype numbers are an in-memory lower bound (no serialization,
+  disk I/O, or tail replay); no production recovery-time claim.
+- [2026-06-12] M46 CodeScene pass: an initial `bench_recovery_at_size` scored 8.23 (complex/long
+  method, bumpy road, five arguments, complex conditional); decomposed into named reference/
+  log-writing/restart-phase/capture-rebuild/verification helpers shared by the flow and depth
+  scenarios. `benchmarks/bench_recovery.cpp` now scores 10.0 with no findings;
+  `src/engine/order_book.cpp` stays 9.68 and `src/engine/matching_engine.cpp` stays 9.09 (both
+  unchanged from pre-M46 baselines). The artifact was regenerated from the refactored clean
+  source in an artifact-only commit so its `Source digest` matches the committed generator.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -551,13 +580,11 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M45 on `feat/m45-persistence-prototype`: PR #117 is open for review
-(`feat: prototype stronger persistence strategy`). Implementation is complete and verified
-(durability modes, torn-tail recovery/repair, crash harness + clean-provenance artifact,
-persistence docs/ADR, strict `qsl-replay` subcommand arity, explicit ambiguous-tail crash fixture,
-recover exit-status contract checks, and the CodeScene delta cleanup). Do not merge from
-automation. M45B (PR #116, b9ea27a) is merged; the provenance schema is now the project-wide
-policy.
+Current action is M46 on `feat/m46-recovery-benchmarking`: implement recovery benchmarking —
+replay-path and snapshot-restoration measurement via committed scripts, artifacts with full
+metadata (`Provenance version: 1`, source digest, dirty-inputs state), and docs stating exactly
+which recovery objective was measured. M45 (PR #117, d10bfb0) is merged; its durability modes and
+`qsl-replay recover` path are available as measurement subjects.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
