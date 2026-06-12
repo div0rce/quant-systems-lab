@@ -124,6 +124,12 @@ class OrderBook {
 
     template <class OppMap>
     std::size_t count_matches(const OppMap &opposite, MatchQuery query) const;
+    template <class BaselineFn, class IntrusiveFn, class ContiguousFn>
+    decltype(auto) dispatch_storage(BaselineFn &&baseline_fn, IntrusiveFn &&intrusive_fn,
+                                    ContiguousFn &&contiguous_fn);
+    template <class BaselineFn, class IntrusiveFn, class ContiguousFn>
+    decltype(auto) dispatch_storage(BaselineFn &&baseline_fn, IntrusiveFn &&intrusive_fn,
+                                    ContiguousFn &&contiguous_fn) const;
     template <class LevelMap>
     void erase_level_if_empty(LevelMap &levels, typename LevelMap::iterator level_it);
     template <class LevelMap> void erase_from_side(LevelMap &levels, const Locator &loc);

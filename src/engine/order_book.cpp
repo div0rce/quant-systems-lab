@@ -775,6 +775,32 @@ struct OrderBook::ContiguousStore {
         return quantity;
     }
 
+    static std::size_t count_flat_level(const FlatLevel &level, Quantity &quantity) {
+        std::size_t count = 0;
+        for (std::size_t i = level.head; quantity > 0 && i < level.orders.size(); ++i) {
+            if (level.orders[i].quantity > 0) {
+                quantity -= std::min(quantity, level.orders[i].quantity);
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    [[nodiscard]] std::size_t count_flat_matches(const BookSide &opposite, bool opposite_is_bid,
+                                                 OrderBook::MatchQuery query) const {
+        std::size_t count = 0;
+        for_each_occupied(opposite, opposite_is_bid, [&](std::size_t slot, const FlatLevel &level) {
+            if (query.quantity == 0 ||
+                !OrderBook::can_match_level(query.taker_is_buy, query.is_market, query.limit,
+                                            price_of(slot))) {
+                return false;
+            }
+            count += count_flat_level(level, query.quantity);
+            return query.quantity > 0;
+        });
+        return count;
+    }
+
     [[nodiscard]] bool can_store_limit(Side side, Price price, Quantity quantity,
                                        TimeInForce tif) const {
         if (tif == TimeInForce::IOC || in_band(price)) {
@@ -818,22 +844,8 @@ struct OrderBook::ContiguousStore {
         }
         const bool taker_is_buy = taker_side == Side::Buy;
         const BookSide &opposite = taker_is_buy ? asks : bids;
-        std::size_t count = 0;
-        for_each_occupied(opposite, !taker_is_buy, [&](std::size_t slot, const FlatLevel &level) {
-            if (quantity == 0 ||
-                !OrderBook::can_match_level(taker_is_buy, is_market, limit, price_of(slot))) {
-                return false;
-            }
-            for (std::size_t i = level.head; quantity > 0 && i < level.orders.size(); ++i) {
-                if (level.orders[i].quantity == 0) {
-                    continue; // tombstone: not a maker
-                }
-                quantity -= std::min(quantity, level.orders[i].quantity);
-                ++count;
-            }
-            return quantity > 0;
-        });
-        return count;
+        return count_flat_matches(opposite, !taker_is_buy,
+                                  OrderBook::MatchQuery{taker_is_buy, limit, is_market, quantity});
     }
 
     [[nodiscard]] std::vector<LevelView> collect_levels(const BookSide &side, bool is_bid) const {
@@ -976,49 +988,82 @@ void OrderBook::rest(OrderId id, Side side, Price price, Quantity quantity) {
     index_[id] = Locator{side, price, std::prev(level.end())};
 }
 
-std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quantity quantity,
-                                        TimeInForce tif) {
+template <class BaselineFn, class IntrusiveFn, class ContiguousFn>
+decltype(auto) OrderBook::dispatch_storage(BaselineFn &&baseline_fn, IntrusiveFn &&intrusive_fn,
+                                           ContiguousFn &&contiguous_fn) {
     if (intrusive_) {
-        return intrusive_->add_limit(
-            OrderBook::IntrusiveStore::LimitInput{id, side, price, quantity, tif});
+        return intrusive_fn(*intrusive_);
     }
     if (contiguous_) {
-        return contiguous_->add_limit(id, side, price, quantity, tif);
+        return contiguous_fn(*contiguous_);
     }
-    std::vector<Trade> trades;
-    if (contains(id)) {
-        return trades;
+    return baseline_fn();
+}
+
+template <class BaselineFn, class IntrusiveFn, class ContiguousFn>
+decltype(auto) OrderBook::dispatch_storage(BaselineFn &&baseline_fn, IntrusiveFn &&intrusive_fn,
+                                           ContiguousFn &&contiguous_fn) const {
+    if (intrusive_) {
+        return intrusive_fn(*intrusive_);
     }
-    MatchContext ctx{id, side == Side::Buy, price, /*is_market=*/false, quantity, trades};
-    if (side == Side::Buy) {
-        match_against(asks_, ctx);
-    } else {
-        match_against(bids_, ctx);
+    if (contiguous_) {
+        return contiguous_fn(*contiguous_);
     }
-    if (quantity > 0 && tif == TimeInForce::GTC) {
-        rest(id, side, price, quantity);
+    return baseline_fn();
+}
+
+namespace {
+template <class LevelMap> std::optional<Price> best_price(const LevelMap &levels) {
+    if (levels.empty()) {
+        return std::nullopt;
     }
-    return trades;
+    return levels.begin()->first;
+}
+} // namespace
+
+std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quantity quantity,
+                                        TimeInForce tif) {
+    return dispatch_storage(
+        [&] {
+            std::vector<Trade> trades;
+            if (contains(id)) {
+                return trades;
+            }
+            MatchContext ctx{id, side == Side::Buy, price, /*is_market=*/false, quantity, trades};
+            if (side == Side::Buy) {
+                match_against(asks_, ctx);
+            } else {
+                match_against(bids_, ctx);
+            }
+            if (quantity > 0 && tif == TimeInForce::GTC) {
+                rest(id, side, price, quantity);
+            }
+            return trades;
+        },
+        [&](IntrusiveStore &store) {
+            return store.add_limit(IntrusiveStore::LimitInput{id, side, price, quantity, tif});
+        },
+        [&](ContiguousStore &store) { return store.add_limit(id, side, price, quantity, tif); });
 }
 
 std::vector<Trade> OrderBook::add_market(OrderId id, Side side, Quantity quantity) {
-    if (intrusive_) {
-        return intrusive_->add_market(id, side, quantity);
-    }
-    if (contiguous_) {
-        return contiguous_->add_market(id, side, quantity);
-    }
-    std::vector<Trade> trades;
-    if (contains(id)) {
-        return trades;
-    }
-    MatchContext ctx{id, side == Side::Buy, /*limit=*/0, /*is_market=*/true, quantity, trades};
-    if (side == Side::Buy) {
-        match_against(asks_, ctx);
-    } else {
-        match_against(bids_, ctx);
-    }
-    return trades; // market orders never rest
+    return dispatch_storage(
+        [&] {
+            std::vector<Trade> trades;
+            if (contains(id)) {
+                return trades;
+            }
+            MatchContext ctx{id,    side == Side::Buy, /*limit=*/0, /*is_market=*/true, quantity,
+                             trades};
+            if (side == Side::Buy) {
+                match_against(asks_, ctx);
+            } else {
+                match_against(bids_, ctx);
+            }
+            return trades; // market orders never rest
+        },
+        [&](IntrusiveStore &store) { return store.add_market(id, side, quantity); },
+        [&](ContiguousStore &store) { return store.add_market(id, side, quantity); });
 }
 
 template <class LevelMap> void OrderBook::erase_from_side(LevelMap &levels, const Locator &loc) {
@@ -1036,84 +1081,67 @@ void OrderBook::erase_resting_order(const Locator &loc) {
 }
 
 bool OrderBook::cancel(OrderId id) {
-    if (intrusive_) {
-        return intrusive_->cancel(id);
-    }
-    if (contiguous_) {
-        return contiguous_->cancel(id);
-    }
-    const auto found = index_.find(id);
-    if (found == index_.end()) {
-        return false;
-    }
-    const Locator loc = found->second;
-    erase_resting_order(loc);
-    index_.erase(found);
-    return true;
+    return dispatch_storage(
+        [&] {
+            const auto found = index_.find(id);
+            if (found == index_.end()) {
+                return false;
+            }
+            const Locator loc = found->second;
+            erase_resting_order(loc);
+            index_.erase(found);
+            return true;
+        },
+        [&](IntrusiveStore &store) { return store.cancel(id); },
+        [&](ContiguousStore &store) { return store.cancel(id); });
 }
 
 std::vector<Trade> OrderBook::modify(OrderId id, Price new_price, Quantity new_quantity) {
-    if (intrusive_) {
-        return intrusive_->modify(id, new_price, new_quantity);
-    }
-    if (contiguous_) {
-        return contiguous_->modify(id, new_price, new_quantity);
-    }
-    std::vector<Trade> trades;
-    const auto found = index_.find(id);
-    if (found == index_.end()) {
-        return trades; // unknown order: no-op here; rejection is the risk layer's job (M5)
-    }
-    const Locator loc = found->second;
-    if (new_quantity == 0) {
-        cancel(id);
-        return trades;
-    }
-    if (new_price == loc.price && new_quantity <= loc.it->quantity) {
-        loc.it->quantity = new_quantity; // reduce in place, preserve time priority
-        return trades;
-    }
-    // Price change or quantity increase loses priority: re-add at the tail (may cross).
-    const Side side = loc.side;
-    cancel(id);
-    return add_limit(id, side, new_price, new_quantity, TimeInForce::GTC);
+    return dispatch_storage(
+        [&] {
+            std::vector<Trade> trades;
+            const auto found = index_.find(id);
+            if (found == index_.end()) {
+                return trades; // unknown order: no-op here; rejection is the risk layer's job (M5)
+            }
+            const Locator loc = found->second;
+            if (new_quantity == 0) {
+                cancel(id);
+                return trades;
+            }
+            if (new_price == loc.price && new_quantity <= loc.it->quantity) {
+                loc.it->quantity = new_quantity; // reduce in place, preserve time priority
+                return trades;
+            }
+            // Price change or quantity increase loses priority: re-add at the tail (may cross).
+            const Side side = loc.side;
+            cancel(id);
+            return add_limit(id, side, new_price, new_quantity, TimeInForce::GTC);
+        },
+        [&](IntrusiveStore &store) { return store.modify(id, new_price, new_quantity); },
+        [&](ContiguousStore &store) { return store.modify(id, new_price, new_quantity); });
 }
 
 std::optional<Price> OrderBook::best_bid() const {
-    if (intrusive_) {
-        return intrusive_->best_bid();
-    }
-    if (contiguous_) {
-        return contiguous_->best_bid();
-    }
-    if (bids_.empty()) {
-        return std::nullopt;
-    }
-    return bids_.begin()->first;
+    return dispatch_storage([&] { return best_price(bids_); },
+                            [](const IntrusiveStore &store) { return store.best_bid(); },
+                            [](const ContiguousStore &store) { return store.best_bid(); });
 }
 
 std::optional<Price> OrderBook::best_ask() const {
-    if (intrusive_) {
-        return intrusive_->best_ask();
-    }
-    if (contiguous_) {
-        return contiguous_->best_ask();
-    }
-    if (asks_.empty()) {
-        return std::nullopt;
-    }
-    return asks_.begin()->first;
+    return dispatch_storage([&] { return best_price(asks_); },
+                            [](const IntrusiveStore &store) { return store.best_ask(); },
+                            [](const ContiguousStore &store) { return store.best_ask(); });
 }
 
 QuantityTotal OrderBook::quantity_at(Side side, Price price) const {
-    if (intrusive_) {
-        return intrusive_->quantity_at(side, price);
-    }
-    if (contiguous_) {
-        return contiguous_->quantity_at(side, price);
-    }
-    const Level *level = find_level(side, price);
-    return level == nullptr ? 0 : level_quantity(*level);
+    return dispatch_storage(
+        [&] {
+            const Level *level = find_level(side, price);
+            return level == nullptr ? QuantityTotal{0} : level_quantity(*level);
+        },
+        [&](const IntrusiveStore &store) { return store.quantity_at(side, price); },
+        [&](const ContiguousStore &store) { return store.quantity_at(side, price); });
 }
 
 const OrderBook::Level *OrderBook::find_level(Side side, Price price) const {
@@ -1134,50 +1162,47 @@ QuantityTotal OrderBook::level_quantity(const Level &level) {
 }
 
 std::size_t OrderBook::order_count() const {
-    if (intrusive_) {
-        return intrusive_->order_count();
-    }
-    if (contiguous_) {
-        return contiguous_->order_count();
-    }
-    return index_.size();
+    return dispatch_storage([&] { return index_.size(); },
+                            [](const IntrusiveStore &store) { return store.order_count(); },
+                            [](const ContiguousStore &store) { return store.order_count(); });
 }
 
 bool OrderBook::contains(OrderId id) const {
-    if (intrusive_) {
-        return intrusive_->contains(id);
-    }
-    if (contiguous_) {
-        return contiguous_->contains(id);
-    }
-    return index_.find(id) != index_.end();
+    return dispatch_storage([&] { return index_.find(id) != index_.end(); },
+                            [&](const IntrusiveStore &store) { return store.contains(id); },
+                            [&](const ContiguousStore &store) { return store.contains(id); });
 }
 
 std::size_t OrderBook::fill_count(Side taker_side, Price limit, bool is_market,
                                   Quantity quantity) const {
-    if (intrusive_) {
-        return intrusive_->fill_count(taker_side, limit, is_market, quantity);
-    }
-    if (contiguous_) {
-        return contiguous_->fill_count(taker_side, limit, is_market, quantity);
-    }
-    if (taker_side == Side::Buy) {
-        return count_matches(asks_, MatchQuery{/*taker_is_buy=*/true, limit, is_market, quantity});
-    }
-    if (taker_side == Side::Sell) {
-        return count_matches(bids_, MatchQuery{/*taker_is_buy=*/false, limit, is_market, quantity});
-    }
-    return 0;
+    return dispatch_storage(
+        [&] {
+            if (taker_side == Side::Buy) {
+                return count_matches(asks_,
+                                     MatchQuery{/*taker_is_buy=*/true, limit, is_market, quantity});
+            }
+            if (taker_side == Side::Sell) {
+                return count_matches(
+                    bids_, MatchQuery{/*taker_is_buy=*/false, limit, is_market, quantity});
+            }
+            return std::size_t{0};
+        },
+        [&](const IntrusiveStore &store) {
+            return store.fill_count(taker_side, limit, is_market, quantity);
+        },
+        [&](const ContiguousStore &store) {
+            return store.fill_count(taker_side, limit, is_market, quantity);
+        });
 }
 
 bool OrderBook::can_store_limit(Side side, Price price, Quantity quantity, TimeInForce tif) const {
-    if (intrusive_) {
-        return intrusive_->can_store_limit(side, price, quantity, tif);
-    }
-    if (contiguous_) {
-        return contiguous_->can_store_limit(side, price, quantity, tif);
-    }
-    return true;
+    return dispatch_storage([] { return true; },
+                            [&](const IntrusiveStore &store) {
+                                return store.can_store_limit(side, price, quantity, tif);
+                            },
+                            [&](const ContiguousStore &store) {
+                                return store.can_store_limit(side, price, quantity, tif);
+                            });
 }
 
 namespace {
@@ -1196,23 +1221,15 @@ template <class LevelMap> std::vector<LevelView> collect_levels(const LevelMap &
 } // namespace
 
 std::vector<LevelView> OrderBook::bid_levels() const {
-    if (intrusive_) {
-        return intrusive_->bid_levels();
-    }
-    if (contiguous_) {
-        return contiguous_->bid_levels();
-    }
-    return collect_levels(bids_);
+    return dispatch_storage([&] { return collect_levels(bids_); },
+                            [](const IntrusiveStore &store) { return store.bid_levels(); },
+                            [](const ContiguousStore &store) { return store.bid_levels(); });
 }
 
 std::vector<LevelView> OrderBook::ask_levels() const {
-    if (intrusive_) {
-        return intrusive_->ask_levels();
-    }
-    if (contiguous_) {
-        return contiguous_->ask_levels();
-    }
-    return collect_levels(asks_);
+    return dispatch_storage([&] { return collect_levels(asks_); },
+                            [](const IntrusiveStore &store) { return store.ask_levels(); },
+                            [](const ContiguousStore &store) { return store.ask_levels(); });
 }
 
 namespace {
@@ -1226,17 +1243,16 @@ template <class LevelMap> void append_orders(const LevelMap &book, std::vector<O
 } // namespace
 
 std::vector<Order> OrderBook::resting_orders() const {
-    if (intrusive_) {
-        return intrusive_->resting_orders();
-    }
-    if (contiguous_) {
-        return contiguous_->resting_orders();
-    }
-    std::vector<Order> out;
-    out.reserve(index_.size());
-    append_orders(bids_, out);
-    append_orders(asks_, out);
-    return out;
+    return dispatch_storage(
+        [&] {
+            std::vector<Order> out;
+            out.reserve(index_.size());
+            append_orders(bids_, out);
+            append_orders(asks_, out);
+            return out;
+        },
+        [](const IntrusiveStore &store) { return store.resting_orders(); },
+        [](const ContiguousStore &store) { return store.resting_orders(); });
 }
 
 } // namespace qsl::engine
