@@ -20,6 +20,7 @@ namespace qsl::bench {
 void run_order_pool_benchmarks();
 void run_storage_benchmarks();
 void run_false_sharing_benchmarks();
+void run_recovery_benchmarks();
 } // namespace qsl::bench
 
 namespace {
@@ -116,6 +117,8 @@ bool run_subcommand(int argc, char **argv) {
         qsl::bench::run_storage_benchmarks();
     } else if (command == "false-sharing") {
         qsl::bench::run_false_sharing_benchmarks();
+    } else if (command == "recovery") {
+        qsl::bench::run_recovery_benchmarks();
     } else {
         return false;
     }

@@ -44,7 +44,8 @@ target_link_libraries(qsl-export-stream PRIVATE qsl_core qsl_warnings)
 if(QSL_BUILD_BENCHMARKS)
   find_package(Threads REQUIRED)
   add_executable(qsl-bench apps/qsl-bench/main.cpp benchmarks/bench_order_pool.cpp
-                           benchmarks/bench_storage.cpp benchmarks/bench_false_sharing.cpp)
+                           benchmarks/bench_storage.cpp benchmarks/bench_false_sharing.cpp
+                           benchmarks/bench_recovery.cpp)
   target_link_libraries(qsl-bench PRIVATE qsl_core qsl_warnings Threads::Threads)
 endif()
 
