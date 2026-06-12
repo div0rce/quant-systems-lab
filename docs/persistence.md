@@ -93,7 +93,7 @@ recovery. The honest differences:
 | Commit batching             | group commit amortizes fsync across requests     | per-append mode or manual `sync()`      |
 | Segmentation                | fixed-size segments, rotation, archival          | one growing file                        |
 | Compaction                  | snapshots bound replay length                    | full replay from the start of the log   |
-| Recovery objective          | bounded restart time (snapshot + log tail)       | unbounded (proportional to log length); M46 measures this |
+| Recovery objective          | bounded restart time (snapshot + log tail)       | unbounded (proportional to log length); measured by `make bench-recovery` (`results/recovery_benchmarks.txt`) |
 
 The deepest gap is the first two rows. Because the gateway acknowledges orders before
 anything is persisted, a crash can lose commands the client believes were accepted — the
@@ -105,8 +105,9 @@ claim. M45 scopes durability to the log layer itself and makes the modes, costs,
 recovery semantics explicit there.
 
 Segmentation, rotation, and snapshot-bounded recovery are likewise documented as gaps, not
-built; M46 (recovery benchmarking) measures the cost of the current full-replay design
-before any of that is added.
+built; M46 (recovery benchmarking, `make bench-recovery`) measures the cost of the current
+full-replay design before any of that is added — see the recovery-cost section of
+[replay_and_recovery.md](replay_and_recovery.md).
 
 ## Validation
 
