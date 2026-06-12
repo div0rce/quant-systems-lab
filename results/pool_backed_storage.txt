@@ -4,12 +4,12 @@ OS:          Darwin 25.2.0
 Compiler:    Apple clang version 17.0.0 (clang-1700.4.4.1)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): d6701e8
-Source digest: sha256:fec2750d302aeabb9438c930a04f137fd779c5f68383a37441b95d09f2519eb8
+Git commit (informational): 4df7dd4
+Source digest: sha256:9bc7cc42609e75feacbf9f3db7b2c10e27104c4e38428b6a71f8875e11ca122c
 Source digest scope: order-book-storage-benchmark
 Dirty inputs: no
 Generated output: results/pool_backed_storage.txt
-Date: 2026-06-12T13:53:36Z
+Date: 2026-06-12T13:59:59Z
 Dataset:     deterministic generated engine flow (seed 42, 4 symbols, 5000 commands)
 Scenario:    baseline OrderBook storage vs PMR pooled nodes vs intrusive OrderPool nodes vs contiguous price-indexed storage
 Warmup:      one full engine replay per storage mode before timing
@@ -26,7 +26,7 @@ Hardware/compiler/build dependent.
 A neutral or negative result is acceptable and should not be reported as a speedup.
 
 Scenario / Metric / Result:
-engine flow baseline storage            5004 cmds       30 reps      180.7 ns/cmd      5534905 cmds/sec events=214650 resting=1110 last_seq=214650
-engine flow pooled pmr storage          5004 cmds       30 reps      159.6 ns/cmd      6264669 cmds/sec events=214650 resting=1110 last_seq=214650
-engine flow intrusive pool storage      5004 cmds       30 reps      247.8 ns/cmd      4035606 cmds/sec events=214650 resting=1110 last_seq=214650
-engine flow contiguous storage          5004 cmds       30 reps      134.7 ns/cmd      7423659 cmds/sec events=214650 resting=1110 last_seq=214650
+engine flow baseline storage            5004 cmds       30 reps      191.0 ns/cmd      5236866 cmds/sec events=214650 resting=1110 last_seq=214650
+engine flow pooled pmr storage          5004 cmds       30 reps      185.6 ns/cmd      5387484 cmds/sec events=214650 resting=1110 last_seq=214650
+engine flow intrusive pool storage      5004 cmds       30 reps      281.8 ns/cmd      3548719 cmds/sec events=214650 resting=1110 last_seq=214650
+engine flow contiguous storage          5004 cmds       30 reps      124.0 ns/cmd      8066613 cmds/sec events=214650 resting=1110 last_seq=214650

@@ -504,7 +504,7 @@ Lower priority:
 - [2026-06-12] M47 verification passed focused `test_matching_engine` and `test_order_book`,
   `make check` 225/225, `make asan` 225/225, and `make bench-storage`. The regenerated
   `results/pool_backed_storage.txt` records source digest
-  `sha256:fec2750d302aeabb9438c930a04f137fd779c5f68383a37441b95d09f2519eb8` and
+  `sha256:9bc7cc42609e75feacbf9f3db7b2c10e27104c4e38428b6a71f8875e11ca122c` and
   `Dirty inputs: no`; the artifact supports no portable speedup claim.
 - [2026-06-12] M47 CodeScene follow-up: storage-mode public dispatch was consolidated through
   internal helpers, and contiguous `fill_count` was split into narrower match-count helpers to
