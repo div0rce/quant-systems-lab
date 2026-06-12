@@ -250,8 +250,9 @@ TEST_CASE("partially filled maker retains priority over later orders", "[book]")
 
 TEST_CASE("resting_orders enumerates bids best-first then asks, FIFO within level",
           "[book][resting]") {
-    for (const auto storage : {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
-                               OrderBook::Storage::IntrusivePooled}) {
+    for (const auto storage :
+         {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
+          OrderBook::Storage::IntrusivePooled, OrderBook::Storage::Contiguous}) {
         CAPTURE(static_cast<int>(storage));
         OrderBook book{storage};
         book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
@@ -271,8 +272,9 @@ TEST_CASE("resting_orders enumerates bids best-first then asks, FIFO within leve
 
 TEST_CASE("resting_orders reflects partial fills, cancels, and priority-losing modifies",
           "[book][resting]") {
-    for (const auto storage : {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
-                               OrderBook::Storage::IntrusivePooled}) {
+    for (const auto storage :
+         {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
+          OrderBook::Storage::IntrusivePooled, OrderBook::Storage::Contiguous}) {
         CAPTURE(static_cast<int>(storage));
         OrderBook book{storage};
         book.add_limit(1, Side::Sell, 100, 10, TimeInForce::GTC);

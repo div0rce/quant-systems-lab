@@ -1,7 +1,7 @@
-# Pool-Backed Order-Book Storage
+# Order-Book Storage Experiments
 
-M32 evaluates order-book storage allocation in the actual matching-engine path. It is an
-engine-level experiment, not another isolated allocator microbenchmark.
+M32 and M47 evaluate order-book storage in the actual matching-engine path. These are
+engine-level experiments, not isolated allocator microbenchmarks.
 
 ## Baseline Storage
 
@@ -58,6 +58,33 @@ public `OrderBook` and `MatchingEngine(OrderBook::Storage)` surface, but replace
 This closes issue #95's direct-storage follow-up at the order-node level without claiming a full
 flat/contiguous order book. Level maps and locator maps are still standard containers.
 
+## M47 Contiguous Direct-Price-Indexed Mode
+
+M47 adds `OrderBook::Storage::Contiguous`, an opt-in layout study for a direct price-indexed book.
+It replaces the ordered price maps with a fixed price band:
+
+```text
+[OrderBook::kContiguousMinPrice, OrderBook::kContiguousMaxPrice] == [1, 1024]
+```
+
+Within that band:
+
+- each side owns a flat array of price levels;
+- occupancy bitmaps find the next occupied level best-first;
+- each price level stores FIFO resting orders in a contiguous `std::vector`;
+- canceled and filled orders become tombstones and long-lived levels compact when tombstones
+  dominate;
+- active-order locators point to `{side, price, position}` inside the flat level.
+
+The price band is an explicit study assumption, not a production-domain claim. Out-of-band limit
+prices may still cross existing in-band liquidity; the band constrains where GTC remainders may
+rest. A GTC order whose remainder would rest outside the band is refused before engine mutation via
+`can_store_limit`, similar to how intrusive pooled storage can refuse a residual when fixed
+capacity is exhausted.
+
+This is not a general sparse-price-book replacement. It is a cache/locality experiment for bounded
+integer-tick domains where direct indexing is plausible.
+
 ## Affected Allocations
 
 `Storage::Pooled` affects container node allocation inside each `OrderBook`:
@@ -83,6 +110,23 @@ It does not affect:
 - `std::map<SymbolId, OrderBook>` nodes owned by `MatchingEngine`.
 - price-level map allocation or locator hash-table allocation in intrusive mode.
 
+`Storage::Contiguous` affects:
+
+- bid/ask price-level storage, replacing ordered maps with fixed direct-index arrays;
+- level discovery, replacing tree traversal with occupancy bitmap scans;
+- per-price FIFO storage, replacing linked list nodes with contiguous vectors;
+- locator representation, replacing list iterators/custom node pointers with vector positions.
+
+It still does not affect:
+
+- protocol frame allocation;
+- gateway/session buffers;
+- event-log allocation;
+- market-data publisher allocation;
+- `std::vector<EngineEvent>` result allocation;
+- `MatchingEngine`'s per-symbol map;
+- hash-table allocation for active-order locators.
+
 ## Correctness Gate
 
 The invariant test replays deterministic generated flows through all storage modes and asserts:
@@ -93,7 +137,9 @@ The invariant test replays deterministic generated flows through all storage mod
 - identical final `EngineSnapshot`;
 - non-vacuity: trades occur and resting liquidity remains.
 
-This keeps M32 as an allocation experiment, not a semantic change.
+The generated-flow test prices remain inside the contiguous mode's explicit band, so it compares
+storage layout without intentionally triggering out-of-band storage refusals. This keeps the
+experiments as storage-layout studies, not semantic changes inside the declared domain.
 
 ## Benchmark Methodology
 
@@ -105,8 +151,8 @@ make bench-storage
 
 The script builds the release benchmark preset and writes `results/pool_backed_storage.txt`. The
 workload is a deterministic generated flow (`seed = 42`, `symbols = 4`, `orders = 5000`) replayed
-through `MatchingEngine` in baseline, PMR pooled, and intrusive pooled modes. The metric is
-`ns/command` and `commands/sec`.
+through `MatchingEngine` in baseline, PMR pooled, intrusive pooled, and contiguous direct-indexed
+modes. The metric is `ns/command` and `commands/sec`.
 
 This benchmark exercises the engine path. It is not isolated allocator acquire/release and does not
 include network, disk, Linux kernel path, or perf/PMU counters.
@@ -118,28 +164,19 @@ depends on CPU, compiler, standard library, allocation pattern, cache state, and
 
 If future runs show neutral or slower pooled performance, that is still a valid result. The
 question is whether a storage mode improves this specific engine workload without changing
-semantics.
+semantics inside the mode's declared domain.
 
 ## Cache, Locality, And Replay
 
-PMR pooling can improve locality by drawing repeated container node allocations from pooled
-chunks, but it does not make the order book contiguous. Intrusive pooled storage removes
-`std::list` nodes from the hot FIFO path, but it still traverses linked nodes and ordered price
-maps; it is not a flat-array book.
+PMR pooling can improve locality by drawing repeated container node allocations from pooled chunks,
+but it does not make the order book contiguous. Intrusive pooled storage removes `std::list` nodes
+from the hot FIFO path, but it still traverses linked nodes and ordered price maps; it is not a
+flat-array book. Contiguous storage changes the price-level layout and per-level FIFO locality, but
+its fixed price band is a tradeoff: direct indexing can be attractive in bounded integer domains
+and wasteful or semantically awkward in sparse/unbounded domains.
 
 Replay determinism is unchanged because allocation addresses are not part of the domain state,
 snapshot output, event ordering, or sequence assignment.
-
-## Future Contiguous Storage Study
-
-M47 owns the next storage-architecture question: whether flat/contiguous order-book layouts provide
-better cache-locality tradeoffs than the baseline, PMR pooled, or intrusive pooled modes. Candidate
-approaches include flat-vector-style price levels, direct price-index storage where price domains
-are explicit, and other contiguous layouts that preserve price-time priority.
-
-That work must be an engine-level study, not another isolated allocator benchmark. It needs replay
-or differential equivalence, benchmark artifacts, and cache-locality discussion. A slower or neutral
-result is acceptable if it explains the tradeoff honestly.
 
 ## Limitations
 
@@ -147,6 +184,8 @@ result is acceptable if it explains the tradeoff honestly.
 - Intrusive pooled storage does not eliminate price-level or locator-map allocations.
 - The intrusive pool has fixed order-node capacity and no heap fallback; committed workloads stay
   within that capacity.
+- Contiguous storage has a fixed resting-price band and is not suitable for arbitrary sparse price
+  domains without a fallback or a different indexing strategy.
 - The benchmark is synthetic and single-process.
 - The result is not a production-latency claim.
-- The experiment does not prove that pooled allocation should be retained for every workload.
+- The experiment does not prove that any storage mode should be retained for every workload.

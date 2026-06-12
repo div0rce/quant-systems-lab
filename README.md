@@ -115,7 +115,8 @@ the core numbers above.
   are architecture and pressure-validation paths, not a production event loop or capacity claim.
 - **Benchmarks are microbenchmarks**, not end-to-end or production latency (see above).
   CPU-affinity/scheduler-migration and false-sharing studies are separate hardware-dependent
-  artifacts; contiguous order-book storage architecture work remains future M47 scope.
+  artifacts; contiguous order-book storage is a bounded-domain architecture study, not a general
+  cache-locality or production-latency claim.
 - **Networking is minimal**: loopback TCP order entry and a UDP market-data feed,
   unauthenticated, no TLS, no framing recovery beyond disconnect-on-malformed. The socket path is
   profiled and its hardening posture documented in

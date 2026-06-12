@@ -27,9 +27,20 @@ class OrderBook {
     // std::map, and std::unordered_map node storage through a per-book
     // std::pmr::unsynchronized_pool_resource. IntrusivePooled replaces the per-price std::list
     // nodes with custom FIFO nodes backed by the M28 raw OrderPool experiment; price/index maps
-    // remain standard containers. The choice is fixed at construction and never changes matching
-    // semantics or determinism; it only changes where resting-order nodes live in memory.
-    enum class Storage { Baseline, Pooled, IntrusivePooled };
+    // remain standard containers. Contiguous (M47) replaces the level maps with a direct
+    // price-indexed flat array plus occupancy bitmaps and stores each level's FIFO queue in a
+    // contiguous vector; it can rest orders only inside the explicit price band below. The choice
+    // is fixed at construction and never changes matching semantics or determinism; it only
+    // changes where resting-order state lives in memory.
+    enum class Storage { Baseline, Pooled, IntrusivePooled, Contiguous };
+
+    // Explicit price-domain assumption for Storage::Contiguous: GTC remainders can rest only at
+    // integer-tick prices inside [kContiguousMinPrice, kContiguousMaxPrice]. Out-of-band limit
+    // prices may still *match* (the band constrains resting, not crossing); an order whose
+    // remainder would rest out of band is refused through can_store_limit, exactly like
+    // IntrusivePooled refuses on pool exhaustion.
+    static constexpr Price kContiguousMinPrice = 1;
+    static constexpr Price kContiguousMaxPrice = 1024;
 
     explicit OrderBook(Storage storage = Storage::Baseline);
     ~OrderBook();
@@ -126,6 +137,7 @@ class OrderBook {
     static bool can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price);
     static QuantityTotal level_quantity(const Level &level);
     struct IntrusiveStore;
+    struct ContiguousStore;
 
     // Declared before the containers so resource_ is valid when they are constructed. `pool_` is
     // engaged only in Pooled mode; resource_ points at it, otherwise at the shared
@@ -136,6 +148,7 @@ class OrderBook {
     AskMap asks_;
     std::pmr::unordered_map<OrderId, Locator> index_;
     std::unique_ptr<IntrusiveStore> intrusive_;
+    std::unique_ptr<ContiguousStore> contiguous_;
 };
 
 } // namespace qsl::engine

@@ -25,8 +25,10 @@ PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109 (68061e6), and 
 (003504f). PR #112 (2369f84) closed issues #95, #28, and #26. PR #113 (f3cc4dd) updated the
 future systems-engineering roadmap and agent guidance. PR #114 (29ed491) added the M43
 CPU-affinity / scheduler-migration / NUMA-locality study. PR #115 (cd05b37) landed M44 plus the
-M45A source-digest provenance slice for false-sharing and NUMA artifacts. Current active work is
-PR #116, the M45B provenance follow-up on `perf/m45b-artifact-provenance-migration`.
+M45A source-digest provenance slice for false-sharing and NUMA artifacts. PR #116 (b9ea27a)
+completed the M45B provenance migration, PR #117 (d10bfb0) landed M45 persistence, and PR #118
+(aeba72c) landed M46 recovery benchmarking. Current active work is M47 on
+`feat/m47-contiguous-order-book-storage`.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -39,8 +41,7 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-Current work is M45B, the process follow-up that migrates the remaining artifact generators from
-commit-hash identity to source-digest provenance. To resume:
+Current work is M47, the contiguous order-book storage and cache-locality study. To resume:
 
 ```text
 /resume
@@ -67,11 +68,10 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `cd05b37` (PR #115, M44 false-sharing study plus M45A provenance)
-- current active branch, if active: `perf/m45b-artifact-provenance-migration`
-- current active status: M45B PR #116 open; remaining perf, socket, allocator, storage,
-  differential, and core benchmark artifact generators are being migrated to source-digest
-  provenance
+- latest synced main baseline: `aeba72c` (PR #118, M46 recovery benchmarking)
+- current active branch, if active: `feat/m47-contiguous-order-book-storage`
+- current active status: M47 in progress; contiguous direct-price-indexed storage is being
+  evaluated against baseline, PMR pooled, and intrusive pooled storage modes
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence
 - issues #95, #28, and #26 were closed by PR #112
@@ -80,10 +80,11 @@ Current state:
 
 ### Next milestone
 
-The repository-health refactor phase (M36–M42), the post-M42 feature follow-up (PR #112), and the
-roadmap audit (PR #113), and M43 NUMA awareness study (PR #114) are complete and merged. The
-current process follow-up is **M45B — Artifact provenance migration**. It is not M45 persistence
-work and does not renumber the roadmap.
+The repository-health refactor phase (M36–M42), the post-M42 feature follow-up (PR #112), the
+roadmap audit (PR #113), M43 NUMA awareness study (PR #114), M44 false-sharing study (PR #115),
+M45B provenance migration (PR #116), M45 persistence (PR #117), and M46 recovery benchmarking
+(PR #118) are complete and merged. The current milestone is **M47 — Contiguous order-book storage
+and cache-locality study**.
 
 ### Phase III / IV purpose
 
@@ -95,7 +96,7 @@ evidence, persistence/recovery benchmarking, and late-stage low-latency networki
 
 Current priority order:
 
-1. M45B — Artifact provenance migration follow-up.
+1. M47 — Contiguous order-book storage and cache-locality study.
 2. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
 3. Issue #94 — independent external technical review remains one of the highest credibility gaps.
 
