@@ -21,7 +21,7 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M46 — Recovery benchmarking
-- **Status:** ◐ implementation complete and review-clean locally; ready to open PR
+- **Status:** ◐ PR #118 open for review
 - **Active branch:** `feat/m46-recovery-benchmarking`
 - **Last completed milestone:** M45 — Exchange-grade persistence prototype (squash-merged PR #117,
   commit d10bfb0), after M45B — Artifact provenance migration follow-up (squash-merged PR #116,
@@ -37,7 +37,7 @@ Do not rely on prior chat memory.
   clean-provenance `results/recovery_benchmarks.txt` artifact (regenerated after the CodeScene
   helper decomposition), and recovery-objective docs in `docs/replay_and_recovery.md` /
   `docs/persistence.md` / `docs/benchmarking.md`.
-- **Next action:** `/finish-milestone` to open PR `perf: benchmark recovery paths`; do not merge
+- **Next action:** wait for review on PR #118 (`perf: benchmark recovery paths`). Do not merge
   from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
@@ -220,9 +220,8 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M46 implementation is complete and verified locally (check 223/223, asan 223/223,
-  fixtures/manifest clean, CodeScene 10.0/9.68/9.09). Remaining: `/review`, then
-  `/finish-milestone` to open the PR._
+- _M46 implementation is complete and PR #118 is open. Remaining: review response only; do not
+  merge from automation._
 
 
 ---
@@ -293,7 +292,7 @@ Lower priority:
 | M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☑ merged | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
-| M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ◐ PR-ready | — | Replay and snapshot restoration performance |
+| M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ◐ PR open | #118 | Replay and snapshot restoration performance |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
@@ -580,8 +579,8 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M46 on `feat/m46-recovery-benchmarking`: implementation is complete and locally
-review-clean; finish the milestone by opening PR `perf: benchmark recovery paths`. Delivered:
+Current action is M46 on `feat/m46-recovery-benchmarking`: PR #118 is open for review
+(`perf: benchmark recovery paths`). Delivered:
 replay-path and snapshot-restoration measurement via committed scripts, artifacts with full
 metadata (`Provenance version: 1`, source digest, dirty-inputs state), and docs stating exactly
 which recovery objective was measured. M45 (PR #117, d10bfb0) is merged; its durability modes and
