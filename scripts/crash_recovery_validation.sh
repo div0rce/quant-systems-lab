@@ -82,6 +82,17 @@ recover_field() {
     printf '%s\n' "$value"
 }
 
+capture_recover() {
+    local log="$1" out_var="$2" rc_var="$3" output rc
+    if output="$("$BIN" recover "$log" 2>&1)"; then
+        rc=0
+    else
+        rc=$?
+    fi
+    printf -v "$out_var" '%s' "$output"
+    printf -v "$rc_var" '%s' "$rc"
+}
+
 TRIAL_LINES=()
 BUFFERED_LOST=0
 TORN_REPAIRED=0
@@ -94,7 +105,7 @@ AMBIGUOUS_TAIL_FIXTURE="not-run"
 run_trial() {
     local mode="$1" trial="$2" target="$3"
     local log="$WORK_DIR/${mode}_${trial}.bin" ack_file="$WORK_DIR/${mode}_${trial}.acks"
-    local acked recovered tail_state repaired="no" recover_out post_out post_records post_append="skipped"
+    local acked recovered tail_state repaired="no" recover_out recover_rc post_records post_append="skipped"
 
     "$BIN" append-loop "$log" "$mode" >"$ack_file" &
     WRITER_PID=$!
@@ -105,21 +116,33 @@ run_trial() {
     WRITER_PID=""
 
     acked="$(grep -c '^ack ' "$ack_file" || true)"
-    recover_out="$("$BIN" recover "$log" 2>&1 || true)"
+    capture_recover "$log" recover_out recover_rc
     recovered="$(recover_field "$recover_out" records)"
     tail_state="$(recover_field "$recover_out" tail)"
 
     case "$tail_state" in
-    clean) ;;
+    clean)
+        [[ "$recover_rc" -eq 0 ]] ||
+            fail "$mode trial $trial: clean tail returned recover status $recover_rc"
+        ;;
     torn)
+        [[ "$recover_rc" -ne 0 ]] ||
+            fail "$mode trial $trial: torn tail returned clean recover status"
         "$BIN" recover "$log" --repair >/dev/null || fail "$mode trial $trial: torn-tail repair failed"
-        recover_out="$("$BIN" recover "$log")" || fail "$mode trial $trial: log not clean after repair"
+        capture_recover "$log" recover_out recover_rc
+        [[ "$recover_rc" -eq 0 ]] ||
+            fail "$mode trial $trial: log not clean after repair (status $recover_rc)"
         [[ "$(recover_field "$recover_out" records)" == "$recovered" ]] ||
             fail "$mode trial $trial: repair changed the recovered record count"
         repaired="yes"
         TORN_REPAIRED=$((TORN_REPAIRED + 1))
         ;;
     corrupt)
+        [[ "$recover_rc" -ne 0 ]] ||
+            fail "$mode trial $trial: corrupt tail returned clean recover status"
+        if "$BIN" recover "$log" --repair >/dev/null 2>&1; then
+            fail "$mode trial $trial: corrupt tail repair unexpectedly succeeded"
+        fi
         CORRUPT_TAILS=$((CORRUPT_TAILS + 1))
         ;;
     *) fail "$mode trial $trial: unexpected tail state '$tail_state' (acked=$acked)" ;;
@@ -135,8 +158,11 @@ run_trial() {
     fi
 
     if [[ "$tail_state" != "corrupt" ]]; then
-        post_out="$("$BIN" append-loop "$log" "$mode" 3)" || fail "$mode trial $trial: post-repair append failed"
-        recover_out="$("$BIN" recover "$log")" || fail "$mode trial $trial: log not clean after post-repair append"
+        "$BIN" append-loop "$log" "$mode" 3 >/dev/null ||
+            fail "$mode trial $trial: post-repair append failed"
+        capture_recover "$log" recover_out recover_rc
+        [[ "$recover_rc" -eq 0 ]] ||
+            fail "$mode trial $trial: log not clean after post-repair append (status $recover_rc)"
         post_records="$(recover_field "$recover_out" records)"
         [[ "$post_records" -eq $((recovered + 3)) ]] ||
             fail "$mode trial $trial: post-repair append count $post_records != $((recovered + 3))"
