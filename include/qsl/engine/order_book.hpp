@@ -120,10 +120,20 @@ class OrderBook {
         Quantity quantity;
     };
 
+    struct MatchResult {
+        std::vector<Trade> trades;
+        Quantity remainder;
+        bool accepted;
+    };
+
     template <class OppMap> void match_against(OppMap &opposite, MatchContext &ctx);
 
     template <class OppMap>
     std::size_t count_matches(const OppMap &opposite, MatchQuery query) const;
+    template <class ContainsFn, class MatchFn>
+    static MatchResult match_incoming(OrderId id, Side side, Price limit, bool is_market,
+                                      Quantity quantity, ContainsFn &&contains_fn,
+                                      MatchFn &&match_fn);
     template <class BaselineFn, class IntrusiveFn, class ContiguousFn>
     decltype(auto) dispatch_storage(BaselineFn &&baseline_fn, IntrusiveFn &&intrusive_fn,
                                     ContiguousFn &&contiguous_fn);
@@ -137,9 +147,12 @@ class OrderBook {
     void rest(OrderId id, Side side, Price price, Quantity quantity);
     Level &level_for(Side side, Price price);
     const Level *find_level(Side side, Price price) const;
+    void match_baseline(Side side, MatchContext &ctx);
     void fill_front_order(Level &level, Price level_price, MatchContext &ctx);
     void fill_level(Level &level, Price level_price, MatchContext &ctx);
     void erase_resting_order(const Locator &loc);
+    static bool fill_maker(MatchContext &ctx, OrderId maker_id, Quantity &maker_quantity,
+                           Price level_price);
     static bool can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price);
     static QuantityTotal level_quantity(const Level &level);
     struct IntrusiveStore;

@@ -100,6 +100,29 @@ template <class T, std::size_t Capacity> class RawPool {
 
 } // namespace
 
+template <class ContainsFn, class MatchFn>
+OrderBook::MatchResult OrderBook::match_incoming(OrderId id, Side side, Price limit, bool is_market,
+                                                 Quantity quantity, ContainsFn &&contains_fn,
+                                                 MatchFn &&match_fn) {
+    MatchResult result{{}, quantity, false};
+    if (contains_fn()) {
+        return result;
+    }
+    result.accepted = true;
+    MatchContext ctx{id, side == Side::Buy, limit, is_market, result.remainder, result.trades};
+    std::forward<MatchFn>(match_fn)(side, ctx);
+    return result;
+}
+
+bool OrderBook::fill_maker(MatchContext &ctx, OrderId maker_id, Quantity &maker_quantity,
+                           Price level_price) {
+    const Quantity traded = std::min(ctx.quantity, maker_quantity);
+    ctx.trades.push_back(Trade{ctx.taker_id, maker_id, level_price, traded});
+    ctx.quantity -= traded;
+    maker_quantity -= traded;
+    return maker_quantity == 0;
+}
+
 struct OrderBook::IntrusiveStore {
     struct Node {
         Order *order;
@@ -224,11 +247,7 @@ struct OrderBook::IntrusiveStore {
     void fill_front_order(Level &level, Price level_price, OrderBook::MatchContext &ctx) {
         Node *node = level.head;
         Order &maker = *node->order;
-        const Quantity traded = std::min(ctx.quantity, maker.quantity);
-        ctx.trades.push_back(Trade{ctx.taker_id, maker.id, level_price, traded});
-        ctx.quantity -= traded;
-        maker.quantity -= traded;
-        if (maker.quantity == 0) {
+        if (OrderBook::fill_maker(ctx, maker.id, maker.quantity, level_price)) {
             index.erase(maker.id);
             unlink_node(level, node);
             destroy_node(node);
@@ -251,6 +270,14 @@ struct OrderBook::IntrusiveStore {
             fill_level(level_it->second, level_price, ctx);
             erase_level_if_empty(opposite, level_it);
         }
+    }
+
+    void match_opposite(Side side, OrderBook::MatchContext &ctx) {
+        if (side == Side::Buy) {
+            match_against(asks, ctx);
+            return;
+        }
+        match_against(bids, ctx);
     }
 
     struct MatchOutcome {
@@ -309,43 +336,27 @@ struct OrderBook::IntrusiveStore {
     }
 
     std::vector<Trade> add_limit(LimitInput input) {
-        std::vector<Trade> trades;
-        if (contains(input.id)) {
-            return trades;
-        }
-        OrderBook::MatchContext ctx{input.id,
-                                    input.side == Side::Buy,
-                                    input.price,
-                                    /*is_market=*/false,
-                                    input.quantity,
-                                    trades};
-        if (input.side == Side::Buy) {
-            match_against(asks, ctx);
-        } else {
-            match_against(bids, ctx);
-        }
+        OrderBook::MatchResult result = OrderBook::match_incoming(
+            input.id, input.side, input.price, /*is_market=*/false, input.quantity,
+            [&] { return contains(input.id); },
+            [&](Side side, OrderBook::MatchContext &ctx) { match_opposite(side, ctx); });
         // Rest only the post-match remainder: match_against reduced ctx.quantity as it filled, so a
         // fully filled order has ctx.quantity == 0 and must not rest, and a partial fill rests the
         // leftover, not the original input quantity.
-        if (ctx.quantity > 0 && input.tif == TimeInForce::GTC) {
-            static_cast<void>(rest(input.id, input.side, input.price, ctx.quantity));
+        if (result.accepted && result.remainder > 0 && input.tif == TimeInForce::GTC) {
+            static_cast<void>(rest(input.id, input.side, input.price, result.remainder));
         }
-        return trades;
+        return result.trades;
     }
 
     std::vector<Trade> add_market(OrderId id, Side side, Quantity quantity) {
-        std::vector<Trade> trades;
-        if (contains(id)) {
-            return trades;
-        }
-        OrderBook::MatchContext ctx{
-            id, side == Side::Buy, /*limit=*/0, /*is_market=*/true, quantity, trades};
-        if (side == Side::Buy) {
-            match_against(asks, ctx);
-        } else {
-            match_against(bids, ctx);
-        }
-        return trades;
+        return OrderBook::match_incoming(
+                   id, side, /*limit=*/0, /*is_market=*/true, quantity,
+                   [&] { return contains(id); },
+                   [&](Side taker_side, OrderBook::MatchContext &ctx) {
+                       match_opposite(taker_side, ctx);
+                   })
+            .trades;
     }
 
     bool cancel(OrderId id) {
@@ -642,11 +653,7 @@ struct OrderBook::ContiguousStore {
 
     void fill_front_order(FlatLevel &level, Price level_price, OrderBook::MatchContext &ctx) {
         FlatOrder &maker = level.orders[level.head];
-        const Quantity traded = std::min(ctx.quantity, maker.quantity);
-        ctx.trades.push_back(Trade{ctx.taker_id, maker.id, level_price, traded});
-        ctx.quantity -= traded;
-        maker.quantity -= traded;
-        if (maker.quantity == 0) {
+        if (OrderBook::fill_maker(ctx, maker.id, maker.quantity, level_price)) {
             index.erase(maker.id);
             --level.alive;
             advance_head(level);
@@ -680,30 +687,32 @@ struct OrderBook::ContiguousStore {
         }
     }
 
+    void match_opposite(Side side, OrderBook::MatchContext &ctx) {
+        const bool taker_is_buy = side == Side::Buy;
+        match_against(taker_is_buy ? asks : bids, !taker_is_buy, ctx);
+    }
+
     std::vector<Trade> add_limit(OrderId id, Side side, Price price, Quantity quantity,
                                  TimeInForce tif) {
-        std::vector<Trade> trades;
-        if (contains(id)) {
-            return trades;
+        OrderBook::MatchResult result = OrderBook::match_incoming(
+            id, side, price, /*is_market=*/false, quantity, [&] { return contains(id); },
+            [&](Side taker_side, OrderBook::MatchContext &ctx) {
+                match_opposite(taker_side, ctx);
+            });
+        if (result.accepted && result.remainder > 0 && tif == TimeInForce::GTC) {
+            static_cast<void>(rest(id, side, price, result.remainder));
         }
-        OrderBook::MatchContext ctx{id,    side == Side::Buy, price, /*is_market=*/false, quantity,
-                                    trades};
-        match_against(side == Side::Buy ? asks : bids, side != Side::Buy, ctx);
-        if (ctx.quantity > 0 && tif == TimeInForce::GTC) {
-            static_cast<void>(rest(id, side, price, ctx.quantity));
-        }
-        return trades;
+        return result.trades;
     }
 
     std::vector<Trade> add_market(OrderId id, Side side, Quantity quantity) {
-        std::vector<Trade> trades;
-        if (contains(id)) {
-            return trades;
-        }
-        OrderBook::MatchContext ctx{
-            id, side == Side::Buy, /*limit=*/0, /*is_market=*/true, quantity, trades};
-        match_against(side == Side::Buy ? asks : bids, side != Side::Buy, ctx);
-        return trades;
+        return OrderBook::match_incoming(
+                   id, side, /*limit=*/0, /*is_market=*/true, quantity,
+                   [&] { return contains(id); },
+                   [&](Side taker_side, OrderBook::MatchContext &ctx) {
+                       match_opposite(taker_side, ctx);
+                   })
+            .trades;
     }
 
     void remove_resting(const Locator &loc) {
@@ -911,11 +920,7 @@ bool OrderBook::can_match_level(bool taker_is_buy, bool is_market, Price limit, 
 
 void OrderBook::fill_front_order(Level &level, Price level_price, MatchContext &ctx) {
     Order &maker = level.front();
-    const Quantity traded = std::min(ctx.quantity, maker.quantity);
-    ctx.trades.push_back(Trade{ctx.taker_id, maker.id, level_price, traded});
-    ctx.quantity -= traded;
-    maker.quantity -= traded;
-    if (maker.quantity == 0) {
+    if (fill_maker(ctx, maker.id, maker.quantity, level_price)) {
         index_.erase(maker.id);
         level.pop_front();
     }
@@ -944,6 +949,14 @@ template <class OppMap> void OrderBook::match_against(OppMap &opposite, MatchCon
         fill_level(level_it->second, level_price, ctx);
         erase_level_if_empty(opposite, level_it);
     }
+}
+
+void OrderBook::match_baseline(Side side, MatchContext &ctx) {
+    if (side == Side::Buy) {
+        match_against(asks_, ctx);
+        return;
+    }
+    match_against(bids_, ctx);
 }
 
 template <class Level> std::size_t count_level_matches(const Level &level, Quantity &quantity) {
@@ -1025,20 +1038,13 @@ std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quan
                                         TimeInForce tif) {
     return dispatch_storage(
         [&] {
-            std::vector<Trade> trades;
-            if (contains(id)) {
-                return trades;
+            MatchResult result = match_incoming(
+                id, side, price, /*is_market=*/false, quantity, [&] { return contains(id); },
+                [&](Side taker_side, MatchContext &ctx) { match_baseline(taker_side, ctx); });
+            if (result.accepted && result.remainder > 0 && tif == TimeInForce::GTC) {
+                rest(id, side, price, result.remainder);
             }
-            MatchContext ctx{id, side == Side::Buy, price, /*is_market=*/false, quantity, trades};
-            if (side == Side::Buy) {
-                match_against(asks_, ctx);
-            } else {
-                match_against(bids_, ctx);
-            }
-            if (quantity > 0 && tif == TimeInForce::GTC) {
-                rest(id, side, price, quantity);
-            }
-            return trades;
+            return result.trades;
         },
         [&](IntrusiveStore &store) {
             return store.add_limit(IntrusiveStore::LimitInput{id, side, price, quantity, tif});
@@ -1049,18 +1055,11 @@ std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quan
 std::vector<Trade> OrderBook::add_market(OrderId id, Side side, Quantity quantity) {
     return dispatch_storage(
         [&] {
-            std::vector<Trade> trades;
-            if (contains(id)) {
-                return trades;
-            }
-            MatchContext ctx{id,    side == Side::Buy, /*limit=*/0, /*is_market=*/true, quantity,
-                             trades};
-            if (side == Side::Buy) {
-                match_against(asks_, ctx);
-            } else {
-                match_against(bids_, ctx);
-            }
-            return trades; // market orders never rest
+            return match_incoming(
+                       id, side, /*limit=*/0, /*is_market=*/true, quantity,
+                       [&] { return contains(id); },
+                       [&](Side taker_side, MatchContext &ctx) { match_baseline(taker_side, ctx); })
+                .trades;
         },
         [&](IntrusiveStore &store) { return store.add_market(id, side, quantity); },
         [&](ContiguousStore &store) { return store.add_market(id, side, quantity); });
