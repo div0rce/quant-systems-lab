@@ -218,3 +218,19 @@ TEST_CASE("cancel/modify on an unknown symbol reject", "[gateway]") {
     expect_reject(fx.gw.cancel(SymbolId{99}, 1), RejectReason::UnknownSymbol);
     expect_reject(fx.gw.modify(SymbolId{99}, 1, 100, 3), RejectReason::UnknownSymbol);
 }
+
+TEST_CASE("contiguous reprice past the band rejects as StorageExhausted", "[gateway]") {
+    engine::MatchingEngine eng{engine::OrderBook::Storage::Contiguous};
+    const SymbolId a = eng.register_symbol("AAPL");
+    OrderGateway gw{eng, kConfig};
+    REQUIRE(gw.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC).accepted);
+    const auto before = eng.snapshot();
+    const auto before_seq = eng.last_seq();
+
+    // The remainder would rest outside the contiguous price band, so the gateway rejects with
+    // a structured reason and the engine emits nothing (no OrderModified for an unapplied modify).
+    const Price out_of_band = engine::OrderBook::kContiguousMaxPrice + 1;
+    expect_reject(gw.modify(a, 1, out_of_band, 5), RejectReason::StorageExhausted);
+    expect_unchanged(eng, before, before_seq);
+    REQUIRE(eng.contains(a, 1));
+}

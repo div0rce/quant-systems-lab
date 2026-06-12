@@ -80,7 +80,11 @@ The price band is an explicit study assumption, not a production-domain claim. O
 prices may still cross existing in-band liquidity; the band constrains where GTC remainders may
 rest. A GTC order whose remainder would rest outside the band is refused before engine mutation via
 `can_store_limit`, similar to how intrusive pooled storage can refuse a residual when fixed
-capacity is exhausted.
+capacity is exhausted. Modifies are pre-gated the same way: the engine asks `can_apply_modify`
+before emitting `OrderModified`, so a reprice whose cancel-and-re-add remainder would rest out of
+band is refused with no event and no state change (the gateway reports it as `StorageExhausted`,
+and the original order keeps resting at its old price). The event stream therefore never reports a
+modify the book did not apply.
 
 This is not a general sparse-price-book replacement. It is a cache/locality experiment for bounded
 integer-tick domains where direct indexing is plausible.

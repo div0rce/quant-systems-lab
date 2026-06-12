@@ -155,8 +155,11 @@ ClientCommand -> OrderGateway (risk) -> MatchingEngine -> EngineEvents
 - **Opt-in storage guards** — when the explicit intrusive order-pool storage mode is selected,
   a GTC limit order that would need to rest but cannot acquire an order node is rejected with
   `StorageExhausted` before matching mutates state. The M47 contiguous storage mode similarly
-  rejects a GTC remainder that would have to rest outside its fixed direct-price-index band.
-  Baseline and PMR storage are unchanged.
+  rejects a GTC remainder that would have to rest outside its fixed direct-price-index band,
+  and pre-gates modifies the same way (`can_apply_modify`): a reprice whose re-add remainder
+  would rest out of band is rejected with `StorageExhausted` before the engine emits
+  `OrderModified`, so the original order keeps resting and the event stream never reports an
+  unapplied modify. Baseline and PMR storage are unchanged.
 
 Checks run in a fixed order so the returned reason is deterministic when multiple would
 apply: unknown symbol, duplicate id, then value checks (side, price, quantity, max

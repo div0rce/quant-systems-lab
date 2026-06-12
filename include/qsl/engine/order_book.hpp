@@ -80,6 +80,12 @@ class OrderBook {
     [[nodiscard]] bool can_store_limit(Side side, Price price, Quantity quantity,
                                        TimeInForce tif) const;
 
+    /// Whether a nonzero modify of resting order `id` can be applied by this storage mode.
+    /// Contiguous storage refuses a reprice whose remainder would rest outside the price band;
+    /// callers must check this *before* emitting a modify event so the event stream never
+    /// reports a modify the book refused. Unknown ids report true (contains() owns that check).
+    [[nodiscard]] bool can_apply_modify(OrderId id, Price new_price, Quantity new_quantity) const;
+
     // Aggregate resting quantity per price level, best price first.
     [[nodiscard]] std::vector<LevelView> bid_levels() const;
     [[nodiscard]] std::vector<LevelView> ask_levels() const;

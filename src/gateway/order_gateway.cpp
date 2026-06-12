@@ -59,6 +59,9 @@ GatewayResult OrderGateway::modify(SymbolId symbol, OrderId id, Price new_price,
         r != RejectReason::None) {
         return GatewayResult::reject(r);
     }
+    if (!engine_.can_apply_modify(symbol, id, new_price, new_quantity)) {
+        return GatewayResult::reject(RejectReason::StorageExhausted);
+    }
     return GatewayResult::accept(engine_.modify(symbol, id, new_price, new_quantity));
 }
 

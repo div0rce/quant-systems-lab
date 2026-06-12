@@ -30,9 +30,11 @@ Do not rely on prior chat memory.
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
 - **`make check` passing:** yes on M47 branch at e55e455 source-input commit plus regenerated
   artifact/docs state (225/225 tests); `make asan` also passed 225/225.
-- **Last action:** implemented `OrderBook::Storage::Contiguous`, a fixed-band direct
-  price-indexed storage mode with occupancy bitmaps and contiguous per-level FIFO vectors; extended
-  storage equivalence tests, `qsl-bench storage`, docs, and `results/pool_backed_storage.txt`.
+- **Last action:** fixed PR #119 review findings: `can_apply_modify` now pre-gates
+  `MatchingEngine::modify` so a refused out-of-band contiguous reprice emits no `OrderModified`
+  (gateway rejects it as `StorageExhausted`; the original order keeps resting), and
+  `ContiguousStore` moved to `src/engine/contiguous_store.hpp` to clear the brain-class
+  function-count gate (both files CodeScene 9.68; change-set quality gates pass).
 - **Next action:** wait for review/CI on PR #119 (`perf: study contiguous order-book storage`).
   Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -509,6 +511,23 @@ Lower priority:
 - [2026-06-12] M47 CodeScene follow-up: storage-mode public dispatch was consolidated through
   internal helpers, and contiguous `fill_count` was split into narrower match-count helpers to
   reduce repeated wrapper structure and local branch complexity without changing semantics.
+- [2026-06-12] M47 PR #119 review fix (Codex P2): a contiguous reprice whose re-add remainder
+  would rest out of band was refused inside `OrderBook::modify` *after* the engine had already
+  emitted `OrderModified`, so the event stream could report a modify the book never applied. The
+  refusal is now visible before the event: `OrderBook::can_apply_modify` (true for
+  baseline/PMR/intrusive, band check for contiguous) pre-gates `MatchingEngine::modify` exactly
+  like `can_store_limit` pre-gates `new_limit`, the gateway rejects such modifies with structured
+  `StorageExhausted`, and the store-level refusal remains as defense in depth for direct book
+  callers (the original order keeps resting). Side effect: the engine-level pre-gate cleared the
+  pre-existing CodeScene Code Duplication finding between `MatchingEngine::new_market` and
+  `modify`. New tests pin the engine no-event/no-seq refusal, the crossing out-of-band reprice
+  that still applies, the gateway rejection, and the direct-book refusal.
+- [2026-06-12] M47 PR #119 CodeScene gate fix: adding the modify pre-gate pushed
+  `src/engine/order_book.cpp` to the brain-class function-count threshold, so the M47
+  `ContiguousStore` moved to an internal header `src/engine/contiguous_store.hpp` (included only
+  by `order_book.cpp`; no public API or CMake change). Both files score 9.68 with only the
+  pre-existing argument-count findings, and `analyze_change_set` vs `origin/main` passes the
+  quality gates.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.

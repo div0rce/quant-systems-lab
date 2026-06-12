@@ -298,3 +298,22 @@ TEST_CASE("resting_orders on an empty book is empty", "[book][resting]") {
     book.cancel(1);
     REQUIRE(book.resting_orders().empty());
 }
+
+TEST_CASE("contiguous book refuses an out-of-band reprice and keeps the order", "[book]") {
+    OrderBook book{OrderBook::Storage::Contiguous};
+    book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+
+    // No crossing liquidity: the re-add would have to rest out of band, so the modify is
+    // refused and the original order is kept (not silently dropped).
+    REQUIRE_FALSE(book.can_apply_modify(1, out_of_band, 5));
+    REQUIRE(book.modify(1, out_of_band, 5).empty());
+    REQUIRE(book.contains(1));
+    REQUIRE(book.best_bid() == std::optional<Price>{100});
+
+    // In-band reprices, reductions, cancels (qty 0), and unknown ids all remain applicable.
+    const bool applicable = book.can_apply_modify(1, 101, 9) && book.can_apply_modify(1, 100, 3) &&
+                            book.can_apply_modify(1, out_of_band, 0) &&
+                            book.can_apply_modify(999, out_of_band, 5);
+    REQUIRE(applicable);
+}
