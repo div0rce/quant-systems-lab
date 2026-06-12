@@ -21,7 +21,7 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M47 — Contiguous order-book storage and cache-locality study
-- **Status:** ◐ in progress (implementation and verification complete; PR ready)
+- **Status:** ◐ PR open (#119)
 - **Active branch:** `feat/m47-contiguous-order-book-storage`
 - **Last completed milestone:** M46 — Recovery benchmarking (squash-merged PR #118, commit
   aeba72c), after M45 — Exchange-grade persistence prototype (squash-merged PR #117, commit
@@ -33,9 +33,8 @@ Do not rely on prior chat memory.
 - **Last action:** implemented `OrderBook::Storage::Contiguous`, a fixed-band direct
   price-indexed storage mode with occupancy bitmaps and contiguous per-level FIFO vectors; extended
   storage equivalence tests, `qsl-bench storage`, docs, and `results/pool_backed_storage.txt`.
-- **Next action:** commit the regenerated artifact/progress state, push
-  `feat/m47-contiguous-order-book-storage`, and open PR `perf: study contiguous order-book
-  storage`. Do not merge from automation.
+- **Next action:** wait for review/CI on PR #119 (`perf: study contiguous order-book storage`).
+  Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -217,8 +216,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M47 implementation and verification complete. Next step: open PR `perf: study contiguous
-  order-book storage`; do not merge from automation._
+- _M47 PR #119 is open. Next step: wait for review/CI; do not merge from automation._
 
 
 ---
@@ -290,7 +288,7 @@ Lower priority:
 | M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
-| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ◐ PR ready | — | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
+| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ◐ PR open | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 

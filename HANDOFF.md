@@ -27,7 +27,7 @@ future systems-engineering roadmap and agent guidance. PR #114 (29ed491) added t
 CPU-affinity / scheduler-migration / NUMA-locality study. PR #115 (cd05b37) landed M44 plus the
 M45A source-digest provenance slice for false-sharing and NUMA artifacts. PR #116 (b9ea27a)
 completed the M45B provenance migration, PR #117 (d10bfb0) landed M45 persistence, and PR #118
-(aeba72c) landed M46 recovery benchmarking. Current active work is M47 on
+(aeba72c) landed M46 recovery benchmarking. Current active work is M47 PR #119 on
 `feat/m47-contiguous-order-book-storage`.
 
 Background — M29 delivered (merged, constrained-environment only):
@@ -70,7 +70,7 @@ Current state:
 
 - latest synced main baseline: `aeba72c` (PR #118, M46 recovery benchmarking)
 - current active branch, if active: `feat/m47-contiguous-order-book-storage`
-- current active status: M47 in progress; contiguous direct-price-indexed storage is being
+- current active status: M47 PR #119 open; contiguous direct-price-indexed storage is being
   evaluated against baseline, PMR pooled, and intrusive pooled storage modes
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence

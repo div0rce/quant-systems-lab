@@ -1722,7 +1722,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m45-persistence-prototype`
 - **PR title:** `feat: prototype stronger persistence strategy`
 - **Goal:** Investigate durability strategy beyond the current append-only lab log.
-- **Status:** ◐ PR ready.
+- **Status:** ◐ PR open (#119).
 - **Dependencies:** M7/M8 event log and replay plus M30 socket/kernel profiling. M45 should define
   durability/recovery assumptions that M46 can benchmark later; it must not depend on M46 being
   complete.
