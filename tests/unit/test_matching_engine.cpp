@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <optional>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <variant>
@@ -311,4 +312,40 @@ TEST_CASE("market order emits OrderAccepted then a TradeEvent", "[engine]") {
     expect_accepted(ev[0], a, /*order_id=*/2);
     expect_trade(ev[1], ExpectedTrade{a, /*maker=*/1, /*taker=*/2, /*price=*/100, /*quantity=*/5});
     REQUIRE(seq_of(ev[1]) > seq_of(ev[0]));
+}
+
+TEST_CASE("book state rebuilt from resting_orders matches the original", "[engine][resting]") {
+    // The capture/restore procedure the M46 recovery benchmark times: enumerate every resting
+    // order in priority order, then re-add the orders into a fresh engine registered with the
+    // same symbol names. Book state (levels, tops, counts) and intra-level FIFO order must be
+    // reproduced exactly; only the sequence counter differs (the rebuilt engine re-counts
+    // accepts), which is why a real snapshot design would also have to persist sequencing state.
+    const auto flow = qsl::replay::generate_flow(/*seed=*/7, /*symbols=*/3, /*orders=*/600);
+    MatchingEngine original;
+    std::vector<std::string> names;
+    for (const auto &command : flow) {
+        if (const auto *reg = std::get_if<qsl::replay::RegisterSymbol>(&command)) {
+            names.push_back(reg->name);
+        }
+        static_cast<void>(qsl::replay::apply(original, command));
+    }
+
+    MatchingEngine rebuilt;
+    std::size_t total_resting = 0;
+    for (const auto &name : names) {
+        const SymbolId symbol = rebuilt.register_symbol(name);
+        for (const Order &order : original.resting_orders(symbol)) {
+            const auto ev = rebuilt.new_limit(symbol, order.id, order.side, order.price,
+                                              order.quantity, TimeInForce::GTC);
+            REQUIRE(ev.size() == 1); // accepted only: re-adding uncrossed state never trades
+            ++total_resting;
+        }
+    }
+
+    REQUIRE(total_resting > 10); // non-vacuity: the flow must leave a real book behind
+    REQUIRE(rebuilt.snapshot().symbols == original.snapshot().symbols);
+    for (SymbolId symbol = 0; symbol < 3; ++symbol) {
+        CAPTURE(symbol);
+        REQUIRE(rebuilt.resting_orders(symbol) == original.resting_orders(symbol));
+    }
 }

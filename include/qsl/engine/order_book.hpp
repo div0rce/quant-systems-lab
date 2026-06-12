@@ -73,6 +73,12 @@ class OrderBook {
     [[nodiscard]] std::vector<LevelView> bid_levels() const;
     [[nodiscard]] std::vector<LevelView> ask_levels() const;
 
+    /// Every resting order in deterministic priority order: bid levels best (highest) first,
+    /// then ask levels best (lowest) first, FIFO within each level. Re-adding the orders in
+    /// this sequence into an empty book reproduces the same levels and intra-level time
+    /// priority, so this is exactly the state a snapshot/restore path would have to persist.
+    [[nodiscard]] std::vector<Order> resting_orders() const;
+
   private:
     // pmr node storage so the resting-order list nodes (and the level/index map nodes) can be
     // drawn from a pooled memory resource (M32). The container API is identical to the std::

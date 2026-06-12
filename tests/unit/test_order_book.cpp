@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <limits>
 #include <optional>
+#include <vector>
 
 using namespace qsl::engine;
 
@@ -245,4 +246,53 @@ TEST_CASE("partially filled maker retains priority over later orders", "[book]")
     expect_trade(second[0], /*maker=*/1, /*taker=*/4, /*price=*/100,
                  /*quantity=*/2); // o1 remainder
     expect_trade(second[1], /*maker=*/2, /*taker=*/4, /*price=*/100, /*quantity=*/1); // then o2
+}
+
+TEST_CASE("resting_orders enumerates bids best-first then asks, FIFO within level",
+          "[book][resting]") {
+    for (const auto storage : {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
+                               OrderBook::Storage::IntrusivePooled}) {
+        CAPTURE(static_cast<int>(storage));
+        OrderBook book{storage};
+        book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
+        book.add_limit(2, Side::Buy, 101, 3, TimeInForce::GTC); // better bid: listed first
+        book.add_limit(3, Side::Buy, 101, 4, TimeInForce::GTC); // same level, later: after 2
+        book.add_limit(4, Side::Sell, 103, 7, TimeInForce::GTC);
+        book.add_limit(5, Side::Sell, 102, 6, TimeInForce::GTC); // better ask: listed first
+
+        const std::vector<Order> expected{{2, Side::Buy, 101, 3},
+                                          {3, Side::Buy, 101, 4},
+                                          {1, Side::Buy, 100, 5},
+                                          {5, Side::Sell, 102, 6},
+                                          {4, Side::Sell, 103, 7}};
+        REQUIRE(book.resting_orders() == expected);
+    }
+}
+
+TEST_CASE("resting_orders reflects partial fills, cancels, and priority-losing modifies",
+          "[book][resting]") {
+    for (const auto storage : {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
+                               OrderBook::Storage::IntrusivePooled}) {
+        CAPTURE(static_cast<int>(storage));
+        OrderBook book{storage};
+        book.add_limit(1, Side::Sell, 100, 10, TimeInForce::GTC);
+        book.add_limit(2, Side::Sell, 100, 5, TimeInForce::GTC);
+        book.add_limit(3, Side::Sell, 100, 5, TimeInForce::GTC);
+
+        book.add_limit(4, Side::Buy, 100, 4, TimeInForce::GTC); // partial-fills 1 down to 6
+        book.modify(2, 100, 9);                                 // qty increase: 2 moves to back
+        book.cancel(3);
+
+        // 1 keeps its reduced remainder at the front; 2 lost priority and re-rested at the tail.
+        const std::vector<Order> expected{{1, Side::Sell, 100, 6}, {2, Side::Sell, 100, 9}};
+        REQUIRE(book.resting_orders() == expected);
+    }
+}
+
+TEST_CASE("resting_orders on an empty book is empty", "[book][resting]") {
+    OrderBook book;
+    REQUIRE(book.resting_orders().empty());
+    book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
+    book.cancel(1);
+    REQUIRE(book.resting_orders().empty());
 }

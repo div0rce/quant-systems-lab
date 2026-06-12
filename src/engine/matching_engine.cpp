@@ -111,6 +111,11 @@ bool MatchingEngine::has_symbol(SymbolId symbol) const {
     return books_.find(symbol) != books_.end();
 }
 
+std::vector<Order> MatchingEngine::resting_orders(SymbolId symbol) const {
+    const auto it = books_.find(symbol);
+    return it == books_.end() ? std::vector<Order>{} : it->second.resting_orders();
+}
+
 bool MatchingEngine::contains(SymbolId symbol, OrderId id) const {
     const auto it = books_.find(symbol);
     return it != books_.end() && it->second.contains(id);
