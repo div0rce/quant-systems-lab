@@ -33,6 +33,11 @@ void expect_bid_order_kept(const OrderBook &book, OrderId id, Price price) {
     REQUIRE(book.contains(id));
     REQUIRE(book.best_bid() == std::optional<Price>{price});
 }
+
+void expect_ask_order_kept(const OrderBook &book, OrderId id, Price price) {
+    REQUIRE(book.contains(id));
+    REQUIRE(book.best_ask() == std::optional<Price>{price});
+}
 } // namespace
 
 TEST_CASE("non-crossing limits rest and set top of book", "[book]") {
@@ -324,4 +329,16 @@ TEST_CASE("contiguous book refuses an out-of-band reprice and keeps the order", 
                             book.can_apply_modify(1, out_of_band, 0) &&
                             book.can_apply_modify(999, out_of_band, 5);
     REQUIRE(applicable);
+}
+
+TEST_CASE("contiguous book refuses out-of-band residuals before matching", "[book]") {
+    OrderBook book{OrderBook::Storage::Contiguous};
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+
+    REQUIRE(book.add_limit(1, Side::Sell, 100, 2, TimeInForce::GTC).empty());
+    const auto trades = book.add_limit(2, Side::Buy, out_of_band, 5, TimeInForce::GTC);
+
+    REQUIRE(trades.empty());
+    expect_ask_order_kept(book, 1, 100);
+    REQUIRE_FALSE(book.contains(2));
 }

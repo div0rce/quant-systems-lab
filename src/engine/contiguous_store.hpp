@@ -223,6 +223,9 @@ struct OrderBook::ContiguousStore {
 
     std::vector<Trade> add_limit(OrderId id, Side side, Price price, Quantity quantity,
                                  TimeInForce tif) {
+        if (!can_store_limit(side, price, quantity, tif)) {
+            return {};
+        }
         OrderBook::MatchResult result = OrderBook::match_incoming(
             id, side, price, /*is_market=*/false, quantity, [&] { return contains(id); },
             [&](Side taker_side, OrderBook::MatchContext &ctx) {
