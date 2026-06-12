@@ -25,6 +25,7 @@ ACK_BASE="${QSL_CRASH_ACK_BASE:-25}"
 ACK_STEP="${QSL_CRASH_ACK_STEP:-25}"
 PROVENANCE_SCOPE="crash-recovery-validation"
 PROVENANCE_INPUTS=(
+    include/qsl/protocol/endian.hpp
     include/qsl/replay/event_log.hpp
     src/replay/event_log.cpp
     apps/qsl-replay
@@ -85,6 +86,8 @@ TRIAL_LINES=()
 BUFFERED_LOST=0
 TORN_REPAIRED=0
 CORRUPT_TAILS=0
+AMBIGUOUS_TAILS_REFUSED=0
+AMBIGUOUS_TAIL_FIXTURE="not-run"
 
 # One kill trial: start the writer, kill it once `target` appends are acknowledged, then
 # validate recovery, repair, and post-repair appendability.
@@ -102,7 +105,7 @@ run_trial() {
     WRITER_PID=""
 
     acked="$(grep -c '^ack ' "$ack_file" || true)"
-    recover_out="$("$BIN" recover "$log" || true)"
+    recover_out="$("$BIN" recover "$log" 2>&1 || true)"
     recovered="$(recover_field "$recover_out" records)"
     tail_state="$(recover_field "$recover_out" tail)"
 
@@ -144,6 +147,47 @@ run_trial() {
         "$mode" "$trial" "$target" "$acked" "$recovered" "$tail_state" "$repaired" "$post_append")")
 }
 
+validate_ambiguous_tail_fixture() {
+    local log="$WORK_DIR/ambiguous_full_header.bin" recover_out records tail_state tail_error
+    local second_record_payload_size_offset=$((42 + 18))
+
+    "$BIN" append-loop "$log" fsync 3 >/dev/null ||
+        fail "ambiguous-tail fixture: seed log generation failed"
+
+    # Each append-loop record is 42 bytes: a 22-byte header, 16-byte payload, and 4-byte
+    # checksum. Corrupt the second record's payload_size field to an in-range value that is
+    # larger than the remaining file. This simulates a complete but untrusted header before
+    # later bytes, so automated repair must treat it as corruption rather than a torn final
+    # append.
+    printf '\000\000\004\000' |
+        dd of="$log" bs=1 seek="$second_record_payload_size_offset" conv=notrunc >/dev/null 2>&1 ||
+        fail "ambiguous-tail fixture: payload-size corruption failed"
+
+    if recover_out="$("$BIN" recover "$log" 2>&1)"; then
+        fail "ambiguous-tail fixture: corrupted log recovered cleanly"
+    fi
+
+    records="$(recover_field "$recover_out" records)"
+    tail_state="$(recover_field "$recover_out" tail)"
+    tail_error="$(recover_field "$recover_out" tail_error)"
+    [[ "$records" == "1" ]] ||
+        fail "ambiguous-tail fixture: expected one trusted prefix record, got $records"
+    [[ "$tail_state" == "corrupt" ]] ||
+        fail "ambiguous-tail fixture: expected corrupt tail, got $tail_state"
+    [[ "$tail_error" == "truncated" ]] ||
+        fail "ambiguous-tail fixture: expected truncated tail error, got $tail_error"
+
+    if "$BIN" recover "$log" --repair >/dev/null 2>&1; then
+        fail "ambiguous-tail fixture: repair unexpectedly succeeded"
+    fi
+
+    AMBIGUOUS_TAILS_REFUSED=$((AMBIGUOUS_TAILS_REFUSED + 1))
+    AMBIGUOUS_TAIL_FIXTURE="$(
+        printf 'records=%s tail=%s tail_error=%s repair=refused' \
+            "$records" "$tail_state" "$tail_error"
+    )"
+}
+
 for mode in fsync flush; do
     for ((trial = 1; trial <= TRIALS; trial++)); do
         run_trial "$mode" "$trial" $((ACK_BASE + (trial - 1) * ACK_STEP))
@@ -151,6 +195,7 @@ for mode in fsync flush; do
 done
 # Buffered demonstration: kill only after enough acks that the unflushed stdio tail is visible.
 run_trial buffered 1 1000
+validate_ambiguous_tail_fixture
 
 TMP_OUT="$WORK_DIR/artifact.txt"
 {
@@ -176,10 +221,12 @@ TMP_OUT="$WORK_DIR/artifact.txt"
     for line in "${TRIAL_LINES[@]}"; do
         echo "  $line"
     done
+    echo "  ambiguous-fixture $AMBIGUOUS_TAIL_FIXTURE"
     echo
     echo "Result: all $TRIALS fsync and $TRIALS flush process-kill trials preserved every"
     echo "acknowledged record. Torn tails repaired to clean appendable logs when provable."
-    echo "Result: repaired torn tails=$TORN_REPAIRED; corrupt ambiguous tails refused=$CORRUPT_TAILS."
+    echo "Result: repaired torn tails=$TORN_REPAIRED; process-kill corrupt tails refused=$CORRUPT_TAILS;"
+    echo "explicit ambiguous full-header fixtures refused=$AMBIGUOUS_TAILS_REFUSED."
     echo "Result: the buffered demonstration lost $BUFFERED_LOST acknowledged record(s) under"
     echo "SIGKILL; user-space buffering is expected to lose its unflushed tail."
     echo

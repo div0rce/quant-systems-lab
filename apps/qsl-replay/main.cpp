@@ -174,6 +174,10 @@ bool command_is(const CommandLine &line, CommandName name) {
     return line.command_name().text == spelling(name);
 }
 
+bool has_subcommand(const CommandLine &line) noexcept {
+    return line.size() >= 2;
+}
+
 int usage_error() {
     std::cerr << kUsage;
     return 2;
@@ -205,8 +209,11 @@ int generate(GenerateRequest request) {
 }
 
 int run_generate_command(const CommandLine &line) {
+    if (line.size() != 3 && line.size() != 4) {
+        return usage_error();
+    }
     Seed seed{42};
-    if (line.size() >= 4) {
+    if (line.size() == 4) {
         const auto parsed = parse_u64(line.seed_arg());
         if (!parsed) {
             return unsigned_arg_error(NumericArg::Seed, line.seed_arg());
@@ -295,7 +302,7 @@ int append_loop(AppendLoopRequest request) {
 }
 
 int run_append_loop_command(const CommandLine &line) {
-    if (line.size() > 5) {
+    if (line.size() != 4 && line.size() != 5) {
         return usage_error();
     }
     const auto mode = parse_mode(line.mode_arg());
@@ -338,14 +345,16 @@ int replay(LogPath path) {
 }
 
 int dispatch(const CommandLine &line) {
-    if (line.size() >= 3 && command_is(line, CommandName::Generate)) {
-        return run_generate_command(line);
-    }
-    if (line.size() >= 3 && command_is(line, CommandName::Recover)) {
-        return run_recover_command(line);
-    }
-    if (line.size() >= 4 && command_is(line, CommandName::AppendLoop)) {
-        return run_append_loop_command(line);
+    if (has_subcommand(line)) {
+        if (command_is(line, CommandName::Generate)) {
+            return run_generate_command(line);
+        }
+        if (command_is(line, CommandName::Recover)) {
+            return run_recover_command(line);
+        }
+        if (command_is(line, CommandName::AppendLoop)) {
+            return run_append_loop_command(line);
+        }
     }
     if (line.size() == 2) {
         return replay({std::string(line.values[1])});
