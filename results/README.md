@@ -29,6 +29,11 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   append-only event log across durability modes (`make crash-recovery`). It is process-kill
   evidence only: it validates crash-mid-append recovery and acknowledged-record retention across
   process death, not power-loss or OS-crash durability (see `docs/persistence.md`).
+- `recovery_benchmarks.txt` — M46 recovery benchmarking (`make bench-recovery`,
+  `qsl-bench recovery`): full-replay restart cost (log read/verify/classify plus replay into a
+  fresh engine) at several log lengths, against a benchmark-only in-memory snapshot-restoration
+  prototype at several live-state depths. Restart cost on this host (RTO-style) only; no
+  production recovery-time claim (see `docs/replay_and_recovery.md`).
 
 ## Policy
 
