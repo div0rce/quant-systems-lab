@@ -39,6 +39,32 @@ add_test(
           "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
 
 add_test(
+  NAME qsl_replay_generate_missing_path_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-replay>" -D "ARGS=generate"
+          -D "EXPECT_OUTPUT=usage:" -D "REJECT_OUTPUT=log read error" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_replay_generate_extra_arg_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-replay>"
+          -D "ARGS=generate;${CMAKE_CURRENT_BINARY_DIR}/qsl-replay-extra.log;42;extra"
+          -D "EXPECT_OUTPUT=usage:" -D "REJECT_OUTPUT=wrote " -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_replay_recover_missing_path_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-replay>" -D "ARGS=recover"
+          -D "EXPECT_OUTPUT=usage:" -D "REJECT_OUTPUT=log read error" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_replay_append_loop_missing_mode_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-replay>"
+          -D "ARGS=append-loop;${CMAKE_CURRENT_BINARY_DIR}/qsl-replay-append-loop.log"
+          -D "EXPECT_OUTPUT=usage:" -D "REJECT_OUTPUT=cannot open" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
   NAME qsl_export_stream_missing_mode_seed_fails
   COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-export-stream>" -D "ARGS=prop"
           -D "EXPECT_OUTPUT=prop requires <seed>" -P

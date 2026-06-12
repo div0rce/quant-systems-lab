@@ -54,9 +54,13 @@ A buffer that ends exactly on a record boundary reads cleanly (`LogError::None`)
 truncated trailing record is reported as `Truncated` while earlier intact records are still
 returned.
 
-`EventLogWriter::append` checks both `fwrite` and `fflush` before reporting success. M7
-does not claim `fsync` or durable-to-disk semantics; the guarantee is stdio flush
-correctness for the append path.
+`EventLogWriter::append` checks both `fwrite` and `fflush` before reporting success in the
+default `FlushOnAppend` mode; the M7 guarantee is stdio flush correctness for the append
+path, not durable-to-disk semantics. M45 added explicit durability modes (`BufferedOnly`,
+`FlushOnAppend`, `FsyncOnAppend`, plus a `sync()` group-commit point), torn-tail recovery
+classification (`recover_log`, `qsl-replay recover`), conservative tail repair, and a
+SIGKILL crash-validation harness (`make crash-recovery`). The persistence failure model and
+its limits are documented in [persistence.md](persistence.md).
 
 `EventLogReader::read_all` distinguishes a missing or unreadable file from a valid empty
 log: open/read failures return `LogError::OpenFailed`, while an existing empty file reads

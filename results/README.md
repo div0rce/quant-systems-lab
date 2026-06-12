@@ -25,6 +25,10 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `false_sharing_study.txt` — benchmark-only packed-vs-padded SPSC queue-cursor contention study
   (`make false-sharing-study`). It is research-note evidence about cache-line sharing shape, not
   a production throughput or latency claim.
+- `crash_recovery_validation.txt` — M45 SIGKILL crash / torn-tail recovery validation for the
+  append-only event log across durability modes (`make crash-recovery`). It is process-kill
+  evidence only: it validates crash-mid-append recovery and acknowledged-record retention across
+  process death, not power-loss or OS-crash durability (see `docs/persistence.md`).
 
 ## Policy
 

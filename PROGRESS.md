@@ -20,22 +20,32 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M45B process follow-up — migrate remaining artifact provenance metadata
-- **Status:** ◐ PR #116 open. This branch converts the remaining perf, socket, allocator, storage,
-  differential, and core benchmark artifact generators to source-digest provenance after M45A
-  landed with M44.
-- **Active branch:** `perf/m45b-artifact-provenance-migration`
-- **Last completed milestone:** M44 — Ingress queue memory-ordering and false-sharing study
+- **Active milestone:** M45 — Exchange-grade persistence prototype
+- **Status:** ◐ PR #117 open for review. Delivered: explicit event-log durability modes + sync()
+  group commit, torn-tail recovery classification and conservative repair, `qsl-replay
+  recover`/`append-loop` subcommands, `make crash-recovery` SIGKILL validation harness with a
+  clean-provenance artifact, and docs/persistence.md + ADR 0011. No production-durability claims.
+- **Active branch:** `feat/m45-persistence-prototype`
+- **Last completed milestone:** M45B — Artifact provenance migration follow-up (squash-merged
+  PR #116, commit b9ea27a), after M44 — Ingress queue memory-ordering and false-sharing study
   (squash-merged PR #115, commit cd05b37)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes, 204/204 for M45B. `make asan` was not run because M45B changes
-  Bash/docs/results only.
-- **Last action:** migrated the remaining artifact generators to source-digest provenance, fixed
-  constrained perf wrapper classification, regenerated migrated artifacts with `Dirty inputs: no`,
-  and verified the branch.
-- **Next action:** wait for PR #116 review/CI and iterate until Codex reports no issues. Do not
-  merge from automation.
+- **`make check` passing:** yes, 219/219 on the M45 branch; `make asan` 219/219; `make
+  check-fixtures` and `make check-manifest` clean (replay-library changes did not alter export
+  bytes); `make crash-recovery` regenerated `results/crash_recovery_validation.txt` with
+  `Dirty inputs: no`; local CodeScene reviews of `apps/qsl-replay/main.cpp` and
+  `src/replay/event_log.cpp` are 10.0 with no findings.
+- **Last action:** fixed PR #117 replay/crash-harness review findings: known `qsl-replay`
+  subcommands now reject missing/extra operands with usage instead of falling through to replay or
+  ignoring extras, crash-recovery provenance includes the endian serialization helper, and the
+  crash harness now builds an explicit in-range full-header corrupt-tail fixture, enforces
+  `qsl-replay recover` exit-status semantics, and proves corrupt repair is refused. Regenerated
+  the crash-recovery artifact from clean declared inputs and verified focused CLI tests,
+  `bash -n scripts/crash_recovery_validation.sh`, `git diff --check`, `make check`, `make asan`,
+  and `make crash-recovery`.
+- **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
+  Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -217,9 +227,8 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M45B provenance migration is in progress on `perf/m45b-artifact-provenance-migration`; finish
-  script/docs conversion, regenerate migrated artifacts after committing source inputs, and do not
-  merge from automation._
+- _M45 implementation is complete and verified locally (check 214/214, asan 214/214,
+  fixtures/manifest clean). Remaining: `/review`, then `/finish-milestone` to open the PR._
 
 
 ---
@@ -288,8 +297,8 @@ Lower priority:
 | Docs | Systems-engineering roadmap audit | `docs/systems-roadmap-audit` | ☑ merged | #113 | Docs-only update to future systems roadmap and agent guidance |
 | M43 | NUMA awareness study | `feat/m43-numa-awareness-study` | ☑ merged | #114 | CPU affinity, scheduler migration, NUMA, and cache-locality caveats where hardware exists; constrained Docker artifact generated |
 | M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☑ merged | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
-| M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ◐ PR open | #116 | Convert remaining artifact generators from commit identity to source-digest provenance |
-| M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☐ not started | — | WAL/durability/crash-recovery prototype |
+| M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
+| M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ◐ PR open | #117 | WAL/durability/crash-recovery prototype verified locally |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☐ not started | — | Replay and snapshot restoration performance |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
@@ -397,6 +406,66 @@ Lower priority:
   `make socket-load`, `git diff --check`, and `make check` 204/204.
 - [2026-06-11] M45B opened PR #116 (`perf: migrate artifact provenance metadata`). Do not merge
   from automation; wait for Codex no-bugs review before treating M45B as complete.
+- [2026-06-11] PR #116 squash-merged to `main` as b9ea27a, completing M45B. M45 started on
+  `feat/m45-persistence-prototype`. Scope: durability strategy beyond the current append-only lab
+  log, WAL analysis, and automated crash/recovery validation. Constraints: no production-durability
+  claims; deterministic replay, integer-tick prices, and wall-clock-independent core remain
+  invariants; M46 recovery benchmarking is out of scope here.
+- [2026-06-11] M45: `EventLogWriter` gains an explicit caller-chosen `DurabilityMode`
+  (`BufferedOnly` / `FlushOnAppend` / `FsyncOnAppend`) plus a `sync()` group-commit point; the
+  default `FlushOnAppend` preserves pre-M45 behavior so existing call sites are unchanged. Fsync
+  uses `F_FULLFSYNC` on macOS with `fsync` fallback, and `FsyncOnAppend` also fsyncs the parent
+  directory at open so a new log's directory entry is durable, not just its bytes.
+- [2026-06-11] M45: recovery classifies a log tail as `CleanTail` / `TornTail` / `Corrupt`
+  (`recover_log`, `recover_log_file`). A partial next-record header is torn; once a full header has
+  declared a payload size, a truncated frame is corrupt because that untrusted size could span
+  later valid records. `BadChecksum` is torn only when the failing frame ends exactly at end of
+  file; `PayloadTooLarge` headers are never trusted. `repair_log_file` truncates torn tails to the
+  last valid record boundary and fsyncs the truncation; it refuses `Corrupt` logs because truncating
+  mid-file damage would silently discard acknowledged records beyond it — a human decision, not
+  automation. The fsync-mode contract: an acknowledged append is never removed by tail repair
+  unless the storage stack lied.
+- [2026-06-11] M45: `qsl-replay` gains `recover <file> [--repair]` and
+  `append-loop <file> <buffered|flush|fsync> [max_records]` subcommands; argument parsing moved to
+  exception-free `from_chars` (fixing the previously unguarded `std::stoull` generate-seed parse,
+  the same bug class M42 review fixed in `qsl-export-stream`).
+- [2026-06-11] M45 CodeScene cleanup: `qsl-replay` command dispatch now uses local command-line,
+  request, path, seed, repair, and max-record value objects instead of raw primitive/string
+  helper arguments. Local CodeScene review scores `apps/qsl-replay/main.cpp` 10.0 with no findings,
+  addressing the hosted primitive-obsession and string-heavy argument findings without changing the
+  CLI or persistence semantics.
+- [2026-06-11] M45: added `make crash-recovery` / `scripts/crash_recovery_validation.sh`
+  (portable Linux/macOS): SIGKILLs live `append-loop` writers mid-stream per durability mode and
+  asserts recovered records ∈ [acked, acked+1] for flush/fsync, repairs provably torn tails to a
+  clean appendable log, and refuses ambiguous full-header truncations as corrupt instead of
+  auto-repairing them; the buffered trial demonstrates (without asserting) acknowledged-data loss.
+  Committed `results/crash_recovery_validation.txt` with `Provenance version: 1` and `Dirty
+  inputs: no`; the latest run showed buffered mode losing 94 acknowledged records under SIGKILL,
+  one torn tail repaired to a clean appendable log, and one explicit ambiguous full-header fixture
+  refused as corrupt while all flush/fsync trials preserved every acknowledged record. The artifact
+  is explicitly process-kill evidence only: SIGKILL leaves the page cache intact, so
+  power-loss/OS-crash durability is exercised but not falsifiable and is not claimed.
+- [2026-06-11] M45: unit tests extend `test_event_log.cpp` with a truncation sweep at every byte
+  offset (exact valid-prefix recovery + classification), final-record vs mid-file checksum-damage
+  classification, untrusted-header corruption, in-range full-header truncation corruption, repair
+  semantics (torn repaired/appendable, corrupt refused/untouched, clean no-op), durability-mode
+  round trips, and missing-file recovery. 219/219 with `make check` and `make asan`.
+- [2026-06-12] M45 PR #117 review fixes: `qsl-replay` now recognizes known subcommands before the
+  replay fallback and enforces exact arity for `generate`, `recover`, and `append-loop`; CTest
+  covers missing/extra operand failures. `scripts/crash_recovery_validation.sh` now includes
+  `include/qsl/protocol/endian.hpp` in the source-digest scope and constructs an explicit
+  corrupted in-range payload-size fixture so the artifact's ambiguous full-header repair-refusal
+  claim is directly exercised. The harness also captures `qsl-replay recover` exit statuses:
+  clean tails must exit 0, torn/corrupt tails must fail before repair, torn repair must produce a
+  clean log, and corrupt repair must fail.
+- [2026-06-11] M45: docs/persistence.md documents the buffering-layer ladder per mode, the
+  tail-classification/repair contract, parent-directory fsync requirement for newly created logs
+  at the first durable point, the residual final-record-BadChecksum-vs-bit-rot ambiguity, and a WAL
+  analysis: the lab log is log-behind (gateway acks are not coupled to durability), and closing
+  that gap was deliberately rejected for M45 as a pipeline rearchitecture for a durability property
+  the simulator does not claim. ADR 0011 records the durability-mode and
+  repair-only-provably-torn decisions. M46 will measure full-replay recovery cost before any
+  segmentation/snapshot design.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -482,9 +551,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M45B on `perf/m45b-artifact-provenance-migration`: wait for PR #116 review/CI
-and iterate until Codex reports no issues. Do not start M45 persistence work from the roadmap until
-this process follow-up lands.
+Current action is M45 on `feat/m45-persistence-prototype`: PR #117 is open for review
+(`feat: prototype stronger persistence strategy`). Implementation is complete and verified
+(durability modes, torn-tail recovery/repair, crash harness + clean-provenance artifact,
+persistence docs/ADR, strict `qsl-replay` subcommand arity, explicit ambiguous-tail crash fixture,
+recover exit-status contract checks, and the CodeScene delta cleanup). Do not merge from
+automation. M45B (PR #116, b9ea27a) is merged; the provenance schema is now the project-wide
+policy.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
