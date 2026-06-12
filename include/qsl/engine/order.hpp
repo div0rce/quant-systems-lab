@@ -16,6 +16,7 @@ struct Order {
     Side side;
     Price price;
     Quantity quantity; // remaining
+    bool operator==(const Order &) const = default;
 };
 
 // A match between an aggressing (taker) order and a resting (maker) order.

@@ -69,6 +69,10 @@ class MatchingEngine {
     [[nodiscard]] SeqNo last_seq() const noexcept { return seq_; }
     [[nodiscard]] EngineSnapshot snapshot() const;
 
+    /// Resting orders for one symbol in deterministic priority order (see
+    /// OrderBook::resting_orders). Empty when the symbol is unknown.
+    [[nodiscard]] std::vector<Order> resting_orders(SymbolId symbol) const;
+
     [[nodiscard]] bool has_symbol(SymbolId symbol) const;
     [[nodiscard]] bool contains(SymbolId symbol, OrderId id) const;
 

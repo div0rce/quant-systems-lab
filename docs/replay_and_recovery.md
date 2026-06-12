@@ -119,6 +119,44 @@ requested log cannot be opened or read; `records: 0` is only reported for a real
 was opened and decoded cleanly as empty. M8 tests include a file-level
 `EventLogWriter -> EventLogReader -> replay` round trip through the M7 byte framing.
 
+## Recovery cost (M46)
+
+Recovery in this repo is **full replay**: a restarting process re-reads the entire log and
+re-applies every command, so restart time grows with history length, not with live state.
+`make bench-recovery` (`qsl-bench recovery`, artifact
+`results/recovery_benchmarks.txt`) measures that cost on the generating host.
+
+**Recovery objective measured.** Restart cost — the wall time from a clean log file to a
+rebuilt engine (RTO-style), split into its two phases:
+
+1. `recover_log_file`: read the file and verify/classify every frame (the M45 crash-safe
+   entry point);
+2. `replay`: decode and apply every command into a fresh engine;
+
+plus the combined end-to-end restart, at several log lengths to expose the linear growth.
+How much acknowledged data can be **lost** before restart (RPO-style) is a property of the
+M45 durability modes and is exercised by `make crash-recovery`, not by this benchmark.
+
+**Snapshot-restoration prototype.** To quantify what snapshot-bounded recovery would buy,
+the benchmark also measures rebuilding the book directly from captured live state:
+`MatchingEngine::resting_orders` enumerates every resting order in priority order (bids
+best-first, then asks, FIFO within a level), and re-adding that sequence into a fresh
+engine reproduces levels and intra-level time priority exactly — verified against the
+reference snapshot on every run, including a synthetic-depth sweep because the realistic
+flow leaves only a few dozen resting orders (per-order timings on such small books are
+noisy; the controlled-depth section is the reliable scaling signal). This prototype is
+**benchmark-only and in-memory**: no snapshot file format or persistence path exists, the
+numbers exclude serialization, disk I/O, and tail replay past the snapshot point, and the
+restored engine's sequence counter is rebuilt by re-counting accepts, so a real snapshot
+design would also have to persist sequencing state.
+
+**What the artifact supports.** On the measured host, full-replay restart cost is linear
+in log length while book rebuild cost is linear in resting-order count; for the measured
+synthetic flows the live state is orders of magnitude smaller than the history that
+produced it. That is the case for snapshot-bounded recovery *if* restart time ever
+matters — and no more: the numbers are single-machine, warm-cache, synthetic-flow
+measurements, not a production recovery-time claim.
+
 ### Limitations
 
 - Replay reconstructs from the recorded **command** stream; emitted events are recomputed,

@@ -453,6 +453,23 @@ struct OrderBook::IntrusiveStore {
 
     [[nodiscard]] std::vector<LevelView> bid_levels() const { return collect_levels(bids); }
     [[nodiscard]] std::vector<LevelView> ask_levels() const { return collect_levels(asks); }
+
+    template <class LevelMap>
+    static void append_orders(const LevelMap &book, std::vector<Order> &out) {
+        for (const auto &entry : book) {
+            for (Node *node = entry.second.head; node != nullptr; node = node->next) {
+                out.push_back(*node->order);
+            }
+        }
+    }
+
+    [[nodiscard]] std::vector<Order> resting_orders() const {
+        std::vector<Order> out;
+        out.reserve(index.size());
+        append_orders(bids, out);
+        append_orders(asks, out);
+        return out;
+    }
 };
 
 // Baseline uses the shared new_delete_resource (operator new/delete -> identical to pre-M32).
@@ -754,6 +771,27 @@ std::vector<LevelView> OrderBook::ask_levels() const {
         return intrusive_->ask_levels();
     }
     return collect_levels(asks_);
+}
+
+namespace {
+template <class LevelMap> void append_orders(const LevelMap &book, std::vector<Order> &out) {
+    for (const auto &entry : book) {
+        for (const Order &o : entry.second) {
+            out.push_back(o);
+        }
+    }
+}
+} // namespace
+
+std::vector<Order> OrderBook::resting_orders() const {
+    if (intrusive_) {
+        return intrusive_->resting_orders();
+    }
+    std::vector<Order> out;
+    out.reserve(index_.size());
+    append_orders(bids_, out);
+    append_orders(asks_, out);
+    return out;
 }
 
 } // namespace qsl::engine

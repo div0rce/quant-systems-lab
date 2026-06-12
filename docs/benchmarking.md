@@ -127,6 +127,19 @@ behavior:
 make false-sharing-study   # runs qsl-bench false-sharing, writes results/false_sharing_study.txt
 ```
 
+M46 adds recovery benchmarking: the cost of a full-replay restart (log read/verify/classify via
+`recover_log_file`, then decode+apply into a fresh engine) at several log lengths, against a
+benchmark-only in-memory snapshot-restoration prototype (capture resting state via
+`resting_orders`, rebuild the book from it) at several live-state depths. Every phase
+self-verifies against the reference snapshot before its numbers are reported. The measured
+recovery objective is restart cost on the generating host; data-loss bounds belong to the M45
+durability modes (`make crash-recovery`). See the recovery-cost section of
+`docs/replay_and_recovery.md`:
+
+```bash
+make bench-recovery   # runs qsl-bench recovery, writes results/recovery_benchmarks.txt
+```
+
 ## What these numbers do and do not prove
 
 - They **do** give a reproducible, order-of-magnitude picture of the core's latency/throughput
@@ -134,5 +147,6 @@ make false-sharing-study   # runs qsl-bench false-sharing, writes results/false_
 - They **do not** represent production trading latency. There is no kernel-bypass networking,
   no CPU pinning or isolation, no hugepages, and timing includes allocator and `std::map`
   overhead. CPU frequency scaling/turbo and a shared machine add noise. The false-sharing study is
-  host-local cache-line evidence only. See `docs/linux_performance.md` for how to reason about and
-  tighten such measurements.
+  host-local cache-line evidence only. The recovery benchmark measures restart cost on a warm
+  local filesystem, not a production recovery-time objective. See `docs/linux_performance.md` for
+  how to reason about and tighten such measurements.

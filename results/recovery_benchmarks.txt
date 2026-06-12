@@ -1,0 +1,64 @@
+Command:     make bench-recovery
+Hardware:    arm64 (Apple M2)
+OS:          Darwin 25.2.0
+Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
+Build type:  Release
+Provenance version: 1
+Git commit (informational): de1944a
+Source digest: sha256:49e0958ca8e1ea952a03177ce22477bb71a90f415271e4b189ea55da1909bee8
+Source digest scope: recovery-benchmark
+Dirty inputs: no
+Generated output: results/recovery_benchmarks.txt
+Date: 2026-06-12T03:13:32Z
+Dataset:     deterministic generated flows (seed 42, 4 symbols, 5k/20k/80k commands)
+             plus synthetic non-crossing resting books (1k/10k/50k resting orders)
+Scenario:    full-replay restart (recover_log_file + replay) vs in-memory book rebuild
+Warmup:      one untimed run per phase before timing; averages over the listed reps
+Units:       ms/run plus ns per record/command/order
+
+Recovery objective measured: time to rebuild engine state after a process crash, on
+this host, from a clean event log of the given length (restart cost; RTO-style).
+How much acknowledged data can be lost before restart (RPO-style) is governed by the
+M45 durability modes and is exercised by make crash-recovery, not measured here.
+
+Caveat: synthetic single-process benchmark (release build, local filesystem, warm page
+cache, no concurrent load). Full-replay restart cost grows with log length. The
+snapshot-restoration prototype is benchmark-only and in-memory - no snapshot
+persistence exists in this repo - so its numbers are a lower bound that excludes
+serialization, disk I/O, and tail replay past the snapshot point. Hardware-, compiler-,
+and build-dependent; not a production recovery-time claim.
+
+Scenario / Metric / Result:
+log 5004 commands  file 0.24 MiB  resting 37 orders
+  recover_log_file (read+verify+classify)      10 reps        0.385 ms/run         76.9 ns/record
+  replay into fresh engine (decode+apply)      10 reps        0.780 ms/run        155.9 ns/command
+  full restart (recover + replay)              10 reps        1.211 ms/run        242.0 ns/command
+  capture resting state (snapshot proto)       10 reps        0.001 ms/run         17.6 ns/order
+  rebuild book from captured state             10 reps        0.007 ms/run        186.8 ns/order
+
+log 20004 commands  file 0.95 MiB  resting 30 orders
+  recover_log_file (read+verify+classify)      10 reps        1.553 ms/run         77.7 ns/record
+  replay into fresh engine (decode+apply)      10 reps        3.174 ms/run        158.7 ns/command
+  full restart (recover + replay)              10 reps        4.733 ms/run        236.6 ns/command
+  capture resting state (snapshot proto)       10 reps        0.001 ms/run         28.3 ns/order
+  rebuild book from captured state             10 reps        0.005 ms/run        158.9 ns/order
+
+log 80004 commands  file 3.81 MiB  resting 24 orders
+  recover_log_file (read+verify+classify)      10 reps        6.857 ms/run         85.7 ns/record
+  replay into fresh engine (decode+apply)      10 reps       12.838 ms/run        160.5 ns/command
+  full restart (recover + replay)              10 reps       22.905 ms/run        286.3 ns/command
+  capture resting state (snapshot proto)       10 reps        0.001 ms/run         27.6 ns/order
+  rebuild book from captured state             10 reps        0.004 ms/run        184.7 ns/order
+
+synthetic resting book  4 symbols  1000 resting orders
+  capture resting state (snapshot proto)       10 reps        0.002 ms/run          1.8 ns/order
+  rebuild book from captured state             10 reps        0.135 ms/run        134.5 ns/order
+
+synthetic resting book  4 symbols  10000 resting orders
+  capture resting state (snapshot proto)       10 reps        0.059 ms/run          5.9 ns/order
+  rebuild book from captured state             10 reps        1.118 ms/run        111.8 ns/order
+
+synthetic resting book  4 symbols  50000 resting orders
+  capture resting state (snapshot proto)       10 reps        0.368 ms/run          7.4 ns/order
+  rebuild book from captured state             10 reps        5.438 ms/run        108.8 ns/order
+

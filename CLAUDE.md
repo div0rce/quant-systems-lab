@@ -345,6 +345,7 @@ Keep this synchronized with the Makefile.
 - `make bench-diff` — run differential harness benchmarks
 - `make bench-allocator` — run M28 allocator experiment
 - `make bench-storage` — run M32 storage experiment
+- `make bench-recovery` — run M46 recovery benchmarking (full-replay restart vs book rebuild)
 - `make perf-stat` — run Linux `perf stat` workflow where supported
 - `make perf-record` — run Linux `perf record/report` workflow where supported
 - `make numa-study` — run Linux CPU-affinity / scheduler-migration / NUMA-locality study where supported
