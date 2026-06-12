@@ -163,10 +163,10 @@ Treat committed results as local measurements, not general speedup claims. Alloc
 depends on CPU, compiler, standard library, allocation pattern, cache state, and build mode.
 
 The committed M47 artifact is a bounded-domain storage comparison on one macOS/Apple clang host.
-It shows the contiguous row in the same broad range as baseline/PMR for this generated flow, while
-the intrusive row is slower on this host. That is useful evidence, not a portable conclusion. The
-question is whether a storage mode improves this specific engine workload without changing
-semantics inside the mode's declared domain.
+In the current local run, the contiguous row is fastest for this generated flow and the intrusive
+row is slower than the baseline. That is useful evidence, not a portable conclusion or a production
+latency claim. The question is whether a storage mode improves this specific engine workload
+without changing semantics inside the mode's declared domain.
 
 ## Cache, Locality, And Replay
 

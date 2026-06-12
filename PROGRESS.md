@@ -504,8 +504,11 @@ Lower priority:
 - [2026-06-12] M47 verification passed focused `test_matching_engine` and `test_order_book`,
   `make check` 225/225, `make asan` 225/225, and `make bench-storage`. The regenerated
   `results/pool_backed_storage.txt` records source digest
-  `sha256:ecdd996360bc4b95e6d9111feda3daacccc9c346cceb3d8e88a901c3e9be1dfb` and
+  `sha256:479eaa8ea8251eb928dbc077ddfe293642cf36c39c40ce37733475cd85d70217` and
   `Dirty inputs: no`; the artifact supports no portable speedup claim.
+- [2026-06-12] M47 CodeScene follow-up: storage-mode public dispatch was consolidated through
+  internal helpers, and contiguous `fill_count` was split into narrower match-count helpers to
+  reduce repeated wrapper structure and local branch complexity without changing semantics.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
