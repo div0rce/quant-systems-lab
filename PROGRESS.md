@@ -39,10 +39,11 @@ Do not rely on prior chat memory.
 - **Last action:** fixed PR #117 replay/crash-harness review findings: known `qsl-replay`
   subcommands now reject missing/extra operands with usage instead of falling through to replay or
   ignoring extras, crash-recovery provenance includes the endian serialization helper, and the
-  crash harness now builds an explicit in-range full-header corrupt-tail fixture and proves repair
-  is refused. Regenerated the crash-recovery artifact from clean declared inputs and verified
-  focused CLI tests, `bash -n scripts/crash_recovery_validation.sh`, `git diff --check`,
-  `make check`, `make asan`, and `make crash-recovery`.
+  crash harness now builds an explicit in-range full-header corrupt-tail fixture, enforces
+  `qsl-replay recover` exit-status semantics, and proves corrupt repair is refused. Regenerated
+  the crash-recovery artifact from clean declared inputs and verified focused CLI tests,
+  `bash -n scripts/crash_recovery_validation.sh`, `git diff --check`, `make check`, `make asan`,
+  and `make crash-recovery`.
 - **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
   Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -439,10 +440,11 @@ Lower priority:
   clean appendable log, and refuses ambiguous full-header truncations as corrupt instead of
   auto-repairing them; the buffered trial demonstrates (without asserting) acknowledged-data loss.
   Committed `results/crash_recovery_validation.txt` with `Provenance version: 1` and `Dirty
-  inputs: no`; the latest run showed buffered mode losing 54 acknowledged records under SIGKILL
-  while all flush/fsync trials preserved every acknowledged record. The artifact is explicitly
-  process-kill evidence only: SIGKILL leaves the page cache intact, so power-loss/OS-crash
-  durability is exercised but not falsifiable and is not claimed.
+  inputs: no`; the latest run showed buffered mode losing 94 acknowledged records under SIGKILL,
+  one torn tail repaired to a clean appendable log, and one explicit ambiguous full-header fixture
+  refused as corrupt while all flush/fsync trials preserved every acknowledged record. The artifact
+  is explicitly process-kill evidence only: SIGKILL leaves the page cache intact, so
+  power-loss/OS-crash durability is exercised but not falsifiable and is not claimed.
 - [2026-06-11] M45: unit tests extend `test_event_log.cpp` with a truncation sweep at every byte
   offset (exact valid-prefix recovery + classification), final-record vs mid-file checksum-damage
   classification, untrusted-header corruption, in-range full-header truncation corruption, repair
@@ -453,7 +455,9 @@ Lower priority:
   covers missing/extra operand failures. `scripts/crash_recovery_validation.sh` now includes
   `include/qsl/protocol/endian.hpp` in the source-digest scope and constructs an explicit
   corrupted in-range payload-size fixture so the artifact's ambiguous full-header repair-refusal
-  claim is directly exercised.
+  claim is directly exercised. The harness also captures `qsl-replay recover` exit statuses:
+  clean tails must exit 0, torn/corrupt tails must fail before repair, torn repair must produce a
+  clean log, and corrupt repair must fail.
 - [2026-06-11] M45: docs/persistence.md documents the buffering-layer ladder per mode, the
   tail-classification/repair contract, parent-directory fsync requirement for newly created logs
   at the first durable point, the residual final-record-BadChecksum-vs-bit-rot ambiguity, and a WAL
@@ -551,8 +555,9 @@ Current action is M45 on `feat/m45-persistence-prototype`: PR #117 is open for r
 (`feat: prototype stronger persistence strategy`). Implementation is complete and verified
 (durability modes, torn-tail recovery/repair, crash harness + clean-provenance artifact,
 persistence docs/ADR, strict `qsl-replay` subcommand arity, explicit ambiguous-tail crash fixture,
-and the CodeScene delta cleanup). Do not merge from automation. M45B (PR #116, b9ea27a) is merged;
-the provenance schema is now the project-wide policy.
+recover exit-status contract checks, and the CodeScene delta cleanup). Do not merge from
+automation. M45B (PR #116, b9ea27a) is merged; the provenance schema is now the project-wide
+policy.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
