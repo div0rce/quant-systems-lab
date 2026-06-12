@@ -31,17 +31,17 @@ Do not rely on prior chat memory.
   (squash-merged PR #115, commit cd05b37)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes, 214/214 on the M45 branch; `make asan` 214/214; `make
+- **`make check` passing:** yes, 215/215 on the M45 branch; `make asan` 215/215; `make
   check-fixtures` and `make check-manifest` clean (replay-library changes did not alter export
   bytes); `make crash-recovery` regenerated `results/crash_recovery_validation.txt` with
-  `Dirty inputs: no`; local CodeScene review of `apps/qsl-replay/main.cpp` is 10.0 with no
+  `Dirty inputs: no`; local CodeScene reviews of the touched event-log files are 10.0 with no
   findings and CodeScene pre-commit safeguard passed.
-- **Last action:** fixed the CodeScene delta findings in PR #117 by splitting `qsl-replay` command
-  dispatch, wrapping replay CLI arguments/requests to clear primitive/string-heavy function
-  argument findings, deduplicating event-log file loading, simplifying the durability constructor
-  condition, and collapsing repetitive event-log test assertion blocks. Regenerated the
-  crash-recovery artifact from clean declared inputs and verified targeted CLI checks,
-  `test_event_log`, `git diff --check`, `make check`, and `make asan`.
+- **Last action:** fixed PR #117 durability/recovery review findings: newly created logs now get a
+  one-shot parent-directory fsync at the first durable point even in weaker modes, recovery refuses
+  full-header truncated frames as corrupt instead of auto-truncating ambiguous damage, and
+  `write_raw_file` in `test_event_log.cpp` uses RAII. Regenerated the crash-recovery artifact from
+  clean declared inputs and verified `test_event_log`, `git diff --check`, `make check`, `make
+  asan`, and `make crash-recovery`.
 - **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
   Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -415,10 +415,11 @@ Lower priority:
   uses `F_FULLFSYNC` on macOS with `fsync` fallback, and `FsyncOnAppend` also fsyncs the parent
   directory at open so a new log's directory entry is durable, not just its bytes.
 - [2026-06-11] M45: recovery classifies a log tail as `CleanTail` / `TornTail` / `Corrupt`
-  (`recover_log`, `recover_log_file`). `Truncated` is always torn (it can only occur at end of
-  buffer); `BadChecksum` is torn only when the failing frame ends exactly at end of file;
-  `PayloadTooLarge` headers are never trusted. `repair_log_file` truncates torn tails to the last
-  valid record boundary and fsyncs the truncation; it refuses `Corrupt` logs because truncating
+  (`recover_log`, `recover_log_file`). A partial next-record header is torn; once a full header has
+  declared a payload size, a truncated frame is corrupt because that untrusted size could span
+  later valid records. `BadChecksum` is torn only when the failing frame ends exactly at end of
+  file; `PayloadTooLarge` headers are never trusted. `repair_log_file` truncates torn tails to the
+  last valid record boundary and fsyncs the truncation; it refuses `Corrupt` logs because truncating
   mid-file damage would silently discard acknowledged records beyond it — a human decision, not
   automation. The fsync-mode contract: an acknowledged append is never removed by tail repair
   unless the storage stack lied.
@@ -433,23 +434,25 @@ Lower priority:
   CLI or persistence semantics.
 - [2026-06-11] M45: added `make crash-recovery` / `scripts/crash_recovery_validation.sh`
   (portable Linux/macOS): SIGKILLs live `append-loop` writers mid-stream per durability mode and
-  asserts recovered records ∈ [acked, acked+1] for flush/fsync, torn-tail repair to a clean
-  appendable log, and never-corrupt classification; the buffered trial demonstrates (without
-  asserting) acknowledged-data loss. Committed `results/crash_recovery_validation.txt` with
-  `Provenance version: 1` and `Dirty inputs: no`; the run showed buffered mode losing 88
-  acknowledged records under SIGKILL while all flush/fsync trials preserved every acknowledged
-  record. The artifact is explicitly process-kill evidence only: SIGKILL leaves the page cache
-  intact, so power-loss/OS-crash durability is exercised but not falsifiable and is not claimed.
+  asserts recovered records ∈ [acked, acked+1] for flush/fsync, repairs provably torn tails to a
+  clean appendable log, and refuses ambiguous full-header truncations as corrupt instead of
+  auto-repairing them; the buffered trial demonstrates (without asserting) acknowledged-data loss.
+  Committed `results/crash_recovery_validation.txt` with `Provenance version: 1` and `Dirty
+  inputs: no`; the latest run showed buffered mode losing 58 acknowledged records under SIGKILL
+  while all flush/fsync trials preserved every acknowledged record. The artifact is explicitly
+  process-kill evidence only: SIGKILL leaves the page cache intact, so power-loss/OS-crash
+  durability is exercised but not falsifiable and is not claimed.
 - [2026-06-11] M45: unit tests extend `test_event_log.cpp` with a truncation sweep at every byte
   offset (exact valid-prefix recovery + classification), final-record vs mid-file checksum-damage
-  classification, untrusted-header corruption, repair semantics (torn repaired/appendable, corrupt
-  refused/untouched, clean no-op), durability-mode round trips, and missing-file recovery. 214/214
-  with `make check` and `make asan`.
+  classification, untrusted-header corruption, in-range full-header truncation corruption, repair
+  semantics (torn repaired/appendable, corrupt refused/untouched, clean no-op), durability-mode
+  round trips, and missing-file recovery. 215/215 with `make check` and `make asan`.
 - [2026-06-11] M45: docs/persistence.md documents the buffering-layer ladder per mode, the
-  tail-classification/repair contract, the residual final-record-BadChecksum-vs-bit-rot ambiguity,
-  and a WAL analysis: the lab log is log-behind (gateway acks are not coupled to durability), and
-  closing that gap was deliberately rejected for M45 as a pipeline rearchitecture for a durability
-  property the simulator does not claim. ADR 0011 records the durability-mode and
+  tail-classification/repair contract, parent-directory fsync requirement for newly created logs
+  at the first durable point, the residual final-record-BadChecksum-vs-bit-rot ambiguity, and a WAL
+  analysis: the lab log is log-behind (gateway acks are not coupled to durability), and closing
+  that gap was deliberately rejected for M45 as a pipeline rearchitecture for a durability property
+  the simulator does not claim. ADR 0011 records the durability-mode and
   repair-only-provably-torn decisions. M46 will measure full-replay recovery cost before any
   segmentation/snapshot design.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
