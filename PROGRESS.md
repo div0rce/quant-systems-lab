@@ -31,17 +31,18 @@ Do not rely on prior chat memory.
   (squash-merged PR #115, commit cd05b37)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes, 215/215 on the M45 branch; `make asan` 215/215; `make
+- **`make check` passing:** yes, 219/219 on the M45 branch; `make asan` 219/219; `make
   check-fixtures` and `make check-manifest` clean (replay-library changes did not alter export
   bytes); `make crash-recovery` regenerated `results/crash_recovery_validation.txt` with
-  `Dirty inputs: no`; local CodeScene reviews of the touched event-log files are 10.0 with no
-  findings and CodeScene pre-commit safeguard passed.
-- **Last action:** fixed PR #117 durability/recovery review findings: newly created logs now get a
-  one-shot parent-directory fsync at the first durable point even in weaker modes, recovery refuses
-  full-header truncated frames as corrupt instead of auto-truncating ambiguous damage, and
-  `write_raw_file` in `test_event_log.cpp` uses RAII. Regenerated the crash-recovery artifact from
-  clean declared inputs and verified `test_event_log`, `git diff --check`, `make check`, `make
-  asan`, and `make crash-recovery`.
+  `Dirty inputs: no`; local CodeScene reviews of `apps/qsl-replay/main.cpp` and
+  `src/replay/event_log.cpp` are 10.0 with no findings.
+- **Last action:** fixed PR #117 replay/crash-harness review findings: known `qsl-replay`
+  subcommands now reject missing/extra operands with usage instead of falling through to replay or
+  ignoring extras, crash-recovery provenance includes the endian serialization helper, and the
+  crash harness now builds an explicit in-range full-header corrupt-tail fixture and proves repair
+  is refused. Regenerated the crash-recovery artifact from clean declared inputs and verified
+  focused CLI tests, `bash -n scripts/crash_recovery_validation.sh`, `git diff --check`,
+  `make check`, `make asan`, and `make crash-recovery`.
 - **Next action:** wait for review on PR #117 (`feat: prototype stronger persistence strategy`).
   Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -438,7 +439,7 @@ Lower priority:
   clean appendable log, and refuses ambiguous full-header truncations as corrupt instead of
   auto-repairing them; the buffered trial demonstrates (without asserting) acknowledged-data loss.
   Committed `results/crash_recovery_validation.txt` with `Provenance version: 1` and `Dirty
-  inputs: no`; the latest run showed buffered mode losing 58 acknowledged records under SIGKILL
+  inputs: no`; the latest run showed buffered mode losing 54 acknowledged records under SIGKILL
   while all flush/fsync trials preserved every acknowledged record. The artifact is explicitly
   process-kill evidence only: SIGKILL leaves the page cache intact, so power-loss/OS-crash
   durability is exercised but not falsifiable and is not claimed.
@@ -446,7 +447,13 @@ Lower priority:
   offset (exact valid-prefix recovery + classification), final-record vs mid-file checksum-damage
   classification, untrusted-header corruption, in-range full-header truncation corruption, repair
   semantics (torn repaired/appendable, corrupt refused/untouched, clean no-op), durability-mode
-  round trips, and missing-file recovery. 215/215 with `make check` and `make asan`.
+  round trips, and missing-file recovery. 219/219 with `make check` and `make asan`.
+- [2026-06-12] M45 PR #117 review fixes: `qsl-replay` now recognizes known subcommands before the
+  replay fallback and enforces exact arity for `generate`, `recover`, and `append-loop`; CTest
+  covers missing/extra operand failures. `scripts/crash_recovery_validation.sh` now includes
+  `include/qsl/protocol/endian.hpp` in the source-digest scope and constructs an explicit
+  corrupted in-range payload-size fixture so the artifact's ambiguous full-header repair-refusal
+  claim is directly exercised.
 - [2026-06-11] M45: docs/persistence.md documents the buffering-layer ladder per mode, the
   tail-classification/repair contract, parent-directory fsync requirement for newly created logs
   at the first durable point, the residual final-record-BadChecksum-vs-bit-rot ambiguity, and a WAL
@@ -543,9 +550,9 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 Current action is M45 on `feat/m45-persistence-prototype`: PR #117 is open for review
 (`feat: prototype stronger persistence strategy`). Implementation is complete and verified
 (durability modes, torn-tail recovery/repair, crash harness + clean-provenance artifact,
-persistence docs/ADR, the `append-loop` CLI review fix, and the CodeScene delta cleanup). Do not
-merge from automation. M45B (PR #116, b9ea27a) is merged; the provenance schema is now the
-project-wide policy.
+persistence docs/ADR, strict `qsl-replay` subcommand arity, explicit ambiguous-tail crash fixture,
+and the CodeScene delta cleanup). Do not merge from automation. M45B (PR #116, b9ea27a) is merged;
+the provenance schema is now the project-wide policy.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
