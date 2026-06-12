@@ -28,13 +28,14 @@ Do not rely on prior chat memory.
   d10bfb0)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes on M47 branch at e55e455 source-input commit plus regenerated
-  artifact/docs state (225/225 tests); `make asan` also passed 225/225.
-- **Last action:** fixed PR #119 review findings: `can_apply_modify` now pre-gates
+- **`make check` passing:** yes on M47 branch after PR #119 review fixes (229/229 tests);
+  `make asan` also passed 229/229.
+- **Last action:** fixed and locally verified PR #119 review findings: `can_apply_modify` now pre-gates
   `MatchingEngine::modify` so a refused out-of-band contiguous reprice emits no `OrderModified`
   (gateway rejects it as `StorageExhausted`; the original order keeps resting), and
   `ContiguousStore` moved to `src/engine/contiguous_store.hpp` to clear the brain-class
-  function-count gate (both files CodeScene 9.68; change-set quality gates pass).
+  function-count gate. Regression tests cover engine no-event/no-sequence behavior, full-crossing
+  out-of-band reprices, direct-book refusal, and gateway `StorageExhausted`.
 - **Next action:** wait for review/CI on PR #119 (`perf: study contiguous order-book storage`).
   Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -528,6 +529,11 @@ Lower priority:
   by `order_book.cpp`; no public API or CMake change). Both files score 9.68 with only the
   pre-existing argument-count findings, and `analyze_change_set` vs `origin/main` passes the
   quality gates.
+- [2026-06-12] M47 PR #119 final local validation: split the new modify-pre-gate regression
+  assertions into small helpers so the tests pin event-stream/book-state consistency without
+  introducing new CodeScene assertion-block noise. Focused `test_matching_engine`,
+  `test_order_book`, and `test_risk_gateway` passed; `git diff --check`, `make check` 229/229, and
+  `make asan` 229/229 passed locally.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.

@@ -23,6 +23,16 @@ void expect_top(const OrderBook &book, std::optional<Price> best_bid,
     REQUIRE(book.best_bid() == best_bid);
     REQUIRE(book.best_ask() == best_ask);
 }
+
+void expect_modify_refused(OrderBook &book, Price new_price) {
+    REQUIRE_FALSE(book.can_apply_modify(1, new_price, 5));
+    REQUIRE(book.modify(1, new_price, 5).empty());
+}
+
+void expect_bid_order_kept(const OrderBook &book, OrderId id, Price price) {
+    REQUIRE(book.contains(id));
+    REQUIRE(book.best_bid() == std::optional<Price>{price});
+}
 } // namespace
 
 TEST_CASE("non-crossing limits rest and set top of book", "[book]") {
@@ -306,10 +316,8 @@ TEST_CASE("contiguous book refuses an out-of-band reprice and keeps the order", 
 
     // No crossing liquidity: the re-add would have to rest out of band, so the modify is
     // refused and the original order is kept (not silently dropped).
-    REQUIRE_FALSE(book.can_apply_modify(1, out_of_band, 5));
-    REQUIRE(book.modify(1, out_of_band, 5).empty());
-    REQUIRE(book.contains(1));
-    REQUIRE(book.best_bid() == std::optional<Price>{100});
+    expect_modify_refused(book, out_of_band);
+    expect_bid_order_kept(book, 1, 100);
 
     // In-band reprices, reductions, cancels (qty 0), and unknown ids all remain applicable.
     const bool applicable = book.can_apply_modify(1, 101, 9) && book.can_apply_modify(1, 100, 3) &&
