@@ -162,7 +162,9 @@ include network, disk, Linux kernel path, or perf/PMU counters.
 Treat committed results as local measurements, not general speedup claims. Allocator behavior
 depends on CPU, compiler, standard library, allocation pattern, cache state, and build mode.
 
-If future runs show neutral or slower pooled performance, that is still a valid result. The
+The committed M47 artifact is a bounded-domain storage comparison on one macOS/Apple clang host.
+It shows the contiguous row in the same broad range as baseline/PMR for this generated flow, while
+the intrusive row is slower on this host. That is useful evidence, not a portable conclusion. The
 question is whether a storage mode improves this specific engine workload without changing
 semantics inside the mode's declared domain.
 
