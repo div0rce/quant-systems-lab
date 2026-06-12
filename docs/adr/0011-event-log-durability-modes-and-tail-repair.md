@@ -25,13 +25,17 @@ Two design questions had real alternatives:
    callers are unchanged. `sync()` provides an explicit group-commit point. On macOS,
    fsync uses `F_FULLFSYNC` with `fsync` fallback; `FsyncOnAppend` also fsyncs the parent
    directory at open so a new log's directory entry is durable, not just its bytes.
+   For weaker modes, the first successful explicit `sync()` on a newly created log performs
+   the same one-shot parent-directory fsync.
 2. **Automation repairs only damage it can prove is confined to the final append.**
-   Recovery classifies the tail as `CleanTail`, `TornTail`, or `Corrupt`. `Truncated` is
-   always torn (it can only occur at end of buffer). `BadChecksum` is torn only when the
-   failing frame ends exactly at end of file. `PayloadTooLarge` headers are never trusted.
-   `repair_log_file` truncates torn tails to the last valid record boundary (and fsyncs
-   the truncation); it refuses `Corrupt` logs, because truncating mid-file damage would
-   silently discard acknowledged records beyond it — a human decision.
+   Recovery classifies the tail as `CleanTail`, `TornTail`, or `Corrupt`. `Truncated`
+   before a complete next-record header exists is torn; once a complete header has
+   declared a payload size, a truncated frame is corrupt because that untrusted size could
+   span later valid records. `BadChecksum` is torn only when the failing frame ends exactly
+   at end of file. `PayloadTooLarge` headers are never trusted. `repair_log_file`
+   truncates torn tails to the last valid record boundary (and fsyncs the truncation); it
+   refuses `Corrupt` logs, because truncating mid-file damage would silently discard
+   acknowledged records beyond it — a human decision.
 3. **The claim is scoped to the log layer.** The gateway/pipeline still acknowledges
    before persisting (log-behind, not write-ahead). Re-architecting acks-after-durability
    was deliberately rejected for M45; the gap is documented in `docs/persistence.md`

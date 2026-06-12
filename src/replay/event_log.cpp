@@ -61,6 +61,11 @@ bool sync_parent_directory_if_needed(const std::filesystem::path &path, Durabili
     return sync_parent_directory(path);
 }
 
+bool needs_directory_sync_after_open(const std::filesystem::path &path) {
+    std::error_code ec;
+    return !std::filesystem::exists(path, ec);
+}
+
 } // namespace
 
 bool encode_record(const LogRecord &record, std::vector<std::byte> &out) {
@@ -165,15 +170,20 @@ bool checksum_failure_confined_to_tail(std::span<const std::byte> bytes, std::si
     return offset + total == bytes.size();
 }
 
+bool truncated_failure_confined_to_partial_header(std::span<const std::byte> bytes,
+                                                  std::size_t offset) {
+    return bytes.size() - offset < kRecordHeaderSize;
+}
+
 TailState classify_tail(std::span<const std::byte> bytes, LogError tail_error,
                         std::size_t valid_bytes) {
     switch (tail_error) {
     case LogError::None:
         return TailState::CleanTail;
     case LogError::Truncated:
-        // decode_record reports Truncated only when the buffer ends mid-record, so the
-        // damage is necessarily confined to the final (partial) append.
-        return TailState::TornTail;
+        return truncated_failure_confined_to_partial_header(bytes, valid_bytes)
+                   ? TailState::TornTail
+                   : TailState::Corrupt;
     case LogError::BadChecksum:
         return checksum_failure_confined_to_tail(bytes, valid_bytes) ? TailState::TornTail
                                                                      : TailState::Corrupt;
@@ -241,12 +251,13 @@ void FileCloser::operator()(std::FILE *file) const noexcept {
 }
 
 EventLogWriter::EventLogWriter(const std::filesystem::path &path, DurabilityMode mode)
-    : file_(std::fopen(path.string().c_str(), "ab")), mode_(mode) {
+    : path_(path), directory_sync_pending_(needs_directory_sync_after_open(path_)),
+      file_(std::fopen(path_.string().c_str(), "ab")), mode_(mode) {
     // Durability of a newly created log includes its directory entry, not just its bytes.
     if (!file_) {
         return;
     }
-    if (!sync_parent_directory_if_needed(path, mode_)) {
+    if (mode_ == DurabilityMode::FsyncOnAppend && !sync_parent_directory_once()) {
         file_.reset();
     }
 }
@@ -279,7 +290,21 @@ bool EventLogWriter::sync() {
     if (!file_) {
         return false;
     }
-    return std::fflush(file_.get()) == 0 && sync_to_storage(file_.get());
+    if (std::fflush(file_.get()) != 0 || !sync_to_storage(file_.get())) {
+        return false;
+    }
+    return sync_parent_directory_once();
+}
+
+bool EventLogWriter::sync_parent_directory_once() {
+    if (!directory_sync_pending_) {
+        return true;
+    }
+    if (!sync_parent_directory_if_needed(path_, DurabilityMode::FsyncOnAppend)) {
+        return false;
+    }
+    directory_sync_pending_ = false;
+    return true;
 }
 
 EventLogReader::EventLogReader(std::filesystem::path path) : path_(std::move(path)) {}

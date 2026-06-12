@@ -5,8 +5,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <initializer_list>
 #include <span>
 #include <vector>
@@ -77,10 +77,11 @@ void expect_recovery(const LogRecovery &recovery, const RecoverySummary &summary
 }
 
 void write_raw_file(const std::filesystem::path &path, std::span<const std::byte> bytes) {
-    std::FILE *file = std::fopen(path.string().c_str(), "wb");
-    REQUIRE(file != nullptr);
-    REQUIRE(std::fwrite(bytes.data(), 1, bytes.size(), file) == bytes.size());
-    REQUIRE(std::fclose(file) == 0);
+    std::ofstream file(path, std::ios::binary);
+    REQUIRE(file.is_open());
+    file.write(reinterpret_cast<const char *>(bytes.data()),
+               static_cast<std::streamsize>(bytes.size()));
+    REQUIRE(file.good());
 }
 } // namespace
 
@@ -286,8 +287,12 @@ TEST_CASE("recovery of a log cut at every byte yields the exact valid prefix", "
             REQUIRE(summarize(recovery) == RecoverySummary{LogError::None, TailState::CleanTail,
                                                            LogError::None, whole_records,
                                                            last_boundary});
-        } else {
+        } else if (cut - last_boundary < kRecordHeaderSize) {
             REQUIRE(summarize(recovery) == RecoverySummary{LogError::None, TailState::TornTail,
+                                                           LogError::Truncated, whole_records,
+                                                           last_boundary});
+        } else {
+            REQUIRE(summarize(recovery) == RecoverySummary{LogError::None, TailState::Corrupt,
                                                            LogError::Truncated, whole_records,
                                                            last_boundary});
         }
@@ -339,6 +344,19 @@ TEST_CASE("an untrustworthy header is corruption, not a torn tail", "[log][recov
                     {kR1});
 }
 
+TEST_CASE("an in-range truncated header span is corruption, not a repairable tail",
+          "[log][recovery]") {
+    std::vector<std::byte> buf;
+    REQUIRE(encode_record(kR1, buf));
+    const std::size_t bad_start = buf.size();
+    REQUIRE(encode_record(kR2, buf));
+    REQUIRE(encode_record(kR1, buf)); // bytes after the damaged header must not be discarded
+    qsl::protocol::store_be<std::uint32_t>(buf.data() + bad_start + 18, kMaxPayload);
+
+    expect_recovery(recover_log(buf),
+                    {LogError::None, TailState::Corrupt, LogError::Truncated, 1, bad_start}, {kR1});
+}
+
 TEST_CASE("repair truncates a torn tail and the log accepts appends again", "[log][recovery]") {
     const auto path = std::filesystem::temp_directory_path() / "qsl_eventlog_repair.bin";
     const std::size_t first_record_size = encoded_size(kR1);
@@ -348,8 +366,8 @@ TEST_CASE("repair truncates a torn tail and the log accepts appends again", "[lo
         REQUIRE(writer.append(kR1));
         REQUIRE(writer.append(kR2));
     }
-    // Tear the final append: chop bytes so kR2's record is incomplete.
-    const auto torn_size = std::filesystem::file_size(path) - 3;
+    // Tear the final append before a complete header exists; this is the repairable case.
+    const auto torn_size = first_record_size + kRecordHeaderSize - 1;
     std::filesystem::resize_file(path, torn_size);
 
     const auto recovery = recover_log_file(path);

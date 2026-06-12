@@ -95,11 +95,12 @@ struct LogRecovery {
     std::size_t valid_bytes;        // byte offset of the last valid record boundary
 };
 
-/// Scan `bytes` like `read_log`, then classify the tail. `Truncated` can only occur at the
-/// end of the buffer, so it is always a torn tail. `BadChecksum` is a torn tail only when
-/// the failing record's frame ends exactly at the end of the buffer (an interrupted final
-/// append); a checksum failure followed by more bytes, or an invalid header
-/// (`PayloadTooLarge`), is classified `Corrupt`.
+/// Scan `bytes` like `read_log`, then classify the tail. A partial final header is a torn
+/// tail. Once a full header has declared a payload size, a truncated frame is treated as
+/// corrupt because that untrusted size could span later valid records. `BadChecksum` is a
+/// torn tail only when the failing record's frame ends exactly at the end of the buffer
+/// (an interrupted final append); a checksum failure followed by more bytes, or an
+/// invalid header (`PayloadTooLarge`), is classified `Corrupt`.
 [[nodiscard]] LogRecovery recover_log(std::span<const std::byte> bytes);
 
 /// Read the whole file and run `recover_log`. A missing/unreadable file reports
@@ -133,8 +134,12 @@ class EventLogWriter {
     bool sync();
 
   private:
+    std::filesystem::path path_;
+    bool directory_sync_pending_;
     FilePtr file_;
     DurabilityMode mode_;
+
+    bool sync_parent_directory_once();
 };
 
 /// Reads an entire log file and decodes it.

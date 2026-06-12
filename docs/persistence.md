@@ -30,9 +30,10 @@ durability mode stops at a different layer, and each layer dies with a different
 - `EventLogWriter::sync()` is an explicit group-commit point: it flushes and fsyncs
   regardless of mode, so a caller can batch appends in a weaker mode and pay the
   stable-storage cost once per batch.
-- In `FsyncOnAppend` mode the writer also fsyncs the parent directory when it opens the
-  log: a new file's bytes can be durable while its *name* is not, in which case the file
-  itself can vanish after a power loss.
+- In `FsyncOnAppend` mode the writer also fsyncs the parent directory when it opens a new
+  log. In weaker modes, the first successful `sync()` on a newly created log does the same
+  one-shot directory fsync. A new file's bytes can be durable while its *name* is not, in
+  which case the file itself can vanish after a power loss.
 
 ## Failure model and recovery contract
 
@@ -47,8 +48,9 @@ prefix, then classifies the tail:
 
 Classification rules:
 
-- A `Truncated` scan error can only occur at the end of the buffer, so it is always a torn
-  tail.
+- A `Truncated` scan error before a complete next-record header exists is a torn tail. Once
+  a full header has declared a payload size, a truncated frame is `Corrupt`: that size is
+  untrusted and could span later valid records, so automated repair must not truncate it.
 - A `BadChecksum` record is a torn tail only when its frame ends exactly at the end of the
   file — consistent with an interrupted final append (for example, out-of-order page
   writeback inside the last record). A checksum failure *followed by more bytes* means valid
@@ -112,9 +114,9 @@ Two layers of automated evidence, each labeled with what it does and does not pr
 
 1. **Deterministic unit tests** (`tests/unit/test_event_log.cpp`, `[recovery]` tag): a log
    cut at *every byte offset* recovers the exact valid prefix with the correct
-   classification; final-record checksum damage classifies as torn; mid-file damage and
-   untrusted headers classify as corrupt and are refused by repair; repaired logs read
-   clean and accept appends; every durability mode round-trips.
+   classification; partial final headers classify as torn; full-header truncations,
+   mid-file damage, and untrusted headers classify as corrupt and are refused by repair;
+   repaired logs read clean and accept appends; every durability mode round-trips.
 2. **Process-kill harness** (`make crash-recovery`,
    `scripts/crash_recovery_validation.sh`, artifact
    `results/crash_recovery_validation.txt`): SIGKILLs a live writer mid-stream per mode and
