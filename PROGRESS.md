@@ -31,13 +31,15 @@ Do not rely on prior chat memory.
 - **`make check` passing:** yes — Docker Linux 240/240 and native macOS 232/232 on the follow-up
   branch (the 8-test delta is Linux-only epoll/socket tests); `make asan` also green
   (240/240 Docker, 232/232 native macOS).
-- **Last action:** implemented the M47 storage-benchmark diagnosis follow-up: added a compact
-  all-mode benchmark-mix equivalence regression, added deterministic storage workload variants and
-  non-timed shape metrics to `qsl-bench storage`, fixed small intrusive-path overheads, regenerated
-  `results/pool_backed_storage.txt` through `make bench-storage`, and updated storage benchmark
-  docs. The clean artifact records source digest
-  `sha256:c34b52a84fad30f446938b120ebf9ad0e5c0769f486c3f2015fb9d9f18243b08` with
-  `Dirty inputs: no`.
+- **Last action:** addressed the PR #122 Codex review finding that the storage benchmark timed
+  per-run setup as command cost. The harness now runs engine construction, the symbol-registration
+  prefix (which eagerly performs the pooled modes' 65536-slot free-list initialization), and the
+  end-of-run snapshot outside the timed interval, normalizing over timed commands. This overturns
+  the earlier "intrusive is ~4-5x slower" reading: with setup excluded the four modes cluster into a
+  tight band (~40-120 ns/cmd) and intrusive/contiguous are the two fastest, trading the lead by
+  workload. Regenerated `results/pool_backed_storage.txt` in Docker Linux (digest
+  `sha256:81ff74300a1633d0d9ddaed68f8880f121bd03cddc568ab212056b8eddd53b1b`, `Dirty inputs: no`,
+  informational commit 476ba71) and rewrote the storage-doc interpretation.
 - **Next action:** wait for review/CI on follow-up PR #122. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
@@ -220,8 +222,9 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M47 storage-benchmark diagnosis follow-up PR #122 is open. Next step: wait for review/CI; do not
-  merge from automation._
+- _M47 storage-benchmark diagnosis follow-up PR #122 is open; pushed a review fix that excludes
+  per-run setup (engine construction + pool free-list init + snapshot) from the storage benchmark
+  timing and regenerates the artifact. Next step: wait for review/CI; do not merge from automation._
 
 
 ---
@@ -294,7 +297,7 @@ Lower priority:
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
-| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ PR open | #122 | Workload-shape metrics, deterministic variants, and small intrusive overhead fixes |
+| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ PR open | #122 | Workload-shape variants + corrected timing (excludes per-run pool-init setup); overturns the earlier intrusive-slow reading |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
@@ -577,6 +580,24 @@ Lower priority:
   passed for the changed C++ files and the branch diff, `make bench-storage` regenerated the
   artifact from clean source inputs, and final Docker verification passed `make check` 240/240 and
   `make asan` 240/240. Docker Desktop Linux does not provide bare-metal PMU/cache evidence.
+- [2026-06-15] M47 follow-up review correction (PR #122): a Codex review found the storage benchmark
+  timed the full per-replay `run_once`, including `MatchingEngine` construction and the
+  `RegisterSymbol` prefix. Book construction is eager (`OrderBook` builds its `IntrusiveStore` /
+  `ContiguousStore` in its constructor), so for the pooled modes that prefix runs `OrderPool` /
+  `RawPool` free-list initialization over 65536 slots per book — a fixed per-run setup cost that was
+  charged to per-command time and amortized over only ~5k commands, scaling with symbol count and
+  inflating the intrusive mode most. The fix (`bench_storage.cpp`, `run_storage_benchmarks.sh`)
+  applies engine construction, the registration prefix, and the end-of-run snapshot outside the
+  timed interval and normalizes over timed commands. A macOS before/after on the same host confirmed
+  the effect is intrusive-specific and scales with symbol count (4-symbol flows dropped ~80-92
+  ns/cmd, 2-symbol ~45), leaving baseline/PMR/contiguous within noise. The Docker-regenerated
+  artifact (digest `sha256:81ff74300a1633d0d9ddaed68f8880f121bd03cddc568ab212056b8eddd53b1b`,
+  `Dirty inputs: no`, informational commit 476ba71) supersedes the `c34b52a…` artifact and overturns
+  the earlier "intrusive is the slow outlier / PMR-fastest" reading (including the M47 single-flow
+  ranking, which was contaminated the same way): with setup excluded the four modes cluster into a
+  tight ~40-120 ns/cmd band, intrusive and contiguous are the two fastest (trading the lead by
+  workload shape), and intrusive still carries a large fixed init cost the per-command metric
+  deliberately excludes. `docs/pool_backed_storage.md` interpretation rewritten accordingly.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
