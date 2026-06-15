@@ -21,7 +21,7 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M48 — DPDK research and prototype
-- **Status:** ◐ implementation started; local docs/support-check groundwork complete
+- **Status:** ◐ ready for PR; local docs/support-check groundwork complete with clean provenance
 - **Active branch:** `feat/m48-dpdk-research-prototype`
 - **Last completed milestone:** M47 follow-up — Storage benchmark diagnosis (squash-merged
   PR #122, commit 548cb68), after M47 — Contiguous order-book storage and cache-locality study
@@ -41,10 +41,11 @@ Do not rely on prior chat memory.
   scripts/dpdk_environment_check.sh`, `make dpdk-check`, `make check` (232/232), and CodeScene
   pre-commit quality gates. CodeScene file-level review does not support `.sh`; a local
   `codex review --uncommitted` second-opinion attempt hung after its internal CodeScene call and
-  was killed without producing findings.
-- **Next action:** before opening a PR, commit or otherwise track the new source files and
-  regenerate `results/dpdk_environment.txt` so its source digest includes the new inputs and
-  `Dirty inputs` is no; then rerun final review gates.
+  was killed without producing findings. The artifact was then regenerated from tracked source
+  commit `4256168` with source digest
+  `sha256:b2d79e329b8274dfa478e5226426af4a379c54e3d6def042dc448609af1cfa53` and `Dirty inputs: no`.
+- **Next action:** push `feat/m48-dpdk-research-prototype`, open the M48 PR with title
+  `docs: research DPDK packet-path tradeoffs`, and do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Any DPDK measurement/prototype evidence depends on suitable host,
   NIC, driver, and hugepage support; no kernel-bypass performance claim is allowed without real
@@ -228,11 +229,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M48 initial docs/support-check slice is implemented and locally verified. The generated DPDK
-  environment artifact is currently a valid mid-development unsupported-host result but has
-  `Dirty inputs: yes`; regenerate it after the new source inputs are tracked/committed before PR.
-  Review fixes already applied: Linux-only devbind status collection, broader provenance inputs,
-  and stricter mounted/free hugepage readiness for `linux-dpdk-build-ready`._
+- _none_
 
 
 ---
@@ -306,11 +303,12 @@ Lower priority:
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
 | Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ☑ merged | #122 | Workload-shape variants + corrected timing (excludes per-run pool-init setup); overturns the earlier intrusive-slow reading |
-| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ◐ in progress | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
+| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ◐ ready for PR | — | DPDK research notes + non-mutating environment support check; no packet-path benchmark or kernel-bypass claim |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
 ## Decision log additions
 
+- [2026-06-15] M48: added DPDK research notes and a non-mutating `make dpdk-check` support artifact. The macOS development host classifies as `unsupported-host`, with no device binding, hugepage mutation, packet-path benchmark, or kernel-bypass performance claim. A prototype remains optional and only valid on a host that can support it cleanly.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
@@ -717,11 +715,9 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M48 on `feat/m48-dpdk-research-prototype`: research DPDK/user-space networking
-tradeoffs, compare them against the existing kernel socket evidence, and only add an optional
-prototype if the environment supports a buildable, honestly caveated artifact. PR #122
-(548cb68) is merged, so the current branch starts from the latest storage-benchmark diagnosis
-baseline.
+Current action is M48 on `feat/m48-dpdk-research-prototype`: push the branch and open the PR titled
+`docs: research DPDK packet-path tradeoffs`. The local M48 artifact is an unsupported-host
+environment check with clean source-digest provenance, not packet-path evidence.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
