@@ -735,9 +735,13 @@ The canonical knowledge base is the repo:
 
 If using Obsidian, open the repo root or `docs/` folder as a vault. Do not maintain separate canonical notes.
 
-Use GitHub CLI over GitHub MCP unless there is a specific reason.
+Prefer the GitHub MCP for PR, issue, branch, commit, and milestone review, per the MCP-first
+directive in `CLAUDE.md` / `AGENTS.md` (the canonical MCP policy). The GitHub CLI (`gh`) is the
+fallback when the MCP is unavailable (e.g. before its one-time OAuth) or for scripted/headless
+steps.
 
-Use current-docs MCP only if needed for exact Claude Code settings, CMake behavior, or library APIs.
+Use the `context7` docs MCP for current library, CLI, API, CMake, or Claude Code settings behavior
+rather than relying on memory.
 
 Local MCP/tooling model:
 
