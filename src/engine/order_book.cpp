@@ -351,11 +351,14 @@ struct OrderBook::IntrusiveStore {
         if (tif == TimeInForce::IOC) {
             return true;
         }
+        if (has_capacity()) {
+            return true;
+        }
         const MatchOutcome outcome = simulate_match(side, price, /*is_market=*/false, quantity);
         // A fully filled order rests nothing. Otherwise the remainder needs one order + node slot,
         // which any fully consumed maker frees during the match before the rest happens -- so a
-        // match that frees at least one maker always fits, regardless of current free capacity.
-        return outcome.remainder == 0 || outcome.makers_freed > 0 || has_capacity();
+        // match that frees at least one maker fits even when the pool is currently full.
+        return outcome.remainder == 0 || outcome.makers_freed > 0;
     }
 
     std::vector<Trade> add_limit(LimitInput input) {
