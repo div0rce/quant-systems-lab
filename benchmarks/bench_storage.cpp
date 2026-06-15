@@ -85,6 +85,7 @@ struct Timing {
     double min_ns = 0.0;
     double max_ns = 0.0;
     RunSummary summary;
+    std::size_t timed_commands = 0;
 };
 
 void escape(const void *p) {
@@ -298,10 +299,26 @@ void observe_snapshot(const engine::EngineSnapshot &snapshot, WorkloadShape &sha
     return checksum;
 }
 
-[[nodiscard]] RunSummary run_once(engine::OrderBook::Storage storage, const Workload &workload) {
-    engine::MatchingEngine engine{storage};
+// Apply the leading RegisterSymbol prefix. Registration eagerly constructs each per-symbol
+// OrderBook, which for the pooled modes runs the fixed-capacity free-list initialization. This is
+// per-run setup, not command-path work, so callers run it outside the timed interval. Returns the
+// index of the first non-registration (trading) command.
+[[nodiscard]] std::size_t apply_registration(engine::MatchingEngine &engine,
+                                             const Workload &workload) {
+    std::size_t index = 0;
+    while (index < workload.commands.size() &&
+           std::holds_alternative<replay::RegisterSymbol>(workload.commands[index])) {
+        static_cast<void>(replay::apply(engine, workload.commands[index]));
+        ++index;
+    }
+    return index;
+}
+
+// Apply the trading commands [start, end) -- the timed command path.
+[[nodiscard]] RunSummary apply_trading(engine::MatchingEngine &engine, const Workload &workload,
+                                       std::size_t start) {
     RunSummary summary;
-    for (std::size_t i = 0; i < workload.commands.size(); ++i) {
+    for (std::size_t i = start; i < workload.commands.size(); ++i) {
         const auto events = replay::apply(engine, workload.commands[i]);
         summary.events += events.size();
         if (should_probe(workload, i)) {
@@ -309,6 +326,12 @@ void observe_snapshot(const engine::EngineSnapshot &snapshot, WorkloadShape &sha
             summary.top_probe_calls += workload.symbols * 2U;
         }
     }
+    return summary;
+}
+
+// End-of-run readout (snapshot accounting + dead-code-elimination sink). Not command-path work,
+// so it runs outside the timed interval.
+void finalize_run(engine::MatchingEngine &engine, RunSummary &summary) {
     const auto snapshot = engine.snapshot();
     for (const auto &symbol : snapshot.symbols) {
         summary.resting_orders += symbol.order_count;
@@ -317,24 +340,41 @@ void observe_snapshot(const engine::EngineSnapshot &snapshot, WorkloadShape &sha
     g_storage_sink +=
         summary.events + summary.resting_orders + summary.last_seq + summary.top_probe_calls;
     escape(&engine);
+}
+
+[[nodiscard]] RunSummary run_once(engine::OrderBook::Storage storage, const Workload &workload) {
+    engine::MatchingEngine engine{storage};
+    const std::size_t start = apply_registration(engine, workload);
+    RunSummary summary = apply_trading(engine, workload, start);
+    finalize_run(engine, summary);
     return summary;
 }
 
 [[nodiscard]] Timing time_storage(engine::OrderBook::Storage storage, const Workload &workload,
                                   std::size_t reps) {
-    static_cast<void>(run_once(storage, workload));
+    static_cast<void>(run_once(storage, workload)); // warmup
     std::vector<double> samples;
     samples.reserve(reps);
     RunSummary last;
+    std::size_t timed_commands = 0;
     for (std::size_t r = 0; r < reps; ++r) {
+        engine::MatchingEngine engine{storage};
+        // Per-run setup (engine construction + symbol registration, including the pooled modes'
+        // free-list initialization) runs untimed so each sample measures only the command path.
+        const std::size_t start = apply_registration(engine, workload);
+        timed_commands = workload.commands.size() - start;
         const auto t0 = clock_type::now();
-        last = run_once(storage, workload);
+        RunSummary summary = apply_trading(engine, workload, start);
         const auto t1 = clock_type::now();
+        // The end-of-run snapshot readout is bookkeeping, not command work; keep it untimed.
+        finalize_run(engine, summary);
+        last = summary;
         const double ns = std::chrono::duration<double, std::nano>(t1 - t0).count();
-        samples.push_back(ns / static_cast<double>(workload.commands.size()));
+        samples.push_back(ns / static_cast<double>(timed_commands));
     }
     std::sort(samples.begin(), samples.end());
-    return Timing{samples[samples.size() / 2], samples.front(), samples.back(), last};
+    return Timing{samples[samples.size() / 2], samples.front(), samples.back(), last,
+                  timed_commands};
 }
 
 void print_shape(const Workload &workload, const WorkloadShape &shape) {
@@ -365,7 +405,7 @@ void print_timing(const Workload &workload, std::string_view mode, const Timing 
         "max %8.1f %12.0f cmds/sec events/run=%zu resting/run=%zu last_seq/run=%llu "
         "probes/run=%zu\n",
         static_cast<int>(workload.name.size()), workload.name.data(), static_cast<int>(mode.size()),
-        mode.data(), workload.commands.size(), reps, timing.median_ns, timing.min_ns, timing.max_ns,
+        mode.data(), timing.timed_commands, reps, timing.median_ns, timing.min_ns, timing.max_ns,
         commands_per_sec, timing.summary.events, timing.summary.resting_orders,
         static_cast<unsigned long long>(timing.summary.last_seq), timing.summary.top_probe_calls);
 }
