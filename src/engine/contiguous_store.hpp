@@ -222,18 +222,18 @@ struct OrderBook::ContiguousStore {
         match_against(taker_is_buy ? asks : bids, !taker_is_buy, ctx);
     }
 
-    std::vector<Trade> add_limit(OrderId id, Side side, Price price, Quantity quantity,
-                                 TimeInForce tif) {
-        if (!can_store_limit(side, price, quantity, tif)) {
+    std::vector<Trade> add_limit(OrderBook::LimitInput input) {
+        if (!can_store_limit(input.side, input.price, input.quantity, input.tif)) {
             return {};
         }
         OrderBook::MatchResult result = OrderBook::match_incoming(
-            id, side, price, /*is_market=*/false, quantity, [&] { return contains(id); },
+            input.id, input.side, input.price, /*is_market=*/false, input.quantity,
+            [&] { return contains(input.id); },
             [&](Side taker_side, OrderBook::MatchContext &ctx) {
                 match_opposite(taker_side, ctx);
             });
-        if (OrderBook::should_rest_limit(result, tif)) {
-            static_cast<void>(rest(id, side, price, result.remainder));
+        if (OrderBook::should_rest_limit(result, input.tif)) {
+            static_cast<void>(rest(input.id, input.side, input.price, result.remainder));
         }
         return result.trades;
     }
@@ -319,7 +319,8 @@ struct OrderBook::ContiguousStore {
             return trades;
         }
         static_cast<void>(cancel(id));
-        return add_limit(id, loc.side, new_price, new_quantity, TimeInForce::GTC);
+        return add_limit(
+            OrderBook::LimitInput{id, loc.side, new_price, new_quantity, TimeInForce::GTC});
     }
 
     // The remainder a limit order would have left after crossing the current opposite side.

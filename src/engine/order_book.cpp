@@ -178,14 +178,6 @@ struct OrderBook::IntrusiveStore {
         Node *node;
     };
 
-    struct LimitInput {
-        OrderId id;
-        Side side;
-        Price price;
-        Quantity quantity;
-        TimeInForce tif;
-    };
-
     using BidMap = std::map<Price, Level, std::greater<Price>>;
     using AskMap = std::map<Price, Level, std::less<Price>>;
 
@@ -659,9 +651,11 @@ std::vector<Trade> OrderBook::add_limit(OrderId id, Side side, Price price, Quan
             return result.trades;
         },
         [&](IntrusiveStore &store) {
-            return store.add_limit(IntrusiveStore::LimitInput{id, side, price, quantity, tif});
+            return store.add_limit(LimitInput{id, side, price, quantity, tif});
         },
-        [&](ContiguousStore &store) { return store.add_limit(id, side, price, quantity, tif); });
+        [&](ContiguousStore &store) {
+            return store.add_limit(LimitInput{id, side, price, quantity, tif});
+        });
 }
 
 std::vector<Trade> OrderBook::add_market(OrderId id, Side side, Quantity quantity) {

@@ -135,6 +135,16 @@ class OrderBook {
         bool accepted;
     };
 
+    // Bundled new-limit arguments, shared by the storage backends so their add_limit stays a
+    // single-argument entry point (the public OrderBook::add_limit keeps the flat signature).
+    struct LimitInput {
+        OrderId id;
+        Side side;
+        Price price;
+        Quantity quantity;
+        TimeInForce tif;
+    };
+
     template <class OppMap> void match_against(OppMap &opposite, MatchContext &ctx);
 
     template <class OppMap>
