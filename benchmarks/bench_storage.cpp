@@ -239,19 +239,55 @@ void observe_snapshot(const engine::EngineSnapshot &snapshot, WorkloadShape &sha
     ++shape.snapshot_samples;
 }
 
+// Length of the leading RegisterSymbol prefix -- the single boundary between per-run setup and the
+// timed/observed trading commands, shared by characterize() and the timed path so the two never
+// disagree about which commands count.
+[[nodiscard]] std::size_t registration_prefix_len(const Workload &workload) {
+    std::size_t index = 0;
+    while (index < workload.commands.size() &&
+           std::holds_alternative<replay::RegisterSymbol>(workload.commands[index])) {
+        ++index;
+    }
+    return index;
+}
+
+// Apply the leading RegisterSymbol prefix. Registration eagerly constructs each per-symbol
+// OrderBook, which for the pooled modes runs the fixed-capacity free-list initialization. This is
+// per-run setup, not command-path work, so callers run it outside the timed/observed interval.
+// Returns the index of the first trading command.
+[[nodiscard]] std::size_t apply_registration(engine::MatchingEngine &engine,
+                                             const Workload &workload) {
+    const std::size_t prefix = registration_prefix_len(workload);
+    for (std::size_t i = 0; i < prefix; ++i) {
+        static_cast<void>(replay::apply(engine, workload.commands[i]));
+    }
+    return prefix;
+}
+
+[[nodiscard]] bool should_probe(const Workload &workload, std::size_t command_index) noexcept {
+    return workload.top_probe_interval != 0 &&
+           ((command_index + 1) % workload.top_probe_interval) == 0;
+}
+
+// Characterize the timed trading workload. The registration prefix builds books but is not
+// observed, so every shape metric (command counts, probe counts, level averages) describes exactly
+// the post-registration commands the timed rows measure. Probes are counted with the same
+// should_probe predicate over the same range the timed loop uses, so the shape line cannot drift
+// from probes/run.
 [[nodiscard]] WorkloadShape characterize(const Workload &workload) {
     WorkloadShape shape;
     engine::MatchingEngine engine;
-    for (const auto &command : workload.commands) {
+    const std::size_t start = apply_registration(engine, workload);
+    for (std::size_t i = start; i < workload.commands.size(); ++i) {
+        const auto &command = workload.commands[i];
         observe_command(command, shape);
         const auto events = replay::apply(engine, command);
         observe_events(events, shape);
         observe_snapshot(engine.snapshot(), shape);
+        if (should_probe(workload, i)) {
+            shape.top_probe_calls += workload.symbols * 2U;
+        }
     }
-    shape.top_probe_calls =
-        workload.top_probe_interval == 0
-            ? 0
-            : (shape.commands / workload.top_probe_interval) * workload.symbols * 2U;
     return shape;
 }
 
@@ -280,11 +316,6 @@ void observe_snapshot(const engine::EngineSnapshot &snapshot, WorkloadShape &sha
     return static_cast<double>(samples) / static_cast<double>(count);
 }
 
-[[nodiscard]] bool should_probe(const Workload &workload, std::size_t command_index) noexcept {
-    return workload.top_probe_interval != 0 &&
-           ((command_index + 1) % workload.top_probe_interval) == 0;
-}
-
 [[nodiscard]] std::uint64_t probe_top_of_book(const engine::MatchingEngine &engine,
                                               core::SymbolId symbols) {
     std::uint64_t checksum = 0;
@@ -297,21 +328,6 @@ void observe_snapshot(const engine::EngineSnapshot &snapshot, WorkloadShape &sha
         }
     }
     return checksum;
-}
-
-// Apply the leading RegisterSymbol prefix. Registration eagerly constructs each per-symbol
-// OrderBook, which for the pooled modes runs the fixed-capacity free-list initialization. This is
-// per-run setup, not command-path work, so callers run it outside the timed interval. Returns the
-// index of the first non-registration (trading) command.
-[[nodiscard]] std::size_t apply_registration(engine::MatchingEngine &engine,
-                                             const Workload &workload) {
-    std::size_t index = 0;
-    while (index < workload.commands.size() &&
-           std::holds_alternative<replay::RegisterSymbol>(workload.commands[index])) {
-        static_cast<void>(replay::apply(engine, workload.commands[index]));
-        ++index;
-    }
-    return index;
 }
 
 // Apply the trading commands [start, end) -- the timed command path.
