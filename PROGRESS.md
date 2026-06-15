@@ -28,8 +28,9 @@ Do not rely on prior chat memory.
   PR #118, commit aeba72c)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes in Docker Linux on the follow-up branch (240/240 tests);
-  `make asan` also passed 240/240.
+- **`make check` passing:** yes — Docker Linux 240/240 and native macOS 232/232 on the follow-up
+  branch (the 8-test delta is Linux-only epoll/socket tests); `make asan` also green
+  (240/240 Docker, 232/232 native macOS).
 - **Last action:** implemented the M47 storage-benchmark diagnosis follow-up: added a compact
   all-mode benchmark-mix equivalence regression, added deterministic storage workload variants and
   non-timed shape metrics to `qsl-bench storage`, fixed small intrusive-path overheads, regenerated
@@ -37,7 +38,7 @@ Do not rely on prior chat memory.
   docs. The clean artifact records source digest
   `sha256:c34b52a84fad30f446938b120ebf9ad0e5c0769f486c3f2015fb9d9f18243b08` with
   `Dirty inputs: no`.
-- **Next action:** open the follow-up PR. Do not merge from automation.
+- **Next action:** wait for review/CI on follow-up PR #122. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -219,7 +220,8 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M47 PR #119 is open. Next step: wait for review/CI; do not merge from automation._
+- _M47 storage-benchmark diagnosis follow-up PR #122 is open. Next step: wait for review/CI; do not
+  merge from automation._
 
 
 ---
@@ -292,7 +294,7 @@ Lower priority:
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
-| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ local branch | — | Workload-shape metrics, deterministic variants, and small intrusive overhead fixes; PR not opened yet |
+| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ PR open | #122 | Workload-shape metrics, deterministic variants, and small intrusive overhead fixes |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
