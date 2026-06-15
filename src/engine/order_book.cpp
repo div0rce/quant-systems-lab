@@ -178,14 +178,22 @@ struct OrderBook::IntrusiveStore {
         Node *node;
     };
 
+    struct RestingNode {
+        OrderId id;
+        Side side;
+        Price price;
+        Node *node;
+    };
+
     using BidMap = std::map<Price, Level, std::greater<Price>>;
     using AskMap = std::map<Price, Level, std::less<Price>>;
+    using Index = std::unordered_map<OrderId, Locator>;
 
     memory::OrderPool<kIntrusivePoolCapacity> orders;
     RawPool<Node, kIntrusivePoolCapacity> nodes;
     BidMap bids;
     AskMap asks;
-    std::unordered_map<OrderId, Locator> index;
+    Index index;
 
     [[nodiscard]] bool has_capacity() const noexcept {
         return orders.available() > 0 && nodes.available() > 0;
@@ -252,6 +260,28 @@ struct OrderBook::IntrusiveStore {
         erase_from(asks, loc.price, loc.node);
     }
 
+    void erase_indexed_order(Index::iterator found) {
+        const Locator loc = found->second;
+        index.erase(found);
+        erase_resting_order(loc);
+    }
+
+    template <class LevelMap> bool append_resting(LevelMap &levels, RestingNode resting) {
+        auto level_it = levels.try_emplace(resting.price).first;
+        Level &level = level_it->second;
+        append_node(level, resting.node);
+        const auto [it, inserted] =
+            index.emplace(resting.id, Locator{resting.side, resting.price, resting.node});
+        (void)it;
+        if (!inserted) {
+            unlink_node(level, resting.node);
+            destroy_node(resting.node);
+            erase_level_if_empty(levels, level_it);
+            return false;
+        }
+        return true;
+    }
+
     bool rest(OrderId id, Side side, Price price, Quantity quantity) {
         Order *order = orders.try_acquire(id, side, price, quantity);
         if (order == nullptr) {
@@ -262,10 +292,10 @@ struct OrderBook::IntrusiveStore {
             static_cast<void>(orders.release(order));
             return false;
         }
-        Level &level = level_for(side, price);
-        append_node(level, node);
-        index[id] = Locator{side, price, node};
-        return true;
+        if (side == Side::Buy) {
+            return append_resting(bids, RestingNode{id, side, price, node});
+        }
+        return append_resting(asks, RestingNode{id, side, price, node});
     }
 
     static bool can_match_level(bool taker_is_buy, bool is_market, Price limit, Price level_price) {
@@ -389,8 +419,12 @@ struct OrderBook::IntrusiveStore {
     }
 
     bool cancel(OrderId id) {
-        return OrderBook::cancel_indexed_order(
-            index, id, [&](const Locator &loc) { erase_resting_order(loc); });
+        const auto found = index.find(id);
+        if (found == index.end()) {
+            return false;
+        }
+        erase_indexed_order(found);
+        return true;
     }
 
     std::vector<Trade> modify(OrderId id, Price new_price, Quantity new_quantity) {
@@ -401,7 +435,7 @@ struct OrderBook::IntrusiveStore {
         }
         const Locator loc = found->second;
         if (new_quantity == 0) {
-            static_cast<void>(cancel(id));
+            erase_indexed_order(found);
             return trades;
         }
         if (new_price == loc.price && new_quantity <= loc.node->order->quantity) {
@@ -409,7 +443,7 @@ struct OrderBook::IntrusiveStore {
             return trades;
         }
         const Side side = loc.side;
-        static_cast<void>(cancel(id));
+        erase_indexed_order(found);
         return add_limit(LimitInput{id, side, new_price, new_quantity, TimeInForce::GTC});
     }
 
