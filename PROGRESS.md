@@ -37,9 +37,13 @@ Do not rely on prior chat memory.
   end-of-run snapshot outside the timed interval, normalizing over timed commands. This overturns
   the earlier "intrusive is ~4-5x slower" reading: with setup excluded the four modes cluster into a
   tight band (~40-120 ns/cmd) and intrusive/contiguous are the two fastest, trading the lead by
-  workload. Regenerated `results/pool_backed_storage.txt` in Docker Linux (digest
-  `sha256:81ff74300a1633d0d9ddaed68f8880f121bd03cddc568ab212056b8eddd53b1b`, `Dirty inputs: no`,
-  informational commit 476ba71) and rewrote the storage-doc interpretation.
+  workload. A second review finding (same root cause) was then closed: the non-timed `characterize`
+  pass now observes the same post-registration trading range the timed rows measure (shared
+  registration-prefix boundary + `should_probe` predicate), so the shape line's
+  `commands`/`top_probe_calls` match the per-run `cmds`/`probes/run`. Regenerated
+  `results/pool_backed_storage.txt` in Docker Linux (digest
+  `sha256:e12d141670f00f56846697529987006e14aedf7bac2c4f44c994e687ec8cc38f`, `Dirty inputs: no`,
+  informational commit d3ed253) and rebuilt the storage-doc and PR tables from that single artifact.
 - **Next action:** wait for review/CI on follow-up PR #122. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
@@ -598,6 +602,23 @@ Lower priority:
   tight ~40-120 ns/cmd band, intrusive and contiguous are the two fastest (trading the lead by
   workload shape), and intrusive still carries a large fixed init cost the per-command metric
   deliberately excludes. `docs/pool_backed_storage.md` interpretation rewritten accordingly.
+- [2026-06-15] M47 follow-up review correction #2 (PR #122, same root cause as #1): a second Codex
+  finding noted the non-timed `characterize` shape pass still walked the full command stream and
+  derived `top_probe_calls` from a formula on total commands, so the dense shape line printed
+  `top_probe_calls=20016` against the measured `probes/run=20008` (the 2 registration commands x 2
+  symbols x bid/ask). Root cause: the first fix moved the registration prefix out of the *timed*
+  path but not the *characterization* path, leaving the shape line describing a different sequence
+  than the rows. Fix: `characterize` now applies the registration prefix unobserved and observes
+  only the trading range, sharing one `registration_prefix_len` boundary with `apply_registration`
+  and counting probes with the same `should_probe` predicate over the same range — so `commands` and
+  `top_probe_calls` on the shape line match the per-run `cmds`/`probes/run` by construction. Audited
+  the class: `top_probe_calls` and `commands` were the only live instances (`events`/`resting`/
+  `last_seq` are immune because `RegisterSymbol` emits no events and rests nothing), so this closes
+  the registration-prefix accounting class at the source. The timed path is unchanged, so medians
+  moved only within noise; artifact regenerated in Docker Linux (digest
+  `sha256:e12d141670f00f56846697529987006e14aedf7bac2c4f44c994e687ec8cc38f`, `Dirty inputs: no`,
+  informational commit d3ed253), and the storage-doc and PR-body tables were rebuilt mechanically
+  from that one artifact.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.

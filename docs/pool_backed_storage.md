@@ -215,16 +215,16 @@ produced the earlier "intrusive is ~4-5x slower" ranking.
 
 This artifact moves engine construction, the registration prefix, and the end-of-run snapshot
 readout outside the timed interval (`Source digest:
-sha256:81ff74300a1633d0d9ddaed68f8880f121bd03cddc568ab212056b8eddd53b1b`, `Dirty inputs: no`), so
+sha256:e12d141670f00f56846697529987006e14aedf7bac2c4f44c994e687ec8cc38f`, `Dirty inputs: no`), so
 each row reflects per-command work. The corrected medians are:
 
 | Workload | Shape summary | Median ns/timed-command, fastest to slowest |
 | --- | --- | --- |
-| General generated flow | 4 symbols, 5000 timed cmds, 2238 trades, 793 cancels, 690 modifies, max 41 active levels, width 67, density 0.076 | Contiguous 90.8, intrusive 94.0, baseline 111.5, PMR 117.3 |
-| Dense bounded flow | 2 symbols, 5002 timed cmds, 1048 trades, 984 market orders, 20008 probes, max 80 active levels, width 136, density 0.147 | Intrusive 64.6, contiguous 70.4, PMR 88.4, baseline 95.0 |
-| Sparse wide flow | 4 symbols, 5000 timed cmds, no trades, 828 cancels, 828 modifies, max 32 active levels, width 985, density 0.004 | Intrusive 48.3, contiguous 52.4, PMR 71.4, baseline 79.6 |
-| Cancel/modify-heavy flow | 3 symbols, 5001 timed cmds, no trades, 1599 cancels, 1603 modifies, max 60 active levels, width 30, density 0.333 | Contiguous 40.8, intrusive 43.3, baseline 52.5, PMR 56.0 |
-| Match/traversal-heavy flow | 1 symbol, 5003 timed cmds, 4012 trades, 494 market orders, max 60 active levels, width 81, density 0.370 | Contiguous 69.8, intrusive 86.0, baseline 108.6, PMR 116.5 |
+| General generated flow | 4 symbols, 5000 timed cmds, 2238 trades, 793 cancels, 690 modifies, max 41 active levels, width 67, density 0.076 | Contiguous 91.3, intrusive 98.7, baseline 111.1, PMR 119.2 |
+| Dense bounded flow | 2 symbols, 5002 timed cmds, 1048 trades, 984 market orders, 20008 probes, max 80 active levels, width 136, density 0.147 | Intrusive 66.1, contiguous 71.0, PMR 95.5, baseline 107.6 |
+| Sparse wide flow | 4 symbols, 5000 timed cmds, no trades, 828 cancels, 828 modifies, max 32 active levels, width 985, density 0.004 | Intrusive 49.1, contiguous 51.8, PMR 77.3, baseline 79.5 |
+| Cancel/modify-heavy flow | 3 symbols, 5001 timed cmds, no trades, 1599 cancels, 1603 modifies, max 60 active levels, width 30, density 0.333 | Contiguous 41.0, intrusive 43.2, baseline 52.4, PMR 57.9 |
+| Match/traversal-heavy flow | 1 symbol, 5003 timed cmds, 4012 trades, 494 market orders, max 60 active levels, width 81, density 0.370 | Contiguous 70.5, intrusive 85.7, baseline 110.0, PMR 117.5 |
 
 ### What the corrected numbers show
 
