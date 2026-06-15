@@ -6,6 +6,7 @@
 #include "qsl/replay/recovery.hpp"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -29,6 +30,14 @@ using clock_type = std::chrono::steady_clock;
 struct ActiveOrder {
     core::SymbolId symbol;
     engine::Order order;
+};
+
+struct LimitSpec {
+    core::SymbolId symbol;
+    core::Side side;
+    core::Price price;
+    core::Quantity quantity;
+    core::TimeInForce tif = core::TimeInForce::GTC;
 };
 
 struct Workload {
@@ -101,9 +110,9 @@ class WorkloadBuilder {
     [[nodiscard]] std::size_t size() const noexcept { return commands_.size(); }
     [[nodiscard]] bool has_active() const noexcept { return !active_.empty(); }
 
-    void add_limit(core::SymbolId symbol, core::Side side, core::Price price,
-                   core::Quantity quantity, core::TimeInForce tif = core::TimeInForce::GTC) {
-        push(replay::NewLimit{symbol, next_id_++, side, price, quantity, tif});
+    void add_limit(LimitSpec spec) {
+        push(replay::NewLimit{spec.symbol, next_id_++, spec.side, spec.price, spec.quantity,
+                              spec.tif});
     }
 
     void add_market(core::SymbolId symbol, core::Side side, core::Quantity quantity) {
@@ -383,47 +392,54 @@ void benchmark_workload(const Workload &workload, std::size_t reps) {
                     /*top_probe_interval=*/0};
 }
 
-[[nodiscard]] Workload dense_bounded_flow() {
-    WorkloadBuilder builder{/*symbols=*/2};
+void seed_dense_bounded_book(WorkloadBuilder &builder) {
     for (core::Price price = 90; price <= 113; ++price) {
-        builder.add_limit(0, core::Side::Buy, price, 8);
+        builder.add_limit({0, core::Side::Buy, price, 8});
     }
     for (core::Price price = 115; price <= 138; ++price) {
-        builder.add_limit(0, core::Side::Sell, price, 8);
+        builder.add_limit({0, core::Side::Sell, price, 8});
     }
     for (core::Price price = 190; price <= 205; ++price) {
-        builder.add_limit(1, core::Side::Buy, price, 6);
-        builder.add_limit(1, core::Side::Sell, price + 20, 6);
+        builder.add_limit({1, core::Side::Buy, price, 6});
+        builder.add_limit({1, core::Side::Sell, price + 20, 6});
     }
+}
 
+void append_dense_bounded_step(WorkloadBuilder &builder, std::uint64_t i) {
+    const auto phase = i % 10;
+    if (phase < 3) {
+        builder.add_limit({0, core::Side::Buy, 98 + static_cast<core::Price>(i % 16), 4});
+        return;
+    }
+    if (phase < 5) {
+        builder.add_limit({0, core::Side::Sell, 115 + static_cast<core::Price>(i % 16), 4});
+        return;
+    }
+    if (phase == 5) {
+        builder.add_market(0, core::Side::Buy, 1);
+        return;
+    }
+    if (phase == 6) {
+        builder.add_market(0, core::Side::Sell, 1);
+        return;
+    }
+    if (phase == 7) {
+        builder.add_limit({0, core::Side::Buy, 115, 2, core::TimeInForce::IOC});
+        return;
+    }
+    if (phase == 8) {
+        builder.reduce_active(i);
+        return;
+    }
+    builder.duplicate_active(i);
+}
+
+[[nodiscard]] Workload dense_bounded_flow() {
+    WorkloadBuilder builder{/*symbols=*/2};
+    seed_dense_bounded_book(builder);
     std::uint64_t i = 0;
     while (builder.size() < 5004) {
-        switch (i % 10) {
-        case 0:
-        case 1:
-        case 2:
-            builder.add_limit(0, core::Side::Buy, 98 + static_cast<core::Price>(i % 16), 4);
-            break;
-        case 3:
-        case 4:
-            builder.add_limit(0, core::Side::Sell, 115 + static_cast<core::Price>(i % 16), 4);
-            break;
-        case 5:
-            builder.add_market(0, core::Side::Buy, 1);
-            break;
-        case 6:
-            builder.add_market(0, core::Side::Sell, 1);
-            break;
-        case 7:
-            builder.add_limit(0, core::Side::Buy, 115, 2, core::TimeInForce::IOC);
-            break;
-        case 8:
-            builder.reduce_active(i);
-            break;
-        default:
-            builder.duplicate_active(i);
-            break;
-        }
+        append_dense_bounded_step(builder, i);
         ++i;
     }
     return builder.finish(
@@ -433,38 +449,47 @@ void benchmark_workload(const Workload &workload, std::size_t reps) {
         /*top_probe_interval=*/1);
 }
 
-[[nodiscard]] Workload sparse_wide_flow() {
-    WorkloadBuilder builder{/*symbols=*/4};
-    const std::vector<core::Price> bid_prices{16, 128, 384, 640};
-    const std::vector<core::Price> ask_prices{720, 840, 960, 1000};
+using PriceSet = std::array<core::Price, 4>;
+
+void seed_sparse_wide_book(WorkloadBuilder &builder, const PriceSet &bid_prices,
+                           const PriceSet &ask_prices) {
     for (core::SymbolId symbol = 0; symbol < 4; ++symbol) {
         for (const auto price : bid_prices) {
-            builder.add_limit(symbol, core::Side::Buy, price, 3);
+            builder.add_limit({symbol, core::Side::Buy, price, 3});
         }
         for (const auto price : ask_prices) {
-            builder.add_limit(symbol, core::Side::Sell, price, 3);
+            builder.add_limit({symbol, core::Side::Sell, price, 3});
         }
     }
+}
 
+void append_sparse_wide_step(WorkloadBuilder &builder, std::uint64_t i, const PriceSet &bid_prices,
+                             const PriceSet &ask_prices) {
+    const auto symbol = static_cast<core::SymbolId>(i % 4);
+    const auto phase = i % 6;
+    if (phase < 2) {
+        builder.add_limit({symbol, core::Side::Buy, bid_prices[i % bid_prices.size()], 2});
+        return;
+    }
+    if (phase < 4) {
+        builder.add_limit({symbol, core::Side::Sell, ask_prices[i % ask_prices.size()], 2});
+        return;
+    }
+    if (phase == 4) {
+        builder.cancel_active(i);
+        return;
+    }
+    builder.reduce_active(i);
+}
+
+[[nodiscard]] Workload sparse_wide_flow() {
+    WorkloadBuilder builder{/*symbols=*/4};
+    constexpr PriceSet bid_prices{16, 128, 384, 640};
+    constexpr PriceSet ask_prices{720, 840, 960, 1000};
+    seed_sparse_wide_book(builder, bid_prices, ask_prices);
     std::uint64_t i = 0;
     while (builder.size() < 5004) {
-        const auto symbol = static_cast<core::SymbolId>(i % 4);
-        switch (i % 6) {
-        case 0:
-        case 1:
-            builder.add_limit(symbol, core::Side::Buy, bid_prices[i % bid_prices.size()], 2);
-            break;
-        case 2:
-        case 3:
-            builder.add_limit(symbol, core::Side::Sell, ask_prices[i % ask_prices.size()], 2);
-            break;
-        case 4:
-            builder.cancel_active(i);
-            break;
-        default:
-            builder.reduce_active(i);
-            break;
-        }
+        append_sparse_wide_step(builder, i, bid_prices, ask_prices);
         ++i;
     }
     return builder.finish("sparse wide flow", 4703,
@@ -472,35 +497,50 @@ void benchmark_workload(const Workload &workload, std::size_t reps) {
                           /*top_probe_interval=*/0);
 }
 
-[[nodiscard]] Workload cancel_modify_heavy_flow() {
-    WorkloadBuilder builder{/*symbols=*/3};
+void seed_cancel_modify_book(WorkloadBuilder &builder) {
     for (core::SymbolId symbol = 0; symbol < 3; ++symbol) {
         for (core::Price price = 90; price < 100; ++price) {
-            builder.add_limit(symbol, core::Side::Buy, price, 5);
-            builder.add_limit(symbol, core::Side::Sell, price + 20, 5);
+            builder.add_limit({symbol, core::Side::Buy, price, 5});
+            builder.add_limit({symbol, core::Side::Sell, price + 20, 5});
         }
     }
+}
 
+void add_cancel_modify_replenishment(WorkloadBuilder &builder, std::mt19937_64 &rng) {
+    const auto symbol = static_cast<core::SymbolId>(rng() % 3);
+    const bool buy = (rng() % 2) == 0;
+    const core::Price price = buy ? 90 + static_cast<core::Price>(rng() % 10)
+                                  : 110 + static_cast<core::Price>(rng() % 10);
+    builder.add_limit({symbol, buy ? core::Side::Buy : core::Side::Sell, price, 5});
+}
+
+void append_cancel_modify_step(WorkloadBuilder &builder, std::mt19937_64 &rng) {
+    if (!builder.has_active()) {
+        builder.add_limit({0, core::Side::Buy, 95, 5});
+        return;
+    }
+    const auto pick = static_cast<int>(rng() % 100);
+    if (pick < 15) {
+        add_cancel_modify_replenishment(builder, rng);
+        return;
+    }
+    if (pick < 55) {
+        builder.cancel_active(rng());
+        return;
+    }
+    if (pick < 95) {
+        builder.reduce_active(rng());
+        return;
+    }
+    builder.duplicate_active(rng());
+}
+
+[[nodiscard]] Workload cancel_modify_heavy_flow() {
+    WorkloadBuilder builder{/*symbols=*/3};
+    seed_cancel_modify_book(builder);
     std::mt19937_64 rng{4704};
     while (builder.size() < 5004) {
-        if (!builder.has_active()) {
-            builder.add_limit(0, core::Side::Buy, 95, 5);
-            continue;
-        }
-        const auto pick = static_cast<int>(rng() % 100);
-        if (pick < 15) {
-            const auto symbol = static_cast<core::SymbolId>(rng() % 3);
-            const bool buy = (rng() % 2) == 0;
-            const core::Price price = buy ? 90 + static_cast<core::Price>(rng() % 10)
-                                          : 110 + static_cast<core::Price>(rng() % 10);
-            builder.add_limit(symbol, buy ? core::Side::Buy : core::Side::Sell, price, 5);
-        } else if (pick < 55) {
-            builder.cancel_active(rng());
-        } else if (pick < 95) {
-            builder.reduce_active(rng());
-        } else {
-            builder.duplicate_active(rng());
-        }
+        append_cancel_modify_step(builder, rng);
     }
     return builder.finish("cancel/modify-heavy flow", 4704,
                           "Locator-heavy workload with frequent active cancels, in-place "
@@ -508,51 +548,46 @@ void benchmark_workload(const Workload &workload, std::size_t reps) {
                           /*top_probe_interval=*/0);
 }
 
-[[nodiscard]] Workload match_traversal_heavy_flow() {
-    WorkloadBuilder builder{/*symbols=*/1};
+void seed_match_traversal_book(WorkloadBuilder &builder) {
     for (core::Price price = 80; price < 100; ++price) {
-        builder.add_limit(0, core::Side::Buy, price, 1);
+        builder.add_limit({0, core::Side::Buy, price, 1});
     }
     for (core::Price price = 100; price < 140; ++price) {
-        builder.add_limit(0, core::Side::Sell, price, 1);
+        builder.add_limit({0, core::Side::Sell, price, 1});
     }
+}
 
+void append_match_traversal_step(WorkloadBuilder &builder, std::uint64_t i) {
+    const auto phase = i % 20;
+    if (phase < 8) {
+        builder.add_limit({0, core::Side::Sell, 100 + static_cast<core::Price>(i % 40), 1});
+        return;
+    }
+    if (phase < 16) {
+        builder.add_limit({0, core::Side::Buy, 99 - static_cast<core::Price>(i % 40), 1});
+        return;
+    }
+    if (phase == 16) {
+        builder.add_market(0, core::Side::Buy, 12);
+        return;
+    }
+    if (phase == 17) {
+        builder.add_market(0, core::Side::Sell, 12);
+        return;
+    }
+    if (phase == 18) {
+        builder.add_limit({0, core::Side::Buy, 140, 8, core::TimeInForce::IOC});
+        return;
+    }
+    builder.add_limit({0, core::Side::Sell, 60, 8, core::TimeInForce::IOC});
+}
+
+[[nodiscard]] Workload match_traversal_heavy_flow() {
+    WorkloadBuilder builder{/*symbols=*/1};
+    seed_match_traversal_book(builder);
     std::uint64_t i = 0;
     while (builder.size() < 5004) {
-        switch (i % 20) {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            builder.add_limit(0, core::Side::Sell, 100 + static_cast<core::Price>(i % 40), 1);
-            break;
-        case 8:
-        case 9:
-        case 10:
-        case 11:
-        case 12:
-        case 13:
-        case 14:
-        case 15:
-            builder.add_limit(0, core::Side::Buy, 99 - static_cast<core::Price>(i % 40), 1);
-            break;
-        case 16:
-            builder.add_market(0, core::Side::Buy, 12);
-            break;
-        case 17:
-            builder.add_market(0, core::Side::Sell, 12);
-            break;
-        case 18:
-            builder.add_limit(0, core::Side::Buy, 140, 8, core::TimeInForce::IOC);
-            break;
-        default:
-            builder.add_limit(0, core::Side::Sell, 60, 8, core::TimeInForce::IOC);
-            break;
-        }
+        append_match_traversal_step(builder, i);
         ++i;
     }
     return builder.finish("match/traversal-heavy flow", 4705,

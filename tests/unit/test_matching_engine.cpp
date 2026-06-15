@@ -184,40 +184,58 @@ std::vector<qsl::replay::Command> benchmark_mix_flow() {
     };
 }
 
-void require_benchmark_mix_coverage(const std::vector<qsl::replay::Command> &flow) {
-    MatchingEngine model;
+struct BenchmarkMixCoverage {
     bool saw_duplicate_active_id = false;
     bool saw_ioc = false;
     bool saw_market = false;
     bool saw_cancel = false;
     bool saw_modify = false;
     bool saw_partial_fill = false;
+};
 
-    for (const auto &command : flow) {
-        if (const auto *limit = std::get_if<qsl::replay::NewLimit>(&command)) {
-            saw_ioc = saw_ioc || limit->tif == TimeInForce::IOC;
-            saw_duplicate_active_id =
-                saw_duplicate_active_id || model.contains(limit->symbol, limit->id);
-        } else if (std::holds_alternative<qsl::replay::NewMarket>(command)) {
-            saw_market = true;
-        } else if (std::holds_alternative<qsl::replay::Cancel>(command)) {
-            saw_cancel = true;
-        } else if (std::holds_alternative<qsl::replay::Modify>(command)) {
-            saw_modify = true;
-        }
-        const auto events = qsl::replay::apply(model, command);
-        for (const auto &event : events) {
-            const auto *trade = std::get_if<TradeEvent>(&event);
-            saw_partial_fill = saw_partial_fill || (trade != nullptr && trade->quantity == 4);
-        }
+void observe_benchmark_mix_command(const qsl::replay::Command &command, MatchingEngine &model,
+                                   BenchmarkMixCoverage &coverage) {
+    if (const auto *limit = std::get_if<qsl::replay::NewLimit>(&command)) {
+        coverage.saw_ioc = coverage.saw_ioc || limit->tif == TimeInForce::IOC;
+        coverage.saw_duplicate_active_id =
+            coverage.saw_duplicate_active_id || model.contains(limit->symbol, limit->id);
+    } else if (std::holds_alternative<qsl::replay::NewMarket>(command)) {
+        coverage.saw_market = true;
+    } else if (std::holds_alternative<qsl::replay::Cancel>(command)) {
+        coverage.saw_cancel = true;
+    } else if (std::holds_alternative<qsl::replay::Modify>(command)) {
+        coverage.saw_modify = true;
     }
+}
 
-    REQUIRE(saw_duplicate_active_id);
-    REQUIRE(saw_ioc);
-    REQUIRE(saw_market);
-    REQUIRE(saw_cancel);
-    REQUIRE(saw_modify);
-    REQUIRE(saw_partial_fill);
+void observe_benchmark_mix_events(const std::vector<EngineEvent> &events,
+                                  BenchmarkMixCoverage &coverage) {
+    for (const auto &event : events) {
+        const auto *trade = std::get_if<TradeEvent>(&event);
+        coverage.saw_partial_fill =
+            coverage.saw_partial_fill || (trade != nullptr && trade->quantity == 4);
+    }
+}
+
+BenchmarkMixCoverage collect_benchmark_mix_coverage(const std::vector<qsl::replay::Command> &flow) {
+    MatchingEngine model;
+    BenchmarkMixCoverage coverage;
+    for (const auto &command : flow) {
+        observe_benchmark_mix_command(command, model, coverage);
+        observe_benchmark_mix_events(qsl::replay::apply(model, command), coverage);
+    }
+    return coverage;
+}
+
+void require_benchmark_mix_coverage(const std::vector<qsl::replay::Command> &flow) {
+    const auto coverage = collect_benchmark_mix_coverage(flow);
+
+    REQUIRE(coverage.saw_duplicate_active_id);
+    REQUIRE(coverage.saw_ioc);
+    REQUIRE(coverage.saw_market);
+    REQUIRE(coverage.saw_cancel);
+    REQUIRE(coverage.saw_modify);
+    REQUIRE(coverage.saw_partial_fill);
 }
 
 std::pair<std::vector<EngineEvent>, EngineSnapshot>
