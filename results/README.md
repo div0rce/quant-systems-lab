@@ -34,6 +34,9 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   fresh engine) at several log lengths, against a benchmark-only in-memory snapshot-restoration
   prototype at several live-state depths. Restart cost on this host (RTO-style) only; no
   production recovery-time claim (see `docs/replay_and_recovery.md`).
+- `dpdk_environment.txt` — M48 non-mutating DPDK environment support check (`make dpdk-check`).
+  It records whether the host can build or potentially run a DPDK prototype, but it never binds
+  devices, reserves hugepages, sends packets, or supports a kernel-bypass performance claim.
 
 ## Policy
 
@@ -62,3 +65,6 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - CPU-affinity and NUMA artifacts must include the chosen CPU, whether `taskset` and `perf` ran,
   whether unpinned and pinned migration/context-switch counters were captured, whether `numactl`
   topology was available, whether node-local/remote NUMA binding succeeded, and a caveat line.
+- DPDK artifacts must state whether they are build-only, virtual-device, loopback-like, real-NIC,
+  or unsupported-host evidence, and must record hugepage/device-binding state before any packet
+  path result is interpreted.

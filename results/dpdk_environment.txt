@@ -1,0 +1,42 @@
+Command:     make dpdk-check
+Artifact:    DPDK environment support check (non-mutating)
+Evidence class: unsupported-host
+Host support summary: unsupported OS for DPDK packet-path prototype
+Hardware:    arm64
+OS:          Darwin 25.2.0
+CPU:         Apple M2
+Compiler:    Apple clang version 21.0.0 (clang-2100.1.1.101)
+Build type:  n/a
+Provenance version: 1
+Git commit (informational): 4256168
+Source digest: sha256:b2d79e329b8274dfa478e5226426af4a379c54e3d6def042dc448609af1cfa53
+Source digest scope: dpdk-environment-check
+Dirty inputs: no
+Generated output: results/dpdk_environment.txt
+Date: 2026-06-15T20:14:00Z
+pkg-config:  not-found
+libdpdk pkg-config status: not-available
+libdpdk version: not-found
+meson:       not-found
+ninja:       /opt/homebrew/bin/ninja
+cc:          /usr/bin/cc
+c++:         /usr/bin/c++
+dpdk-devbind: not-found
+dpdk-hugepages: not-found
+lspci:       not-found
+HugePages_Total: n/a
+HugePages_Free:  n/a
+Hugepagesize_kB: n/a
+Hugepage mount /dev/hugepages: n/a
+vfio-pci loaded: n/a
+uio loaded:      n/a
+IOMMU groups present: n/a
+Device binding performed: no
+Hugepage setup performed: no
+Packet-path benchmark ran: no
+Prototype compiled: no
+
+Caveat: This artifact only records whether the host appears capable of building or
+running a DPDK prototype. It does not bind NICs, reserve hugepages, send packets,
+or support any kernel-bypass latency/throughput claim.
+dpdk-devbind status: not collected (unsupported OS)
