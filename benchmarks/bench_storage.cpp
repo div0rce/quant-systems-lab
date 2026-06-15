@@ -368,17 +368,21 @@ void finalize_run(engine::MatchingEngine &engine, RunSummary &summary) {
 
 [[nodiscard]] Timing time_storage(engine::OrderBook::Storage storage, const Workload &workload,
                                   std::size_t reps) {
+    // The registration prefix length (and thus the timed-command count) is identical across reps,
+    // so resolve it once. Guard degenerate inputs before any sampling math.
+    const std::size_t timed_commands = workload.commands.size() - registration_prefix_len(workload);
+    if (reps == 0 || timed_commands == 0) {
+        return Timing{};
+    }
     static_cast<void>(run_once(storage, workload)); // warmup
     std::vector<double> samples;
     samples.reserve(reps);
     RunSummary last;
-    std::size_t timed_commands = 0;
     for (std::size_t r = 0; r < reps; ++r) {
         engine::MatchingEngine engine{storage};
         // Per-run setup (engine construction + symbol registration, including the pooled modes'
         // free-list initialization) runs untimed so each sample measures only the command path.
         const std::size_t start = apply_registration(engine, workload);
-        timed_commands = workload.commands.size() - start;
         const auto t0 = clock_type::now();
         RunSummary summary = apply_trading(engine, workload, start);
         const auto t1 = clock_type::now();

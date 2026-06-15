@@ -114,7 +114,9 @@ The storage experiment is separate from the M28 allocator microbenchmark. It rep
 engine workloads through baseline order-book storage, PMR-backed container-node allocation,
 intrusive `OrderPool`-backed resting-order nodes, and the M47 fixed-band contiguous
 direct-price-indexed storage mode. The storage artifact includes a non-timed workload-shape line
-for each variant plus median/min/max timing over full workload replays:
+for each variant plus median/min/max timing of the post-registration command path per replay
+(per-run setup -- engine construction and symbol registration -- and the end-of-run snapshot are
+excluded so each number reflects per-command work):
 
 ```bash
 make bench-storage   # runs qsl-bench storage, writes results/pool_backed_storage.txt
