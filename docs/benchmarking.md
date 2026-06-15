@@ -110,10 +110,11 @@ against a fixed-capacity `OrderPool` acquire/release path and writes full metada
 make bench-allocator   # runs qsl-bench pool, writes results/allocator_experiment.txt
 ```
 
-The storage experiment is separate from the M28 allocator microbenchmark. It replays the same
-deterministic engine flow through baseline order-book storage, PMR-backed container-node
-allocation, intrusive `OrderPool`-backed resting-order nodes, and the M47 fixed-band contiguous
-direct-price-indexed storage mode:
+The storage experiment is separate from the M28 allocator microbenchmark. It replays deterministic
+engine workloads through baseline order-book storage, PMR-backed container-node allocation,
+intrusive `OrderPool`-backed resting-order nodes, and the M47 fixed-band contiguous
+direct-price-indexed storage mode. The storage artifact includes a non-timed workload-shape line
+for each variant plus median/min/max timing over full workload replays:
 
 ```bash
 make bench-storage   # runs qsl-bench storage, writes results/pool_backed_storage.txt

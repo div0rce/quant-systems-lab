@@ -20,24 +20,24 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M47 — Contiguous order-book storage and cache-locality study
-- **Status:** ◐ PR open (#119)
-- **Active branch:** `feat/m47-contiguous-order-book-storage`
-- **Last completed milestone:** M46 — Recovery benchmarking (squash-merged PR #118, commit
-  aeba72c), after M45 — Exchange-grade persistence prototype (squash-merged PR #117, commit
-  d10bfb0)
+- **Active milestone:** M47 follow-up — Storage benchmark diagnosis
+- **Status:** local implementation complete on follow-up branch; PR not opened yet
+- **Active branch:** `perf/m47-storage-benchmark-diagnosis`
+- **Last completed milestone:** M47 — Contiguous order-book storage and cache-locality study
+  (squash-merged PR #119, commit 93d5062), after M46 — Recovery benchmarking (squash-merged
+  PR #118, commit aeba72c)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes on M47 branch after PR #119 review fixes (230/230 tests);
-  `make asan` also passed 230/230.
-- **Last action:** fixed and locally verified PR #119 review findings: `can_apply_modify` now pre-gates
-  `MatchingEngine::modify` so a refused out-of-band contiguous reprice emits no `OrderModified`
-  (gateway rejects it as `StorageExhausted`; the original order keeps resting), and
-  `ContiguousStore` moved to `src/engine/contiguous_store.hpp` to clear the brain-class
-  function-count gate. Regression tests cover engine no-event/no-sequence behavior, full-crossing
-  out-of-band reprices, direct-book refusal before matching, and gateway `StorageExhausted`.
-- **Next action:** wait for review/CI on PR #119 (`perf: study contiguous order-book storage`).
-  Do not merge from automation.
+- **`make check` passing:** yes in Docker Linux on the follow-up branch (240/240 tests);
+  `make asan` also passed 240/240.
+- **Last action:** implemented the M47 storage-benchmark diagnosis follow-up: added a compact
+  all-mode benchmark-mix equivalence regression, added deterministic storage workload variants and
+  non-timed shape metrics to `qsl-bench storage`, fixed the intrusive capacity preflight
+  short-circuit, regenerated `results/pool_backed_storage.txt` through `make bench-storage`, and
+  updated storage benchmark docs. The clean artifact records source digest
+  `sha256:3c9de2760a695bacb1dd47637e51182ac19cfa14876abb1bac57d76a4d4369c6` with
+  `Dirty inputs: no`.
+- **Next action:** open the follow-up PR. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -291,7 +291,8 @@ Lower priority:
 | M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
-| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ◐ PR open | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
+| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
+| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ local branch | — | Workload-shape metrics, deterministic variants, and intrusive preflight fix; PR not opened yet |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
@@ -559,6 +560,19 @@ Lower priority:
   `MILESTONES.md` statuses so resume/finish workflows route to the right milestone: M45 is merged
   via PR #117 (not PR #119), M44 (#115) and M46 (#118) are also merged, and M47 is the active
   PR #119.
+- [2026-06-15] M47 follow-up started after PR #119 squash-merged to `main` as 93d5062. Branch
+  `perf/m47-storage-benchmark-diagnosis` diagnoses the storage artifact ordering rather than
+  forcing contiguous storage to win. Implemented deterministic storage workload variants
+  (general generated, dense bounded, sparse wide, cancel/modify-heavy, match/traversal-heavy),
+  non-timed workload-shape metrics, median/min/max timing output, and a compact all-mode
+  benchmark-mix equivalence regression. Fixed one real intrusive overhead: `can_store_limit` now
+  returns immediately for IOC or when pool capacity exists, only simulating matches near capacity
+  exhaustion. Regenerated `results/pool_backed_storage.txt` through `make bench-storage`; source
+  digest is `sha256:3c9de2760a695bacb1dd47637e51182ac19cfa14876abb1bac57d76a4d4369c6` and
+  `Dirty inputs: no`. Focused Docker verification passed the benchmark-mix storage test, CodeScene
+  passed for the changed C++ files and the branch diff, `make bench-storage` regenerated the
+  artifact from clean source inputs, and final Docker verification passed `make check` 240/240 and
+  `make asan` 240/240. Docker Desktop Linux does not provide bare-metal PMU/cache evidence.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -644,12 +658,11 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M47 on `feat/m47-contiguous-order-book-storage`: evaluate flat/contiguous
-order-book storage against the baseline, PMR pooled, and intrusive pooled modes. Required:
-explicit symbol/price-domain assumptions, replay/differential equivalence (identical event
-streams, `EngineSnapshot`, `last_seq`), engine-level benchmark artifacts from committed scripts
-with `Provenance version: 1` metadata, and honest documentation of negative or neutral results.
-No speedup or cache-locality claim without measured evidence. M46 (PR #118, aeba72c) is merged.
+Current action is the M47 follow-up on `perf/m47-storage-benchmark-diagnosis`: open the
+benchmark-diagnosis PR. The code/artifact/docs now preserve the original negative result, add
+workload-shape evidence and deterministic variants, and avoid unsupported contiguous speedup
+claims. CodeScene, `make check`, `make asan`, and `make bench-storage` passed in Docker Linux.
+M47 (PR #119, 93d5062) is merged.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.

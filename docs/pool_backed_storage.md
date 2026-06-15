@@ -131,15 +131,37 @@ It still does not affect:
 - `MatchingEngine`'s per-symbol map;
 - hash-table allocation for active-order locators.
 
+## Command Hot Path
+
+The M47 follow-up keeps the comparison explicit about what each storage mode changes and what it
+leaves in the command path:
+
+| Mode | Price-level structure | Per-level FIFO | Locator | Allocation path | Best bid/ask path | Cancel/modify path |
+| --- | --- | --- | --- | --- | --- | --- |
+| Baseline | `std::pmr::map` using `new_delete_resource` | `std::pmr::list<Order>` | `std::pmr::unordered_map<OrderId, Locator>` | General heap through the default PMR resource | `map.begin()` | Hash lookup, list erase, map-level erase if empty; priority-losing modify cancels and re-adds |
+| PMR pooled | Same maps as baseline | Same lists as baseline | Same PMR hash map as baseline | Per-book `std::pmr::unsynchronized_pool_resource` for map/list/hash nodes | `map.begin()` | Same algorithm as baseline, but node allocations come from the PMR pool |
+| Intrusive pooled | `std::map<Price, Level>` | Custom linked nodes plus `OrderPool<Capacity>` | `std::unordered_map<OrderId, Locator>` to custom nodes | Fixed raw pools for orders and FIFO nodes; map/hash allocations remain standard | `map.begin()` | Hash lookup, custom unlink/release; storage preflight only simulates matches when the pool is full |
+| Contiguous | Fixed direct-index arrays for `[1, 1024]` plus occupancy bitmaps | Per-level `std::vector<FlatOrder>` with tombstones/compaction | `std::unordered_map<OrderId, Locator>` to vector positions | Vectors and locator hash table still allocate; price-level map/list nodes are removed | Occupancy bitmap scan to best occupied slot | Hash lookup, tombstone/compact, vector-position locator updates; out-of-band residuals are refused before mutation |
+
+Contiguous storage removes the ordered price maps and `std::list<Order>` nodes, but it does not
+remove event-vector allocation, `MatchingEngine`'s symbol map, gateway/risk paths, or the active
+order hash table. The benchmark is therefore an engine-workload comparison, not a pure
+price-array microbenchmark.
+
 ## Correctness Gate
 
-The invariant test replays deterministic generated flows through all storage modes and asserts:
+The tests replay deterministic generated flows through all storage modes and assert:
 
 - identical per-command event streams;
 - identical aggregate event stream;
 - identical `last_seq`;
 - identical final `EngineSnapshot`;
 - non-vacuity: trades occur and resting liquidity remains.
+
+The M47 follow-up adds a small all-mode benchmark-mix regression rather than duplicating the whole
+engine test suite. It covers the command mix that matters for this benchmark family: partial fills,
+duplicate active IDs, IOC orders, market orders, cancels, modifies, event-stream equality, final
+snapshot equality, and nonempty resting state.
 
 The generated-flow test prices remain inside the contiguous mode's explicit band, so it compares
 storage layout without intentionally triggering out-of-band storage refusals. This keeps the
@@ -153,10 +175,20 @@ Run:
 make bench-storage
 ```
 
-The script builds the release benchmark preset and writes `results/pool_backed_storage.txt`. The
-workload is a deterministic generated flow (`seed = 42`, `symbols = 4`, `orders = 5000`) replayed
-through `MatchingEngine` in baseline, PMR pooled, intrusive pooled, and contiguous direct-indexed
-modes. The metric is `ns/command` and `commands/sec`.
+The script builds the release benchmark preset and writes `results/pool_backed_storage.txt`. It now
+runs five deterministic workloads through `MatchingEngine` in baseline, PMR pooled, intrusive
+pooled, and contiguous direct-indexed modes:
+
+- general generated flow: the existing generated workload (`seed = 42`);
+- dense bounded flow: many live levels in a small bounded domain plus top-of-book probes;
+- sparse wide flow: few active levels spread across a wide in-band price domain;
+- cancel/modify-heavy flow: locator-heavy churn with duplicate active IDs;
+- match/traversal-heavy flow: many small maker orders swept across levels.
+
+Each workload prints a non-timed shape line before timing. Timing reports median, minimum, and
+maximum `ns/command` across 30 full workload replays per storage mode. Shape collection is outside
+the measured loop. Top-of-book probes are included only when listed and are intentional workload
+operations, not instrumentation.
 
 This benchmark exercises the engine path. It is not isolated allocator acquire/release and does not
 include network, disk, Linux kernel path, or perf/PMU counters.
@@ -166,11 +198,48 @@ include network, disk, Linux kernel path, or perf/PMU counters.
 Treat committed results as local measurements, not general speedup claims. Allocator behavior
 depends on CPU, compiler, standard library, allocation pattern, cache state, and build mode.
 
-The committed M47 artifact is a bounded-domain storage comparison on one macOS/Apple clang host.
-In the current local run, the PMR-pooled row is fastest for this generated flow, with contiguous
-next (both ahead of baseline) and the intrusive row slower than baseline. That is useful evidence,
-not a portable conclusion or a production latency claim. The question is whether a storage mode improves this specific engine workload
-without changing semantics inside the mode's declared domain.
+The original M47 artifact for the single generated flow ranked PMR fastest, contiguous second,
+baseline third, and intrusive slowest:
+
+```text
+PMR 209.6 ns/cmd < contiguous 222.4 < baseline 273.7 < intrusive 373.0
+```
+
+The M47 follow-up artifact was regenerated in the local Linux-container toolchain after the
+diagnosis changes (`Source digest:
+sha256:3c9de2760a695bacb1dd47637e51182ac19cfa14876abb1bac57d76a4d4369c6`,
+`Dirty inputs: no`). It preserves the original PMR-fastest result as historical evidence and adds
+workload-sensitive evidence:
+
+| Workload | Shape summary | Median ranking, fastest to slowest |
+| --- | --- | --- |
+| General generated flow | 5004 commands, 2238 trades, 793 cancels, 690 modifies, 602 market orders, 376 IOC orders, max 41 active levels, width 67, density 0.076 | Contiguous 105.8 ns/cmd, baseline 130.0, PMR 210.9, intrusive 591.5 |
+| Dense bounded flow | 5004 commands, 1048 trades, 984 market orders, 492 modifies, 492 IOC orders, 20016 top-of-book probes, max 80 active levels, width 136, density 0.147 | Contiguous 83.2, PMR 112.3, baseline 120.7, intrusive 336.2 |
+| Sparse wide flow | 5004 commands, no trades, 828 cancels, 828 modifies, max 32 active levels, width 985, density 0.004 | Contiguous 72.4, baseline 105.3, PMR 155.8, intrusive 725.0 |
+| Cancel/modify-heavy flow | 5004 commands, no trades, 1599 cancels, 1603 modifies, max 60 active levels, width 30, density 0.333 | Contiguous 65.0, PMR 65.5, baseline 81.2, intrusive 337.1 |
+| Match/traversal-heavy flow | 5004 commands, 4012 trades, 494 market orders, 494 IOC orders, max 60 active levels, width 81, density 0.370 | Contiguous 76.7, PMR 127.9, baseline 134.0, intrusive 145.8 |
+
+This evidence supports a workload, allocator, and environment-sensitivity interpretation rather than
+a semantic problem. The original single-flow artifact was not a pure cache-locality benchmark: it
+included symbol routing, duplicate checks, locator updates, event emission, cancel/modify
+bookkeeping, and allocation behavior. PMR can win that kind of workload when pooled node allocation
+dominates and the standard-container path stays simpler than custom storage. The Linux-container
+follow-up did not reproduce that PMR win: contiguous storage led the median for every named
+workload, with the cancel/modify-heavy result effectively a near-tie against PMR. That makes the
+safe conclusion narrower: contiguous can benefit bounded in-band workloads, especially traversal
+heavy ones, but the original PMR-fastest result shows that ranking is not portable across
+environment and workload shape.
+
+The sparse-wide workload also favors contiguous storage in this fixed in-band study, but that does
+not make direct indexing a general sparse-price-book replacement. The benchmark deliberately keeps
+resting prices inside `[1, 1024]`; a wider or unbounded production-style price domain would change
+the memory and fallback tradeoffs.
+
+Intrusive pooled storage remains slower in every follow-up workload. The follow-up removed one real
+overhead: when capacity exists, `can_store_limit` now returns before simulating a match. The
+remaining regression is an overhead tradeoff: intrusive storage still uses ordered price maps and a
+hash locator, adds custom linked-node management, and does not get PMR's broad pooling for map and
+hash nodes.
 
 ## Cache, Locality, And Replay
 
@@ -193,5 +262,7 @@ snapshot output, event ordering, or sequence assignment.
 - Contiguous storage has a fixed resting-price band and is not suitable for arbitrary sparse price
   domains without a fallback or a different indexing strategy.
 - The benchmark is synthetic and single-process.
+- No hardware PMU/cache-miss evidence was collected for this artifact; it was generated in Docker
+  Desktop Linux, which is constrained evidence rather than a bare-metal perf run.
 - The result is not a production-latency claim.
 - The experiment does not prove that any storage mode should be retained for every workload.
