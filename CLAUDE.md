@@ -178,7 +178,7 @@ falling back to ad-hoc shell:
   finished.
 - `context7` for current docs of any library / framework / CLI / API before relying on its
   behavior — do not answer from memory.
-- `sequential-thinking` to structure multi-step refactor or risk planning.
+- `sequential_thinking` to structure multi-step refactor or risk planning.
 - `filesystem` for repository read / edit / search and the project docs (ADRs, MILESTONES.md,
   PROGRESS.md, HANDOFF.md, review docs).
 - `docker` for Linux-container verification of perf / NUMA / socket studies.
