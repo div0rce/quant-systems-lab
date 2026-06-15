@@ -207,17 +207,17 @@ PMR 209.6 ns/cmd < contiguous 222.4 < baseline 273.7 < intrusive 373.0
 
 The M47 follow-up artifact was regenerated in the local Linux-container toolchain after the
 diagnosis changes (`Source digest:
-sha256:3c9de2760a695bacb1dd47637e51182ac19cfa14876abb1bac57d76a4d4369c6`,
+sha256:c34b52a84fad30f446938b120ebf9ad0e5c0769f486c3f2015fb9d9f18243b08`,
 `Dirty inputs: no`). It preserves the original PMR-fastest result as historical evidence and adds
 workload-sensitive evidence:
 
 | Workload | Shape summary | Median ranking, fastest to slowest |
 | --- | --- | --- |
-| General generated flow | 5004 commands, 2238 trades, 793 cancels, 690 modifies, 602 market orders, 376 IOC orders, max 41 active levels, width 67, density 0.076 | Contiguous 105.8 ns/cmd, baseline 130.0, PMR 210.9, intrusive 591.5 |
-| Dense bounded flow | 5004 commands, 1048 trades, 984 market orders, 492 modifies, 492 IOC orders, 20016 top-of-book probes, max 80 active levels, width 136, density 0.147 | Contiguous 83.2, PMR 112.3, baseline 120.7, intrusive 336.2 |
-| Sparse wide flow | 5004 commands, no trades, 828 cancels, 828 modifies, max 32 active levels, width 985, density 0.004 | Contiguous 72.4, baseline 105.3, PMR 155.8, intrusive 725.0 |
-| Cancel/modify-heavy flow | 5004 commands, no trades, 1599 cancels, 1603 modifies, max 60 active levels, width 30, density 0.333 | Contiguous 65.0, PMR 65.5, baseline 81.2, intrusive 337.1 |
-| Match/traversal-heavy flow | 5004 commands, 4012 trades, 494 market orders, 494 IOC orders, max 60 active levels, width 81, density 0.370 | Contiguous 76.7, PMR 127.9, baseline 134.0, intrusive 145.8 |
+| General generated flow | 5004 commands, 2238 trades, 793 cancels, 690 modifies, 602 market orders, 376 IOC orders, max 41 active levels, width 67, density 0.076 | Contiguous 98.5 ns/cmd, baseline 114.5, PMR 119.0, intrusive 486.5 |
+| Dense bounded flow | 5004 commands, 1048 trades, 984 market orders, 492 modifies, 492 IOC orders, 20016 top-of-book probes, max 80 active levels, width 136, density 0.147 | Contiguous 78.7, PMR 104.0, baseline 106.3, intrusive 196.5 |
+| Sparse wide flow | 5004 commands, no trades, 828 cancels, 828 modifies, max 32 active levels, width 985, density 0.004 | Contiguous 63.8, PMR 88.0, baseline 102.9, intrusive 426.8 |
+| Cancel/modify-heavy flow | 5004 commands, no trades, 1599 cancels, 1603 modifies, max 60 active levels, width 30, density 0.333 | Contiguous 43.3, baseline 54.4, PMR 56.9, intrusive 283.1 |
+| Match/traversal-heavy flow | 5004 commands, 4012 trades, 494 market orders, 494 IOC orders, max 60 active levels, width 81, density 0.370 | Contiguous 70.1, baseline 109.3, PMR 118.5, intrusive 126.5 |
 
 This evidence supports a workload, allocator, and environment-sensitivity interpretation rather than
 a semantic problem. The original single-flow artifact was not a pure cache-locality benchmark: it
@@ -225,21 +225,22 @@ included symbol routing, duplicate checks, locator updates, event emission, canc
 bookkeeping, and allocation behavior. PMR can win that kind of workload when pooled node allocation
 dominates and the standard-container path stays simpler than custom storage. The Linux-container
 follow-up did not reproduce that PMR win: contiguous storage led the median for every named
-workload, with the cancel/modify-heavy result effectively a near-tie against PMR. That makes the
-safe conclusion narrower: contiguous can benefit bounded in-band workloads, especially traversal
-heavy ones, but the original PMR-fastest result shows that ranking is not portable across
-environment and workload shape.
+workload. That makes the safe conclusion narrower: contiguous can benefit bounded in-band
+workloads, especially traversal-heavy ones, but the original PMR-fastest result shows that ranking
+is not portable across environment and workload shape.
 
 The sparse-wide workload also favors contiguous storage in this fixed in-band study, but that does
 not make direct indexing a general sparse-price-book replacement. The benchmark deliberately keeps
 resting prices inside `[1, 1024]`; a wider or unbounded production-style price domain would change
 the memory and fallback tradeoffs.
 
-Intrusive pooled storage remains slower in every follow-up workload. The follow-up removed one real
-overhead: when capacity exists, `can_store_limit` now returns before simulating a match. The
-remaining regression is an overhead tradeoff: intrusive storage still uses ordered price maps and a
-hash locator, adds custom linked-node management, and does not get PMR's broad pooling for map and
-hash nodes.
+Intrusive pooled storage remains slower in every follow-up workload. The follow-up removed small
+avoidable overheads: when capacity exists, `can_store_limit` returns before simulating a match;
+priority-losing modifies erase via the already-found locator instead of doing a second cancel
+lookup; and resting orders insert into the locator with checked `emplace` instead of
+`operator[]`. The remaining regression is an overhead tradeoff: intrusive storage still uses
+ordered price maps and a hash locator, adds custom linked-node management, and does not get PMR's
+broad pooling for map and hash nodes.
 
 ## Cache, Locality, And Replay
 

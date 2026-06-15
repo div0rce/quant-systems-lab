@@ -32,10 +32,10 @@ Do not rely on prior chat memory.
   `make asan` also passed 240/240.
 - **Last action:** implemented the M47 storage-benchmark diagnosis follow-up: added a compact
   all-mode benchmark-mix equivalence regression, added deterministic storage workload variants and
-  non-timed shape metrics to `qsl-bench storage`, fixed the intrusive capacity preflight
-  short-circuit, regenerated `results/pool_backed_storage.txt` through `make bench-storage`, and
-  updated storage benchmark docs. The clean artifact records source digest
-  `sha256:3c9de2760a695bacb1dd47637e51182ac19cfa14876abb1bac57d76a4d4369c6` with
+  non-timed shape metrics to `qsl-bench storage`, fixed small intrusive-path overheads, regenerated
+  `results/pool_backed_storage.txt` through `make bench-storage`, and updated storage benchmark
+  docs. The clean artifact records source digest
+  `sha256:c34b52a84fad30f446938b120ebf9ad0e5c0769f486c3f2015fb9d9f18243b08` with
   `Dirty inputs: no`.
 - **Next action:** open the follow-up PR. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
@@ -292,7 +292,7 @@ Lower priority:
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
-| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ local branch | — | Workload-shape metrics, deterministic variants, and intrusive preflight fix; PR not opened yet |
+| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ local branch | — | Workload-shape metrics, deterministic variants, and small intrusive overhead fixes; PR not opened yet |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
@@ -565,10 +565,12 @@ Lower priority:
   forcing contiguous storage to win. Implemented deterministic storage workload variants
   (general generated, dense bounded, sparse wide, cancel/modify-heavy, match/traversal-heavy),
   non-timed workload-shape metrics, median/min/max timing output, and a compact all-mode
-  benchmark-mix equivalence regression. Fixed one real intrusive overhead: `can_store_limit` now
-  returns immediately for IOC or when pool capacity exists, only simulating matches near capacity
-  exhaustion. Regenerated `results/pool_backed_storage.txt` through `make bench-storage`; source
-  digest is `sha256:3c9de2760a695bacb1dd47637e51182ac19cfa14876abb1bac57d76a4d4369c6` and
+  benchmark-mix equivalence regression. Fixed small intrusive overheads: `can_store_limit` now
+  returns immediately for IOC or when pool capacity exists, priority-losing modifies erase via the
+  already-found locator instead of doing a second cancel lookup, and `rest` uses checked locator
+  `emplace` with cleanup on unexpected insertion failure. Regenerated
+  `results/pool_backed_storage.txt` through `make bench-storage`; source digest is
+  `sha256:c34b52a84fad30f446938b120ebf9ad0e5c0769f486c3f2015fb9d9f18243b08` and
   `Dirty inputs: no`. Focused Docker verification passed the benchmark-mix storage test, CodeScene
   passed for the changed C++ files and the branch diff, `make bench-storage` regenerated the
   artifact from clean source inputs, and final Docker verification passed `make check` 240/240 and
