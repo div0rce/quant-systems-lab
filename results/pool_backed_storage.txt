@@ -4,12 +4,12 @@ OS:          Linux 6.12.76-linuxkit
 Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
 Build type:  Release
 Provenance version: 1
-Git commit (informational): d3ed253
-Source digest: sha256:e12d141670f00f56846697529987006e14aedf7bac2c4f44c994e687ec8cc38f
+Git commit (informational): cf0396f
+Source digest: sha256:b606452b1bbff3d1c4eed8f59839701590cfbc824207f7b707c03ca66766353a
 Source digest scope: order-book-storage-benchmark
 Dirty inputs: no
 Generated output: results/pool_backed_storage.txt
-Date: 2026-06-15T19:06:05Z
+Date: 2026-06-15T19:41:28Z
 Dataset:     deterministic storage workloads (general, dense, sparse, cancel/modify, match/traversal)
 Scenario:    baseline OrderBook storage vs PMR pooled nodes vs intrusive OrderPool nodes vs contiguous price-indexed storage
 Warmup:      one full workload replay per storage mode before timing
@@ -43,39 +43,39 @@ Scenario / Metric / Result:
 Workload: general generated flow (seed=42)
 Purpose:  Existing deterministic generated engine flow; mixed insert, match, cancel, modify, IOC, and market activity.
 Shape:    commands=5000 events=7155 accepted=3517 trades=2238 cancel_cmds=793 modify_cmds=690 market_orders=602 ioc_orders=376 canceled_events=710 modified_events=690 final_resting=37 max_resting=72 max_bid_levels=21 max_ask_levels=22 avg_bid_levels=11.2 avg_ask_levels=12.4 max_active_levels=41 price_width=67 price_density=0.076 top_probe_calls=0
-general generated flow   baseline              5000 cmds    30 reps median    111.1 ns/cmd min    110.1 max    116.5      8998875 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
-general generated flow   pooled pmr            5000 cmds    30 reps median    119.2 ns/cmd min    117.4 max    126.3      8392782 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
-general generated flow   intrusive pool        5000 cmds    30 reps median     98.7 ns/cmd min     93.5 max    110.2     10136847 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
-general generated flow   contiguous            5000 cmds    30 reps median     91.3 ns/cmd min     89.7 max     95.9     10954894 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
+general generated flow   baseline              5000 cmds    30 reps median    111.0 ns/cmd min    110.3 max    115.9      9007662 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
+general generated flow   pooled pmr            5000 cmds    30 reps median    121.4 ns/cmd min    116.6 max    136.1      8238929 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
+general generated flow   intrusive pool        5000 cmds    30 reps median     95.4 ns/cmd min     93.5 max    106.1     10480357 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
+general generated flow   contiguous            5000 cmds    30 reps median     93.2 ns/cmd min     91.4 max     98.8     10732493 cmds/sec events/run=7155 resting/run=37 last_seq/run=7155 probes/run=0
 
 Workload: dense bounded flow (seed=4702)
 Purpose:  Small bounded price domain with many live levels, repeated same-price operations, and top-of-book probes after every command.
 Shape:    commands=5002 events=5558 accepted=4018 trades=1048 cancel_cmds=0 modify_cmds=492 market_orders=984 ioc_orders=492 canceled_events=0 modified_events=492 final_resting=2264 max_resting=2264 max_bid_levels=40 max_ask_levels=40 avg_bid_levels=39.2 avg_ask_levels=38.5 max_active_levels=80 price_width=136 price_density=0.147 top_probe_calls=20008
-dense bounded flow       baseline              5002 cmds    30 reps median    107.6 ns/cmd min     97.6 max    239.6      9295964 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
-dense bounded flow       pooled pmr            5002 cmds    30 reps median     95.5 ns/cmd min     90.3 max    102.6     10469911 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
-dense bounded flow       intrusive pool        5002 cmds    30 reps median     66.1 ns/cmd min     64.4 max     76.7     15125080 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
-dense bounded flow       contiguous            5002 cmds    30 reps median     71.0 ns/cmd min     69.5 max     88.4     14090141 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
+dense bounded flow       baseline              5002 cmds    30 reps median     96.4 ns/cmd min     95.1 max     99.9     10378498 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
+dense bounded flow       pooled pmr            5002 cmds    30 reps median     88.3 ns/cmd min     87.4 max     92.6     11322096 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
+dense bounded flow       intrusive pool        5002 cmds    30 reps median     66.0 ns/cmd min     65.2 max     70.2     15140371 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
+dense bounded flow       contiguous            5002 cmds    30 reps median     70.7 ns/cmd min     70.0 max     76.2     14138251 cmds/sec events/run=5558 resting/run=2264 last_seq/run=5558 probes/run=20008
 
 Workload: sparse wide flow (seed=4703)
 Purpose:  Wide in-band price domain with few active levels and many gaps.
 Shape:    commands=5000 events=5000 accepted=3344 trades=0 cancel_cmds=828 modify_cmds=828 market_orders=0 ioc_orders=0 canceled_events=828 modified_events=828 final_resting=2516 max_resting=2517 max_bid_levels=16 max_ask_levels=16 avg_bid_levels=7.8 avg_ask_levels=7.5 max_active_levels=32 price_width=985 price_density=0.004 top_probe_calls=0
-sparse wide flow         baseline              5000 cmds    30 reps median     79.5 ns/cmd min     78.3 max     85.7     12582573 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
-sparse wide flow         pooled pmr            5000 cmds    30 reps median     77.3 ns/cmd min     71.8 max     89.6     12931023 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
-sparse wide flow         intrusive pool        5000 cmds    30 reps median     49.1 ns/cmd min     47.8 max     70.6     20359715 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
-sparse wide flow         contiguous            5000 cmds    30 reps median     51.8 ns/cmd min     51.1 max     58.0     19292580 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
+sparse wide flow         baseline              5000 cmds    30 reps median     81.0 ns/cmd min     78.5 max     90.7     12343149 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
+sparse wide flow         pooled pmr            5000 cmds    30 reps median     72.1 ns/cmd min     71.2 max     93.3     13872858 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
+sparse wide flow         intrusive pool        5000 cmds    30 reps median     48.2 ns/cmd min     47.6 max     53.8     20754036 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
+sparse wide flow         contiguous            5000 cmds    30 reps median     60.9 ns/cmd min     53.6 max     77.4     16418097 cmds/sec events/run=5000 resting/run=2516 last_seq/run=5000 probes/run=0
 
 Workload: cancel/modify-heavy flow (seed=4704)
 Purpose:  Locator-heavy workload with frequent active cancels, in-place modifies, replenishment, and duplicate active ids.
 Shape:    commands=5001 events=4801 accepted=1599 trades=0 cancel_cmds=1599 modify_cmds=1603 market_orders=0 ioc_orders=0 canceled_events=1599 modified_events=1603 final_resting=0 max_resting=62 max_bid_levels=30 max_ask_levels=30 avg_bid_levels=1.9 avg_ask_levels=1.4 max_active_levels=60 price_width=30 price_density=0.333 top_probe_calls=0
-cancel/modify-heavy flow baseline              5001 cmds    30 reps median     52.4 ns/cmd min     52.0 max     56.4     19099961 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
-cancel/modify-heavy flow pooled pmr            5001 cmds    30 reps median     57.9 ns/cmd min     57.2 max     60.7     17264652 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
-cancel/modify-heavy flow intrusive pool        5001 cmds    30 reps median     43.2 ns/cmd min     42.8 max     47.6     23157281 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
-cancel/modify-heavy flow contiguous            5001 cmds    30 reps median     41.0 ns/cmd min     40.7 max     46.5     24419899 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
+cancel/modify-heavy flow baseline              5001 cmds    30 reps median     59.7 ns/cmd min     55.6 max     74.2     16763147 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
+cancel/modify-heavy flow pooled pmr            5001 cmds    30 reps median     59.8 ns/cmd min     56.6 max     62.6     16730397 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
+cancel/modify-heavy flow intrusive pool        5001 cmds    30 reps median     44.3 ns/cmd min     43.3 max     51.0     22590627 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
+cancel/modify-heavy flow contiguous            5001 cmds    30 reps median     42.8 ns/cmd min     40.8 max     48.7     23341890 cmds/sec events/run=4801 resting/run=0 last_seq/run=4801 probes/run=0
 
 Workload: match/traversal-heavy flow (seed=4705)
 Purpose:  Many small maker orders per level sweep, stressing level traversal and best-price maintenance.
 Shape:    commands=5003 events=9015 accepted=5003 trades=4012 cancel_cmds=0 modify_cmds=0 market_orders=494 ioc_orders=494 canceled_events=0 modified_events=0 final_resting=3 max_resting=76 max_bid_levels=20 max_ask_levels=40 avg_bid_levels=2.5 avg_ask_levels=5.4 max_active_levels=60 price_width=81 price_density=0.370 top_probe_calls=0
-match/traversal-heavy flow baseline              5003 cmds    30 reps median    110.0 ns/cmd min    107.7 max    130.0      9088102 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0
-match/traversal-heavy flow pooled pmr            5003 cmds    30 reps median    117.5 ns/cmd min    116.3 max    121.2      8512123 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0
-match/traversal-heavy flow intrusive pool        5003 cmds    30 reps median     85.7 ns/cmd min     84.7 max     91.3     11673351 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0
-match/traversal-heavy flow contiguous            5003 cmds    30 reps median     70.5 ns/cmd min     69.3 max     75.9     14174491 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0
+match/traversal-heavy flow baseline              5003 cmds    30 reps median    109.3 ns/cmd min    108.1 max    124.5      9152527 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0
+match/traversal-heavy flow pooled pmr            5003 cmds    30 reps median    117.9 ns/cmd min    116.4 max    127.1      8483860 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0
+match/traversal-heavy flow intrusive pool        5003 cmds    30 reps median     87.2 ns/cmd min     86.4 max     91.6     11462730 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0
+match/traversal-heavy flow contiguous            5003 cmds    30 reps median     69.9 ns/cmd min     69.5 max     72.8     14313015 cmds/sec events/run=9015 resting/run=3 last_seq/run=9015 probes/run=0

@@ -40,10 +40,12 @@ Do not rely on prior chat memory.
   workload. A second review finding (same root cause) was then closed: the non-timed `characterize`
   pass now observes the same post-registration trading range the timed rows measure (shared
   registration-prefix boundary + `should_probe` predicate), so the shape line's
-  `commands`/`top_probe_calls` match the per-run `cmds`/`probes/run`. Regenerated
-  `results/pool_backed_storage.txt` in Docker Linux (digest
-  `sha256:e12d141670f00f56846697529987006e14aedf7bac2c4f44c994e687ec8cc38f`, `Dirty inputs: no`,
-  informational commit d3ed253) and rebuilt the storage-doc and PR tables from that single artifact.
+  `commands`/`top_probe_calls` match the per-run `cmds`/`probes/run`. Two CodeRabbit nits were also
+  fixed: `time_storage` resolves the timed-command count once and guards `reps == 0` / zero
+  trading commands before the sampling math, and `docs/benchmarking.md` no longer says timing covers
+  "full workload replays". Regenerated `results/pool_backed_storage.txt` in Docker Linux (digest
+  `sha256:b606452b1bbff3d1c4eed8f59839701590cfbc824207f7b707c03ca66766353a`, `Dirty inputs: no`,
+  informational commit cf0396f) and rebuilt the storage-doc and PR tables from that single artifact.
 - **Next action:** wait for review/CI on follow-up PR #122. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
@@ -619,6 +621,15 @@ Lower priority:
   `sha256:e12d141670f00f56846697529987006e14aedf7bac2c4f44c994e687ec8cc38f`, `Dirty inputs: no`,
   informational commit d3ed253), and the storage-doc and PR-body tables were rebuilt mechanically
   from that one artifact.
+- [2026-06-15] M47 follow-up CodeRabbit nits (PR #122): (1) `time_storage` now resolves the
+  timed-command count once (identical across reps) and returns early when `reps == 0` or a workload
+  has no post-registration commands, avoiding empty-vector indexing / divide-by-zero in the sampling
+  math; (2) `docs/benchmarking.md` no longer describes storage timing as "full workload replays" --
+  it times only the post-registration command path, matching the storage doc and harness. Behavior
+  on the real workloads is unchanged (those degenerate inputs cannot occur with the fixed reps and
+  multi-thousand-command workloads). Artifact regenerated in Docker Linux (digest
+  `sha256:b606452b1bbff3d1c4eed8f59839701590cfbc824207f7b707c03ca66766353a`, `Dirty inputs: no`,
+  informational commit cf0396f), tables rebuilt from that one artifact; ranking unchanged.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
