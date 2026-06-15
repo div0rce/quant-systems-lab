@@ -165,6 +165,28 @@ Known constraints:
 
 ## Local MCP/tooling memory
 
+**Use these MCP servers exhaustively.** They are the primary engineering surface for QSL, not an
+optional add-on. For every substantive task, actively reach for the relevant server instead of
+falling back to ad-hoc shell:
+
+- `codescene` Code Health review on every file you touch, and `analyze_change_set` before opening
+  or updating any PR — a gate, not a nicety.
+- `git` / `github` for diffs, blame, history, and PR / issue / branch / commit / milestone review.
+- `qsl-results` (SQLite) to record and query benchmark history (storage / NUMA / false-sharing /
+  perf / recovery) instead of re-parsing committed text artifacts.
+- `codex` for an independent second-opinion review of any non-trivial change before a milestone is
+  finished.
+- `context7` for current docs of any library / framework / CLI / API before relying on its
+  behavior — do not answer from memory.
+- `sequential-thinking` to structure multi-step refactor or risk planning.
+- `filesystem` for repository read / edit / search and the project docs (ADRs, MILESTONES.md,
+  PROGRESS.md, HANDOFF.md, review docs).
+- `docker` for Linux-container verification of perf / NUMA / socket studies.
+
+Prefer the dedicated MCP for a step over a generic shell command; skip a server only when it
+genuinely cannot do the step (e.g. a destructive `git push`, which stays manual per the golden
+rules). Never invent an MCP server or tool that is not configured.
+
 Local Codex client MCP servers currently configured:
 
 - `codescene` — use for repository-health analysis, file Code Health review, branch/change-set
@@ -182,6 +204,14 @@ Local Codex client MCP servers currently configured:
 - `context7` — use for current library/tool documentation when exact external API behavior matters.
 - `node_repl` — use when JavaScript/browser-plugin workflows require the persistent Node-backed
   kernel.
+- `codex` — Codex CLI exposed as an MCP server (`codex mcp-server`); use for an independent
+  second-opinion review of non-trivial changes before finishing a milestone.
+- `git` — structured git access (diffs, blame, log, branch) over this repo for artifact
+  provenance, milestone audits, and release preparation.
+- `github` — official GitHub MCP server for PR review, issue/milestone tracking, branch and commit
+  inspection, and release notes (needs a one-time OAuth via `/mcp`; the `gh` CLI is the fallback).
+- `qsl-results` — SQLite store of structured benchmark history (storage/NUMA/false-sharing/perf/
+  recovery) so results are queryable instead of re-parsed from committed text artifacts.
 
 Postgres and Perplexity MCP servers are intentionally not configured. Do not assume database or
 Perplexity access unless the human explicitly configures them later.
