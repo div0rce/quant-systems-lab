@@ -96,6 +96,19 @@ consumer-owned `head` release/acquire observation pattern as the production `Sps
 not change the production ring layout. Treat the artifact as host-local cache-line contention
 evidence; scheduler placement, CPU topology, and OS behavior can move the result.
 
+## DPDK environment checks
+
+M48 owns late-stage DPDK research. Run:
+
+```bash
+make dpdk-check
+```
+
+This writes `results/dpdk_environment.txt`. It is a non-mutating support check: it does not reserve
+hugepages, load kernel modules, bind NICs, or send packets. Treat it as research/environment
+evidence only unless a later prototype artifact records DPDK version, EAL arguments, hugepage
+state, device binding, packet workload, and source provenance.
+
 ## What this does not prove
 
 These are in-process microbenchmarks on a commodity machine with the standard library and a

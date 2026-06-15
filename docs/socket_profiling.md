@@ -5,7 +5,8 @@ boundary, what the committed artifacts mean, and — just as important — what 
 prove. It complements [`socket_gateway.md`](socket_gateway.md) (the design),
 [`socket_hardening.md`](socket_hardening.md) (the defensive posture), and
 [`linux_performance.md`](linux_performance.md) / [`perf_analysis.md`](perf_analysis.md) (the
-CPU-side perf workflow).
+CPU-side perf workflow). Late-stage kernel-bypass research is tracked separately in
+[`dpdk_research.md`](dpdk_research.md); it is not part of these socket artifacts.
 
 All numbers here are **measured by committed scripts** on a developer machine over **loopback**.
 They are profiling evidence for investigation, not a latency, throughput, or capacity claim. See
@@ -167,4 +168,6 @@ sequence-visible datagram loss under burst while adequate buffers do not.
 
 It **does not** show: production latency or throughput, behaviour over a real network, production
 throughput under concurrency (the load test shows connection-scaling *shape*, not capacity), or
-any kernel-bypass / low-latency-networking result. No such claim is made.
+any kernel-bypass / low-latency-networking result. No such claim is made; see
+[`dpdk_research.md`](dpdk_research.md) for the explicit environment gate that would be required
+before any DPDK prototype evidence exists.

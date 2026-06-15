@@ -1814,7 +1814,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Goal:** Late-stage user-space networking investigation only after CPU locality, false sharing,
   storage architecture, Linux profiling, persistence/recovery, and external-review visibility are in
   place.
-- **Status:** ☐ not started.
+- **Status:** ◐ in progress.
 - **Dependencies:** M30/M35 socket evidence, M43 CPU locality, M44 false-sharing/ingress evidence,
   M47 storage locality, M45/M46 persistence/recovery, and issue #94 external-review visibility.
 - **Signal gained:** Late-stage networking context and packet-path tradeoff literacy.

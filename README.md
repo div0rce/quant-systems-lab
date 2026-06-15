@@ -66,6 +66,8 @@ Other targets: `make check` (format-check + build + test), `make fmt`, `make asa
 fixtures are byte-identical across compilers). Systems evidence targets include
 `make false-sharing-study`, plus Linux-only `make profile-io`, `make socket-load`, and
 `make numa-study`; `make socket-stress` runs the UDP socket-buffer experiment where supported.
+`make dpdk-check` records a non-mutating DPDK environment support artifact for the late-stage
+kernel-bypass research notes.
 
 ## Demo
 
@@ -122,6 +124,8 @@ the core numbers above.
   profiled and its hardening posture documented in
   [docs/socket_profiling.md](docs/socket_profiling.md) and
   [docs/socket_hardening.md](docs/socket_hardening.md) (loopback-only, constrained evidence).
+  DPDK/kernel-bypass work is currently research and environment-gating only; see
+  [docs/dpdk_research.md](docs/dpdk_research.md).
 - **Not production-hardened**: persistence is a single append-only event log — now with
   explicit durability modes and SIGKILL-validated torn-tail recovery
   ([docs/persistence.md](docs/persistence.md)), but no power-loss/OS-crash validation, no

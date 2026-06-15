@@ -20,36 +20,36 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M47 follow-up — Storage benchmark diagnosis
-- **Status:** local implementation complete on follow-up branch; PR not opened yet
-- **Active branch:** `perf/m47-storage-benchmark-diagnosis`
-- **Last completed milestone:** M47 — Contiguous order-book storage and cache-locality study
-  (squash-merged PR #119, commit 93d5062), after M46 — Recovery benchmarking (squash-merged
-  PR #118, commit aeba72c)
+- **Active milestone:** M48 — DPDK research and prototype
+- **Status:** ◐ implementation started; local docs/support-check groundwork complete
+- **Active branch:** `feat/m48-dpdk-research-prototype`
+- **Last completed milestone:** M47 follow-up — Storage benchmark diagnosis (squash-merged
+  PR #122, commit 548cb68), after M47 — Contiguous order-book storage and cache-locality study
+  (squash-merged PR #119, commit 93d5062)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes — Docker Linux 240/240 and native macOS 232/232 on the follow-up
-  branch (the 8-test delta is Linux-only epoll/socket tests); `make asan` also green
-  (240/240 Docker, 232/232 native macOS).
-- **Last action:** addressed the PR #122 Codex review finding that the storage benchmark timed
-  per-run setup as command cost. The harness now runs engine construction, the symbol-registration
-  prefix (which eagerly performs the pooled modes' 65536-slot free-list initialization), and the
-  end-of-run snapshot outside the timed interval, normalizing over timed commands. This overturns
-  the earlier "intrusive is ~4-5x slower" reading: with setup excluded the four modes cluster into a
-  tight band (~40-120 ns/cmd) and intrusive/contiguous are the two fastest, trading the lead by
-  workload. A second review finding (same root cause) was then closed: the non-timed `characterize`
-  pass now observes the same post-registration trading range the timed rows measure (shared
-  registration-prefix boundary + `should_probe` predicate), so the shape line's
-  `commands`/`top_probe_calls` match the per-run `cmds`/`probes/run`. Two CodeRabbit nits were also
-  fixed: `time_storage` resolves the timed-command count once and guards `reps == 0` / zero
-  trading commands before the sampling math, and `docs/benchmarking.md` no longer says timing covers
-  "full workload replays". Regenerated `results/pool_backed_storage.txt` in Docker Linux (digest
-  `sha256:b606452b1bbff3d1c4eed8f59839701590cfbc824207f7b707c03ca66766353a`, `Dirty inputs: no`,
-  informational commit cf0396f) and rebuilt the storage-doc and PR tables from that single artifact.
-- **Next action:** wait for review/CI on follow-up PR #122. Do not merge from automation.
+- **`make check` passing:** yes — native macOS 232/232 on the M48 branch after adding the DPDK
+  research note and environment check. Last Linux baseline remains PR #122: Docker Linux 240/240
+  and `make asan` 240/240.
+- **Last action:** added `docs/dpdk_research.md`, a non-mutating `make dpdk-check` /
+  `scripts/dpdk_environment_check.sh` path, and `results/dpdk_environment.txt`. The local artifact
+  correctly classifies this macOS host as `unsupported-host`, performs no hugepage or NIC mutation,
+  and records no packet-path benchmark. The `/review and fix` pass tightened the script so
+  `dpdk-devbind --status` is collected only on Linux, the provenance input set covers the touched
+  docs, Makefile, and command-list files, and Linux hosts need mounted plus free hugepages before they
+  can classify as `linux-dpdk-build-ready`. Verification passed `git diff --check`, `bash -n
+  scripts/dpdk_environment_check.sh`, `make dpdk-check`, `make check` (232/232), and CodeScene
+  pre-commit quality gates. CodeScene file-level review does not support `.sh`; a local
+  `codex review --uncommitted` second-opinion attempt hung after its internal CodeScene call and
+  was killed without producing findings.
+- **Next action:** before opening a PR, commit or otherwise track the new source files and
+  regenerate `results/dpdk_environment.txt` so its source digest includes the new inputs and
+  `Dirty inputs` is no; then rerun final review gates.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
-  independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
-  were closed by PR #112.
+  independent external review. Any DPDK measurement/prototype evidence depends on suitable host,
+  NIC, driver, and hugepage support; no kernel-bypass performance claim is allowed without real
+  measurements. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26 were closed by
+  PR #112.
 
 ---
 
@@ -228,9 +228,11 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M47 storage-benchmark diagnosis follow-up PR #122 is open; pushed a review fix that excludes
-  per-run setup (engine construction + pool free-list init + snapshot) from the storage benchmark
-  timing and regenerates the artifact. Next step: wait for review/CI; do not merge from automation._
+- _M48 initial docs/support-check slice is implemented and locally verified. The generated DPDK
+  environment artifact is currently a valid mid-development unsupported-host result but has
+  `Dirty inputs: yes`; regenerate it after the new source inputs are tracked/committed before PR.
+  Review fixes already applied: Linux-only devbind status collection, broader provenance inputs,
+  and stricter mounted/free hugepage readiness for `linux-dpdk-build-ready`._
 
 
 ---
@@ -303,8 +305,8 @@ Lower priority:
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
-| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ PR open | #122 | Workload-shape variants + corrected timing (excludes per-run pool-init setup); overturns the earlier intrusive-slow reading |
-| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
+| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ☑ merged | #122 | Workload-shape variants + corrected timing (excludes per-run pool-init setup); overturns the earlier intrusive-slow reading |
+| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ◐ in progress | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
 ## Decision log additions
@@ -715,11 +717,11 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is the M47 follow-up on `perf/m47-storage-benchmark-diagnosis`: open the
-benchmark-diagnosis PR. The code/artifact/docs now preserve the original negative result, add
-workload-shape evidence and deterministic variants, and avoid unsupported contiguous speedup
-claims. CodeScene, `make check`, `make asan`, and `make bench-storage` passed in Docker Linux.
-M47 (PR #119, 93d5062) is merged.
+Current action is M48 on `feat/m48-dpdk-research-prototype`: research DPDK/user-space networking
+tradeoffs, compare them against the existing kernel socket evidence, and only add an optional
+prototype if the environment supports a buildable, honestly caveated artifact. PR #122
+(548cb68) is merged, so the current branch starts from the latest storage-benchmark diagnosis
+baseline.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
