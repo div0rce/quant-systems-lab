@@ -30,8 +30,11 @@ class OrderBook {
     // remain standard containers. Contiguous (M47) replaces the level maps with a direct
     // price-indexed flat array plus occupancy bitmaps and stores each level's FIFO queue in a
     // contiguous vector; it can rest orders only inside the explicit price band below. The choice
-    // is fixed at construction and never changes matching semantics or determinism; it only
-    // changes where resting-order state lives in memory.
+    // is fixed at construction. Within their declared domain (any price for Baseline/Pooled,
+    // available capacity for IntrusivePooled, the in-band price range for Contiguous) the modes
+    // preserve matching semantics and determinism and only change where resting-order state lives
+    // in memory; outside it, IntrusivePooled and Contiguous can refuse a GTC remainder
+    // (`can_store_limit` / `can_apply_modify`) that the others would rest.
     enum class Storage { Baseline, Pooled, IntrusivePooled, Contiguous };
 
     // Explicit price-domain assumption for Storage::Contiguous: GTC remainders can rest only at

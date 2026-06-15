@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <cstdint>
 #include <new>
 #include <utility>
@@ -368,6 +367,9 @@ struct OrderBook::IntrusiveStore {
     }
 
     std::vector<Trade> add_limit(LimitInput input) {
+        if (!can_store_limit(input.side, input.price, input.quantity, input.tif)) {
+            return {};
+        }
         OrderBook::MatchResult result = OrderBook::match_incoming(
             input.id, input.side, input.price, /*is_market=*/false, input.quantity,
             [&] { return contains(input.id); },

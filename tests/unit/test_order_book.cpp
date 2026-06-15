@@ -38,6 +38,30 @@ void expect_ask_order_kept(const OrderBook &book, OrderId id, Price price) {
     REQUIRE(book.contains(id));
     REQUIRE(book.best_ask() == std::optional<Price>{price});
 }
+
+OrderId fill_intrusive_pool_with_asks(OrderBook &book) {
+    OrderId next_id = 1;
+    for (; next_id < 100'000; ++next_id) {
+        const auto trades = book.add_limit(next_id, Side::Sell, 101, 1, TimeInForce::GTC);
+        if (!book.contains(next_id)) {
+            break;
+        }
+        REQUIRE(trades.empty());
+    }
+    REQUIRE(next_id < 100'000);
+    return next_id;
+}
+
+void expect_full_intrusive_pool_rejects_new_bid(OrderBook &book, OrderId rejected_id) {
+    const std::size_t count_before = book.order_count();
+    REQUIRE_FALSE(book.can_store_limit(Side::Buy, 99, 1, TimeInForce::GTC));
+
+    const auto trades = book.add_limit(rejected_id, Side::Buy, 99, 1, TimeInForce::GTC);
+
+    REQUIRE(trades.empty());
+    REQUIRE(book.order_count() == count_before);
+    REQUIRE_FALSE(book.contains(rejected_id));
+}
 } // namespace
 
 TEST_CASE("non-crossing limits rest and set top of book", "[book]") {
@@ -341,4 +365,12 @@ TEST_CASE("contiguous book refuses out-of-band residuals before matching", "[boo
     REQUIRE(trades.empty());
     expect_ask_order_kept(book, 1, 100);
     REQUIRE_FALSE(book.contains(2));
+}
+
+TEST_CASE("intrusive book refuses no-capacity residuals before matching", "[book]") {
+    OrderBook book{OrderBook::Storage::IntrusivePooled};
+    const OrderId rejected_id = fill_intrusive_pool_with_asks(book);
+
+    expect_full_intrusive_pool_rejects_new_bid(book, rejected_id);
+    expect_ask_order_kept(book, 1, 101);
 }

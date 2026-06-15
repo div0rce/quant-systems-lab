@@ -539,7 +539,19 @@ Lower priority:
   that would leave an un-restable remainder is refused without removing maker liquidity. Added a
   direct-book regression; focused storage/gateway tests passed, then `git diff --check`,
   `make check` 230/230, and `make asan` 230/230 passed locally.
-- [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
+- [2026-06-12] M47 PR #119 CodeRabbit follow-up: applied the same residual preflight to
+  `IntrusiveStore::add_limit` — a direct `OrderBook{Storage::IntrusivePooled}` caller that
+  partially crossed a GTC order and then hit pool exhaustion previously dropped the remainder
+  despite the rest-the-remainder contract; it now refuses the whole order via `can_store_limit`
+  before matching (engine/gateway callers were already pre-gated, so their behavior is
+  unchanged). Added a direct-book regression that fills the intrusive pool and asserts a
+  no-capacity bid is refused with maker liquidity intact. Narrowed the `Storage` doc comment so
+  the "preserves matching semantics" claim is scoped to each mode's declared domain (out of it,
+  IntrusivePooled/Contiguous can refuse a GTC remainder the others would rest), per CodeRabbit.
+  Include hygiene: added `<utility>` to `contiguous_store.hpp` (uses `std::move`) and dropped the
+  now-unused `<bit>` from `order_book.cpp` (the bit-scan code moved into the header). The Codex
+  contiguous-residual and benchmark-provenance comments were already resolved by the earlier
+  `f7c40fe`/`f0f268b` commits on this branch. to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.

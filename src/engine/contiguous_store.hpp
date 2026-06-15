@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace qsl::engine {
