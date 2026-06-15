@@ -551,7 +551,15 @@ Lower priority:
   Include hygiene: added `<utility>` to `contiguous_store.hpp` (uses `std::move`) and dropped the
   now-unused `<bit>` from `order_book.cpp` (the bit-scan code moved into the header). The Codex
   contiguous-residual and benchmark-provenance comments were already resolved by the earlier
-  `f7c40fe`/`f0f268b` commits on this branch. to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
+  `f7c40fe`/`f0f268b` commits on this branch.
+- [2026-06-12] M47 PR #119 review round 3 fixes (docs/roadmap only; committed artifact numbers
+  unchanged): corrected a benchmark-claim error in `docs/pool_backed_storage.md` (it named
+  contiguous the fastest row, but the committed artifact has PMR 209.6 < contiguous 222.4 <
+  baseline 273.7 < intrusive 373.0 ns/cmd — PMR is fastest, contiguous second) and fixed stale
+  `MILESTONES.md` statuses so resume/finish workflows route to the right milestone: M45 is merged
+  via PR #117 (not PR #119), M44 (#115) and M46 (#118) are also merged, and M47 is the active
+  PR #119.
+- [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.

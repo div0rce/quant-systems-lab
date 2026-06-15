@@ -1679,7 +1679,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **PR title:** `perf: study ingress memory ordering and false sharing`
 - **Goal:** Evaluate ingress queue contention, memory ordering, and cache-line sharing without
   changing deterministic matching ownership.
-- **Status:** ◐ PR #115 open.
+- **Status:** ☑ merged via PR #115 (`cd05b37`).
 - **Dependencies:** M24 SPSC ring, M25 memory-ordering docs, M26 threaded pipeline, M27 TSan, M33
   advanced concurrency validation, and M37 pipeline helper refactor.
 - **Signal gained:** Acquire/release reasoning, queue ownership, cache-line contention evidence,
@@ -1722,7 +1722,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m45-persistence-prototype`
 - **PR title:** `feat: prototype stronger persistence strategy`
 - **Goal:** Investigate durability strategy beyond the current append-only lab log.
-- **Status:** ◐ PR open (#119).
+- **Status:** ☑ merged via PR #117 (`d10bfb0`).
 - **Dependencies:** M7/M8 event log and replay plus M30 socket/kernel profiling. M45 should define
   durability/recovery assumptions that M46 can benchmark later; it must not depend on M46 being
   complete.
@@ -1750,7 +1750,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m46-recovery-benchmarking`
 - **PR title:** `perf: benchmark recovery paths`
 - **Goal:** Measure recovery objectives from replay and snapshot restoration.
-- **Status:** ☐ not started.
+- **Status:** ☑ merged via PR #118 (`aeba72c`).
 - **Dependencies:** M8 replay/recovery, M15–M20 differential fixtures, M45 persistence prototype if
   it lands first, and the benchmark metadata policy from M11/M29.
 - **Signal gained:** Recovery objective framing, replay-cost visibility, and benchmark
@@ -1779,7 +1779,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **PR title:** `perf: study contiguous order-book storage`
 - **Goal:** Evaluate flat/contiguous order-book storage alternatives against the existing
   node-based baseline, PMR pooled mode, and intrusive pooled mode.
-- **Status:** ☐ not started.
+- **Status:** ◐ PR open (#119).
 - **Dependencies:** M32 PMR-backed node allocation, PR #112 intrusive `OrderPool` storage, M39
   matching-parameter refactor, M40 engine test consolidation, and M43/M44 locality evidence when
   available.
