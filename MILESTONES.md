@@ -1779,7 +1779,8 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **PR title:** `perf: study contiguous order-book storage`
 - **Goal:** Evaluate flat/contiguous order-book storage alternatives against the existing
   node-based baseline, PMR pooled mode, and intrusive pooled mode.
-- **Status:** ◐ PR open (#119).
+- **Status:** ☑ merged (#119). Follow-up storage-workload diagnosis is on
+  `perf/m47-storage-benchmark-diagnosis`.
 - **Dependencies:** M32 PMR-backed node allocation, PR #112 intrusive `OrderPool` storage, M39
   matching-parameter refactor, M40 engine test consolidation, and M43/M44 locality evidence when
   available.

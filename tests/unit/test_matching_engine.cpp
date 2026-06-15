@@ -162,6 +162,91 @@ rebuild_from_resting_orders(const MatchingEngine &original, const std::vector<st
     }
     return {std::move(rebuilt), total_resting};
 }
+
+std::vector<qsl::replay::Command> benchmark_mix_flow() {
+    using qsl::replay::Cancel;
+    using qsl::replay::Modify;
+    using qsl::replay::NewLimit;
+    using qsl::replay::NewMarket;
+    using qsl::replay::RegisterSymbol;
+    return {
+        RegisterSymbol{"S0"},
+        NewLimit{0, 1, Side::Sell, 100, 10, TimeInForce::GTC},
+        NewLimit{0, 2, Side::Buy, 100, 4, TimeInForce::GTC},  // partial fill
+        NewLimit{0, 1, Side::Sell, 101, 1, TimeInForce::GTC}, // duplicate active id
+        NewLimit{0, 3, Side::Buy, 99, 5, TimeInForce::GTC},
+        Modify{0, 3, 99, 3},
+        NewLimit{0, 4, Side::Sell, 99, 1, TimeInForce::IOC},
+        NewMarket{0, 5, Side::Buy, 2},
+        Cancel{0, 3},
+        NewLimit{0, 6, Side::Sell, 101, 2, TimeInForce::GTC},
+        Modify{0, 6, 99, 2},
+    };
+}
+
+struct BenchmarkMixCoverage {
+    bool saw_duplicate_active_id = false;
+    bool saw_ioc = false;
+    bool saw_market = false;
+    bool saw_cancel = false;
+    bool saw_modify = false;
+    bool saw_partial_fill = false;
+};
+
+void observe_benchmark_mix_command(const qsl::replay::Command &command, MatchingEngine &model,
+                                   BenchmarkMixCoverage &coverage) {
+    if (const auto *limit = std::get_if<qsl::replay::NewLimit>(&command)) {
+        coverage.saw_ioc = coverage.saw_ioc || limit->tif == TimeInForce::IOC;
+        coverage.saw_duplicate_active_id =
+            coverage.saw_duplicate_active_id || model.contains(limit->symbol, limit->id);
+    } else if (std::holds_alternative<qsl::replay::NewMarket>(command)) {
+        coverage.saw_market = true;
+    } else if (std::holds_alternative<qsl::replay::Cancel>(command)) {
+        coverage.saw_cancel = true;
+    } else if (std::holds_alternative<qsl::replay::Modify>(command)) {
+        coverage.saw_modify = true;
+    }
+}
+
+void observe_benchmark_mix_events(const std::vector<EngineEvent> &events,
+                                  BenchmarkMixCoverage &coverage) {
+    for (const auto &event : events) {
+        const auto *trade = std::get_if<TradeEvent>(&event);
+        coverage.saw_partial_fill =
+            coverage.saw_partial_fill || (trade != nullptr && trade->quantity == 4);
+    }
+}
+
+BenchmarkMixCoverage collect_benchmark_mix_coverage(const std::vector<qsl::replay::Command> &flow) {
+    MatchingEngine model;
+    BenchmarkMixCoverage coverage;
+    for (const auto &command : flow) {
+        observe_benchmark_mix_command(command, model, coverage);
+        observe_benchmark_mix_events(qsl::replay::apply(model, command), coverage);
+    }
+    return coverage;
+}
+
+void require_benchmark_mix_coverage(const std::vector<qsl::replay::Command> &flow) {
+    const auto coverage = collect_benchmark_mix_coverage(flow);
+
+    REQUIRE(coverage.saw_duplicate_active_id);
+    REQUIRE(coverage.saw_ioc);
+    REQUIRE(coverage.saw_market);
+    REQUIRE(coverage.saw_cancel);
+    REQUIRE(coverage.saw_modify);
+    REQUIRE(coverage.saw_partial_fill);
+}
+
+std::pair<std::vector<EngineEvent>, EngineSnapshot>
+run_flow_with_storage(const std::vector<qsl::replay::Command> &flow, OrderBook::Storage storage) {
+    MatchingEngine eng{storage};
+    std::vector<EngineEvent> events;
+    for (const auto &command : flow) {
+        append(events, qsl::replay::apply(eng, command));
+    }
+    return {events, eng.snapshot()};
+}
 } // namespace
 
 TEST_CASE("symbol registry assigns stable, distinct ids", "[engine]") {
@@ -248,6 +333,21 @@ TEST_CASE("storage modes produce identical events and final snapshot", "[engine]
     const bool non_vacuous = baseline.second.last_seq > 0 && !baseline.second.symbols.empty() &&
                              baseline.first.size() > baseline.second.symbols.size();
     REQUIRE(non_vacuous);
+}
+
+TEST_CASE("storage modes are equivalent for the benchmark command mix", "[engine][storage]") {
+    const auto flow = benchmark_mix_flow();
+    require_benchmark_mix_coverage(flow);
+
+    const auto baseline = run_flow_with_storage(flow, OrderBook::Storage::Baseline);
+    const auto pmr = run_flow_with_storage(flow, OrderBook::Storage::Pooled);
+    const auto intrusive = run_flow_with_storage(flow, OrderBook::Storage::IntrusivePooled);
+    const auto contiguous = run_flow_with_storage(flow, OrderBook::Storage::Contiguous);
+
+    REQUIRE(std::tuple{pmr, intrusive, contiguous} == std::tuple{baseline, baseline, baseline});
+    REQUIRE(baseline.second.symbols.size() == 1);
+    REQUIRE(baseline.second.symbols[0].order_count > 0);
+    REQUIRE(baseline.first.size() > baseline.second.symbols[0].order_count);
 }
 
 TEST_CASE("contiguous storage refuses out-of-band resting remainders", "[engine][storage]") {

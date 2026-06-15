@@ -20,24 +20,33 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M47 — Contiguous order-book storage and cache-locality study
-- **Status:** ◐ PR open (#119)
-- **Active branch:** `feat/m47-contiguous-order-book-storage`
-- **Last completed milestone:** M46 — Recovery benchmarking (squash-merged PR #118, commit
-  aeba72c), after M45 — Exchange-grade persistence prototype (squash-merged PR #117, commit
-  d10bfb0)
+- **Active milestone:** M47 follow-up — Storage benchmark diagnosis
+- **Status:** local implementation complete on follow-up branch; PR not opened yet
+- **Active branch:** `perf/m47-storage-benchmark-diagnosis`
+- **Last completed milestone:** M47 — Contiguous order-book storage and cache-locality study
+  (squash-merged PR #119, commit 93d5062), after M46 — Recovery benchmarking (squash-merged
+  PR #118, commit aeba72c)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes on M47 branch after PR #119 review fixes (230/230 tests);
-  `make asan` also passed 230/230.
-- **Last action:** fixed and locally verified PR #119 review findings: `can_apply_modify` now pre-gates
-  `MatchingEngine::modify` so a refused out-of-band contiguous reprice emits no `OrderModified`
-  (gateway rejects it as `StorageExhausted`; the original order keeps resting), and
-  `ContiguousStore` moved to `src/engine/contiguous_store.hpp` to clear the brain-class
-  function-count gate. Regression tests cover engine no-event/no-sequence behavior, full-crossing
-  out-of-band reprices, direct-book refusal before matching, and gateway `StorageExhausted`.
-- **Next action:** wait for review/CI on PR #119 (`perf: study contiguous order-book storage`).
-  Do not merge from automation.
+- **`make check` passing:** yes — Docker Linux 240/240 and native macOS 232/232 on the follow-up
+  branch (the 8-test delta is Linux-only epoll/socket tests); `make asan` also green
+  (240/240 Docker, 232/232 native macOS).
+- **Last action:** addressed the PR #122 Codex review finding that the storage benchmark timed
+  per-run setup as command cost. The harness now runs engine construction, the symbol-registration
+  prefix (which eagerly performs the pooled modes' 65536-slot free-list initialization), and the
+  end-of-run snapshot outside the timed interval, normalizing over timed commands. This overturns
+  the earlier "intrusive is ~4-5x slower" reading: with setup excluded the four modes cluster into a
+  tight band (~40-120 ns/cmd) and intrusive/contiguous are the two fastest, trading the lead by
+  workload. A second review finding (same root cause) was then closed: the non-timed `characterize`
+  pass now observes the same post-registration trading range the timed rows measure (shared
+  registration-prefix boundary + `should_probe` predicate), so the shape line's
+  `commands`/`top_probe_calls` match the per-run `cmds`/`probes/run`. Two CodeRabbit nits were also
+  fixed: `time_storage` resolves the timed-command count once and guards `reps == 0` / zero
+  trading commands before the sampling math, and `docs/benchmarking.md` no longer says timing covers
+  "full workload replays". Regenerated `results/pool_backed_storage.txt` in Docker Linux (digest
+  `sha256:b606452b1bbff3d1c4eed8f59839701590cfbc824207f7b707c03ca66766353a`, `Dirty inputs: no`,
+  informational commit cf0396f) and rebuilt the storage-doc and PR tables from that single artifact.
+- **Next action:** wait for review/CI on follow-up PR #122. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -219,7 +228,9 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M47 PR #119 is open. Next step: wait for review/CI; do not merge from automation._
+- _M47 storage-benchmark diagnosis follow-up PR #122 is open; pushed a review fix that excludes
+  per-run setup (engine construction + pool free-list init + snapshot) from the storage benchmark
+  timing and regenerates the artifact. Next step: wait for review/CI; do not merge from automation._
 
 
 ---
@@ -291,7 +302,8 @@ Lower priority:
 | M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
-| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ◐ PR open | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
+| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
+| Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ◐ PR open | #122 | Workload-shape variants + corrected timing (excludes per-run pool-init setup); overturns the earlier intrusive-slow reading |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
@@ -559,6 +571,65 @@ Lower priority:
   `MILESTONES.md` statuses so resume/finish workflows route to the right milestone: M45 is merged
   via PR #117 (not PR #119), M44 (#115) and M46 (#118) are also merged, and M47 is the active
   PR #119.
+- [2026-06-15] M47 follow-up started after PR #119 squash-merged to `main` as 93d5062. Branch
+  `perf/m47-storage-benchmark-diagnosis` diagnoses the storage artifact ordering rather than
+  forcing contiguous storage to win. Implemented deterministic storage workload variants
+  (general generated, dense bounded, sparse wide, cancel/modify-heavy, match/traversal-heavy),
+  non-timed workload-shape metrics, median/min/max timing output, and a compact all-mode
+  benchmark-mix equivalence regression. Fixed small intrusive overheads: `can_store_limit` now
+  returns immediately for IOC or when pool capacity exists, priority-losing modifies erase via the
+  already-found locator instead of doing a second cancel lookup, and `rest` uses checked locator
+  `emplace` with cleanup on unexpected insertion failure. Regenerated
+  `results/pool_backed_storage.txt` through `make bench-storage`; source digest is
+  `sha256:c34b52a84fad30f446938b120ebf9ad0e5c0769f486c3f2015fb9d9f18243b08` and
+  `Dirty inputs: no`. Focused Docker verification passed the benchmark-mix storage test, CodeScene
+  passed for the changed C++ files and the branch diff, `make bench-storage` regenerated the
+  artifact from clean source inputs, and final Docker verification passed `make check` 240/240 and
+  `make asan` 240/240. Docker Desktop Linux does not provide bare-metal PMU/cache evidence.
+- [2026-06-15] M47 follow-up review correction (PR #122): a Codex review found the storage benchmark
+  timed the full per-replay `run_once`, including `MatchingEngine` construction and the
+  `RegisterSymbol` prefix. Book construction is eager (`OrderBook` builds its `IntrusiveStore` /
+  `ContiguousStore` in its constructor), so for the pooled modes that prefix runs `OrderPool` /
+  `RawPool` free-list initialization over 65536 slots per book — a fixed per-run setup cost that was
+  charged to per-command time and amortized over only ~5k commands, scaling with symbol count and
+  inflating the intrusive mode most. The fix (`bench_storage.cpp`, `run_storage_benchmarks.sh`)
+  applies engine construction, the registration prefix, and the end-of-run snapshot outside the
+  timed interval and normalizes over timed commands. A macOS before/after on the same host confirmed
+  the effect is intrusive-specific and scales with symbol count (4-symbol flows dropped ~80-92
+  ns/cmd, 2-symbol ~45), leaving baseline/PMR/contiguous within noise. The Docker-regenerated
+  artifact (digest `sha256:81ff74300a1633d0d9ddaed68f8880f121bd03cddc568ab212056b8eddd53b1b`,
+  `Dirty inputs: no`, informational commit 476ba71) supersedes the `c34b52a…` artifact and overturns
+  the earlier "intrusive is the slow outlier / PMR-fastest" reading (including the M47 single-flow
+  ranking, which was contaminated the same way): with setup excluded the four modes cluster into a
+  tight ~40-120 ns/cmd band, intrusive and contiguous are the two fastest (trading the lead by
+  workload shape), and intrusive still carries a large fixed init cost the per-command metric
+  deliberately excludes. `docs/pool_backed_storage.md` interpretation rewritten accordingly.
+- [2026-06-15] M47 follow-up review correction #2 (PR #122, same root cause as #1): a second Codex
+  finding noted the non-timed `characterize` shape pass still walked the full command stream and
+  derived `top_probe_calls` from a formula on total commands, so the dense shape line printed
+  `top_probe_calls=20016` against the measured `probes/run=20008` (the 2 registration commands x 2
+  symbols x bid/ask). Root cause: the first fix moved the registration prefix out of the *timed*
+  path but not the *characterization* path, leaving the shape line describing a different sequence
+  than the rows. Fix: `characterize` now applies the registration prefix unobserved and observes
+  only the trading range, sharing one `registration_prefix_len` boundary with `apply_registration`
+  and counting probes with the same `should_probe` predicate over the same range — so `commands` and
+  `top_probe_calls` on the shape line match the per-run `cmds`/`probes/run` by construction. Audited
+  the class: `top_probe_calls` and `commands` were the only live instances (`events`/`resting`/
+  `last_seq` are immune because `RegisterSymbol` emits no events and rests nothing), so this closes
+  the registration-prefix accounting class at the source. The timed path is unchanged, so medians
+  moved only within noise; artifact regenerated in Docker Linux (digest
+  `sha256:e12d141670f00f56846697529987006e14aedf7bac2c4f44c994e687ec8cc38f`, `Dirty inputs: no`,
+  informational commit d3ed253), and the storage-doc and PR-body tables were rebuilt mechanically
+  from that one artifact.
+- [2026-06-15] M47 follow-up CodeRabbit nits (PR #122): (1) `time_storage` now resolves the
+  timed-command count once (identical across reps) and returns early when `reps == 0` or a workload
+  has no post-registration commands, avoiding empty-vector indexing / divide-by-zero in the sampling
+  math; (2) `docs/benchmarking.md` no longer describes storage timing as "full workload replays" --
+  it times only the post-registration command path, matching the storage doc and harness. Behavior
+  on the real workloads is unchanged (those degenerate inputs cannot occur with the fixed reps and
+  multi-thousand-command workloads). Artifact regenerated in Docker Linux (digest
+  `sha256:b606452b1bbff3d1c4eed8f59839701590cfbc824207f7b707c03ca66766353a`, `Dirty inputs: no`,
+  informational commit cf0396f), tables rebuilt from that one artifact; ranking unchanged.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -644,12 +715,11 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M47 on `feat/m47-contiguous-order-book-storage`: evaluate flat/contiguous
-order-book storage against the baseline, PMR pooled, and intrusive pooled modes. Required:
-explicit symbol/price-domain assumptions, replay/differential equivalence (identical event
-streams, `EngineSnapshot`, `last_seq`), engine-level benchmark artifacts from committed scripts
-with `Provenance version: 1` metadata, and honest documentation of negative or neutral results.
-No speedup or cache-locality claim without measured evidence. M46 (PR #118, aeba72c) is merged.
+Current action is the M47 follow-up on `perf/m47-storage-benchmark-diagnosis`: open the
+benchmark-diagnosis PR. The code/artifact/docs now preserve the original negative result, add
+workload-shape evidence and deterministic variants, and avoid unsupported contiguous speedup
+claims. CodeScene, `make check`, `make asan`, and `make bench-storage` passed in Docker Linux.
+M47 (PR #119, 93d5062) is merged.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
