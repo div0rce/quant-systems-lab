@@ -35,6 +35,9 @@ All notable changes to this project. The format is loosely based on
 - M44: `scripts/run_false_sharing_study.sh` (`make false-sharing-study`) — benchmark-only
   packed-vs-padded SPSC queue-cursor contention study with metadata in
   `results/false_sharing_study.txt`.
+- M47: `OrderBook::Storage::Contiguous`, an opt-in fixed-band direct price-indexed storage mode
+  that uses occupancy bitmaps and contiguous per-level FIFO vectors for bounded-domain
+  cache/locality study work.
 - M34: Linux-only `EpollServer` gateway transport prototype. It uses one `epoll` loop,
   nonblocking accept/read/write, per-client outbound buffers, and one deterministic `Session` per
   client; `qsl-gateway <port> --epoll` opts in on Linux.
@@ -52,6 +55,9 @@ All notable changes to this project. The format is loosely based on
   `std::pmr::unsynchronized_pool_resource`; baseline storage remains the default.
 - M32: `make bench-storage` / `scripts/run_storage_benchmarks.sh` / `qsl-bench storage`, an
   engine-level benchmark comparing baseline order-book storage against PMR pooled node allocation.
+- M47: `make bench-storage` now also compares the contiguous direct-price-indexed mode against
+  baseline, PMR pooled, and intrusive pooled storage modes. Results remain hardware/build
+  dependent and are not a speedup or production-latency claim.
 - PR #112: the later #95 follow-up adds the separate intrusive/custom-node `OrderPool<Capacity>`
   integration path that M32 intentionally kept out of its PMR scope.
 - M30: optional UDP receive-buffer (`SO_RCVBUF`) sizing on the market-data client, with the
@@ -109,6 +115,9 @@ All notable changes to this project. The format is loosely based on
 - M32: added `docs/pool_backed_storage.md` and ADR 0009 to distinguish M28 raw-object pool
   mechanics, M32 PMR container-node allocation, and the later intrusive/custom-node order-book
   redesign. Added `results/pool_backed_storage.txt` as the measured engine-level artifact.
+- M47: expanded `docs/pool_backed_storage.md` and `results/README.md` to describe the contiguous
+  direct-price-indexed storage mode, its fixed price-domain assumption, affected allocations, and
+  interpretation limits.
 - M31: added an external-review package — `docs/review_request.md` (an adversarial review
   checklist over SPSC memory ordering, backpressure, threaded ownership, event-log integrity under
   concurrency, and benchmark/profiling + Linux/socket methodology), `docs/review_feedback.md` (an

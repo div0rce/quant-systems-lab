@@ -112,7 +112,8 @@ make bench-allocator   # runs qsl-bench pool, writes results/allocator_experimen
 
 The storage experiment is separate from the M28 allocator microbenchmark. It replays the same
 deterministic engine flow through baseline order-book storage, PMR-backed container-node
-allocation, and intrusive `OrderPool`-backed resting-order nodes:
+allocation, intrusive `OrderPool`-backed resting-order nodes, and the M47 fixed-band contiguous
+direct-price-indexed storage mode:
 
 ```bash
 make bench-storage   # runs qsl-bench storage, writes results/pool_backed_storage.txt

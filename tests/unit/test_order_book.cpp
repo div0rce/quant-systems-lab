@@ -23,6 +23,45 @@ void expect_top(const OrderBook &book, std::optional<Price> best_bid,
     REQUIRE(book.best_bid() == best_bid);
     REQUIRE(book.best_ask() == best_ask);
 }
+
+void expect_modify_refused(OrderBook &book, Price new_price) {
+    REQUIRE_FALSE(book.can_apply_modify(1, new_price, 5));
+    REQUIRE(book.modify(1, new_price, 5).empty());
+}
+
+void expect_bid_order_kept(const OrderBook &book, OrderId id, Price price) {
+    REQUIRE(book.contains(id));
+    REQUIRE(book.best_bid() == std::optional<Price>{price});
+}
+
+void expect_ask_order_kept(const OrderBook &book, OrderId id, Price price) {
+    REQUIRE(book.contains(id));
+    REQUIRE(book.best_ask() == std::optional<Price>{price});
+}
+
+OrderId fill_intrusive_pool_with_asks(OrderBook &book) {
+    OrderId next_id = 1;
+    for (; next_id < 100'000; ++next_id) {
+        const auto trades = book.add_limit(next_id, Side::Sell, 101, 1, TimeInForce::GTC);
+        if (!book.contains(next_id)) {
+            break;
+        }
+        REQUIRE(trades.empty());
+    }
+    REQUIRE(next_id < 100'000);
+    return next_id;
+}
+
+void expect_full_intrusive_pool_rejects_new_bid(OrderBook &book, OrderId rejected_id) {
+    const std::size_t count_before = book.order_count();
+    REQUIRE_FALSE(book.can_store_limit(Side::Buy, 99, 1, TimeInForce::GTC));
+
+    const auto trades = book.add_limit(rejected_id, Side::Buy, 99, 1, TimeInForce::GTC);
+
+    REQUIRE(trades.empty());
+    REQUIRE(book.order_count() == count_before);
+    REQUIRE_FALSE(book.contains(rejected_id));
+}
 } // namespace
 
 TEST_CASE("non-crossing limits rest and set top of book", "[book]") {
@@ -250,8 +289,9 @@ TEST_CASE("partially filled maker retains priority over later orders", "[book]")
 
 TEST_CASE("resting_orders enumerates bids best-first then asks, FIFO within level",
           "[book][resting]") {
-    for (const auto storage : {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
-                               OrderBook::Storage::IntrusivePooled}) {
+    for (const auto storage :
+         {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
+          OrderBook::Storage::IntrusivePooled, OrderBook::Storage::Contiguous}) {
         CAPTURE(static_cast<int>(storage));
         OrderBook book{storage};
         book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
@@ -271,8 +311,9 @@ TEST_CASE("resting_orders enumerates bids best-first then asks, FIFO within leve
 
 TEST_CASE("resting_orders reflects partial fills, cancels, and priority-losing modifies",
           "[book][resting]") {
-    for (const auto storage : {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
-                               OrderBook::Storage::IntrusivePooled}) {
+    for (const auto storage :
+         {OrderBook::Storage::Baseline, OrderBook::Storage::Pooled,
+          OrderBook::Storage::IntrusivePooled, OrderBook::Storage::Contiguous}) {
         CAPTURE(static_cast<int>(storage));
         OrderBook book{storage};
         book.add_limit(1, Side::Sell, 100, 10, TimeInForce::GTC);
@@ -295,4 +336,41 @@ TEST_CASE("resting_orders on an empty book is empty", "[book][resting]") {
     book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
     book.cancel(1);
     REQUIRE(book.resting_orders().empty());
+}
+
+TEST_CASE("contiguous book refuses an out-of-band reprice and keeps the order", "[book]") {
+    OrderBook book{OrderBook::Storage::Contiguous};
+    book.add_limit(1, Side::Buy, 100, 5, TimeInForce::GTC);
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+
+    // No crossing liquidity: the re-add would have to rest out of band, so the modify is
+    // refused and the original order is kept (not silently dropped).
+    expect_modify_refused(book, out_of_band);
+    expect_bid_order_kept(book, 1, 100);
+
+    // In-band reprices, reductions, cancels (qty 0), and unknown ids all remain applicable.
+    const bool applicable = book.can_apply_modify(1, 101, 9) && book.can_apply_modify(1, 100, 3) &&
+                            book.can_apply_modify(1, out_of_band, 0) &&
+                            book.can_apply_modify(999, out_of_band, 5);
+    REQUIRE(applicable);
+}
+
+TEST_CASE("contiguous book refuses out-of-band residuals before matching", "[book]") {
+    OrderBook book{OrderBook::Storage::Contiguous};
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+
+    REQUIRE(book.add_limit(1, Side::Sell, 100, 2, TimeInForce::GTC).empty());
+    const auto trades = book.add_limit(2, Side::Buy, out_of_band, 5, TimeInForce::GTC);
+
+    REQUIRE(trades.empty());
+    expect_ask_order_kept(book, 1, 100);
+    REQUIRE_FALSE(book.contains(2));
+}
+
+TEST_CASE("intrusive book refuses no-capacity residuals before matching", "[book]") {
+    OrderBook book{OrderBook::Storage::IntrusivePooled};
+    const OrderId rejected_id = fill_intrusive_pool_with_asks(book);
+
+    expect_full_intrusive_pool_rejects_new_bid(book, rejected_id);
+    expect_ask_order_kept(book, 1, 101);
 }

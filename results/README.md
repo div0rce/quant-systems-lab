@@ -8,11 +8,11 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `allocator_experiment.txt` — isolated M28 allocation experiment comparing `engine::Order`
   `new/delete` with fixed-pool acquire/release (`make bench-allocator`, `qsl-bench pool`).
 - `pool_backed_storage.txt` — engine-level storage experiment comparing baseline order-book node
-  allocation against PMR-backed `std::list`/`std::map`/`std::unordered_map` node allocation and the
-  opt-in intrusive `OrderPool`-backed resting-order storage mode (`make bench-storage`,
-  `qsl-bench storage`).
-  Future M47 contiguous-storage artifacts should make the compared layouts explicit and must not
-  be described as cache-locality evidence unless generated from the corresponding code and tooling.
+  allocation against PMR-backed `std::list`/`std::map`/`std::unordered_map` node allocation, the
+  opt-in intrusive `OrderPool`-backed resting-order storage mode, and the M47 fixed-band
+  contiguous direct-price-indexed storage mode (`make bench-storage`, `qsl-bench storage`). Treat
+  the contiguous row as a bounded-domain cache/locality study, not general sparse-price-book
+  evidence.
 - `perf_stat_linux.txt` — Linux `perf stat` output for the benchmark harness (`make perf-stat`).
   It is full hardware-counter evidence only when the file says `Artifact: hardware PMU evidence`
   and `Unsupported counters detected: no`; otherwise it is constrained-environment validation.

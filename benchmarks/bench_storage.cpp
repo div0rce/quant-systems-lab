@@ -79,6 +79,8 @@ void run_storage_benchmarks() {
                 kSymbols, kOrders, kReps);
     engine_flow("engine flow intrusive pool storage", engine::OrderBook::Storage::IntrusivePooled,
                 kSeed, kSymbols, kOrders, kReps);
+    engine_flow("engine flow contiguous storage", engine::OrderBook::Storage::Contiguous, kSeed,
+                kSymbols, kOrders, kReps);
 }
 
 } // namespace qsl::bench

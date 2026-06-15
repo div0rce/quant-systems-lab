@@ -99,6 +99,9 @@ std::vector<EngineEvent> MatchingEngine::modify(SymbolId symbol, OrderId id, Pri
     if (book == nullptr || !book->contains(id)) {
         return events; // unknown symbol/order: rejection is the risk layer's job (M5)
     }
+    if (!book->can_apply_modify(id, new_price, new_quantity)) {
+        return events; // refused by storage: never emit OrderModified for an unapplied modify
+    }
     events.push_back(OrderModified{next_seq(), symbol, id});
     for (const Trade &t : book->modify(id, new_price, new_quantity)) {
         events.push_back(
@@ -144,6 +147,12 @@ bool MatchingEngine::can_store_limit(SymbolId symbol, Side side, Price price, Qu
                                      TimeInForce tif) const {
     const auto it = books_.find(symbol);
     return it != books_.end() && it->second.can_store_limit(side, price, quantity, tif);
+}
+
+bool MatchingEngine::can_apply_modify(SymbolId symbol, OrderId id, Price new_price,
+                                      Quantity new_quantity) const {
+    const auto it = books_.find(symbol);
+    return it != books_.end() && it->second.can_apply_modify(id, new_price, new_quantity);
 }
 
 EngineSnapshot MatchingEngine::snapshot() const {

@@ -63,6 +63,30 @@ void expect_duplicate_noop(const std::vector<EngineEvent> &dup_events, const Mat
     REQUIRE(eng.last_seq() == seq_before);
 }
 
+void expect_no_events_same_sequence(const std::vector<EngineEvent> &events,
+                                    const MatchingEngine &eng, SeqNo seq_before) {
+    REQUIRE(events.empty());
+    REQUIRE(eng.last_seq() == seq_before);
+}
+
+void expect_resting_bid(const MatchingEngine &eng, SymbolId symbol, OrderId id, Price price) {
+    REQUIRE(eng.contains(symbol, id));
+    REQUIRE(eng.best_bid(symbol) == std::optional<Price>{price});
+}
+
+void expect_modified_then_trade(const std::vector<EngineEvent> &events,
+                                const ExpectedTrade &trade) {
+    REQUIRE(events.size() == 2);
+    REQUIRE(std::holds_alternative<OrderModified>(events[0]));
+    expect_trade(events[1], trade);
+}
+
+void expect_orders_absent(const MatchingEngine &eng, SymbolId symbol, OrderId first,
+                          OrderId second) {
+    REQUIRE_FALSE(eng.contains(symbol, first));
+    REQUIRE_FALSE(eng.contains(symbol, second));
+}
+
 // Assert every event's sequence number strictly increases; returns the final (highest) one.
 SeqNo expect_strictly_increasing(const std::vector<EngineEvent> &events) {
     SeqNo prev = 0;
@@ -218,11 +242,77 @@ TEST_CASE("storage modes produce identical events and final snapshot", "[engine]
     const auto baseline = run(OrderBook::Storage::Baseline);
     const auto pmr = run(OrderBook::Storage::Pooled);
     const auto intrusive = run(OrderBook::Storage::IntrusivePooled);
+    const auto contiguous = run(OrderBook::Storage::Contiguous);
 
-    REQUIRE(pmr == baseline);
-    REQUIRE(intrusive == baseline);
-    const bool non_vacuous = baseline.second.last_seq > 0 && !baseline.second.symbols.empty();
+    REQUIRE(std::tuple{pmr, intrusive, contiguous} == std::tuple{baseline, baseline, baseline});
+    const bool non_vacuous = baseline.second.last_seq > 0 && !baseline.second.symbols.empty() &&
+                             baseline.first.size() > baseline.second.symbols.size();
     REQUIRE(non_vacuous);
+}
+
+TEST_CASE("contiguous storage refuses out-of-band resting remainders", "[engine][storage]") {
+    MatchingEngine eng{OrderBook::Storage::Contiguous};
+    const SymbolId a = eng.register_symbol("AAPL");
+
+    // A GTC order whose entire quantity would have to rest outside the explicit direct-index band
+    // is refused before it mutates engine state.
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+    REQUIRE(eng.new_limit(a, 1, Side::Buy, out_of_band, 5, TimeInForce::GTC).empty());
+    REQUIRE(eng.last_seq() == 0);
+    REQUIRE_FALSE(eng.contains(a, 1));
+}
+
+TEST_CASE("contiguous storage allows out-of-band prices to cross in-band liquidity",
+          "[engine][storage]") {
+    MatchingEngine eng{OrderBook::Storage::Contiguous};
+    const SymbolId a = eng.register_symbol("AAPL");
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+
+    // The same out-of-band price can still cross existing in-band liquidity; the band constrains
+    // resting storage, not the aggressor's limit price.
+    REQUIRE(eng.new_limit(a, 2, Side::Sell, 100, 4, TimeInForce::GTC).size() == 1);
+    const auto crossing = eng.new_limit(a, 3, Side::Buy, out_of_band, 4, TimeInForce::GTC);
+    REQUIRE(crossing.size() == 2);
+    expect_accepted(crossing[0], a, 3);
+    expect_trade(crossing[1],
+                 ExpectedTrade{a, /*maker=*/2, /*taker=*/3, /*price=*/100, /*quantity=*/4});
+    REQUIRE_FALSE(eng.contains(a, 3));
+}
+
+TEST_CASE("contiguous engine refuses an out-of-band reprice before emitting OrderModified",
+          "[engine][storage]") {
+    // Regression for the PR #119 review finding: the refusal must happen before the engine emits
+    // any event. Replay applies commands through this exact path, so an OrderModified for an
+    // unapplied modify would corrupt the replay/differential contract.
+    MatchingEngine eng{OrderBook::Storage::Contiguous};
+    const SymbolId a = eng.register_symbol("AAPL");
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+
+    REQUIRE(eng.new_limit(a, 1, Side::Buy, 100, 5, TimeInForce::GTC).size() == 1);
+    const SeqNo seq_before = eng.last_seq();
+
+    // No crossing liquidity: the re-add remainder would rest out of band, so the modify is
+    // refused with no events, no sequence number, and the order intact at its old price.
+    const auto events = eng.modify(a, 1, out_of_band, 5);
+    expect_no_events_same_sequence(events, eng, seq_before);
+    expect_resting_bid(eng, a, 1, 100);
+}
+
+TEST_CASE("contiguous engine applies an out-of-band reprice that fully crosses",
+          "[engine][storage]") {
+    MatchingEngine eng{OrderBook::Storage::Contiguous};
+    const SymbolId a = eng.register_symbol("AAPL");
+    const Price out_of_band = OrderBook::kContiguousMaxPrice + 1;
+
+    REQUIRE(eng.new_limit(a, 1, Side::Buy, 90, 4, TimeInForce::GTC).size() == 1);
+    REQUIRE(eng.new_limit(a, 2, Side::Sell, 100, 4, TimeInForce::GTC).size() == 1);
+
+    // The repriced order fully fills against the in-band ask, so nothing rests out of band and
+    // the modify applies: OrderModified plus the trade, exactly like baseline storage.
+    const auto events = eng.modify(a, 1, out_of_band, 4);
+    expect_modified_then_trade(
+        events, ExpectedTrade{a, /*maker=*/2, /*taker=*/1, /*price=*/100, /*quantity=*/4});
+    expect_orders_absent(eng, a, 1, 2);
 }
 
 TEST_CASE("intrusive storage rests only the post-match remainder", "[engine][storage]") {

@@ -80,6 +80,10 @@ class MatchingEngine {
     [[nodiscard]] std::optional<Price> best_ask(SymbolId symbol) const;
     [[nodiscard]] std::size_t fill_count(SymbolId symbol, Side side, Price price, OrderType type,
                                          Quantity quantity) const;
+    /// Whether the symbol's storage mode can apply a nonzero modify (see
+    /// OrderBook::can_apply_modify). False for unknown symbols.
+    [[nodiscard]] bool can_apply_modify(SymbolId symbol, OrderId id, Price new_price,
+                                        Quantity new_quantity) const;
     [[nodiscard]] bool can_store_limit(SymbolId symbol, Side side, Price price, Quantity quantity,
                                        TimeInForce tif) const;
 

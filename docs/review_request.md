@@ -116,14 +116,14 @@ to confirm what looks right.
 ### 8. Storage architecture and cache locality
 
 - **Claim:** allocator and storage evidence is intentionally staged: M28 isolated allocator
-  mechanics, M32 PMR node allocation, PR #112 intrusive pooled resting-order storage, and future
-  M47 contiguous storage/cache-locality study.
+  mechanics, M32 PMR node allocation, PR #112 intrusive pooled resting-order storage, and M47
+  fixed-band contiguous storage/cache-locality study.
 - **Where:** [`pool_backed_storage.md`](pool_backed_storage.md),
   [`allocator_experiment.md`](allocator_experiment.md), `results/pool_backed_storage.txt`,
   `MILESTONES.md` (M47).
-- **Questions:** Does the documentation clearly distinguish node-allocation experiments from true
-  contiguous-storage architecture? Are replay-equivalence requirements sufficient before comparing
-  flat/direct-price-index layouts? Are cache-locality claims forbidden until measured?
+- **Questions:** Does the documentation clearly distinguish node-allocation experiments from the
+  bounded-domain contiguous architecture? Are replay-equivalence requirements sufficient before
+  comparing flat/direct-price-index layouts? Are cache-locality claims forbidden until measured?
 
 ### 9. External review priority
 

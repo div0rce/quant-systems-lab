@@ -77,7 +77,8 @@ After M28/M29 review, the roadmap distinguishes workflow validation from final e
 - TSan coverage is dynamic-analysis evidence over executed schedules, not proof over all possible
   interleavings.
 - M28 allocator evidence did not change order-book storage architecture. M32 later measured
-  PMR-backed node allocation and PR #112 added an opt-in intrusive pooled resting-order storage
-  mode; true contiguous storage/cache-locality study remains future M47 scope.
+  PMR-backed node allocation, PR #112 added an opt-in intrusive pooled resting-order storage mode,
+  and M47 studies a bounded-domain contiguous direct-price-indexed layout without making a general
+  cache-locality or production-latency claim.
 - M43-M49 now keep CPU locality, false sharing, contiguous storage, Linux evidence, and external
   review ahead of late-stage DPDK/NIC research.

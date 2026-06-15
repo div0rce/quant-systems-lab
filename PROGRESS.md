@@ -20,25 +20,24 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M46 — Recovery benchmarking
-- **Status:** ◐ PR #118 open for review
-- **Active branch:** `feat/m46-recovery-benchmarking`
-- **Last completed milestone:** M45 — Exchange-grade persistence prototype (squash-merged PR #117,
-  commit d10bfb0), after M45B — Artifact provenance migration follow-up (squash-merged PR #116,
-  commit b9ea27a)
+- **Active milestone:** M47 — Contiguous order-book storage and cache-locality study
+- **Status:** ◐ PR open (#119)
+- **Active branch:** `feat/m47-contiguous-order-book-storage`
+- **Last completed milestone:** M46 — Recovery benchmarking (squash-merged PR #118, commit
+  aeba72c), after M45 — Exchange-grade persistence prototype (squash-merged PR #117, commit
+  d10bfb0)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes, 223/223 on the M46 branch; `make asan` 223/223;
-  `make check-fixtures` and `make check-manifest` clean; `git diff --check` clean; CodeScene
-  `bench_recovery.cpp` 10.0, `order_book.cpp` 9.68 and `matching_engine.cpp` 9.09 (both equal to
-  their pre-M46 baselines).
-- **Last action:** implemented M46 — `resting_orders` enumeration API + tests, `qsl-bench
-  recovery`, `scripts/run_recovery_benchmarks.sh`, `make bench-recovery`, the committed
-  clean-provenance `results/recovery_benchmarks.txt` artifact (regenerated after the CodeScene
-  helper decomposition), and recovery-objective docs in `docs/replay_and_recovery.md` /
-  `docs/persistence.md` / `docs/benchmarking.md`.
-- **Next action:** wait for review on PR #118 (`perf: benchmark recovery paths`). Do not merge
-  from automation.
+- **`make check` passing:** yes on M47 branch after PR #119 review fixes (230/230 tests);
+  `make asan` also passed 230/230.
+- **Last action:** fixed and locally verified PR #119 review findings: `can_apply_modify` now pre-gates
+  `MatchingEngine::modify` so a refused out-of-band contiguous reprice emits no `OrderModified`
+  (gateway rejects it as `StorageExhausted`; the original order keeps resting), and
+  `ContiguousStore` moved to `src/engine/contiguous_store.hpp` to clear the brain-class
+  function-count gate. Regression tests cover engine no-event/no-sequence behavior, full-crossing
+  out-of-band reprices, direct-book refusal before matching, and gateway `StorageExhausted`.
+- **Next action:** wait for review/CI on PR #119 (`perf: study contiguous order-book storage`).
+  Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26
   were closed by PR #112.
@@ -220,8 +219,7 @@ compiler-, and build-dependent — these are from one machine, not a production-
 
 > If stopping mid-milestone, write exactly what is half-done and the precise next step. Clear this when the milestone merges.
 
-- _M46 implementation is complete and PR #118 is open. Remaining: review response only; do not
-  merge from automation._
+- _M47 PR #119 is open. Next step: wait for review/CI; do not merge from automation._
 
 
 ---
@@ -292,8 +290,8 @@ Lower priority:
 | M44 | Ingress queue memory-ordering and false-sharing study | `feat/m44-ingress-memory-ordering-false-sharing` | ☑ merged | #115 | Ingress queue ordering/backpressure plus false-sharing validation; not lock-free matching |
 | M45B | Artifact provenance migration follow-up | `perf/m45b-artifact-provenance-migration` | ☑ merged | #116 | Converted remaining artifact generators from commit identity to source-digest provenance |
 | M45 | Exchange-grade persistence prototype | `feat/m45-persistence-prototype` | ☑ merged | #117 | Durability modes, torn-tail recovery/repair, crash harness; no production-durability claims |
-| M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ◐ PR open | #118 | Replay and snapshot restoration performance |
-| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☐ not started | — | Flat/contiguous/direct-price-index storage study against baseline, PMR, and intrusive modes |
+| M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
+| M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ◐ PR open | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
 | M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☐ not started | — | Late-stage user-space packet-path research after stronger locality/storage/review evidence |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
@@ -494,6 +492,73 @@ Lower priority:
   `src/engine/order_book.cpp` stays 9.68 and `src/engine/matching_engine.cpp` stays 9.09 (both
   unchanged from pre-M46 baselines). The artifact was regenerated from the refactored clean
   source in an artifact-only commit so its `Source digest` matches the committed generator.
+- [2026-06-12] PR #118 squash-merged to `main` as aeba72c, completing M46. M47 started on
+  `feat/m47-contiguous-order-book-storage`. Scope: flat/contiguous order-book storage study
+  against baseline, PMR pooled, and intrusive pooled modes — explicit symbol/price-domain
+  assumptions, replay/differential equivalence (identical event streams, `EngineSnapshot`,
+  `last_seq`), engine-level benchmark artifacts from committed scripts, cache-locality analysis
+  only where tooling supports it, and honest documentation of negative/neutral results. No
+  speedup or cache-locality claim without measured evidence; matching determinism and
+  integer-tick prices remain invariants.
+- [2026-06-12] M47 implemented `OrderBook::Storage::Contiguous`: a fixed direct price-index band
+  `[1, 1024]`, occupancy bitmaps for best-level discovery, and contiguous per-level FIFO vectors.
+  Out-of-band prices may still cross in-band liquidity, but GTC remainders that would rest outside
+  the band are refused before engine mutation. Baseline remains default.
+- [2026-06-12] M47 verification passed focused `test_matching_engine` and `test_order_book`,
+  `make check` 225/225, `make asan` 225/225, and `make bench-storage`. The regenerated
+  `results/pool_backed_storage.txt` records source digest
+  `sha256:9bc7cc42609e75feacbf9f3db7b2c10e27104c4e38428b6a71f8875e11ca122c` and
+  `Dirty inputs: no`; the artifact supports no portable speedup claim.
+- [2026-06-12] M47 CodeScene follow-up: storage-mode public dispatch was consolidated through
+  internal helpers, and contiguous `fill_count` was split into narrower match-count helpers to
+  reduce repeated wrapper structure and local branch complexity without changing semantics.
+- [2026-06-12] M47 PR #119 review fix (Codex P2): a contiguous reprice whose re-add remainder
+  would rest out of band was refused inside `OrderBook::modify` *after* the engine had already
+  emitted `OrderModified`, so the event stream could report a modify the book never applied. The
+  refusal is now visible before the event: `OrderBook::can_apply_modify` (true for
+  baseline/PMR/intrusive, band check for contiguous) pre-gates `MatchingEngine::modify` exactly
+  like `can_store_limit` pre-gates `new_limit`, the gateway rejects such modifies with structured
+  `StorageExhausted`, and the store-level refusal remains as defense in depth for direct book
+  callers (the original order keeps resting). Side effect: the engine-level pre-gate cleared the
+  pre-existing CodeScene Code Duplication finding between `MatchingEngine::new_market` and
+  `modify`. New tests pin the engine no-event/no-seq refusal, the crossing out-of-band reprice
+  that still applies, the gateway rejection, and the direct-book refusal.
+- [2026-06-12] M47 PR #119 CodeScene gate fix: adding the modify pre-gate pushed
+  `src/engine/order_book.cpp` to the brain-class function-count threshold, so the M47
+  `ContiguousStore` moved to an internal header `src/engine/contiguous_store.hpp` (included only
+  by `order_book.cpp`; no public API or CMake change). Both files score 9.68 with only the
+  pre-existing argument-count findings, and `analyze_change_set` vs `origin/main` passes the
+  quality gates.
+- [2026-06-12] M47 PR #119 final local validation: split the new modify-pre-gate regression
+  assertions into small helpers so the tests pin event-stream/book-state consistency without
+  introducing new CodeScene assertion-block noise. Focused `test_matching_engine`,
+  `test_order_book`, and `test_risk_gateway` passed; `git diff --check`, `make check` 229/229, and
+  `make asan` 229/229 passed locally.
+- [2026-06-12] M47 PR #119 Codex follow-up: direct `OrderBook` callers using contiguous storage
+  now run the out-of-band residual preflight before matching, so a partially crossing GTC order
+  that would leave an un-restable remainder is refused without removing maker liquidity. Added a
+  direct-book regression; focused storage/gateway tests passed, then `git diff --check`,
+  `make check` 230/230, and `make asan` 230/230 passed locally.
+- [2026-06-12] M47 PR #119 CodeRabbit follow-up: applied the same residual preflight to
+  `IntrusiveStore::add_limit` — a direct `OrderBook{Storage::IntrusivePooled}` caller that
+  partially crossed a GTC order and then hit pool exhaustion previously dropped the remainder
+  despite the rest-the-remainder contract; it now refuses the whole order via `can_store_limit`
+  before matching (engine/gateway callers were already pre-gated, so their behavior is
+  unchanged). Added a direct-book regression that fills the intrusive pool and asserts a
+  no-capacity bid is refused with maker liquidity intact. Narrowed the `Storage` doc comment so
+  the "preserves matching semantics" claim is scoped to each mode's declared domain (out of it,
+  IntrusivePooled/Contiguous can refuse a GTC remainder the others would rest), per CodeRabbit.
+  Include hygiene: added `<utility>` to `contiguous_store.hpp` (uses `std::move`) and dropped the
+  now-unused `<bit>` from `order_book.cpp` (the bit-scan code moved into the header). The Codex
+  contiguous-residual and benchmark-provenance comments were already resolved by the earlier
+  `f7c40fe`/`f0f268b` commits on this branch.
+- [2026-06-12] M47 PR #119 review round 3 fixes (docs/roadmap only; committed artifact numbers
+  unchanged): corrected a benchmark-claim error in `docs/pool_backed_storage.md` (it named
+  contiguous the fastest row, but the committed artifact has PMR 209.6 < contiguous 222.4 <
+  baseline 273.7 < intrusive 373.0 ns/cmd — PMR is fastest, contiguous second) and fixed stale
+  `MILESTONES.md` statuses so resume/finish workflows route to the right milestone: M45 is merged
+  via PR #117 (not PR #119), M44 (#115) and M46 (#118) are also merged, and M47 is the active
+  PR #119.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
 - [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
@@ -579,12 +644,12 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M46 on `feat/m46-recovery-benchmarking`: PR #118 is open for review
-(`perf: benchmark recovery paths`). Delivered:
-replay-path and snapshot-restoration measurement via committed scripts, artifacts with full
-metadata (`Provenance version: 1`, source digest, dirty-inputs state), and docs stating exactly
-which recovery objective was measured. M45 (PR #117, d10bfb0) is merged; its durability modes and
-`qsl-replay recover` path are available as measurement subjects.
+Current action is M47 on `feat/m47-contiguous-order-book-storage`: evaluate flat/contiguous
+order-book storage against the baseline, PMR pooled, and intrusive pooled modes. Required:
+explicit symbol/price-domain assumptions, replay/differential equivalence (identical event
+streams, `EngineSnapshot`, `last_seq`), engine-level benchmark artifacts from committed scripts
+with `Provenance version: 1` metadata, and honest documentation of negative or neutral results.
+No speedup or cache-locality claim without measured evidence. M46 (PR #118, aeba72c) is merged.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
