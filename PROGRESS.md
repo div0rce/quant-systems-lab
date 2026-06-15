@@ -21,7 +21,7 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M48 — DPDK research and prototype
-- **Status:** ◐ ready for PR; local docs/support-check groundwork complete with clean provenance
+- **Status:** ◐ PR open; awaiting human review / squash merge
 - **Active branch:** `feat/m48-dpdk-research-prototype`
 - **Last completed milestone:** M47 follow-up — Storage benchmark diagnosis (squash-merged
   PR #122, commit 548cb68), after M47 — Contiguous order-book storage and cache-locality study
@@ -44,8 +44,8 @@ Do not rely on prior chat memory.
   was killed without producing findings. The artifact was then regenerated from tracked source
   commit `4256168` with source digest
   `sha256:b2d79e329b8274dfa478e5226426af4a379c54e3d6def042dc448609af1cfa53` and `Dirty inputs: no`.
-- **Next action:** push `feat/m48-dpdk-research-prototype`, open the M48 PR with title
-  `docs: research DPDK packet-path tradeoffs`, and do not merge from automation.
+  PR #123 is open: <https://github.com/div0rce/quant-systems-lab/pull/123>.
+- **Next action:** wait for review/CI on PR #123. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Any DPDK measurement/prototype evidence depends on suitable host,
   NIC, driver, and hugepage support; no kernel-bypass performance claim is allowed without real
@@ -303,7 +303,7 @@ Lower priority:
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
 | Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ☑ merged | #122 | Workload-shape variants + corrected timing (excludes per-run pool-init setup); overturns the earlier intrusive-slow reading |
-| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ◐ ready for PR | — | DPDK research notes + non-mutating environment support check; no packet-path benchmark or kernel-bypass claim |
+| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ◐ PR open | #123 | DPDK research notes + non-mutating environment support check; no packet-path benchmark or kernel-bypass claim |
 | M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
 
 ## Decision log additions
@@ -715,9 +715,9 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M48 on `feat/m48-dpdk-research-prototype`: push the branch and open the PR titled
-`docs: research DPDK packet-path tradeoffs`. The local M48 artifact is an unsupported-host
-environment check with clean source-digest provenance, not packet-path evidence.
+Current action is M48 PR #123 on `feat/m48-dpdk-research-prototype`: wait for review/CI and do not
+merge from automation. The M48 artifact is an unsupported-host environment check with clean
+source-digest provenance, not packet-path evidence.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
