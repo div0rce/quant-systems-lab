@@ -191,7 +191,19 @@ qsl_publish_artifact() {
         exit 2
     fi
     clean="$(mktemp)"
-    sed 's/[[:blank:]]*$//' "$tmp" >"$clean"
+    sed 's/[[:blank:]]*$//' "$tmp" |
+        awk '
+            { lines[NR] = $0 }
+            END {
+                last = NR
+                while (last > 0 && lines[last] == "") {
+                    --last
+                }
+                for (i = 1; i <= last; ++i) {
+                    print lines[i]
+                }
+            }
+        ' >"$clean"
     mv "$clean" "$out"
 }
 
