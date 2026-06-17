@@ -184,6 +184,17 @@ qsl_emit_provenance() {
     echo "Date: $(qsl_utc_timestamp)"
 }
 
+qsl_publish_artifact() {
+    local tmp="$1" out="$2" clean
+    if [[ -z "$tmp" || -z "$out" ]]; then
+        echo "error: qsl_publish_artifact requires temporary and output paths" >&2
+        exit 2
+    fi
+    clean="$(mktemp)"
+    sed 's/[[:blank:]]*$//' "$tmp" >"$clean"
+    mv "$clean" "$out"
+}
+
 qsl_utc_timestamp() {
     date -u +%Y-%m-%dT%H:%M:%SZ
 }

@@ -129,7 +129,7 @@ write_unsupported_artifact() {
         echo
         echo "Caveat: This host is not Linux, so no CPU-affinity, scheduler-migration, or NUMA evidence was collected."
     } >"$TMP_OUT"
-    mv "$TMP_OUT" "$OUT"
+    qsl_publish_artifact "$TMP_OUT" "$OUT"
     echo "wrote $OUT"
     cat "$OUT"
     exit 2
@@ -352,7 +352,7 @@ fi
     cat "$NUMACTL_OUT"
 } >"$TMP_OUT"
 
-mv "$TMP_OUT" "$OUT"
+qsl_publish_artifact "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"
 

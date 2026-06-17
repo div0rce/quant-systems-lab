@@ -277,6 +277,6 @@ TMP_OUT="$(mktemp)"
     echo "- Constrained-environment evidence for investigation; not a production-capacity claim."
 } >"$TMP_OUT"
 
-mv "$TMP_OUT" "$OUT"
+qsl_publish_artifact "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"
