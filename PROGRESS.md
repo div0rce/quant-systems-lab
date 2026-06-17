@@ -21,7 +21,7 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** M49 — NIC offload and low-latency networking study
-- **Status:** ◐ ready for PR; M49 finish gates passing locally
+- **Status:** ◐ PR open; awaiting human review / squash merge
 - **Active branch:** `feat/m49-nic-offload-study`
 - **Last completed milestone:** M48 — DPDK research and prototype (squash-merged PR #123, commit
   c643b62), after M47 follow-up — Storage benchmark diagnosis (squash-merged PR #122, commit
@@ -45,9 +45,10 @@ Do not rely on prior chat memory.
   scripts/qsl_common.sh`, `shellcheck -S warning scripts/*.sh`, `make nic-offload-check`, `make
   check` (232/232), and CodeScene pre-commit quality gates. A local `codex review --uncommitted`
   second-opinion run was stopped after its internal CodeScene call hung; the direct CodeScene gate
-  passed and CodeScene file-level review reported `.sh` as unsupported.
-- **Next action:** commit the finalized M49 sources, regenerate `results/nic_offload_environment.txt`
-  from clean tracked inputs, open the PR, and wait for human review. Do not merge from automation.
+  passed and CodeScene file-level review reported `.sh` as unsupported. The final artifact was
+  regenerated from clean tracked source inputs with `Dirty inputs: no`, and PR #124 is open:
+  <https://github.com/div0rce/quant-systems-lab/pull/124>.
+- **Next action:** wait for review/CI on PR #124. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
   independent external review. Hardware-specific NIC/offload measurement depends on real host,
   driver, timestamping/offload, and NIC access; the current macOS host must be treated as
@@ -717,10 +718,9 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M49 on `feat/m49-nic-offload-study`: produce a NIC offload and low-latency
-networking study with strict separation between research notes and measured artifacts. The M48
-artifact remains an unsupported-host environment check with clean source-digest provenance, not
-packet-path evidence.
+Current action is M49 PR #124 on `feat/m49-nic-offload-study`: wait for human review / CI and do
+not merge from automation. The M49 artifact is an unsupported-host environment check with clean
+source-digest provenance, not NIC-offload or latency evidence.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
