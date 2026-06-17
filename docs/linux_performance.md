@@ -109,6 +109,20 @@ hugepages, load kernel modules, bind NICs, or send packets. Treat it as research
 evidence only unless a later prototype artifact records DPDK version, EAL arguments, hugepage
 state, device binding, packet workload, and source provenance.
 
+## NIC offload and timestamping checks
+
+M49 owns NIC offload, RSS, and hardware timestamping research. Run:
+
+```bash
+make nic-offload-check
+```
+
+This writes `results/nic_offload_environment.txt`. It is a non-mutating capability check: it does
+not change offload flags, RSS tables, queue counts, timestamp filters, driver bindings, IRQ
+affinity, or CPU affinity, and it does not send packets. Treat it as environment classification or
+read-only device capability observation only unless a future artifact records a real NIC workload,
+timestamp source, queue/IRQ placement, packet shape, drops/backpressure, and source provenance.
+
 ## What this does not prove
 
 These are in-process microbenchmarks on a commodity machine with the standard library and a

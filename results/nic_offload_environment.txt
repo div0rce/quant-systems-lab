@@ -1,0 +1,40 @@
+Command:     make nic-offload-check
+Artifact:    NIC offload and timestamping capability check (non-mutating)
+Evidence class: unsupported-host
+Host support summary: unsupported OS for NIC offload/timestamping inspection
+Hardware:    arm64
+OS:          Darwin 25.2.0
+CPU:         Apple M2
+Compiler:    Apple clang version 21.0.0 (clang-2100.1.1.101)
+Build type:  n/a
+Provenance version: 1
+Git commit (informational): 59c0cff
+Source digest: sha256:690f7298ad6e898a56ea15450e48532945156608a26033e5a35ff67c044c3b03
+Source digest scope: nic-offload-environment-check
+Dirty inputs: no
+Generated output: results/nic_offload_environment.txt
+Date: 2026-06-17T15:34:29Z
+ethtool:     not-found
+ip:          not-found
+lspci:       not-found
+phc_ctl:     not-found
+ptp4l:       not-found
+Requested Linux devices: n/a
+Missing requested devices: n/a
+Linux devices inspected: n/a
+Device count: n/a
+Offload feature list visible: n/a
+RSS indirection/hash visible: n/a
+Queue/channel info visible: n/a
+Hardware timestamping visible: n/a
+Offload settings changed: no
+RSS settings changed: no
+Timestamping configured: no
+Driver binding changed: no
+Packet generator ran: no
+Latency benchmark ran: no
+
+Caveat: This artifact records read-only host and NIC capability context. It does
+not change offload flags, queue counts, RSS tables, timestamp filters, drivers,
+or interrupt affinity, and it does not support any NIC-offload or latency claim.
+Device inspection: not collected (unsupported OS)

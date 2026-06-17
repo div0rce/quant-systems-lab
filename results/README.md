@@ -37,6 +37,10 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `dpdk_environment.txt` — M48 non-mutating DPDK environment support check (`make dpdk-check`).
   It records whether the host can build or potentially run a DPDK prototype, but it never binds
   devices, reserves hugepages, sends packets, or supports a kernel-bypass performance claim.
+- `nic_offload_environment.txt` — M49 non-mutating NIC offload/timestamping capability check
+  (`make nic-offload-check`). It records read-only host and interface context where Linux NICs are
+  visible, but it never changes offload flags, RSS tables, timestamp filters, driver bindings, IRQ
+  placement, or packet traffic, and it does not support a latency claim.
 
 ## Policy
 
@@ -68,3 +72,7 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - DPDK artifacts must state whether they are build-only, virtual-device, loopback-like, real-NIC,
   or unsupported-host evidence, and must record hugepage/device-binding state before any packet
   path result is interpreted.
+- NIC offload artifacts must state whether they are unsupported-host, read-only capability
+  observation, or measured real-NIC evidence. Any measured artifact must record device, driver,
+  firmware, offload state, RSS/queue state, timestamp source, CPU/IRQ placement, packet workload,
+  drop/backpressure behavior, and provenance before supporting any offload or latency statement.

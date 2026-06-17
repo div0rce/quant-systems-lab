@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage bench-recovery perf-stat perf-record numa-study false-sharing-study profile-io socket-stress socket-load dpdk-check crash-recovery concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage bench-recovery perf-stat perf-record numa-study false-sharing-study profile-io socket-stress socket-load dpdk-check nic-offload-check crash-recovery concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -106,6 +106,10 @@ socket-load:
 # M48: non-mutating DPDK environment support check. This never binds devices or changes hugepages.
 dpdk-check:
 	bash scripts/dpdk_environment_check.sh
+
+# M49: non-mutating NIC offload/timestamping capability check. This never changes device state.
+nic-offload-check:
+	bash scripts/nic_offload_check.sh
 
 concurrency-stress:
 	bash scripts/concurrency_stress.sh

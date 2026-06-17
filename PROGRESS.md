@@ -20,37 +20,40 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M48 — DPDK research and prototype
+- **Active milestone:** M49 — NIC offload and low-latency networking study
 - **Status:** ◐ PR open; awaiting human review / squash merge
-- **Active branch:** `feat/m48-dpdk-research-prototype`
-- **Last completed milestone:** M47 follow-up — Storage benchmark diagnosis (squash-merged
-  PR #122, commit 548cb68), after M47 — Contiguous order-book storage and cache-locality study
-  (squash-merged PR #119, commit 93d5062)
+- **Active branch:** `feat/m49-nic-offload-study`
+- **Last completed milestone:** M48 — DPDK research and prototype (squash-merged PR #123, commit
+  c643b62), after M47 follow-up — Storage benchmark diagnosis (squash-merged PR #122, commit
+  548cb68)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes — native macOS 232/232 on the M48 branch after adding the DPDK
-  research note and environment check. Last Linux baseline remains PR #122: Docker Linux 240/240
-  and `make asan` 240/240.
-- **Last action:** added `docs/dpdk_research.md`, a non-mutating `make dpdk-check` /
-  `scripts/dpdk_environment_check.sh` path, and `results/dpdk_environment.txt`. The local artifact
-  correctly classifies this macOS host as `unsupported-host`, performs no hugepage or NIC mutation,
-  and records no packet-path benchmark. The `/review and fix` pass tightened the script so
-  `dpdk-devbind --status` is collected only on Linux, the provenance input set covers the touched
-  docs, Makefile, and command-list files, and Linux hosts need mounted plus free hugepages before they
-  can classify as `linux-dpdk-build-ready`. Verification passed `git diff --check`, `bash -n
-  scripts/dpdk_environment_check.sh`, `make dpdk-check`, `make check` (232/232), and CodeScene
-  pre-commit quality gates. CodeScene file-level review does not support `.sh`; a local
-  `codex review --uncommitted` second-opinion attempt hung after its internal CodeScene call and
-  was killed without producing findings. The artifact was then regenerated from tracked source
-  commit `4256168` with source digest
-  `sha256:b2d79e329b8274dfa478e5226426af4a379c54e3d6def042dc448609af1cfa53` and `Dirty inputs: no`.
-  PR #123 is open: <https://github.com/div0rce/quant-systems-lab/pull/123>.
-- **Next action:** wait for review/CI on PR #123. Do not merge from automation.
+- **`make check` passing:** yes — native macOS 232/232 after adding the M49 NIC offload study,
+  non-mutating `make nic-offload-check` path, and unsupported-host artifact. M48 PR #123 CI passed
+  build-test, sanitizers, thread-sanitizer, ocaml-verifier, differential-sweep, determinism, and
+  CodeScene.
+- **Last action:** confirmed PR #123 was merged, fast-forwarded `main` to c643b62, verified no open
+  PRs, read the M49 milestone entry, started `feat/m49-nic-offload-study` from updated `main`, added
+  `docs/nic_offload_study.md`, `scripts/nic_offload_check.sh`, `make nic-offload-check`, and
+  `results/nic_offload_environment.txt`. The local artifact correctly classifies this macOS host as
+  `unsupported-host`, changes no NIC/offload/RSS/timestamping/driver state, sends no packets, and
+  records no latency benchmark. During `/review and fix`, Codex second-opinion review found that
+  missing `QSL_NIC_DEVICES` names could be misclassified as observed Linux devices; the script now
+  filters requested names against `/sys/class/net`, records missing requested names separately, and
+  keeps absent-device runs in `linux-no-observable-nic`. Finish verification passed `git diff
+  --check`, `bash -n scripts/nic_offload_check.sh`, `shellcheck scripts/nic_offload_check.sh
+  scripts/qsl_common.sh`, `shellcheck -S warning scripts/*.sh`, `make nic-offload-check`, `make
+  check` (232/232), and CodeScene pre-commit quality gates. A local `codex review --uncommitted`
+  second-opinion run was stopped after its internal CodeScene call hung; the direct CodeScene gate
+  passed and CodeScene file-level review reported `.sh` as unsupported. The final artifact was
+  regenerated from clean tracked source inputs with `Dirty inputs: no`, and PR #124 is open:
+  <https://github.com/div0rce/quant-systems-lab/pull/124>.
+- **Next action:** wait for review/CI on PR #124. Do not merge from automation.
 - **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
-  independent external review. Any DPDK measurement/prototype evidence depends on suitable host,
-  NIC, driver, and hugepage support; no kernel-bypass performance claim is allowed without real
-  measurements. Legacy backlog still includes #32 and #29. Issues #95, #28, and #26 were closed by
-  PR #112.
+  independent external review. Hardware-specific NIC/offload measurement depends on real host,
+  driver, timestamping/offload, and NIC access; the current macOS host must be treated as
+  non-measured research unless suitable hardware is provided. Legacy backlog still includes #32 and
+  #29. Issues #95, #28, and #26 were closed by PR #112.
 
 ---
 
@@ -715,9 +718,9 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M48 PR #123 on `feat/m48-dpdk-research-prototype`: wait for review/CI and do not
-merge from automation. The M48 artifact is an unsupported-host environment check with clean
-source-digest provenance, not packet-path evidence.
+Current action is M49 PR #124 on `feat/m49-nic-offload-study`: wait for human review / CI and do
+not merge from automation. The M49 artifact is an unsupported-host environment check with clean
+source-digest provenance, not NIC-offload or latency evidence.
 
 Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
 PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.

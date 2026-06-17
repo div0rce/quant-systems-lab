@@ -1814,7 +1814,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Goal:** Late-stage user-space networking investigation only after CPU locality, false sharing,
   storage architecture, Linux profiling, persistence/recovery, and external-review visibility are in
   place.
-- **Status:** ◐ in progress.
+- **Status:** ☑ merged via PR #123 (`c643b62`).
 - **Dependencies:** M30/M35 socket evidence, M43 CPU locality, M44 false-sharing/ingress evidence,
   M47 storage locality, M45/M46 persistence/recovery, and issue #94 external-review visibility.
 - **Signal gained:** Late-stage networking context and packet-path tradeoff literacy.
@@ -1847,7 +1847,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m49-nic-offload-study`
 - **PR title:** `docs: study NIC offload and low-latency networking`
 - **Goal:** Research-heavy networking study unless suitable hardware exists.
-- **Status:** ☐ not started.
+- **Status:** ◐ in progress.
 - **Dependencies:** M48 DPDK research, M43 CPU locality, M44 false-sharing/ingress evidence, and
   real NIC/hardware access for any measurement.
 - **Signal gained:** Late-stage NIC/offload context, hardware timestamping literacy, and limits of
