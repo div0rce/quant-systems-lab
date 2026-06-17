@@ -388,6 +388,7 @@ Keep this synchronized with the Makefile.
 - `make socket-stress` — UDP socket-buffer / burst-loss experiment
 - `make crash-recovery` — SIGKILL crash / torn-tail recovery validation for the event log
 - `make dpdk-check` — run the M48 non-mutating DPDK environment support check
+- `make nic-offload-check` — run the M49 non-mutating NIC offload/timestamping capability check
 - `make demo` — run local replay + TCP gateway demo
 - `make check-fixtures` — regenerate and verify differential fixtures
 - `make check-manifest` — verify fixture provenance manifest
