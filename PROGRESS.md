@@ -21,33 +21,31 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** Linux host artifact refresh follow-up after M49
-- **Status:** ◐ in progress on follow-up branch
+- **Status:** ◑ Linux host artifacts refreshed and verification passed; follow-up PR review pending
 - **Active branch:** `perf/linux-host-artifact-refresh`
 - **Last completed milestone:** M49 — NIC offload and low-latency networking study (squash-merged
   PR #124, commit d8c16b2), after M48 — DPDK research and prototype (squash-merged PR #123, commit
   c643b62)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** pending on the Linux artifact-refresh branch. Last completed M49
-  verification passed on PR #124 before squash merge.
+- **`make check` passing:** yes on the Linux artifact-refresh branch. The sandboxed run failed to
+  create the TCP loopback listener and was interrupted; rerunning `make check` with host socket
+  access passed all 240 tests on 2026-06-17.
 - **Last action:** after moving to Fedora Asahi Linux, created
-  `perf/linux-host-artifact-refresh` from `main` at d8c16b2 and regenerated host-specific
-  Linux artifacts without changing system/network state. `make nic-offload-check` now records a
-  read-only `linux-readonly-capability-observation` for `wld0` (Broadcom BCM4387 via `brcmfmac`):
-  offload features are visible, RSS/channel queries are unsupported, hardware timestamping is not
-  visible, no offload/RSS/timestamp/driver setting was changed, and no packet or latency benchmark
-  ran. `make dpdk-check` now records `linux-missing-dpdk` (no `libdpdk` through `pkg-config`, no
-  hugepages/devbind). `QSL_PERF_ALLOW_PARTIAL=1 make perf-stat` records partial PMU evidence:
-  Asahi Apple PMU cycles/instructions/branches/branch-misses are visible, but cache-reference and
-  cache-miss counters are unsupported, so issue #90 is not complete. `make perf-record` produced a
-  software `cpu-clock` hot-symbol profile. `QSL_NUMA_ALLOW_CONSTRAINED=1 make numa-study` records a
-  single-node Linux constrained artifact. `make false-sharing-study`, `make profile-io`,
-  `make socket-load`, `make socket-stress`, and `make crash-recovery` regenerated Linux host
-  artifacts. Loopback socket targets had to run outside the sandbox so the gateway/client sockets
-  and `strace` saw the real host network/proc state.
-- **Next action:** finish documentation/state reconciliation, rerun the affected provenance
-  artifacts after edits, run verification gates, then open a follow-up PR. Do not merge from
-  automation.
+  `perf/linux-host-artifact-refresh` from `main` at d8c16b2 and regenerated host-specific Linux
+  artifacts without changing system/network state. The shared artifact publisher now trims trailing
+  horizontal whitespace and trailing blank EOF lines before publishing generated reports. Refreshed
+  artifacts all report `Dirty inputs: no`: `make nic-offload-check` records a read-only
+  `linux-readonly-capability-observation` for `wld0` (Broadcom BCM4387 via `brcmfmac`); `make
+  dpdk-check` records `linux-missing-dpdk`; `QSL_PERF_ALLOW_PARTIAL=1 make perf-stat` records
+  partial PMU evidence with cache-reference/cache-miss counters unsupported; `make perf-record`
+  records a software `cpu-clock` hot-symbol profile; `QSL_NUMA_ALLOW_CONSTRAINED=1 make
+  numa-study` records single-node constrained evidence; and `make false-sharing-study`, `make
+  profile-io`, `make socket-load`, `make socket-stress`, and `make crash-recovery` regenerated
+  Linux host artifacts. `git diff --check`, Bash syntax checks, ShellCheck for the touched artifact
+  scripts, and host-level `make check` passed.
+- **Next action:** open/review the follow-up PR from `perf/linux-host-artifact-refresh`; do not
+  merge from automation.
 - **Blockers:** issue #90 remains open because this host lacks the required cache PMU counters for
   full hardware-PMU evidence. Issue #94 remains open for independent external review. Hardware
   NIC/offload latency measurement still requires suitable wired NIC hardware, driver support,

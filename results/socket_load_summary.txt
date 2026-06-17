@@ -1,18 +1,18 @@
 Command:     bash scripts/socket_load.sh  (make socket-load)
 Artifact:    multi-client TCP connection-scaling load (loopback, constrained)
 Hardware:    aarch64
-OS:          Linux 6.12.76-linuxkit
-CPU:         Apple aarch64
+OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
+CPU:         Avalanche-M2
 Cores:       8
-Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Debug
 Provenance version: 1
-Git commit (informational): fc35787
-Source digest: sha256:dbabc48249781c293a5630d76520bd81c9a7aae76bc7f31ff8c470816dddcae6
+Git commit (informational): fd99ad8
+Source digest: sha256:7bb318e1a27cfdb2b938cfb6bec9cf841c21b3ee3bae21b264e5bf2266b1039c
 Source digest scope: socket-load
 Dirty inputs: no
 Generated output: results/socket_load_summary.txt
-Date: 2026-06-11T15:16:13Z
+Date: 2026-06-17T18:33:15Z
 Dataset:     synthetic order flow via qsl-client (NewOrder + Heartbeat per connection)
 Scenario:    concurrent short-lived client sweep across the threaded and epoll transports
 Metric:      best (min) wall time per cell, approximate conns/s, and completion ratio
@@ -30,14 +30,14 @@ path, not matching.
 
 mode       clients   wall(s,best)     conns/s(~)  completed
 -------    -------   ------------     ----------  ---------
-threaded         1         0.0050            200        1/1
-threaded         4         0.0120            333        4/4
-threaded         8         0.0168            476        8/8
-threaded        16         0.0285            561      16/16
-epoll            1         0.0053            189        1/1
-epoll            4         0.0115            348        4/4
-epoll            8         0.0213            376        8/8
-epoll           16         0.0421            380      16/16
+threaded         1         0.0046            217        1/1
+threaded         4         0.0099            404        4/4
+threaded         8         0.0185            432        8/8
+threaded        16         0.0473            338      16/16
+epoll            1         0.0046            217        1/1
+epoll            4         0.0101            396        4/4
+epoll            8         0.0228            351        8/8
+epoll           16         0.0407            393      16/16
 
 Reading the result: compare how the best wall time grows with the client count within each
 mode. At these small loopback counts connection setup dominates and the two modes can stay close

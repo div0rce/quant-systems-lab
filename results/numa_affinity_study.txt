@@ -2,30 +2,30 @@ Command:     QSL_NUMA_ALLOW_CONSTRAINED=1 QSL_NUMA_BIN=build/bench/qsl-bench mak
 Evidence class: linux-constrained
 Host support summary: Linux host, constrained evidence
 Hardware:    aarch64
-OS:          Linux 6.12.76-linuxkit
-CPU:         Apple aarch64
-Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
+CPU:         Avalanche-M2
+Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): beddfb0
-Source digest: sha256:6911d551c2d1aa247fe16004d577693b8e192057179939126db47bbc8b3fedca
+Git commit (informational): fd99ad8
+Source digest: sha256:31b59ce207840c9990532ee20643c75a822ecab78ac0d1b7156ca1845af3ef5a
 Source digest scope: numa-affinity-study
 Dirty inputs: no
 Generated output: results/numa_affinity_study.txt
-Date: 2026-06-11T14:49:33Z
+Date: 2026-06-17T18:32:33Z
 Benchmark binary: build/bench/qsl-bench
 Allowed CPUs: 0-7
 CPU chosen:  0
-NUMA nodes:  unknown
+NUMA nodes:  1
 lscpu topology available: yes
-numactl topology available: no
+numactl topology available: yes
 NUMA node-local/remote binding succeeded: no
 NUMA local node: unknown
 NUMA remote node: unknown
 taskset available: yes
 taskset succeeded: yes
-perf available: no
-perf ran:     no
+perf available: yes
+perf ran:     yes
 perf events:  context-switches,cpu-migrations
 context-switches captured: no
 cpu-migrations captured: no
@@ -38,8 +38,8 @@ Unpinned benchmark status: 0
 Pinned benchmark status:   0
 NUMA local benchmark status:  127
 NUMA remote benchmark status: 127
-Unpinned perf status:      127
-Pinned perf status:        127
+Unpinned perf status:      0
+Pinned perf status:        0
 
 Caveat: CPU-affinity and NUMA measurements are host-specific systems evidence, not a production-latency or speedup claim.
 
@@ -50,28 +50,52 @@ Pinned command:
 taskset -c 0 build/bench/qsl-bench
 
 Unpinned benchmark output:
-order_book add/mod/cancel     200000 ops         78.4 ns/op       12755848 ops/sec
-protocol encode+decode        500000 ops         20.8 ns/op       48038815 ops/sec
-gateway session (fill)        200000 ops        157.8 ns/op        6337161 ops/sec
-matching engine flow            5004 items      108.6 ns/item      9209922 items/sec
-replay command log              5004 items      140.0 ns/item      7141239 items/sec
+order_book add/mod/cancel     200000 ops        136.5 ns/op        7325650 ops/sec
+protocol encode+decode        500000 ops         20.6 ns/op       48613239 ops/sec
+gateway session (fill)        200000 ops        128.5 ns/op        7781220 ops/sec
+matching engine flow            5004 items      102.4 ns/item      9766192 items/sec
+replay command log              5004 items      114.4 ns/item      8739837 items/sec
 
 Pinned benchmark output:
-order_book add/mod/cancel     200000 ops         79.8 ns/op       12525704 ops/sec
-protocol encode+decode        500000 ops         21.6 ns/op       46243134 ops/sec
-gateway session (fill)        200000 ops        122.7 ns/op        8151523 ops/sec
-matching engine flow            5004 items      107.0 ns/item      9343338 items/sec
-replay command log              5004 items      134.9 ns/item      7410269 items/sec
+order_book add/mod/cancel     200000 ops        145.9 ns/op        6855126 ops/sec
+protocol encode+decode        500000 ops         27.7 ns/op       36065879 ops/sec
+gateway session (fill)        200000 ops        236.0 ns/op        4237327 ops/sec
+matching engine flow            5004 items      187.0 ns/item      5348980 items/sec
+replay command log              5004 items      211.7 ns/item      4723626 items/sec
 
 NUMA local benchmark output:
-NUMA node-local/remote binding skipped: numactl topology unavailable
+NUMA node-local/remote binding skipped: fewer than two NUMA nodes found
 
 NUMA remote benchmark output:
-NUMA node-local/remote binding skipped: numactl topology unavailable
+NUMA node-local/remote binding skipped: fewer than two NUMA nodes found
 
 Unpinned perf stat output:
 
+ Performance counter stats for 'build/bench/qsl-bench':
+
+                 0      context-switches:u
+                 0      cpu-migrations:u
+
+       0.104944479 seconds time elapsed
+
+       0.104623000 seconds user
+       0.000000000 seconds sys
+
+
+
 Pinned perf stat output:
+
+ Performance counter stats for 'taskset -c 0 build/bench/qsl-bench':
+
+                 0      context-switches:u
+                 0      cpu-migrations:u
+
+       0.159746846 seconds time elapsed
+
+       0.158328000 seconds user
+       0.000993000 seconds sys
+
+
 
 lscpu output:
 Architecture:                            aarch64
@@ -80,26 +104,47 @@ Byte Order:                              Little Endian
 CPU(s):                                  8
 On-line CPU(s) list:                     0-7
 Vendor ID:                               Apple
-Model name:                              -
+Model name:                              Blizzard-M2
 Model:                                   0
 Thread(s) per core:                      1
-Core(s) per cluster:                     8
-Socket(s):                               -
-Cluster(s):                              1
-Stepping:                                0x0
+Core(s) per socket:                      4
+Socket(s):                               1
+Stepping:                                0x1
+Frequency boost:                         disabled
+CPU(s) scaling MHz:                      72%
+CPU max MHz:                             2424.0000
+CPU min MHz:                             600.0000
 BogoMIPS:                                48.00
-Flags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 asimddp sha512 asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp flagm2 frint bf16 bti
+Flags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 asimddp sha512 asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint i8mm bf16 bti ecv
+Model name:                              Avalanche-M2
+Model:                                   0
+Thread(s) per core:                      1
+Core(s) per socket:                      4
+Socket(s):                               1
+Stepping:                                0x1
+CPU(s) scaling MHz:                      43%
+CPU max MHz:                             3204.0000
+CPU min MHz:                             660.0000
+BogoMIPS:                                48.00
+Flags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 asimddp sha512 asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint i8mm bf16 bti ecv
+L1d cache:                               768 KiB (8 instances)
+L1i cache:                               1.3 MiB (8 instances)
+L2 cache:                                20 MiB (2 instances)
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0-7
 Vulnerability Gather data sampling:      Not affected
+Vulnerability Ghostwrite:                Not affected
 Vulnerability Indirect target selection: Not affected
 Vulnerability Itlb multihit:             Not affected
 Vulnerability L1tf:                      Not affected
 Vulnerability Mds:                       Not affected
 Vulnerability Meltdown:                  Not affected
 Vulnerability Mmio stale data:           Not affected
+Vulnerability Old microcode:             Not affected
 Vulnerability Reg file data sampling:    Not affected
 Vulnerability Retbleed:                  Not affected
 Vulnerability Spec rstack overflow:      Not affected
-Vulnerability Spec store bypass:         Vulnerable
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl
 Vulnerability Spectre v1:                Mitigation; __user pointer sanitization
 Vulnerability Spectre v2:                Mitigation; CSV2, but not BHB
 Vulnerability Srbds:                     Not affected
@@ -108,3 +153,10 @@ Vulnerability Tsx async abort:           Not affected
 Vulnerability Vmscape:                   Not affected
 
 numactl --hardware output:
+available: 1 nodes (0)
+node 0 cpus: 0 1 2 3 4 5 6 7
+node 0 size: 7481 MB
+node 0 free: 4776 MB
+node distances:
+node     0
+   0:   10

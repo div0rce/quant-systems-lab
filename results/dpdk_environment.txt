@@ -1,36 +1,36 @@
 Command:     make dpdk-check
 Artifact:    DPDK environment support check (non-mutating)
-Evidence class: unsupported-host
-Host support summary: unsupported OS for DPDK packet-path prototype
-Hardware:    arm64
-OS:          Darwin 25.2.0
-CPU:         Apple M2
-Compiler:    Apple clang version 21.0.0 (clang-2100.1.1.101)
+Evidence class: linux-missing-dpdk
+Host support summary: Linux host, but libdpdk is not visible through pkg-config
+Hardware:    aarch64
+OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
+CPU:         Avalanche-M2
+Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  n/a
 Provenance version: 1
-Git commit (informational): 4256168
-Source digest: sha256:b2d79e329b8274dfa478e5226426af4a379c54e3d6def042dc448609af1cfa53
+Git commit (informational): fd99ad8
+Source digest: sha256:80708dd663f857bb44db469348d6ededd30345e07bbd284bf5a28173b642fb2c
 Source digest scope: dpdk-environment-check
 Dirty inputs: no
 Generated output: results/dpdk_environment.txt
-Date: 2026-06-15T20:14:00Z
-pkg-config:  not-found
+Date: 2026-06-17T18:32:14Z
+pkg-config:  /usr/bin/pkg-config
 libdpdk pkg-config status: not-available
 libdpdk version: not-found
 meson:       not-found
-ninja:       /opt/homebrew/bin/ninja
+ninja:       /usr/bin/ninja
 cc:          /usr/bin/cc
 c++:         /usr/bin/c++
 dpdk-devbind: not-found
 dpdk-hugepages: not-found
-lspci:       not-found
-HugePages_Total: n/a
-HugePages_Free:  n/a
-Hugepagesize_kB: n/a
-Hugepage mount /dev/hugepages: n/a
-vfio-pci loaded: n/a
-uio loaded:      n/a
-IOMMU groups present: n/a
+lspci:       /usr/bin/lspci
+HugePages_Total: 0
+HugePages_Free:  0
+Hugepagesize_kB: 32768
+Hugepage mount /dev/hugepages: missing
+vfio-pci loaded: no
+uio loaded:      no
+IOMMU groups present: yes
 Device binding performed: no
 Hugepage setup performed: no
 Packet-path benchmark ran: no
@@ -39,4 +39,4 @@ Prototype compiled: no
 Caveat: This artifact only records whether the host appears capable of building or
 running a DPDK prototype. It does not bind NICs, reserve hugepages, send packets,
 or support any kernel-bypass latency/throughput claim.
-dpdk-devbind status: not collected (unsupported OS)
+dpdk-devbind status: not collected (tool not found)
