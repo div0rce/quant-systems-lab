@@ -1243,4 +1243,6 @@ networking study.
 
 Issue #90 remains the full hardware-PMU evidence debt. Issues #99 and #110 were addressed by PR
 #111. Issues #95, #28, and #26 were addressed by PR #112. Issue #94 is the external technical
-review request and remains one of the highest remaining credibility signals.
+review request and remains one of the highest remaining credibility signals. PR #124 completed M49;
+the current follow-up branch `perf/linux-host-artifact-refresh` refreshes Linux host artifacts on
+Fedora Asahi without adding new networking claims.

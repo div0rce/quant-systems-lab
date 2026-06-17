@@ -16,19 +16,17 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M42 are merged. PR #101 (40f9249) and PR #102 (7092423)
+The repo is released at `v0.1.0`. M0–M49 are merged. PR #101 (40f9249) and PR #102 (7092423)
 synchronized project-memory files after M35. PR #103 (0f2ceb7) inserted the repository-health
 refactor phase **M36–M42** and shifted the original networking/persistence roadmap after those
 refactors. PR #113 extended the future roadmap to **M43–M49**. M36–M42 landed as PR #104
-(0d2b97a), PR #105 (a8c0485),
-PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109 (68061e6), and PR #111
-(003504f). PR #112 (2369f84) closed issues #95, #28, and #26. PR #113 (f3cc4dd) updated the
-future systems-engineering roadmap and agent guidance. PR #114 (29ed491) added the M43
-CPU-affinity / scheduler-migration / NUMA-locality study. PR #115 (cd05b37) landed M44 plus the
-M45A source-digest provenance slice for false-sharing and NUMA artifacts. PR #116 (b9ea27a)
-completed the M45B provenance migration, PR #117 (d10bfb0) landed M45 persistence, and PR #118
-(aeba72c) landed M46 recovery benchmarking. Current active work is M47 PR #119 on
-`feat/m47-contiguous-order-book-storage`.
+(0d2b97a), PR #105 (a8c0485), PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109
+(68061e6), and PR #111 (003504f). PR #112 (2369f84) closed issues #95, #28, and #26. PR #113
+(f3cc4dd) updated the future systems-engineering roadmap and agent guidance. M43–M49 landed as PR
+#114 (29ed491), PR #115 (cd05b37), PR #117 (d10bfb0), PR #118 (aeba72c), PR #119 (93d5062),
+PR #123 (c643b62), and PR #124 (d8c16b2), with M45B provenance migration in PR #116 (b9ea27a) and
+the M47 storage diagnosis follow-up in PR #122 (548cb68). Current active work is the Linux host
+artifact refresh follow-up on `perf/linux-host-artifact-refresh`.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -41,7 +39,7 @@ Background — M29 delivered (merged, constrained-environment only):
 - The repository does **not** currently claim real hardware PMU evidence.
 - Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
 
-Current work is M47, the contiguous order-book storage and cache-locality study. To resume:
+Current work is the Linux host artifact refresh follow-up. To resume:
 
 ```text
 /resume
@@ -68,12 +66,13 @@ gh release view v0.1.0
 
 Current state:
 
-- latest synced main baseline: `aeba72c` (PR #118, M46 recovery benchmarking)
-- current active branch, if active: `feat/m47-contiguous-order-book-storage`
-- current active status: M47 PR #119 open; contiguous direct-price-indexed storage is being
-  evaluated against baseline, PMR pooled, and intrusive pooled storage modes
+- latest synced main baseline: `d8c16b2` (PR #124, M49 NIC offload and low-latency networking study)
+- current active branch, if active: `perf/linux-host-artifact-refresh`
+- current active status: follow-up branch refreshing Linux host artifacts after moving from macOS
+  to Fedora Asahi Linux
 - release tag: `v0.1.0`
-- open follow-up issue: #90 for full Linux hardware PMU perf evidence
+- open follow-up issue: #90 for full Linux hardware PMU perf evidence; current Asahi Linux host
+  records partial Apple PMU evidence but lacks cache-reference/cache-miss counter support
 - issues #95, #28, and #26 were closed by PR #112
 - open review request issue: #94
 - legacy backlog still open: #29 and #32
@@ -82,9 +81,10 @@ Current state:
 
 The repository-health refactor phase (M36–M42), the post-M42 feature follow-up (PR #112), the
 roadmap audit (PR #113), M43 NUMA awareness study (PR #114), M44 false-sharing study (PR #115),
-M45B provenance migration (PR #116), M45 persistence (PR #117), and M46 recovery benchmarking
-(PR #118) are complete and merged. The current milestone is **M47 — Contiguous order-book storage
-and cache-locality study**.
+M45B provenance migration (PR #116), M45 persistence (PR #117), M46 recovery benchmarking
+(PR #118), M47 storage locality (PR #119), M47 storage diagnosis (PR #122), M48 DPDK research
+(PR #123), and M49 NIC/offload research (PR #124) are complete and merged. The current work is a
+follow-up artifact refresh, not a new roadmap milestone.
 
 ### Phase III / IV purpose
 

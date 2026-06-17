@@ -72,9 +72,11 @@ Evidence classes:
 | `linux-dpdk-constrained` | DPDK development files are visible, but usable hugepages or devbind support is missing. |
 | `linux-dpdk-build-ready` | DPDK build files, mounted/free hugepages, and devbind tooling are visible. This is still not packet evidence until a device is intentionally bound and a prototype runs. |
 
-The current development host is expected to classify as `unsupported-host` when run on macOS.
-That is a valid M48 outcome: it says the repo has research notes and a reproducible support check,
-not a fake kernel-bypass measurement.
+The current Fedora Asahi Linux artifact classifies as `linux-missing-dpdk`: the host is Linux and
+can expose basic PCI/IOMMU context, but `libdpdk` is not visible through `pkg-config`, no hugepages
+are reserved or mounted for DPDK use, and devbind tooling is absent. That is a valid M48 outcome:
+it says the repo has research notes and a reproducible support check, not a fake kernel-bypass
+measurement.
 
 ## Current DPDK Prerequisites
 
