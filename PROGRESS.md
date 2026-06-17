@@ -21,7 +21,7 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** Linux host artifact refresh follow-up after M49
-- **Status:** ◑ Linux host artifacts refreshed and verification passed; follow-up PR review pending
+- **Status:** ◑ Linux host artifacts refreshed; draft PR #125 open for review
 - **Active branch:** `perf/linux-host-artifact-refresh`
 - **Last completed milestone:** M49 — NIC offload and low-latency networking study (squash-merged
   PR #124, commit d8c16b2), after M48 — DPDK research and prototype (squash-merged PR #123, commit
@@ -43,9 +43,9 @@ Do not rely on prior chat memory.
   numa-study` records single-node constrained evidence; and `make false-sharing-study`, `make
   profile-io`, `make socket-load`, `make socket-stress`, and `make crash-recovery` regenerated
   Linux host artifacts. `git diff --check`, Bash syntax checks, ShellCheck for the touched artifact
-  scripts, and host-level `make check` passed.
-- **Next action:** open/review the follow-up PR from `perf/linux-host-artifact-refresh`; do not
-  merge from automation.
+  scripts, and host-level `make check` passed. Draft PR #125 is open for review:
+  <https://github.com/div0rce/quant-systems-lab/pull/125>.
+- **Next action:** review draft PR #125; do not merge from automation.
 - **Blockers:** issue #90 remains open because this host lacks the required cache PMU counters for
   full hardware-PMU evidence. Issue #94 remains open for independent external review. Hardware
   NIC/offload latency measurement still requires suitable wired NIC hardware, driver support,
