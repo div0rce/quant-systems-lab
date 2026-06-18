@@ -96,8 +96,10 @@ evidence, persistence/recovery benchmarking, and late-stage low-latency networki
 
 Current priority order:
 
-1. M47 — Contiguous order-book storage and cache-locality study.
-2. Issue #90 — real Linux hardware PMU perf evidence (whenever a PMU-capable Linux host is available).
+1. Linux host artifact refresh PR #125 — human review / squash-merge; do not merge from automation.
+2. Issue #90 — full Linux hardware PMU perf evidence (cache-reference/cache-miss counters). The
+   current Fedora Asahi host records only partial Apple PMU counters, so this needs a PMU-capable
+   Linux host that exposes cache counters.
 3. Issue #94 — independent external technical review remains one of the highest credibility gaps.
 
 ### Forbidden shortcuts

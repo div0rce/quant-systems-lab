@@ -51,9 +51,9 @@ tx queues: 1
 
 == ip -details link show dev wld0 ==
 2: wld0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DORMANT group default qlen 1000
-    link/ether 7e:c8:91:10:5e:af brd ff:ff:ff:ff:ff:ff permaddr 74:a6:cd:93:74:cc promiscuity 0 allmulti 0 minmtu 68 maxmtu 1500 netns-immutable addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 parentbus pci parentdev 0000:01:00.0
+    link/ether xx:xx:xx:xx:xx:xx brd ff:ff:ff:ff:ff:ff permaddr xx:xx:xx:xx:xx:xx promiscuity 0 allmulti 0 minmtu 68 maxmtu 1500 netns-immutable addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 parentbus pci parentdev 0000:01:00.0
     altname wlp1s0f0
-    altname wlx74a6cd9374cc
+    altname wlxxxxxxxxxxxxx
 
 == ethtool -i wld0 ==
 driver: brcmfmac

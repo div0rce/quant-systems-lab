@@ -725,12 +725,14 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M49 PR #124 on `feat/m49-nic-offload-study`: wait for human review / CI and do
-not merge from automation. The M49 artifact is an unsupported-host environment check with clean
-source-digest provenance, not NIC-offload or latency evidence.
+Current action is the Linux host artifact refresh PR #125 on `perf/linux-host-artifact-refresh`:
+wait for human review / CI and do not merge from automation. M49 (PR #124) is already merged to
+`main` as d8c16b2. The refreshed artifacts are host-specific Linux evidence — partial Apple PMU
+counters (cycles/instructions/branches/branch-misses) with cache-reference/cache-miss counters
+unsupported — not NIC-offload, latency, or full hardware-PMU evidence.
 
-Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
-PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
+Issue #90 remains the evidence debt for full Linux hardware PMU artifacts (cache counters). Work it
+only on a PMU-capable Linux host; do not relabel constrained or partial artifacts as full evidence.
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 

@@ -185,13 +185,24 @@ qsl_emit_provenance() {
 }
 
 qsl_publish_artifact() {
-    local tmp="$1" out="$2" clean
+    local tmp="$1" out="$2" clean out_dir
     if [[ -z "$tmp" || -z "$out" ]]; then
         echo "error: qsl_publish_artifact requires temporary and output paths" >&2
         exit 2
     fi
-    clean="$(mktemp)"
-    sed 's/[[:blank:]]*$//' "$tmp" |
+    # Create the cleaned temp file in the destination directory so the final mv is an
+    # atomic same-filesystem rename, not a cross-filesystem copy+unlink that could leave a
+    # partially written artifact if interrupted.
+    out_dir="$(dirname "$out")"
+    clean="$(mktemp "${out_dir}/.qsl_publish.XXXXXX")"
+    # Sanitize host MAC identifiers (link/ether, permaddr, and the wlx<mac> altname) before
+    # publishing, then trim trailing whitespace and trailing blank lines, so generated
+    # evidence never leaks stable hardware identifiers into committed reports.
+    sed -E \
+        -e 's#(link/ether )([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}#\1xx:xx:xx:xx:xx:xx#g' \
+        -e 's#(permaddr )([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}#\1xx:xx:xx:xx:xx:xx#g' \
+        -e 's#(altname wlx)[0-9a-fA-F]{12}#\1xxxxxxxxxxxx#g' \
+        -e 's/[[:blank:]]*$//' "$tmp" |
         awk '
             { lines[NR] = $0 }
             END {
