@@ -6,12 +6,12 @@ OS:             Linux 6.19.14-400.asahi.fc44.aarch64+16k
 Compiler:       c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:     Release
 Provenance version: 1
-Git commit (informational): fd99ad8
-Source digest: sha256:3ecbe46442a47b674ccf88e8213c37153fddc64c3275991c6267b389731bcca6
+Git commit (informational): a34a927
+Source digest: sha256:48741d8fc4f020e6382f3cd8c63a3f418abf762ef8b7cb3a7c14a454a7e5b54a
 Source digest scope: false-sharing-study
 Dirty inputs: no
 Generated output: results/false_sharing_study.txt
-Date: 2026-06-17T18:32:36Z
+Date: 2026-06-20T19:08:39Z
 Dataset:        synthetic SPSC cursor exchange (producer tail / consumer head)
 
 Host support summary: portable two-thread C++ benchmark; no PMU counters required.
@@ -29,5 +29,5 @@ index with acquire. Benchmark-only control: the padded layout puts each index on
 128-byte boundary, so the two cursors sit on distinct coherency lines even on hosts
 with 128-byte cache lines (Apple Silicon); the production SpscRing pads to 64 bytes.
 
-packed indices              4000000 cursor updates        2.7 ns/update    372141280 updates/sec checksum=4000000026007
-padded indices              4000000 cursor updates       30.4 ns/update     32934957 updates/sec checksum=4000001978042
+packed indices              4000000 cursor updates        2.7 ns/update    372278782 updates/sec checksum=4000000017686
+padded indices              4000000 cursor updates       26.2 ns/update     38101854 updates/sec checksum=4000002053291

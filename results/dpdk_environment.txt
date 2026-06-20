@@ -8,12 +8,12 @@ CPU:         Avalanche-M2
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  n/a
 Provenance version: 1
-Git commit (informational): fd99ad8
-Source digest: sha256:80708dd663f857bb44db469348d6ededd30345e07bbd284bf5a28173b642fb2c
+Git commit (informational): 542aa1c
+Source digest: sha256:67188fe843d4923ecad4264e0a1b1fb8cb768e703269379b691ddebf20ca9f1f
 Source digest scope: dpdk-environment-check
 Dirty inputs: no
 Generated output: results/dpdk_environment.txt
-Date: 2026-06-17T18:32:14Z
+Date: 2026-06-20T19:20:38Z
 pkg-config:  /usr/bin/pkg-config
 libdpdk pkg-config status: not-available
 libdpdk version: not-found
@@ -27,7 +27,7 @@ lspci:       /usr/bin/lspci
 HugePages_Total: 0
 HugePages_Free:  0
 Hugepagesize_kB: 32768
-Hugepage mount /dev/hugepages: missing
+Hugepage mount /dev/hugepages: mounted
 vfio-pci loaded: no
 uio loaded:      no
 IOMMU groups present: yes

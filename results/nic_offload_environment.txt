@@ -1,4 +1,4 @@
-Command:     make nic-offload-check
+Command:     QSL_NIC_DEVICES=wld0 make nic-offload-check
 Artifact:    NIC offload and timestamping capability check (non-mutating)
 Evidence class: linux-readonly-capability-observation
 Host support summary: Linux host with read-only NIC capability inspection; no settings changed and no packet measurement ran
@@ -8,12 +8,12 @@ CPU:         Avalanche-M2
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  n/a
 Provenance version: 1
-Git commit (informational): fd99ad8
-Source digest: sha256:4db9a16cf11f291683540e4ae77ad0e423a4ad415be9ae023a587fa62a35dba9
+Git commit (informational): 542aa1c
+Source digest: sha256:8d0bc5a19455d8d50119c10068769ff418a5bf8c55bacde5e6837f51f8d414d6
 Source digest scope: nic-offload-environment-check
 Dirty inputs: no
 Generated output: results/nic_offload_environment.txt
-Date: 2026-06-17T18:32:18Z
+Date: 2026-06-20T19:20:38Z
 ethtool:     /usr/bin/ethtool
 ip:          /usr/bin/ip
 lspci:       /usr/bin/lspci
