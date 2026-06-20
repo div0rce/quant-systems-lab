@@ -21,7 +21,8 @@ Do not rely on prior chat memory.
 ## Current state
 
 - **Active milestone:** Linux host artifact refresh follow-up after M49
-- **Status:** ◑ Linux host artifacts refreshed; draft PR #125 open for review
+- **Status:** ◑ Linux host artifacts regenerated from clean inputs (MAC sanitizer generalized,
+  benchmark docs synced); PR #125 open for review
 - **Active branch:** `perf/linux-host-artifact-refresh`
 - **Last completed milestone:** M49 — NIC offload and low-latency networking study (squash-merged
   PR #124, commit d8c16b2), after M48 — DPDK research and prototype (squash-merged PR #123, commit
@@ -31,21 +32,25 @@ Do not rely on prior chat memory.
 - **`make check` passing:** yes on the Linux artifact-refresh branch. The sandboxed run failed to
   create the TCP loopback listener and was interrupted; rerunning `make check` with host socket
   access passed all 240 tests on 2026-06-17.
-- **Last action:** after moving to Fedora Asahi Linux, created
-  `perf/linux-host-artifact-refresh` from `main` at d8c16b2 and regenerated host-specific Linux
-  artifacts without changing system/network state. The shared artifact publisher now trims trailing
-  horizontal whitespace and trailing blank EOF lines before publishing generated reports. Refreshed
-  artifacts all report `Dirty inputs: no`: `make nic-offload-check` records a read-only
-  `linux-readonly-capability-observation` for `wld0` (Broadcom BCM4387 via `brcmfmac`); `make
-  dpdk-check` records `linux-missing-dpdk`; `QSL_PERF_ALLOW_PARTIAL=1 make perf-stat` records
-  partial PMU evidence with cache-reference/cache-miss counters unsupported; `make perf-record`
-  records a software `cpu-clock` hot-symbol profile; `QSL_NUMA_ALLOW_CONSTRAINED=1 make
-  numa-study` records single-node constrained evidence; and `make false-sharing-study`, `make
-  profile-io`, `make socket-load`, `make socket-stress`, and `make crash-recovery` regenerated
-  Linux host artifacts. `git diff --check`, Bash syntax checks, ShellCheck for the touched artifact
-  scripts, and host-level `make check` passed. Draft PR #125 is open for review:
+- **Last action:** finished the PR #125 review-fix follow-up on the Fedora Asahi host. Generalized
+  the publish-time MAC sanitizer (`fix:` a34a927) to redact every MAC-shaped token except the
+  universal broadcast — the prior `link/ether`/`permaddr`/`altname wlx` rules missed a bridge
+  interface's `bridge_id`/`designated_root`/`group_address` MAC in `nic-offload-check` output. Since
+  `scripts/qsl_common.sh` is a declared provenance input for all 15 generators, regenerated every
+  Linux host artifact (`perf-stat` partial PMU, `perf-record` cpu-clock profile, `numa-study`
+  single-node constrained, `nic-offload-check` read-only `wld0`, `dpdk-check` `linux-missing-dpdk`,
+  `false-sharing-study`, `profile-io`, `socket-stress`, `crash-recovery`, `socket-load`) plus all
+  bench artifacts (`bench`, `bench-allocator`, `bench-storage`, `bench-recovery`, `bench-diff`) from
+  the clean committed tree. All 15 report `Dirty inputs: no` with refreshed digests; the audit's MAC
+  leak grep over `results/` returns nothing. Synced the README benchmark table and
+  `docs/recruiting_notes.md` to the regenerated `results/latest.txt` (~114/19/121/99/114 ns,
+  replacing the stale ~126/39/270/121/132 ns). Added `results/*.sqlite` to `.gitignore`. `make
+  check` 240/240; no runtime C++ changed, so asan/tsan not required. PR #125:
   <https://github.com/div0rce/quant-systems-lab/pull/125>.
-- **Next action:** review draft PR #125; do not merge from automation.
+- **Next action:** push the regeneration to `perf/linux-host-artifact-refresh`, let CI +
+  CodeRabbit/Codex re-review, then have the human squash-merge PR #125 (do not merge from
+  automation). After #125 merges, rebase/regenerate PR #126 (CodeRabbit shell tests for
+  `qsl_common.sh`) against it — #126 cannot merge before #125.
 - **Blockers:** issue #90 remains open because this host lacks the required cache PMU counters for
   full hardware-PMU evidence. Issue #94 remains open for independent external review. Hardware
   NIC/offload latency measurement still requires suitable wired NIC hardware, driver support,
@@ -319,6 +324,30 @@ Lower priority:
   remains open; perf-record produced a software `cpu-clock` hot-symbol profile. Loopback socket and
   crash-recovery artifacts were regenerated on the same Linux host with clean source-digest
   provenance. These artifacts are host-specific evidence, not production networking claims.
+- [2026-06-20] PR #125 Linux artifact regeneration (finishing the review-fix follow-up). On the
+  Fedora Asahi host (aarch64, GCC 16.1.1, `make check` 240/240), first generalized the publish-time
+  MAC sanitizer (`fix:` commit a34a927): `qsl_publish_artifact` previously redacted only
+  `link/ether` / `permaddr` / `altname wlx`, so a bridge interface in `nic-offload-check`'s
+  `ip -details` output still leaked a host MAC via `bridge_id` / `designated_root` / `group_address`.
+  It now redacts every MAC-shaped token except the universal broadcast address, mirroring the
+  limitations-audit leak regex. Because `scripts/qsl_common.sh` is a declared `PROVENANCE_INPUTS`
+  entry for all 15 result generators, regenerated every artifact from the clean committed tree:
+  `QSL_PERF_ALLOW_PARTIAL=1 make perf-stat` (partial Apple Avalanche PMU cycles/instructions/
+  branches/branch-misses; cache-reference/cache-miss `<not supported>`, so #90 stays open),
+  `make perf-record` (cpu-clock software hot-symbol profile, 164 samples),
+  `QSL_NUMA_ALLOW_CONSTRAINED=1 make numa-study` (single-node constrained), `make nic-offload-check`
+  (read-only `wld0` observation, now MAC-clean), `make dpdk-check` (`linux-missing-dpdk`),
+  `make false-sharing-study`, `make profile-io`, `make socket-stress`, `make crash-recovery`,
+  `make socket-load`, plus `make bench` / `bench-allocator` / `bench-storage` / `bench-recovery` /
+  `bench-diff`. All 15 artifacts report `Dirty inputs: no` with refreshed source digests, and
+  `git grep -nE '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}' -- results/ | grep -v 'ff:ff:ff:ff:ff:ff'`
+  returns nothing. Closed the README/recruiting benchmark drift: synced the README benchmark table
+  and `docs/recruiting_notes.md` to the regenerated `results/latest.txt` (single source of truth) —
+  order book ~114 ns/op, protocol ~19 ns/op, gateway ~121 ns/op, matching ~99 ns/command, replay
+  ~114 ns/command (the prior macOS-era ~126/39/270/121/132 ns numbers were stale). Added
+  `results/*.sqlite` to `.gitignore` so the local `qsl-results` MCP store is never committed. No
+  runtime C++ changed, so `make asan` / `make tsan` were not required. Do not merge from automation;
+  the human squash-merges PR #125, then PR #126 is rebased/regenerated against it.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.

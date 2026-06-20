@@ -26,7 +26,9 @@ refactors. PR #113 extended the future roadmap to **M43–M49**. M36–M42 lande
 #114 (29ed491), PR #115 (cd05b37), PR #117 (d10bfb0), PR #118 (aeba72c), PR #119 (93d5062),
 PR #123 (c643b62), and PR #124 (d8c16b2), with M45B provenance migration in PR #116 (b9ea27a) and
 the M47 storage diagnosis follow-up in PR #122 (548cb68). Current active work is the Linux host
-artifact refresh follow-up on `perf/linux-host-artifact-refresh`.
+artifact refresh follow-up on `perf/linux-host-artifact-refresh` (PR #125): the review fixes plus a
+full Fedora Asahi regeneration of every `results/*.txt` from clean inputs are done; awaiting human
+squash-merge, after which PR #126 (CodeRabbit shell tests for `qsl_common.sh`) is rebased against it.
 
 Background — M29 delivered (merged, constrained-environment only):
 
@@ -68,8 +70,12 @@ Current state:
 
 - latest synced main baseline: `d8c16b2` (PR #124, M49 NIC offload and low-latency networking study)
 - current active branch, if active: `perf/linux-host-artifact-refresh`
-- current active status: follow-up branch refreshing Linux host artifacts after moving from macOS
-  to Fedora Asahi Linux
+- current active status: PR #125 follow-up complete on the Fedora Asahi host — generalized the
+  publish-time MAC sanitizer (commit a34a927; redacts every non-broadcast MAC, closing the
+  bridge_id/designated_root/group_address leak), regenerated all 15 `results/*.txt` from clean
+  inputs (`Dirty inputs: no`, MAC-leak grep clean), and synced README/recruiting benchmark numbers
+  to `results/latest.txt`. `make check` 240/240. Awaiting human squash-merge; do not merge from
+  automation
 - release tag: `v0.1.0`
 - open follow-up issue: #90 for full Linux hardware PMU perf evidence; current Asahi Linux host
   records partial Apple PMU evidence but lacks cache-reference/cache-miss counter support

@@ -91,17 +91,18 @@ concern. They are **not** production exchange throughput or end-to-end latency, 
 hardware-, compiler-, and build-dependent — useful for regression detection and honest
 order-of-magnitude framing only.
 
-The run below is one machine: arm64 / Apple clang 17 / Release / fixed seed 42. Full output
-and metadata are in [`results/latest.txt`](results/latest.txt); methodology and caveats in
-[docs/benchmarking.md](docs/benchmarking.md) and [docs/linux_performance.md](docs/linux_performance.md).
+The run below is one machine: Fedora Asahi Linux (aarch64, Apple M2) / GCC 16.1.1 / Release /
+fixed seed 42. Full output and metadata are in [`results/latest.txt`](results/latest.txt);
+methodology and caveats in [docs/benchmarking.md](docs/benchmarking.md) and
+[docs/linux_performance.md](docs/linux_performance.md).
 
 | Scenario (synthetic, in-process) | Measured on this run |
 |---|---|
-| Order book add/modify/cancel | ~126 ns/op |
-| Protocol `NewOrder` encode+decode | ~39 ns/op |
-| Gateway session, crossing order with fill | ~270 ns/op |
-| Matching-engine flow (apply) | ~121 ns/command |
-| Replay from command log | ~132 ns/command |
+| Order book add/modify/cancel | ~114 ns/op |
+| Protocol `NewOrder` encode+decode | ~19 ns/op |
+| Gateway session, crossing order with fill | ~121 ns/op |
+| Matching-engine flow (apply) | ~99 ns/command |
+| Replay from command log | ~114 ns/command |
 
 Reproduce with `make bench` (numbers will differ by machine). The differential-testing harness
 (generation, replay, shrinking) has its own benchmark — `make bench-diff`, written to
