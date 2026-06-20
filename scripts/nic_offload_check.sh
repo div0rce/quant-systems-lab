@@ -265,6 +265,6 @@ fi
     fi
 } >"$TMP_OUT"
 
-mv "$TMP_OUT" "$OUT"
+qsl_publish_artifact "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"

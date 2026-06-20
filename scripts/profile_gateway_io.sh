@@ -229,6 +229,6 @@ fi
     echo "- Constrained profiling evidence for investigation; not a production-latency claim."
 } >"$TMP_OUT"
 
-mv "$TMP_OUT" "$OUT"
+qsl_publish_artifact "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"

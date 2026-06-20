@@ -1,24 +1,24 @@
 Command:     make perf-stat
 Artifact:    constrained-environment validation (partial; not full hardware PMU evidence)
 Hardware:    aarch64
-OS:          Linux 6.12.76-linuxkit
-CPU:         Apple aarch64
-Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
-Perf:        WARNING: perf not found for kernel 6.12.76
+OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
+CPU:         Avalanche-M2
+Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
+Perf:        perf version 6.19.14-400.asahi.fc44.aarch64
 Perf paranoid: 2
 Build type:  Release
 Provenance version: 1
-Git commit (informational): fc35787
-Source digest: sha256:1d4eb19cb39fb5c57a37e04eb77d017ce3474f6a3070d948702997a77cdc7ab6
+Git commit (informational): a34a927
+Source digest: sha256:95ae3820c75d216fe2c39dd0645196e065e7037a0dc8940184a541b1db63104c
 Source digest scope: perf-stat-benchmark
 Dirty inputs: no
 Generated output: results/perf_stat_linux.txt
-Date: 2026-06-11T15:15:25Z
+Date: 2026-06-20T19:08:37Z
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
 Dataset:     qsl-bench default synthetic benchmark suite
 Events:      cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches,page-faults
-Perf status: 2
+Perf status: 0
 Unsupported counters detected: yes
 Hardware counters supported: no
 
@@ -27,21 +27,39 @@ Partial artifacts document environment behavior only; they are not full PMU evid
 This is profiling evidence for investigation, not a production-latency claim.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops         81.4 ns/op       12283566 ops/sec
-protocol encode+decode        500000 ops         22.0 ns/op       45468153 ops/sec
-gateway session (fill)        200000 ops        128.7 ns/op        7768662 ops/sec
-matching engine flow            5004 items      126.0 ns/item      7935510 items/sec
-replay command log              5004 items      162.7 ns/item      6147373 items/sec
+order_book add/mod/cancel     200000 ops        129.8 ns/op        7705241 ops/sec
+protocol encode+decode        500000 ops         20.0 ns/op       50003700 ops/sec
+gateway session (fill)        200000 ops        125.8 ns/op        7950000 ops/sec
+matching engine flow            5004 items      100.4 ns/item      9959893 items/sec
+replay command log              5004 items      112.9 ns/item      8854344 items/sec
 
 Benchmark output under perf:
+order_book add/mod/cancel     200000 ops        146.6 ns/op        6820694 ops/sec
+protocol encode+decode        500000 ops         23.5 ns/op       42638883 ops/sec
+gateway session (fill)        200000 ops        128.2 ns/op        7797454 ops/sec
+matching engine flow            5004 items      101.4 ns/item      9858712 items/sec
+replay command log              5004 items      114.2 ns/item      8756600 items/sec
 
 perf stat output:
-WARNING: perf not found for kernel 6.12.76
 
-  You may need to install the following packages for this specific kernel:
-    linux-tools-6.12.76-linuxkit
-    linux-cloud-tools-6.12.76-linuxkit
+ Performance counter stats for 'build/bench/qsl-bench':
 
-  You may also want to install one of the following packages to keep up to date:
-    linux-tools-linuxkit
-    linux-cloud-tools-linuxkit
+       287,995,594      apple_avalanche_pmu/cycles/u                                            (59.88%)
+       235,879,098      apple_blizzard_pmu/cycles/u                                             (40.12%)
+     1,510,519,510      apple_avalanche_pmu/instructions/u                                        (59.88%)
+       855,745,878      apple_blizzard_pmu/instructions/u                                        (40.12%)
+       300,505,281      apple_avalanche_pmu/branches/u                                          (59.88%)
+       163,381,310      apple_blizzard_pmu/branches/u                                           (40.12%)
+         2,094,842      apple_avalanche_pmu/branch-misses/u                                        (59.88%)
+            33,122      apple_blizzard_pmu/branch-misses/u                                        (40.12%)
+   <not supported>      apple_avalanche_pmu/cache-references/u
+   <not supported>      apple_blizzard_pmu/cache-references/u
+   <not supported>      apple_avalanche_pmu/cache-misses/u
+   <not supported>      apple_blizzard_pmu/cache-misses/u
+                 0      context-switches:u
+               950      page-faults:u
+
+       0.104252393 seconds time elapsed
+
+       0.102945000 seconds user
+       0.000992000 seconds sys

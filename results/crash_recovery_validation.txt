@@ -1,17 +1,17 @@
 Command:        make crash-recovery
 Evidence class: crash-validation (process-kill only; no power-loss claim)
-Hardware:       arm64
-CPU:            Apple M2
-OS:             Darwin 25.2.0
-Compiler:       Apple clang version 17.0.0 (clang-1700.3.19.1)
+Hardware:       aarch64
+CPU:            Avalanche-M2
+OS:             Linux 6.19.14-400.asahi.fc44.aarch64+16k
+Compiler:       c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:     Debug
 Provenance version: 1
-Git commit (informational): 4d8d13b
-Source digest: sha256:f05d1a186fb93fdde51c8d797cc84f56567880ef15e70fb6f4e7f96f29ffee2f
+Git commit (informational): a34a927
+Source digest: sha256:8150abd73731d16fd1f4fcad0459abebc9bcc1d13821a05b6e178a3a8148417b
 Source digest scope: crash-recovery-validation
 Dirty inputs: no
 Generated output: results/crash_recovery_validation.txt
-Date: 2026-06-12T02:27:54Z
+Date: 2026-06-20T19:09:44Z
 Dataset:        deterministic 16-byte-payload records from qsl-replay append-loop
 Scenario:       SIGKILL the writer mid-stream per durability mode, then recover/repair
 
@@ -23,20 +23,20 @@ Contract checked per trial:
   - clean and repaired logs accept appends and read back clean.
 
 Metric / Result:
-  fsync    trial=1 target_acks=25   acked=36    recovered=37    tail=clean   repaired=no  post_append=ok
-  fsync    trial=2 target_acks=50   acked=57    recovered=58    tail=clean   repaired=no  post_append=ok
-  fsync    trial=3 target_acks=75   acked=98    recovered=99    tail=clean   repaired=no  post_append=ok
-  flush    trial=1 target_acks=25   acked=10504 recovered=10504 tail=clean   repaired=no  post_append=ok
-  flush    trial=2 target_acks=50   acked=11426 recovered=11426 tail=clean   repaired=no  post_append=ok
-  flush    trial=3 target_acks=75   acked=10368 recovered=10368 tail=clean   repaired=no  post_append=ok
-  buffered trial=1 target_acks=1000 acked=16185 recovered=16091 tail=torn    repaired=yes post_append=ok
+  fsync    trial=1 target_acks=25   acked=17902 recovered=17902 tail=clean   repaired=no  post_append=ok
+  fsync    trial=2 target_acks=50   acked=536   recovered=536   tail=clean   repaired=no  post_append=ok
+  fsync    trial=3 target_acks=75   acked=29509 recovered=29510 tail=clean   repaired=no  post_append=ok
+  flush    trial=1 target_acks=25   acked=557   recovered=557   tail=clean   repaired=no  post_append=ok
+  flush    trial=2 target_acks=50   acked=32122 recovered=32123 tail=clean   repaired=no  post_append=ok
+  flush    trial=3 target_acks=75   acked=456   recovered=456   tail=clean   repaired=no  post_append=ok
+  buffered trial=1 target_acks=1000 acked=53310 recovered=53248 tail=clean   repaired=no  post_append=ok
   ambiguous-fixture records=1 tail=corrupt tail_error=truncated repair=refused
 
 Result: all 3 fsync and 3 flush process-kill trials preserved every
 acknowledged record. Torn tails repaired to clean appendable logs when provable.
-Result: repaired torn tails=1; process-kill corrupt tails refused=0;
+Result: repaired torn tails=0; process-kill corrupt tails refused=0;
 explicit ambiguous full-header fixtures refused=1.
-Result: the buffered demonstration lost 94 acknowledged record(s) under
+Result: the buffered demonstration lost 62 acknowledged record(s) under
 SIGKILL; user-space buffering is expected to lose its unflushed tail.
 
 Caveat: SIGKILL leaves the kernel page cache intact, so these trials validate

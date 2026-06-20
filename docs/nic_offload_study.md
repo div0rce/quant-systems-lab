@@ -2,8 +2,8 @@
 
 M49 is a late-stage networking study. It records what would have to be true before Quant Systems
 Lab could claim anything about NIC offloads, RSS, hardware timestamping, or vendor-specific
-kernel-bypass stacks. On the current macOS development host, this milestone is research and
-environment classification only.
+kernel-bypass stacks. On the current Fedora Asahi Linux host, this milestone is read-only
+capability observation plus research context only; no packet-path or latency measurement exists.
 
 Primary references used for this study:
 
@@ -69,8 +69,11 @@ If `QSL_NIC_DEVICES` names only absent interfaces, the artifact stays in the
 `linux-no-observable-nic` class and lists the missing names instead of treating the request as a
 successful capability observation.
 
-The current macOS development host should classify as `unsupported-host`. That is a valid M49
-result because the milestone is research-heavy unless suitable NIC hardware exists.
+The current Linux artifact classifies as `linux-readonly-capability-observation` for `wld0`, a
+Broadcom BCM4387 Wi-Fi device driven by `brcmfmac`. The probe can read basic device and offload
+feature state, but RSS/channel queries are unsupported and `ethtool -T` reports software
+timestamping only with no PTP hardware clock. This is a valid M49 result because it records the
+host boundary without changing settings or inventing NIC-offload latency evidence.
 
 ## What The Kernel Exposes
 

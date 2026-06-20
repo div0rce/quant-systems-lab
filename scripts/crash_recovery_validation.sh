@@ -263,6 +263,6 @@ TMP_OUT="$WORK_DIR/artifact.txt"
 } >"$TMP_OUT"
 
 mkdir -p "$(dirname "$OUT")"
-mv "$TMP_OUT" "$OUT"
+qsl_publish_artifact "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"

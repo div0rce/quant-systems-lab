@@ -1847,7 +1847,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 - **Branch:** `feat/m49-nic-offload-study`
 - **PR title:** `docs: study NIC offload and low-latency networking`
 - **Goal:** Research-heavy networking study unless suitable hardware exists.
-- **Status:** ◐ in progress.
+- **Status:** ☑ merged via PR #124 (`d8c16b2`).
 - **Dependencies:** M48 DPDK research, M43 CPU locality, M44 false-sharing/ingress evidence, and
   real NIC/hardware access for any measurement.
 - **Signal gained:** Late-stage NIC/offload context, hardware timestamping literacy, and limits of

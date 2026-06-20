@@ -1,15 +1,15 @@
 Command:     make bench-diff
-Hardware:    arm64
-OS:          Darwin 25.2.0
-Compiler:    Apple clang version 17.0.0 (clang-1700.3.19.1)
+Hardware:    aarch64
+OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
+Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): 2497d76
-Source digest: sha256:553945b4eb6eb45141d1859c34d5b9d719546a54911b75611aef1cc9aadb7ac0
+Git commit (informational): a34a927
+Source digest: sha256:fa9379bc5e417e8e8d505bb1e4d0e2e1ba3d17313d63665a9f6adff5ee379eb5
 Source digest scope: differential-benchmark-suite
 Dirty inputs: no
 Generated output: results/differential.txt
-Date: 2026-06-11T15:11:42Z
+Date: 2026-06-20T19:10:12Z
 Dataset:     property command streams (generate_property_flow, 3 symbols, 120 orders)
 Warmup:      iters/10 (or 1 throughput pass) per benchmark, before timing
 Units:       latency = ns/op + ops/sec; throughput = ns/item + items/sec
@@ -19,6 +19,6 @@ measure the differential-testing harness (generation, gateway replay, shrinking)
 production throughput; hardware/compiler/build dependent.
 
 Scenario / Metric / Result:
-property flow generation         123 items       57.9 ns/item     17262649 items/sec
-differential gateway replay       123 items       67.6 ns/item     14785129 items/sec
-shrink property flow             300 ops      41501.4 ns/op          24096 ops/sec
+property flow generation         123 items      107.4 ns/item      9310384 items/sec
+differential gateway replay       123 items      116.1 ns/item      8616203 items/sec
+shrink property flow             300 ops      49119.6 ns/op          20358 ops/sec

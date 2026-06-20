@@ -1,19 +1,19 @@
 Command:     bash scripts/profile_gateway_io.sh  (make profile-io)
 Artifact:    gateway syscall / kernel-socket path profile (loopback, constrained)
 Hardware:    aarch64
-OS:          Linux 6.12.76-linuxkit
-CPU:         Apple aarch64
-Compiler:    c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
+CPU:         Avalanche-M2
+Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Debug
-strace:      strace -- version 6.8
+strace:      strace -- version 7.1
 CLK_TCK:     100
 Provenance version: 1
-Git commit (informational): fc35787
-Source digest: sha256:678c4f5c377b24d2b3373173327416758aa97416241a002a17082701831a7398
+Git commit (informational): a34a927
+Source digest: sha256:84bde978915b9bf22b8684fcef1531509e74f71ad1ac817fe71019a95ab1cf6f
 Source digest scope: gateway-io-profile
 Dirty inputs: no
 Generated output: results/socket_profile_loopback.txt
-Date: 2026-06-11T15:15:43Z
+Date: 2026-06-20T19:08:44Z
 Transport:   TCP over 127.0.0.1 (loopback), portable threaded TcpServer
 Load:        500 sequential client round trips (NewOrder + Heartbeat each)
 
@@ -22,12 +22,12 @@ User (engine-side) vs System (kernel/socket) CPU time splits user-space matching
 from time spent in the kernel servicing accept/read/write/close on the socket path.
 
 User (engine-side) CPU time:   0.000 s  (0 ticks)
-System (kernel/socket) CPU time: 0.040 s  (4 ticks)
+System (kernel/socket) CPU time: 0.030 s  (3 ticks)
 System share of CPU:           100.0%
-Minor page faults: 254    Major page faults: 1
-VmHWM:	    3556 kB
-voluntary_ctxt_switches:	507
-nonvoluntary_ctxt_switches:	2
+Minor page faults: 172    Major page faults: 0
+VmHWM:	    3872 kB
+voluntary_ctxt_switches:	502
+nonvoluntary_ctxt_switches:	3
 
 == Pass 2: strace -f -c (syscall mix on the gateway socket path) ==
 Call counts and in-kernel time per syscall. strace perturbs timing heavily, so read the
@@ -35,36 +35,35 @@ syscall *mix* (which calls dominate the socket path), not the absolute seconds.
 
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
- 49.84    0.078793         156       502         1 accept
- 15.70    0.024824          49       501           clone
-  9.56    0.015117           7      2005           rt_sigprocmask
-  4.68    0.007393          14       506           close
-  4.55    0.007187          14       502           set_robust_list
-  4.28    0.006772          13       500           sendto
-  4.23    0.006681          13       502           rseq
-  4.19    0.006628           6      1005           read
-  2.56    0.004050           8       501           madvise
-  0.14    0.000226         226         1           execve
-  0.11    0.000176           8        21           mmap
-  0.05    0.000072           5        13           mprotect
-  0.04    0.000059           5        11           munmap
-  0.03    0.000048           9         5           openat
-  0.02    0.000028           4         6           fstat
-  0.01    0.000021          21         1           bind
-  0.00    0.000007           7         1         1 faccessat
-  0.00    0.000006           6         1           listen
-  0.00    0.000005           5         1           set_tid_address
-  0.00    0.000005           5         1           rt_sigaction
-  0.00    0.000005           1         3           brk
-  0.00    0.000004           4         1         1 clone3
-  0.00    0.000000           0         1         1 ioctl
+ 47.08    0.039473          78       502         1 accept
+ 21.29    0.017852          35       501           clone3
+  7.45    0.006250           3      2005           rt_sigprocmask
+  5.25    0.004403           8       506           close
+  4.88    0.004092           8       500           sendto
+  4.63    0.003881           7       502           rseq
+  3.73    0.003128           3      1005           read
+  3.58    0.003004           5       502           set_robust_list
+  2.03    0.001699           3       504           madvise
+  0.03    0.000025           1        24           mmap
+  0.02    0.000014           1        11           munmap
+  0.01    0.000006           0        11           mprotect
+  0.01    0.000005           5         1           socket
+  0.01    0.000005           5         1           bind
+  0.00    0.000003           3         1           rt_sigaction
+  0.00    0.000003           3         1           listen
+  0.00    0.000003           3         1           setsockopt
+  0.00    0.000003           1         3           brk
+  0.00    0.000001           1         1         1 ioctl
+  0.00    0.000001           0         6           fstat
+  0.00    0.000000           0         1         1 faccessat
+  0.00    0.000000           0         5           openat
+  0.00    0.000000           0         1           set_tid_address
   0.00    0.000000           0         1           futex
-  0.00    0.000000           0         1           socket
-  0.00    0.000000           0         1           setsockopt
+  0.00    0.000000           0         1           execve
   0.00    0.000000           0         1           prlimit64
   0.00    0.000000           0         1           getrandom
 ------ ----------- ----------- --------- --------- ----------------
-100.00    0.158107          23      6596         4 total
+100.00    0.083851          12      6599         3 total
 
 Caveats:
 - Loopback only: no NIC, device driver, routing, or real-network behaviour is exercised.

@@ -20,39 +20,42 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** M49 — NIC offload and low-latency networking study
-- **Status:** ◐ PR open; awaiting human review / squash merge
-- **Active branch:** `feat/m49-nic-offload-study`
-- **Last completed milestone:** M48 — DPDK research and prototype (squash-merged PR #123, commit
-  c643b62), after M47 follow-up — Storage benchmark diagnosis (squash-merged PR #122, commit
-  548cb68)
+- **Active milestone:** Linux host artifact refresh follow-up after M49
+- **Status:** ◑ Linux host artifacts regenerated from clean inputs (MAC sanitizer generalized,
+  benchmark docs synced); PR #125 open for review
+- **Active branch:** `perf/linux-host-artifact-refresh`
+- **Last completed milestone:** M49 — NIC offload and low-latency networking study (squash-merged
+  PR #124, commit d8c16b2), after M48 — DPDK research and prototype (squash-merged PR #123, commit
+  c643b62)
 - **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
 - **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes — native macOS 232/232 after adding the M49 NIC offload study,
-  non-mutating `make nic-offload-check` path, and unsupported-host artifact. M48 PR #123 CI passed
-  build-test, sanitizers, thread-sanitizer, ocaml-verifier, differential-sweep, determinism, and
-  CodeScene.
-- **Last action:** confirmed PR #123 was merged, fast-forwarded `main` to c643b62, verified no open
-  PRs, read the M49 milestone entry, started `feat/m49-nic-offload-study` from updated `main`, added
-  `docs/nic_offload_study.md`, `scripts/nic_offload_check.sh`, `make nic-offload-check`, and
-  `results/nic_offload_environment.txt`. The local artifact correctly classifies this macOS host as
-  `unsupported-host`, changes no NIC/offload/RSS/timestamping/driver state, sends no packets, and
-  records no latency benchmark. During `/review and fix`, Codex second-opinion review found that
-  missing `QSL_NIC_DEVICES` names could be misclassified as observed Linux devices; the script now
-  filters requested names against `/sys/class/net`, records missing requested names separately, and
-  keeps absent-device runs in `linux-no-observable-nic`. Finish verification passed `git diff
-  --check`, `bash -n scripts/nic_offload_check.sh`, `shellcheck scripts/nic_offload_check.sh
-  scripts/qsl_common.sh`, `shellcheck -S warning scripts/*.sh`, `make nic-offload-check`, `make
-  check` (232/232), and CodeScene pre-commit quality gates. A local `codex review --uncommitted`
-  second-opinion run was stopped after its internal CodeScene call hung; the direct CodeScene gate
-  passed and CodeScene file-level review reported `.sh` as unsupported. The final artifact was
-  regenerated from clean tracked source inputs with `Dirty inputs: no`, and PR #124 is open:
-  <https://github.com/div0rce/quant-systems-lab/pull/124>.
-- **Next action:** wait for review/CI on PR #124. Do not merge from automation.
-- **Blockers:** issue #90 remains blocked on PMU-capable Linux access. Issue #94 remains open for
-  independent external review. Hardware-specific NIC/offload measurement depends on real host,
-  driver, timestamping/offload, and NIC access; the current macOS host must be treated as
-  non-measured research unless suitable hardware is provided. Legacy backlog still includes #32 and
+- **`make check` passing:** yes on the Linux artifact-refresh branch. The sandboxed run failed to
+  create the TCP loopback listener and was interrupted; rerunning `make check` with host socket
+  access passed all 240 tests on 2026-06-17.
+- **Last action:** finished the PR #125 review-fix follow-up on the Fedora Asahi host. Generalized
+  the publish-time MAC sanitizer (`fix:` a34a927) to redact every MAC-shaped token except the
+  universal broadcast — the prior `link/ether`/`permaddr`/`altname wlx` rules missed a bridge
+  interface's `bridge_id`/`designated_root`/`group_address` MAC in `nic-offload-check` output. Since
+  `scripts/qsl_common.sh` is a declared provenance input for all 15 generators, regenerated every
+  Linux host artifact (`perf-stat` partial PMU, `perf-record` cpu-clock profile, `numa-study`
+  single-node constrained, `nic-offload-check` read-only `wld0`, `dpdk-check` `linux-missing-dpdk`,
+  `false-sharing-study`, `profile-io`, `socket-stress`, `crash-recovery`, `socket-load`) plus all
+  bench artifacts (`bench`, `bench-allocator`, `bench-storage`, `bench-recovery`, `bench-diff`) from
+  the clean committed tree. All 15 report `Dirty inputs: no` with refreshed digests; the audit's MAC
+  leak grep over `results/` returns nothing. Synced the README benchmark table and
+  `docs/recruiting_notes.md` to the regenerated `results/latest.txt` (~114/19/121/99/114 ns,
+  replacing the stale ~126/39/270/121/132 ns). Added `results/*.sqlite` to `.gitignore`. `make
+  check` 240/240; no runtime C++ changed, so asan/tsan not required. PR #125:
+  <https://github.com/div0rce/quant-systems-lab/pull/125>.
+- **Next action:** push the regeneration to `perf/linux-host-artifact-refresh`, let CI +
+  CodeRabbit/Codex re-review, then have the human squash-merge PR #125 (do not merge from
+  automation). After #125 merges, rebase/regenerate PR #126 (CodeRabbit shell tests for
+  `qsl_common.sh`) against it — #126 cannot merge before #125.
+- **Blockers:** issue #90 remains open because this host lacks the required cache PMU counters for
+  full hardware-PMU evidence. Issue #94 remains open for independent external review. Hardware
+  NIC/offload latency measurement still requires suitable wired NIC hardware, driver support,
+  timestamping/offload/RSS access, and a measured packet workload; the current `wld0` Wi-Fi
+  capability observation is not NIC-offload latency evidence. Legacy backlog still includes #32 and
   #29. Issues #95, #28, and #26 were closed by PR #112.
 
 ---
@@ -306,12 +309,51 @@ Lower priority:
 | M46 | Recovery benchmarking | `feat/m46-recovery-benchmarking` | ☑ merged | #118 | Full-replay restart cost vs in-memory book rebuild; no production recovery-time claims |
 | M47 | Contiguous order-book storage and cache-locality study | `feat/m47-contiguous-order-book-storage` | ☑ merged | #119 | Fixed-band direct-price-index storage compared against baseline, PMR, and intrusive modes |
 | Follow-up | M47 storage benchmark diagnosis | `perf/m47-storage-benchmark-diagnosis` | ☑ merged | #122 | Workload-shape variants + corrected timing (excludes per-run pool-init setup); overturns the earlier intrusive-slow reading |
-| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ◐ PR open | #123 | DPDK research notes + non-mutating environment support check; no packet-path benchmark or kernel-bypass claim |
-| M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☐ not started | — | Solarflare/Mellanox/RSS/timestamping study if hardware exists |
+| M48 | DPDK research and prototype | `feat/m48-dpdk-research-prototype` | ☑ merged | #123 | DPDK research notes + non-mutating environment support check; no packet-path benchmark or kernel-bypass claim |
+| M49 | NIC offload and low-latency networking study | `feat/m49-nic-offload-study` | ☑ merged | #124 | Solarflare/Mellanox/RSS/timestamping study + non-mutating capability check; no offload latency claim |
 
 ## Decision log additions
 
 - [2026-06-15] M48: added DPDK research notes and a non-mutating `make dpdk-check` support artifact. The macOS development host classifies as `unsupported-host`, with no device binding, hugepage mutation, packet-path benchmark, or kernel-bypass performance claim. A prototype remains optional and only valid on a host that can support it cleanly.
+- [2026-06-17] M49: PR #124 squash-merged to `main` as d8c16b2. On Fedora Asahi Linux, refreshed
+  host artifacts on `perf/linux-host-artifact-refresh`: NIC/offload check observes `wld0`
+  (`brcmfmac`, Broadcom BCM4387) read-only with feature listing visible, no RSS/channel support,
+  no hardware timestamping, no setting changes, no packet generator, and no latency benchmark.
+  DPDK remains `linux-missing-dpdk`; NUMA is single-node constrained; perf-stat has partial Apple
+  PMU cycles/instructions/branches/branch-misses but unsupported cache counters, so issue #90
+  remains open; perf-record produced a software `cpu-clock` hot-symbol profile. Loopback socket and
+  crash-recovery artifacts were regenerated on the same Linux host with clean source-digest
+  provenance. These artifacts are host-specific evidence, not production networking claims.
+- [2026-06-20] PR #125 Linux artifact regeneration (finishing the review-fix follow-up). On the
+  Fedora Asahi host (aarch64, GCC 16.1.1, `make check` 240/240), first generalized the publish-time
+  MAC sanitizer (`fix:` commit a34a927): `qsl_publish_artifact` previously redacted only
+  `link/ether` / `permaddr` / `altname wlx`, so a bridge interface in `nic-offload-check`'s
+  `ip -details` output still leaked a host MAC via `bridge_id` / `designated_root` / `group_address`.
+  It now redacts every MAC-shaped token except the universal broadcast address, mirroring the
+  limitations-audit leak regex. Because `scripts/qsl_common.sh` is a declared `PROVENANCE_INPUTS`
+  entry for all 15 result generators, regenerated every artifact from the clean committed tree:
+  `QSL_PERF_ALLOW_PARTIAL=1 make perf-stat` (partial Apple Avalanche PMU cycles/instructions/
+  branches/branch-misses; cache-reference/cache-miss `<not supported>`, so #90 stays open),
+  `make perf-record` (cpu-clock software hot-symbol profile, 164 samples),
+  `QSL_NUMA_ALLOW_CONSTRAINED=1 make numa-study` (single-node constrained), `make nic-offload-check`
+  (read-only `wld0` observation, now MAC-clean), `make dpdk-check` (`linux-missing-dpdk`),
+  `make false-sharing-study`, `make profile-io`, `make socket-stress`, `make crash-recovery`,
+  `make socket-load`, plus `make bench` / `bench-allocator` / `bench-storage` / `bench-recovery` /
+  `bench-diff`. All 15 artifacts report `Dirty inputs: no` with refreshed source digests, and
+  `git grep -nE '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}' -- results/ | grep -v 'ff:ff:ff:ff:ff:ff'`
+  returns nothing. Closed the README/recruiting benchmark drift: synced the README benchmark table
+  and `docs/recruiting_notes.md` to the regenerated `results/latest.txt` (single source of truth) —
+  order book ~114 ns/op, protocol ~19 ns/op, gateway ~121 ns/op, matching ~99 ns/command, replay
+  ~114 ns/command (the prior macOS-era ~126/39/270/121/132 ns numbers were stale). Added
+  `results/*.sqlite` to `.gitignore` so the local `qsl-results` MCP store is never committed. No
+  runtime C++ changed, so `make asan` / `make tsan` were not required. Also added
+  `tests/shell/test_qsl_common.sh` (registered in CTest; portable) covering both the MAC sanitization
+  (link/ether, permaddr, bridge_id/designated_root, group_address redacted; broadcast and the audit
+  leak-grep invariant preserved; wlx altname redacted) and the trailing-whitespace / blank-line
+  trimming, so the security-relevant publish logic ships with tests — `make check` 241/241. This
+  supersedes CodeRabbit's PR #126, whose generated tests covered only trimming and were based on
+  `d8c16b2` (where `qsl_publish_artifact` does not yet exist, so #126 could not merge before #125);
+  #126 was closed as superseded. Do not merge from automation; the human squash-merges PR #125.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
@@ -718,12 +760,14 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is M49 PR #124 on `feat/m49-nic-offload-study`: wait for human review / CI and do
-not merge from automation. The M49 artifact is an unsupported-host environment check with clean
-source-digest provenance, not NIC-offload or latency evidence.
+Current action is the Linux host artifact refresh PR #125 on `perf/linux-host-artifact-refresh`:
+wait for human review / CI and do not merge from automation. M49 (PR #124) is already merged to
+`main` as d8c16b2. The refreshed artifacts are host-specific Linux evidence — partial Apple PMU
+counters (cycles/instructions/branches/branch-misses) with cache-reference/cache-miss counters
+unsupported — not NIC-offload, latency, or full hardware-PMU evidence.
 
-Issue #90 remains the evidence debt for full Linux hardware PMU artifacts. Work it only on a
-PMU-capable Linux host; do not relabel constrained Docker artifacts as full evidence.
+Issue #90 remains the evidence debt for full Linux hardware PMU artifacts (cache counters). Work it
+only on a PMU-capable Linux host; do not relabel constrained or partial artifacts as full evidence.
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 

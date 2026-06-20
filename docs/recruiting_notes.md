@@ -55,15 +55,15 @@
 
 ## Benchmark bullets (measured — cite with the caveat)
 
-Single-machine synthetic, in-process microbenchmark (arm64, Apple clang 17, Release, seed 42;
-from `results/latest.txt`). **Excludes** network I/O, disk fsync, the kernel/socket path, and
-allocator tuning — not production throughput or end-to-end latency:
+Single-machine synthetic, in-process microbenchmark (aarch64 Fedora Asahi Linux, GCC 16.1.1,
+Release, seed 42; from `results/latest.txt`). **Excludes** network I/O, disk fsync, the
+kernel/socket path, and allocator tuning — not production throughput or end-to-end latency:
 
-- matching-engine flow ~121 ns/command (~8.2M commands/sec)
-- order-book add/modify/cancel ~126 ns/op
-- protocol `NewOrder` encode+decode ~39 ns/op
-- gateway session crossing-fill round-trip ~270 ns/op
-- replay from command log ~132 ns/command
+- matching-engine flow ~99 ns/command (~10.1M commands/sec)
+- order-book add/modify/cancel ~114 ns/op
+- protocol `NewOrder` encode+decode ~19 ns/op
+- gateway session crossing-fill round-trip ~121 ns/op
+- replay from command log ~114 ns/command
 
 ## Interview-defense notes
 

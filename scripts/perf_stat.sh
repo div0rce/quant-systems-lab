@@ -72,7 +72,7 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
         echo "Benchmark output:"
         cat "$BENCH_OUT"
     } >"$TMP_OUT"
-    mv "$TMP_OUT" "$OUT"
+    qsl_publish_artifact "$TMP_OUT" "$OUT"
     echo "wrote $OUT"
     cat "$OUT"
     echo "error: benchmark command failed before perf stat; partial mode cannot override this." >&2
@@ -129,7 +129,7 @@ fi
     cat "$PERF_OUT"
 } >"$TMP_OUT"
 
-mv "$TMP_OUT" "$OUT"
+qsl_publish_artifact "$TMP_OUT" "$OUT"
 echo "wrote $OUT"
 cat "$OUT"
 

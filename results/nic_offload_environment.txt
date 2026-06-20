@@ -1,32 +1,32 @@
-Command:     make nic-offload-check
+Command:     QSL_NIC_DEVICES=wld0 make nic-offload-check
 Artifact:    NIC offload and timestamping capability check (non-mutating)
-Evidence class: unsupported-host
-Host support summary: unsupported OS for NIC offload/timestamping inspection
-Hardware:    arm64
-OS:          Darwin 25.2.0
-CPU:         Apple M2
-Compiler:    Apple clang version 21.0.0 (clang-2100.1.1.101)
+Evidence class: linux-readonly-capability-observation
+Host support summary: Linux host with read-only NIC capability inspection; no settings changed and no packet measurement ran
+Hardware:    aarch64
+OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
+CPU:         Avalanche-M2
+Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  n/a
 Provenance version: 1
-Git commit (informational): 59c0cff
-Source digest: sha256:690f7298ad6e898a56ea15450e48532945156608a26033e5a35ff67c044c3b03
+Git commit (informational): 542aa1c
+Source digest: sha256:8d0bc5a19455d8d50119c10068769ff418a5bf8c55bacde5e6837f51f8d414d6
 Source digest scope: nic-offload-environment-check
 Dirty inputs: no
 Generated output: results/nic_offload_environment.txt
-Date: 2026-06-17T15:34:29Z
-ethtool:     not-found
-ip:          not-found
-lspci:       not-found
+Date: 2026-06-20T19:20:38Z
+ethtool:     /usr/bin/ethtool
+ip:          /usr/bin/ip
+lspci:       /usr/bin/lspci
 phc_ctl:     not-found
 ptp4l:       not-found
-Requested Linux devices: n/a
-Missing requested devices: n/a
-Linux devices inspected: n/a
-Device count: n/a
-Offload feature list visible: n/a
-RSS indirection/hash visible: n/a
-Queue/channel info visible: n/a
-Hardware timestamping visible: n/a
+Requested Linux devices: wld0
+Missing requested devices: none
+Linux devices inspected: wld0
+Device count: 1
+Offload feature list visible: yes
+RSS indirection/hash visible: no
+Queue/channel info visible: no
+Hardware timestamping visible: no
 Offload settings changed: no
 RSS settings changed: no
 Timestamping configured: no
@@ -37,4 +37,115 @@ Latency benchmark ran: no
 Caveat: This artifact records read-only host and NIC capability context. It does
 not change offload flags, queue counts, RSS tables, timestamp filters, drivers,
 or interrupt affinity, and it does not support any NIC-offload or latency claim.
-Device inspection: not collected (unsupported OS)
+
+== device wld0 summary ==
+operstate: up
+mtu:       1500
+driver:    brcmfmac
+pci:       0000:01:00.0
+rx queues: 1
+tx queues: 1
+
+== lspci -s 0000:01:00.0 ==
+01:00.0 Network controller: Broadcom Inc. and subsidiaries BCM4387 802.11ax Dual Band Wireless LAN Controller (rev 07)
+
+== ip -details link show dev wld0 ==
+2: wld0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DORMANT group default qlen 1000
+    link/ether xx:xx:xx:xx:xx:xx brd ff:ff:ff:ff:ff:ff permaddr xx:xx:xx:xx:xx:xx promiscuity 0 allmulti 0 minmtu 68 maxmtu 1500 netns-immutable addrgenmode none numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 gso_ipv4_max_size 65536 gro_ipv4_max_size 65536 parentbus pci parentdev 0000:01:00.0
+    altname wlp1s0f0
+    altname wlxxxxxxxxxxxxx
+
+== ethtool -i wld0 ==
+driver: brcmfmac
+version: unknown
+firmware-version: 01-126f2c4c
+expansion-rom-version:
+bus-info: 0000:01:00.0
+supports-statistics: no
+supports-test: no
+supports-eeprom-access: no
+supports-register-dump: no
+supports-priv-flags: no
+
+== ethtool -k wld0 ==
+Features for wld0:
+rx-checksumming: off [fixed]
+tx-checksumming: off
+	tx-checksum-ipv4: off [fixed]
+	tx-checksum-ip-generic: off [fixed]
+	tx-checksum-ipv6: off [fixed]
+	tx-checksum-fcoe-crc: off [fixed]
+	tx-checksum-sctp: off [fixed]
+scatter-gather: off
+	tx-scatter-gather: off [fixed]
+	tx-scatter-gather-fraglist: off [fixed]
+tcp-segmentation-offload: off
+	tx-tcp-segmentation: off [fixed]
+	tx-tcp-ecn-segmentation: off [fixed]
+	tx-tcp-mangleid-segmentation: off [fixed]
+	tx-tcp6-segmentation: off [fixed]
+	tx-tcp-accecn-segmentation: off [fixed]
+generic-segmentation-offload: off [requested on]
+generic-receive-offload: on
+large-receive-offload: off [fixed]
+rx-vlan-offload: off [fixed]
+tx-vlan-offload: off [fixed]
+ntuple-filters: off [fixed]
+receive-hashing: off [fixed]
+highdma: off [fixed]
+rx-vlan-filter: off [fixed]
+vlan-challenged: off [fixed]
+tx-gso-robust: off [fixed]
+tx-fcoe-segmentation: off [fixed]
+tx-gre-segmentation: off [fixed]
+tx-gre-csum-segmentation: off [fixed]
+tx-ipxip4-segmentation: off [fixed]
+tx-ipxip6-segmentation: off [fixed]
+tx-udp_tnl-segmentation: off [fixed]
+tx-udp_tnl-csum-segmentation: off [fixed]
+tx-gso-partial: off [fixed]
+tx-tunnel-remcsum-segmentation: off [fixed]
+tx-sctp-segmentation: off [fixed]
+tx-esp-segmentation: off [fixed]
+tx-udp-segmentation: off [fixed]
+tx-gso-list: off [fixed]
+tx-nocache-copy: off
+loopback: off [fixed]
+rx-fcs: off [fixed]
+rx-all: off [fixed]
+tx-vlan-stag-hw-insert: off [fixed]
+rx-vlan-stag-hw-parse: off [fixed]
+rx-vlan-stag-filter: off [fixed]
+l2-fwd-offload: off [fixed]
+hw-tc-offload: off [fixed]
+esp-hw-offload: off [fixed]
+esp-tx-csum-hw-offload: off [fixed]
+rx-udp_tunnel-port-offload: off [fixed]
+tls-hw-tx-offload: off [fixed]
+tls-hw-rx-offload: off [fixed]
+rx-gro-hw: off [fixed]
+tls-hw-record: off [fixed]
+rx-gro-list: off
+macsec-hw-offload: off [fixed]
+rx-udp-gro-forwarding: off
+hsr-tag-ins-offload: off [fixed]
+hsr-tag-rm-offload: off [fixed]
+hsr-fwd-offload: off [fixed]
+hsr-dup-offload: off [fixed]
+
+== ethtool -l wld0 ==
+netlink error: Operation not supported
+command failed: /usr/bin/ethtool -l wld0
+
+== ethtool -x wld0 ==
+netlink error: Operation not supported
+command failed: /usr/bin/ethtool -x wld0
+
+== ethtool -T wld0 ==
+Time stamping parameters for wld0:
+Capabilities:
+	software-receive
+	software-system-clock
+PTP Hardware Clock: none
+Hardware Transmit Timestamp Modes: none
+Hardware Receive Filter Modes: none

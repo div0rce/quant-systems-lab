@@ -184,6 +184,44 @@ qsl_emit_provenance() {
     echo "Date: $(qsl_utc_timestamp)"
 }
 
+qsl_publish_artifact() {
+    local tmp="$1" out="$2" clean out_dir
+    if [[ -z "$tmp" || -z "$out" ]]; then
+        echo "error: qsl_publish_artifact requires temporary and output paths" >&2
+        exit 2
+    fi
+    # Create the cleaned temp file in the destination directory so the final mv is an
+    # atomic same-filesystem rename, not a cross-filesystem copy+unlink that could leave a
+    # partially written artifact if interrupted.
+    out_dir="$(dirname "$out")"
+    clean="$(mktemp "${out_dir}/.qsl_publish.XXXXXX")"
+    # Sanitize host MAC identifiers before publishing, then trim trailing whitespace and
+    # trailing blank lines, so generated evidence never leaks stable hardware identifiers
+    # into committed reports. Redact every MAC-shaped token (link/ether, permaddr, bridge_id /
+    # designated_root, group_address, etc.) except the universal broadcast address, which is
+    # not a host identifier; also redact the colon-free wlx<mac> altname. This mirrors the
+    # audit's leak-detection regex so any matched address is redacted rather than committed.
+    sed -E \
+        -e 's#ff:ff:ff:ff:ff:ff#__QSL_BCAST__#g' \
+        -e 's#([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}#xx:xx:xx:xx:xx:xx#g' \
+        -e 's#__QSL_BCAST__#ff:ff:ff:ff:ff:ff#g' \
+        -e 's#(altname wlx)[0-9a-fA-F]{12}#\1xxxxxxxxxxxx#g' \
+        -e 's/[[:blank:]]*$//' "$tmp" |
+        awk '
+            { lines[NR] = $0 }
+            END {
+                last = NR
+                while (last > 0 && lines[last] == "") {
+                    --last
+                }
+                for (i = 1; i <= last; ++i) {
+                    print lines[i]
+                }
+            }
+        ' >"$clean"
+    mv "$clean" "$out"
+}
+
 qsl_utc_timestamp() {
     date -u +%Y-%m-%dT%H:%M:%SZ
 }
