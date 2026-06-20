@@ -195,12 +195,16 @@ qsl_publish_artifact() {
     # partially written artifact if interrupted.
     out_dir="$(dirname "$out")"
     clean="$(mktemp "${out_dir}/.qsl_publish.XXXXXX")"
-    # Sanitize host MAC identifiers (link/ether, permaddr, and the wlx<mac> altname) before
-    # publishing, then trim trailing whitespace and trailing blank lines, so generated
-    # evidence never leaks stable hardware identifiers into committed reports.
+    # Sanitize host MAC identifiers before publishing, then trim trailing whitespace and
+    # trailing blank lines, so generated evidence never leaks stable hardware identifiers
+    # into committed reports. Redact every MAC-shaped token (link/ether, permaddr, bridge_id /
+    # designated_root, group_address, etc.) except the universal broadcast address, which is
+    # not a host identifier; also redact the colon-free wlx<mac> altname. This mirrors the
+    # audit's leak-detection regex so any matched address is redacted rather than committed.
     sed -E \
-        -e 's#(link/ether )([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}#\1xx:xx:xx:xx:xx:xx#g' \
-        -e 's#(permaddr )([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}#\1xx:xx:xx:xx:xx:xx#g' \
+        -e 's#ff:ff:ff:ff:ff:ff#__QSL_BCAST__#g' \
+        -e 's#([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}#xx:xx:xx:xx:xx:xx#g' \
+        -e 's#__QSL_BCAST__#ff:ff:ff:ff:ff:ff#g' \
         -e 's#(altname wlx)[0-9a-fA-F]{12}#\1xxxxxxxxxxxx#g' \
         -e 's/[[:blank:]]*$//' "$tmp" |
         awk '
