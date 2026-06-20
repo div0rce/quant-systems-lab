@@ -346,8 +346,14 @@ Lower priority:
   order book ~114 ns/op, protocol ~19 ns/op, gateway ~121 ns/op, matching ~99 ns/command, replay
   ~114 ns/command (the prior macOS-era ~126/39/270/121/132 ns numbers were stale). Added
   `results/*.sqlite` to `.gitignore` so the local `qsl-results` MCP store is never committed. No
-  runtime C++ changed, so `make asan` / `make tsan` were not required. Do not merge from automation;
-  the human squash-merges PR #125, then PR #126 is rebased/regenerated against it.
+  runtime C++ changed, so `make asan` / `make tsan` were not required. Also added
+  `tests/shell/test_qsl_common.sh` (registered in CTest; portable) covering both the MAC sanitization
+  (link/ether, permaddr, bridge_id/designated_root, group_address redacted; broadcast and the audit
+  leak-grep invariant preserved; wlx altname redacted) and the trailing-whitespace / blank-line
+  trimming, so the security-relevant publish logic ships with tests — `make check` 241/241. This
+  supersedes CodeRabbit's PR #126, whose generated tests covered only trimming and were based on
+  `d8c16b2` (where `qsl_publish_artifact` does not yet exist, so #126 could not merge before #125);
+  #126 was closed as superseded. Do not merge from automation; the human squash-merges PR #125.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.

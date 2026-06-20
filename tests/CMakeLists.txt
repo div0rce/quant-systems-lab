@@ -82,6 +82,13 @@ add_test(
           -D "EXPECT_OUTPUT=orders must be an unsigned integer" -P
           "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
 
+# Shell unit tests for the shared artifact-publish helper (MAC sanitization +
+# trailing-whitespace/blank-line trimming). Portable (sed/awk/mktemp); the script
+# locates the repo via BASH_SOURCE, so it runs correctly by absolute path.
+add_test(
+  NAME qsl_common_publish_artifact
+  COMMAND bash "${CMAKE_CURRENT_LIST_DIR}/shell/test_qsl_common.sh")
+
 if(EXISTS "/dev/full")
   add_test(
     NAME qsl_replay_generate_append_failure
