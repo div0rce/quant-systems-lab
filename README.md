@@ -98,11 +98,11 @@ methodology and caveats in [docs/benchmarking.md](docs/benchmarking.md) and
 
 | Scenario (synthetic, in-process) | Measured on this run |
 |---|---|
-| Order book add/modify/cancel | ~114 ns/op |
-| Protocol `NewOrder` encode+decode | ~19 ns/op |
-| Gateway session, crossing order with fill | ~121 ns/op |
-| Matching-engine flow (apply) | ~99 ns/command |
-| Replay from command log | ~114 ns/command |
+| Order book add/modify/cancel | ~87 ns/op |
+| Protocol `NewOrder` encode+decode | ~16 ns/op |
+| Gateway session, crossing order with fill | ~110 ns/op |
+| Matching-engine flow (apply) | ~98 ns/command |
+| Replay from command log | ~110 ns/command |
 
 Reproduce with `make bench` (numbers will differ by machine). The differential-testing harness
 (generation, replay, shrinking) has its own benchmark — `make bench-diff`, written to
@@ -121,6 +121,11 @@ the core numbers above.
   CPU-affinity/scheduler-migration and false-sharing studies are separate hardware-dependent
   artifacts; contiguous order-book storage is a bounded-domain architecture study, not a general
   cache-locality or production-latency claim.
+- **Perf evidence is partial.** The committed `perf stat` artifact is *real* hardware-PMU evidence
+  from a bare-metal Apple M2 (cycles, instructions, branches, branch-misses), but the Apple Silicon
+  PMU does not expose cache-reference/cache-miss counters, so it is **partial**, not full PMU
+  evidence ([issue #90](https://github.com/div0rce/quant-systems-lab/issues/90)). NUMA evidence is
+  single-node (the M2 has one NUMA node). See [docs/perf_analysis.md](docs/perf_analysis.md).
 - **Networking is minimal**: loopback TCP order entry and a UDP market-data feed,
   unauthenticated, no TLS, no framing recovery beyond disconnect-on-malformed. The socket path is
   profiled and its hardening posture documented in

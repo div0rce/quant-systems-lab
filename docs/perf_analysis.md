@@ -5,17 +5,24 @@ performance-investigation evidence, not an optimization pass and not a productio
 
 ## Current Status
 
-M29 currently provides the Linux `perf` workflow, Linux-only tooling, metadata-rich artifacts,
-dirty-tree handling, PMU preflight/validation, constrained-environment validation, CI validation,
-and a reproducible command path.
+The Linux `perf` workflow provides Linux-only tooling, metadata-rich artifacts, dirty-tree
+handling, PMU preflight/validation, a three-way evidence classification (full / partial / none),
+CI validation, and a reproducible command path.
 
-The committed artifacts were generated in a constrained Docker Desktop Linux environment where
-hardware PMU counters and sampling were unavailable or permission-limited. They are intentionally
-labeled as constrained validation. The repository does **not** claim real hardware PMU evidence at
-this time.
+The committed artifacts are now generated on a **bare-metal Linux host** — an Apple MacBook Air
+(M2, aarch64) running Fedora Asahi Remix, directly on the hardware (`systemd-detect-virt` reports
+`none`, no `hypervisor` CPU flag). `perf stat` reads **real hardware counters** off the Apple
+Avalanche (P-core) and Blizzard (E-core) PMUs: `cycles`, `instructions`, `branches`, and
+`branch-misses` are live. The artifact is therefore classified **partial hardware PMU evidence**,
+not constrained-environment validation: the counters that are present are real, not emulated.
 
-Full PMU-backed evidence is tracked by issue #90 and requires a bare-metal Linux host or a Linux
-VM/server with real hardware `perf_event` access.
+The residual gap is specific and is what issue #90 now tracks: the Apple Silicon PMU, as exposed
+by the current Asahi kernel driver, does **not** implement the generic `cache-references` /
+`cache-misses` events (it whitelists only `cycles`/`instructions`/branch events; the
+`/sys/bus/event_source/devices/apple_avalanche_pmu/events/` directory lists only `cycles` and
+`instructions`). So a *full* counter set — including cache events — is unavailable here. Closing
+#90 needs a PMU **microarchitecture** that exposes cache counters to Linux (e.g. an x86_64
+Intel/AMD host, or an ARM server core such as Graviton/Ampere) — not "more bare metal."
 
 ## Commands
 
@@ -52,10 +59,13 @@ unless the kernel and permissions expose the requested PMU events. On many syste
 - `kernel.perf_event_paranoid`;
 - whether the process has enough privilege for hardware counters;
 - whether the machine is bare metal, a VM, a container, or a hosted CI runner;
-- CPU/kernel support for the requested events.
+- CPU/kernel support for the requested events. Being bare metal is necessary but not sufficient:
+  this Apple Silicon host is bare metal yet its PMU driver still does not expose cache events.
 
-Full hardware-counter evidence requires bare-metal Linux or a cloud/VM environment that exposes
-hardware PMU events through `perf_event`. Before trusting a `perf stat` artifact as full evidence,
+Full hardware-counter evidence requires a host whose PMU exposes the **whole** requested event set
+(including `cache-references`/`cache-misses`) through `perf_event` — e.g. an x86_64 Intel/AMD box or
+an ARM server core — not merely any bare-metal Linux machine. Before trusting a `perf stat` artifact
+as full evidence,
 verify:
 
 ```bash
@@ -65,17 +75,27 @@ cat /proc/sys/kernel/perf_event_paranoid
 perf stat -e cycles,instructions,branches,branch-misses,cache-references,cache-misses -- true
 ```
 
-The full `perf_stat_linux.txt` artifact is acceptable only when it reports:
+The script classifies the artifact three ways via its `Artifact:` and `Hardware counters
+supported:` fields:
 
-- `Artifact: hardware PMU evidence`;
-- `Unsupported counters detected: no`;
-- `Hardware counters supported: yes`;
-- `Dirty inputs: no`.
+- **`hardware PMU evidence`** (`Hardware counters supported: yes`) — every requested counter,
+  including cache events, was captured. This is *full* evidence.
+- **`partial hardware PMU evidence`** (`Hardware counters supported: partial`) — at least one real
+  hardware counter was captured but the requested set is incomplete. This is the **current state on
+  the Apple Silicon host**: real `cycles`/`instructions`/`branches`/`branch-misses`, with
+  `cache-references`/`cache-misses` reported `<not supported>`.
+- **`constrained-environment validation (no hardware PMU access)`** (`Hardware counters supported:
+  no`) — no hardware counter produced a value at all (a VM/container with no PMU, or a
+  permission-denied host). This was the state of the earlier Docker Desktop artifacts.
+
+A *full* artifact is acceptable only when it reports `Artifact: hardware PMU evidence`,
+`Unsupported counters detected: no`, `Hardware counters supported: yes`, and `Dirty inputs: no`.
+On Apple Silicon that bar cannot be met for the cache events, so the honest current label is
+**partial**, not full — and that is recorded in the artifact rather than papered over.
 
 If the host reports counters as unsupported or permission-denied, do not substitute other numbers.
-The scripts can write a partial artifact with `QSL_PERF_ALLOW_PARTIAL=1`, but that output is
-classified as constrained-environment validation only. It proves the scripts/build path run on
-Linux; it is not full PMU evidence.
+The scripts only write a partial/constrained artifact with `QSL_PERF_ALLOW_PARTIAL=1`, and the
+label states exactly which counters were and were not collected.
 
 Partial mode does not hide benchmark failures. Both perf scripts first run the benchmark harness
 outside `perf`; if `qsl-bench` exits non-zero, the script exits non-zero even when
@@ -100,9 +120,11 @@ artifact stale.
 The `Dirty inputs` field checks the declared source inputs and excludes the generated perf output
 itself, so a two-artifact run can remain honest while still detecting real source or script changes.
 
-The committed M29 Docker Desktop Linux artifacts are intentionally labeled as constrained where
-appropriate: the Linux VM runs `perf`, but its hardware PMU counters are reported as unsupported.
-Do not merge or describe those artifacts as full hardware-counter evidence.
+The committed artifacts are now bare-metal Apple Silicon Linux runs labeled **partial hardware PMU
+evidence**: real `cycles`/`instructions`/`branches`/`branch-misses` plus `<not supported>` cache
+events. Do not describe them as *full* hardware-counter evidence (the cache events are missing), and
+do not relabel them back to "constrained validation" either — the counters that are present are
+genuine bare-metal hardware counters.
 
 ## What To Look For
 
@@ -130,5 +152,6 @@ check that proves the change helped on the stated machine.
 ## Limits
 
 These profiles are machine-specific. They do not prove production latency, network behavior, or
-kernel/socket-path performance. M30 is reserved for socket and kernel-path profiling; M29 only
-profiles the default benchmark harness.
+kernel/socket-path performance. The socket / kernel-path profiling is a separate study
+(`docs/socket_profiling.md`, `make profile-io` / `make socket-load` / `make socket-stress`); this
+perf workflow only profiles the default CPU-side benchmark harness.

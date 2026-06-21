@@ -14,8 +14,12 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
   the contiguous row as a bounded-domain cache/locality study, not general sparse-price-book
   evidence.
 - `perf_stat_linux.txt` — Linux `perf stat` output for the benchmark harness (`make perf-stat`).
-  It is full hardware-counter evidence only when the file says `Artifact: hardware PMU evidence`
-  and `Unsupported counters detected: no`; otherwise it is constrained-environment validation.
+  Its `Artifact:` field classifies the run three ways: `hardware PMU evidence` (full — every
+  requested counter including cache events captured), `partial hardware PMU evidence` (real
+  hardware counters present but the requested set is incomplete — the **current** bare-metal Apple
+  Silicon state, where `cache-references`/`cache-misses` are `<not supported>`), or
+  `constrained-environment validation (no hardware PMU access)` (no hardware counter at all). Only
+  the first is full evidence; issue #90 tracks the missing cache-counter set.
 - `perf_report_linux.txt` — Linux `perf record/report` hot-symbol output for the benchmark
   harness (`make perf-record`). It is useful as a hot-symbol profile only when the file says
   `No samples: no`, `Insufficient samples: no`, and the sample count meets the reported minimum.

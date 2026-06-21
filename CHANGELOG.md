@@ -5,8 +5,34 @@ All notable changes to this project. The format is loosely based on
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.2.0] - 2026-06-21
+
+Quant Systems Lab v0.2.0 — the Phase III/IV systems arc (M24–M49: a bounded SPSC queue and threaded
+pipeline, ThreadSanitizer coverage, allocator and order-book storage experiments, Linux
+perf/socket/NUMA studies, an epoll gateway prototype, event-log persistence/recovery, and DPDK/NIC
+research) plus a **bare-metal Linux evidence refresh**. Same honesty bar as v0.1.0: a deterministic
+C++20 exchange simulator and cross-language differential-testing harness — **not** a production
+exchange, no real-market connectivity, no latency or profitability claims, and not formal
+verification.
+
 ### Added
 
+- v0.2.0 evidence refresh: regenerated every `results/*.txt` on a **bare-metal** Apple M2 (aarch64)
+  Fedora Asahi Linux host (`systemd-detect-virt: none`). `scripts/perf_stat.sh` now classifies three
+  ways — full `hardware PMU evidence`, `partial hardware PMU evidence` (real counters, incomplete
+  set), or `constrained-environment validation (no hardware PMU access)` — so the perf artifact is
+  honestly labeled **partial hardware PMU evidence**: real `cycles`/`instructions`/`branches`/
+  `branch-misses` off the Apple Avalanche/Blizzard PMUs, with `cache-references`/`cache-misses`
+  unsupported by the Apple Silicon PMU. Issue #90 is narrowed to the cache-counter set (needs a PMU
+  microarchitecture that exposes it; bare metal alone is not enough).
+- `qsl_publish_artifact` redacts **every** non-broadcast MAC address (link/ether, permaddr,
+  bridge_id/designated_root, group_address, and the `wlx<mac>` altname) at publish time, so
+  generated evidence cannot leak host hardware identifiers.
+- `tests/shell/test_qsl_common.sh` (registered with CTest, runs under `make check`) covering the MAC
+  sanitization and the trailing-whitespace/blank-line trimming of the shared artifact-publish
+  helper.
 - M42: `scripts/qsl_common.sh`, shared by the socket/perf shell workflows for repo-relative
   dirty-tree exclusions, metadata helpers, Linux guards, TCP readiness probes, and process-stop
   handling.
@@ -92,6 +118,14 @@ All notable changes to this project. The format is loosely based on
 
 ### Documentation
 
+- v0.2.0 documentation sweep: reframed the perf evidence from "constrained Docker validation" to
+  **bare-metal partial hardware PMU evidence** across `docs/perf_analysis.md`,
+  `docs/linux_performance.md`, ADR 0007, `CLAUDE.md`, `results/README.md`, `docs/recruiting_notes.md`,
+  and the README Limitations section; corrected stale Docker/containerized framing in
+  `docs/socket_profiling.md` and `docs/pool_backed_storage.md` (artifacts are now bare-metal Apple
+  M2 runs); rewrote `docs/release_readiness.md` for the M0–M49 + v0.2.0 state (241 tests, six CI
+  jobs); added storage/epoll/durability components to `docs/architecture.md`; and clarified that the
+  independent OCaml replay engine (M16) re-implements matching while the M14 log verifier does not.
 - Synchronized project-memory files before repository-health planning (PR #101, PR #102): M35 is
   merged as PR #100; the project-memory syncs landed; the repository-health analysis has since been
   completed (see the inserted refactor phase below).

@@ -273,7 +273,9 @@ snapshot output, event ordering, or sequence assignment.
 - Contiguous storage has a fixed resting-price band and is not suitable for arbitrary sparse price
   domains without a fallback or a different indexing strategy.
 - The benchmark is synthetic and single-process.
-- No hardware PMU/cache-miss evidence was collected for this artifact; it was generated in Docker
-  Desktop Linux, which is constrained evidence rather than a bare-metal perf run.
+- No cache-miss/PMU evidence was collected for this artifact; it is a wall-clock benchmark on a
+  bare-metal Apple M2 (aarch64) Fedora Asahi host. The Apple Silicon PMU does not expose
+  `cache-references`/`cache-misses` (see `docs/perf_analysis.md`), so a cache-locality claim would
+  need a host whose PMU exposes those counters.
 - The result is not a production-latency claim.
 - The experiment does not prove that any storage mode should be retained for every workload.

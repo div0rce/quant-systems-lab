@@ -45,10 +45,13 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
   count clears the threshold reported in the artifact.
 - See `docs/perf_analysis.md` for the M29 profiling workflow, artifacts, and caveats.
 
-Current M29 artifacts are constrained-environment validation from Docker Desktop Linux. They prove
-the workflow and metadata path, not real hardware PMU access. Full PMU-backed evidence is tracked
-by issue #90 and requires bare-metal Linux or a Linux VM/server that exposes the required hardware
-counters without permission or unsupported-counter errors.
+The current perf artifacts are **partial hardware PMU evidence** from a bare-metal Apple MacBook Air
+(M2, aarch64) running Fedora Asahi Remix — not the earlier Docker Desktop runs. `perf stat` reads
+real `cycles`/`instructions`/`branches`/`branch-misses` off the Apple Avalanche/Blizzard PMUs; only
+`cache-references`/`cache-misses` come back `<not supported>` because the Apple Silicon PMU driver
+does not expose them. Issue #90's remaining ask is therefore the cache-counter set specifically,
+which needs a PMU microarchitecture that exposes those events (x86_64 Intel/AMD, or an ARM server
+core) — being bare metal is necessary but not sufficient.
 
 ## CPU affinity and locality studies
 
@@ -79,7 +82,9 @@ the current cpuset.
 Unsupported or constrained hosts are valid outcomes. macOS, Docker Desktop, restricted CI,
 single-NUMA-node Linux machines, and hosts that can pin a CPU but cannot bind local/remote NUMA
 memory should be labeled as constrained rather than used to imply full NUMA or production-latency
-evidence.
+evidence. The committed `numa_affinity_study.txt` is now from the bare-metal Apple M2 host, which is
+a single-NUMA-node machine — so it is `linux-constrained` for NUMA purposes (real CPU pinning, but
+no cross-node local/remote binding to measure), not because of virtualization.
 
 ## False-sharing studies
 
