@@ -383,6 +383,7 @@ Keep this synchronized with the Makefile.
 - `make bench-recovery` — run M46 recovery benchmarking (full-replay restart vs book rebuild)
 - `make perf-stat` — run Linux `perf stat` workflow where supported
 - `make perf-record` — run Linux `perf record/report` workflow where supported
+- `make flamegraph` — render a Linux `perf` call-graph flamegraph (SVG) where supported
 - `make numa-study` — run Linux CPU-affinity / scheduler-migration / NUMA-locality study where supported
 - `make false-sharing-study` — run benchmark-only packed-vs-padded SPSC cursor contention study
 - `make profile-io` — run Linux syscall/socket-path profiling where supported

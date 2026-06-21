@@ -1,4 +1,4 @@
-.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage bench-recovery perf-stat perf-record numa-study false-sharing-study profile-io socket-stress socket-load dpdk-check nic-offload-check crash-recovery concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
+.PHONY: configure build test check fmt fmt-check tidy bench bench-diff bench-allocator bench-storage bench-recovery perf-stat perf-record flamegraph numa-study false-sharing-study profile-io socket-stress socket-load dpdk-check nic-offload-check crash-recovery concurrency-stress asan tsan demo check-fixtures check-manifest determinism divergence-demo clean
 
 BUILD_DIR := build/dev
 
@@ -62,6 +62,13 @@ perf-record:
 	cmake --preset bench
 	cmake --build --preset bench --target qsl-bench
 	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/perf_record.sh
+
+# Issue #32: render a perf call-graph flamegraph (SVG) from the benchmark harness. Linux-only.
+flamegraph:
+	@test "$$(uname -s)" = "Linux" || { echo "error: make flamegraph requires Linux perf; current OS is $$(uname -s)." >&2; exit 2; }
+	cmake --preset bench
+	cmake --build --preset bench --target qsl-bench
+	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/flamegraph.sh
 
 # M43: CPU-affinity / scheduler-migration / NUMA locality study. Linux-only.
 numa-study:

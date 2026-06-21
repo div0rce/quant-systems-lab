@@ -89,6 +89,13 @@ add_test(
   NAME qsl_common_publish_artifact
   COMMAND bash "${CMAKE_CURRENT_LIST_DIR}/shell/test_qsl_common.sh")
 
+# Shell unit tests for the dependency-free flamegraph renderer (scripts/flamegraph.py:
+# perf-script folding + deterministic SVG rendering) behind `make flamegraph` (#32).
+# Portable: needs only python3 (skips cleanly if absent); does not require perf.
+add_test(
+  NAME qsl_flamegraph_render
+  COMMAND bash "${CMAKE_CURRENT_LIST_DIR}/shell/test_flamegraph.sh")
+
 if(EXISTS "/dev/full")
   add_test(
     NAME qsl_replay_generate_append_failure
