@@ -20,43 +20,39 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** Linux host artifact refresh follow-up after M49
-- **Status:** ◑ Linux host artifacts regenerated from clean inputs (MAC sanitizer generalized,
-  benchmark docs synced); PR #125 open for review
-- **Active branch:** `perf/linux-host-artifact-refresh`
-- **Last completed milestone:** M49 — NIC offload and low-latency networking study (squash-merged
-  PR #124, commit d8c16b2), after M48 — DPDK research and prototype (squash-merged PR #123, commit
-  c643b62)
-- **Last completed docs sync:** Post-merge project-memory sync (squash-merged, PR #102, commit 7092423)
-- **Release:** `v0.1.0` published as a GitHub release (tag on commit 9857e1a); no packages published
-- **`make check` passing:** yes on the Linux artifact-refresh branch. The sandboxed run failed to
-  create the TCP loopback listener and was interrupted; rerunning `make check` with host socket
-  access passed all 240 tests on 2026-06-17.
-- **Last action:** finished the PR #125 review-fix follow-up on the Fedora Asahi host. Generalized
-  the publish-time MAC sanitizer (`fix:` a34a927) to redact every MAC-shaped token except the
-  universal broadcast — the prior `link/ether`/`permaddr`/`altname wlx` rules missed a bridge
-  interface's `bridge_id`/`designated_root`/`group_address` MAC in `nic-offload-check` output. Since
-  `scripts/qsl_common.sh` is a declared provenance input for all 15 generators, regenerated every
-  Linux host artifact (`perf-stat` partial PMU, `perf-record` cpu-clock profile, `numa-study`
-  single-node constrained, `nic-offload-check` read-only `wld0`, `dpdk-check` `linux-missing-dpdk`,
-  `false-sharing-study`, `profile-io`, `socket-stress`, `crash-recovery`, `socket-load`) plus all
-  bench artifacts (`bench`, `bench-allocator`, `bench-storage`, `bench-recovery`, `bench-diff`) from
-  the clean committed tree. All 15 report `Dirty inputs: no` with refreshed digests; the audit's MAC
-  leak grep over `results/` returns nothing. Synced the README benchmark table and
-  `docs/recruiting_notes.md` to the regenerated `results/latest.txt` (~114/19/121/99/114 ns,
-  replacing the stale ~126/39/270/121/132 ns). Added `results/*.sqlite` to `.gitignore`. `make
-  check` 240/240; no runtime C++ changed, so asan/tsan not required. PR #125:
-  <https://github.com/div0rce/quant-systems-lab/pull/125>.
-- **Next action:** push the regeneration to `perf/linux-host-artifact-refresh`, let CI +
-  CodeRabbit/Codex re-review, then have the human squash-merge PR #125 (do not merge from
-  automation). After #125 merges, rebase/regenerate PR #126 (CodeRabbit shell tests for
-  `qsl_common.sh`) against it — #126 cannot merge before #125.
-- **Blockers:** issue #90 remains open because this host lacks the required cache PMU counters for
-  full hardware-PMU evidence. Issue #94 remains open for independent external review. Hardware
-  NIC/offload latency measurement still requires suitable wired NIC hardware, driver support,
-  timestamping/offload/RSS access, and a measured packet workload; the current `wld0` Wi-Fi
-  capability observation is not NIC-offload latency evidence. Legacy backlog still includes #32 and
-  #29. Issues #95, #28, and #26 were closed by PR #112.
+- **Active milestone:** none — `v0.2.0` released; project is between releases
+- **Status:** ☑ `v0.2.0` published (Phase III/IV systems arc + bare-metal evidence refresh)
+- **Active branch:** none (work lands via scoped PRs from `main`)
+- **Last completed milestone:** M49 — NIC offload and low-latency networking study (PR #124,
+  d8c16b2), then the Linux host artifact refresh (PR #125, d9094df) and the v0.2.0 release
+  (PR #127, ded6e80)
+- **Last completed docs sync:** v0.2.0 documentation staleness sweep (PR #127): perf evidence
+  reframed as bare-metal partial PMU, release-readiness rewritten, every doc read and brought current
+- **Release:** `v0.1.0` (tag on 9857e1a) and `v0.2.0` (tag on ded6e80, marked Latest) published as
+  GitHub-only releases; no packages published
+- **`make check` passing:** yes — `make check` 241/241 and `make asan` 241/241 on the bare-metal
+  Apple M2 (aarch64) Fedora Asahi host on 2026-06-21
+- **Last action:** prepared and released `v0.2.0`. Reframed the perf evidence from "constrained
+  Docker validation" to **partial hardware PMU evidence** on a bare-metal Apple M2 (real
+  cycles/instructions/branches/branch-misses; cache-references/cache-misses unsupported by the Apple
+  Silicon PMU), with a new three-way `perf_stat.sh` classifier and a reframed issue #90. Regenerated
+  all 15 `results/*.txt` on bare metal (`Dirty inputs: no`, MAC-leak grep clean), bumped the project
+  version to 0.2.0, swept every doc for staleness (release-readiness rewritten to 241 tests / six CI
+  jobs; architecture/socket/storage/OCaml framing corrected), verified all six mermaid diagrams, and
+  synced README/recruiting benchmark numbers to `results/latest.txt` (~87/16/110/98/110 ns).
+  PR #127 squash-merged to `main` as ded6e80; `v0.2.0` tagged and published.
+- **Next action:** no active milestone. Highest-value remaining work is non-code and gated:
+  issue #94 (independent external review — needs a human reviewer) and issue #90 (full
+  cache-counter PMU evidence — needs a PMU microarchitecture that exposes cache events, e.g.
+  x86_64). Low-signal backlog: #32 (flamegraph), #29 (FIX adapter).
+- **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap — this bare-metal
+  Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
+  implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
+  cache events (x86_64, or an ARM server core). Issue #94 remains open for independent external
+  review (human-gated). Hardware NIC/offload latency measurement still requires suitable wired NIC
+  hardware, driver support, timestamping/offload/RSS access, and a measured packet workload; the
+  current `wld0` Wi-Fi capability observation is not NIC-offload latency evidence. Legacy backlog
+  still includes #32 and #29. Issues #95, #28, and #26 were closed by PR #112.
 
 ---
 
