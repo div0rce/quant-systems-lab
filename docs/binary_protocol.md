@@ -81,3 +81,9 @@ a byte stream belong to the TCP/session layer (M9), not the codec.
 
 The wire format is pinned by a byte-fixture test (`tests/unit/test_protocol.cpp`) so any
 accidental change to field order or byte order fails the build.
+
+## Text alternative
+
+A human-readable, FIX-like `tag=value` adapter over the same internal message structs lives
+alongside this binary codec — see [fix_protocol.md](fix_protocol.md). Both decode the same order to
+identical structs, which the tests assert directly.

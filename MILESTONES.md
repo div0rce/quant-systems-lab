@@ -469,10 +469,11 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 > perf/flamegraph). M25 (memory-ordering evidence), M30 (socket profiling/hardening), and M31
 > (external review) are new milestones with no prior issue. PR #112 closed
 > the remaining tractable systems items **#26** (portable TCP serving beyond one-connection-at-a-time
-> accept) and **#28** (realistic synthetic order-flow model). The genuinely **deferred** product/API
-> items remain **#29** (FIX adapter), **#30** (web dashboard), **#31** (Docker packaging), and
-> **#33** (Pages site) — do not start them before the Phase III/IV systems roadmap unless the human
-> explicitly reprioritizes.
+> accept) and **#28** (realistic synthetic order-flow model). The human later reprioritized two
+> backlog items, now **done**: **#32** (perf/flamegraph) and **#29** (FIX-like text protocol
+> adapter). The genuinely **deferred** product/API items remain **#30** (web dashboard), **#31**
+> (Docker packaging), and **#33** (Pages site) — do not start them before the Phase III/IV systems
+> roadmap unless the human explicitly reprioritizes.
 
 Do not pull backlog items into earlier PRs.
 
@@ -481,7 +482,11 @@ Do not pull backlog items into earlier PRs.
 - Multithreaded gateway and market data pipeline, plus portable threaded TCP serving follow-up. (#26)
 - ThreadSanitizer coverage. (#27)
 - More realistic synthetic order-flow model. (#28)
-- FIX-like text protocol adapter. (#29)
+- FIX-like text protocol adapter. (#29) — **done**: `tag=value` SOH-framed adapter
+  (`include/qsl/protocol/fix.hpp`, `src/protocol/fix.cpp`) over the same internal structs as the
+  binary codec, with genuine FIX BeginString/BodyLength/CheckSum framing for NewOrderSingle (35=D)
+  and OrderCancelRequest (35=F). Cross-codec equivalence + malformed-input rejection tested in
+  `tests/unit/test_fix_protocol.cpp`; docs in `docs/fix_protocol.md`.
 - Web dashboard for visualization. (#30)
 - Docker packaging. (#31)
 - Perf/flamegraph docs. (#32) — **done**: `make flamegraph` renders a perf call-graph flamegraph
