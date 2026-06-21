@@ -16,7 +16,8 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ---
 ## Current handoff
 
-The repo is released at `v0.1.0`. M0–M49 are merged. PR #101 (40f9249) and PR #102 (7092423)
+The repo is released at `v0.2.0` (tag on ded6e80, marked Latest), after `v0.1.0`. M0–M49 are
+merged. PR #101 (40f9249) and PR #102 (7092423)
 synchronized project-memory files after M35. PR #103 (0f2ceb7) inserted the repository-health
 refactor phase **M36–M42** and shifted the original networking/persistence roadmap after those
 refactors. PR #113 extended the future roadmap to **M43–M49**. M36–M42 landed as PR #104
@@ -25,23 +26,24 @@ refactors. PR #113 extended the future roadmap to **M43–M49**. M36–M42 lande
 (f3cc4dd) updated the future systems-engineering roadmap and agent guidance. M43–M49 landed as PR
 #114 (29ed491), PR #115 (cd05b37), PR #117 (d10bfb0), PR #118 (aeba72c), PR #119 (93d5062),
 PR #123 (c643b62), and PR #124 (d8c16b2), with M45B provenance migration in PR #116 (b9ea27a) and
-the M47 storage diagnosis follow-up in PR #122 (548cb68). Current active work is the Linux host
-artifact refresh follow-up on `perf/linux-host-artifact-refresh` (PR #125): the review fixes plus a
-full Fedora Asahi regeneration of every `results/*.txt` from clean inputs are done; awaiting human
-squash-merge, after which PR #126 (CodeRabbit shell tests for `qsl_common.sh`) is rebased against it.
+the M47 storage diagnosis follow-up in PR #122 (548cb68). The Linux host artifact refresh landed as
+PR #125 (d9094df), and the **v0.2.0 release** — a bare-metal Linux evidence refresh, the
+partial-PMU reframe, and a full documentation staleness sweep — landed as PR #127 (ded6e80). There
+is no active milestone; the project is between releases.
 
-Background — M29 delivered (merged, constrained-environment only):
+Background — Linux perf evidence (merged, now bare-metal partial PMU):
 
-- Linux-only `make perf-stat` / `make perf-record` tooling exists.
-- Metadata-rich `perf` artifacts exist.
-- Dirty-tree handling and PMU preflight/validation exist.
-- CI validates the workflow.
-- The committed artifacts were generated in a constrained Docker Desktop Linux environment where
-  hardware PMU counters/sampling were unavailable or permission-limited.
-- The repository does **not** currently claim real hardware PMU evidence.
-- Issue #90 tracks full PMU-backed evidence generation on a bare-metal or PMU-capable Linux target.
+- Linux-only `make perf-stat` / `make perf-record` tooling exists with metadata-rich artifacts,
+  dirty-tree/source-digest provenance, a three-way PMU classifier, and CI validation.
+- The committed artifacts are now generated on a **bare-metal** Apple M2 (aarch64) Fedora Asahi
+  host. `perf stat` reads **real** Apple Avalanche/Blizzard counters
+  (`cycles`/`instructions`/`branches`/`branch-misses`), so the artifact is **partial hardware PMU
+  evidence**, not "constrained Docker validation."
+- `cache-references`/`cache-misses` are `<not supported>` by the Apple Silicon PMU, so it is not
+  *full* evidence. Issue #90 now tracks that cache-counter set specifically, which needs a PMU
+  microarchitecture that exposes it (x86_64, or an ARM server core) — bare metal alone is not enough.
 
-Current work is the Linux host artifact refresh follow-up. To resume:
+To resume:
 
 ```text
 /resume
@@ -63,34 +65,32 @@ git pull --ff-only
 git log --oneline -10
 gh pr list --state open
 git tag -l
-gh release view v0.1.0
+gh release view v0.2.0
 ```
 
 Current state:
 
-- latest synced main baseline: `d8c16b2` (PR #124, M49 NIC offload and low-latency networking study)
-- current active branch, if active: `perf/linux-host-artifact-refresh`
-- current active status: PR #125 follow-up complete on the Fedora Asahi host — generalized the
-  publish-time MAC sanitizer (commit a34a927; redacts every non-broadcast MAC, closing the
-  bridge_id/designated_root/group_address leak), regenerated all 15 `results/*.txt` from clean
-  inputs (`Dirty inputs: no`, MAC-leak grep clean), and synced README/recruiting benchmark numbers
-  to `results/latest.txt`. `make check` 240/240. Awaiting human squash-merge; do not merge from
-  automation
-- release tag: `v0.1.0`
-- open follow-up issue: #90 for full Linux hardware PMU perf evidence; current Asahi Linux host
-  records partial Apple PMU evidence but lacks cache-reference/cache-miss counter support
+- latest synced main baseline: `ded6e80` (PR #127, v0.2.0 release)
+- current active branch, if active: none (work lands via scoped PRs from `main`)
+- current active status: `v0.2.0` released. The bare-metal Linux evidence refresh, the
+  partial-PMU reframe (real Apple PMU counters; cache counters unsupported), and a full
+  documentation staleness sweep are merged. All 15 `results/*.txt` are bare-metal with
+  `Dirty inputs: no` and no MAC leaks; `make check` 241/241 and `make asan` 241/241; README and
+  recruiting benchmark numbers match `results/latest.txt`. No active milestone
+- release tag: `v0.2.0` (Latest), after `v0.1.0`
+- open follow-up issue: #90 — narrowed to the full cache-counter PMU set; the bare-metal Apple host
+  provides real cycles/instructions/branches/branch-misses but no cache-reference/cache-miss support
 - issues #95, #28, and #26 were closed by PR #112
 - open review request issue: #94
 - legacy backlog still open: #29 and #32
 
 ### Next milestone
 
-The repository-health refactor phase (M36–M42), the post-M42 feature follow-up (PR #112), the
-roadmap audit (PR #113), M43 NUMA awareness study (PR #114), M44 false-sharing study (PR #115),
-M45B provenance migration (PR #116), M45 persistence (PR #117), M46 recovery benchmarking
-(PR #118), M47 storage locality (PR #119), M47 storage diagnosis (PR #122), M48 DPDK research
-(PR #123), and M49 NIC/offload research (PR #124) are complete and merged. The current work is a
-follow-up artifact refresh, not a new roadmap milestone.
+There is no active milestone. M0–M49, the Linux artifact refresh (PR #125), and the v0.2.0 release
+(PR #127) are merged. The highest-value remaining work is non-code and externally gated: issue #94
+(independent external review — needs a human reviewer) and issue #90 (full cache-counter PMU
+evidence — needs a PMU microarchitecture that exposes cache events). Low-signal backlog: #32
+(flamegraph) and #29 (FIX adapter). Do not invent a new milestone without an explicit human request.
 
 ### Phase III / IV purpose
 
@@ -100,13 +100,14 @@ studies, advanced concurrency validation, event-driven gateway architecture, mul
 pressure, NUMA/affinity and scheduler-migration studies, ingress memory ordering and false-sharing
 evidence, persistence/recovery benchmarking, and late-stage low-latency networking research.
 
-Current priority order:
+Current priority order (post-v0.2.0):
 
-1. Linux host artifact refresh PR #125 — human review / squash-merge; do not merge from automation.
-2. Issue #90 — full Linux hardware PMU perf evidence (cache-reference/cache-miss counters). The
-   current Fedora Asahi host records only partial Apple PMU counters, so this needs a PMU-capable
-   Linux host that exposes cache counters.
-3. Issue #94 — independent external technical review remains one of the highest credibility gaps.
+1. Issue #94 — independent external technical review remains the single highest credibility gap
+   (human-gated; cannot be self-certified).
+2. Issue #90 — full cache-counter PMU evidence. The bare-metal Apple host gives real
+   cycles/instructions/branches/branch-misses but no cache-reference/cache-miss counters, so this
+   needs a PMU microarchitecture that exposes cache events (x86_64, or an ARM server core).
+3. Low-signal backlog only after the above: #32 (flamegraph), #29 (FIX adapter).
 
 ### Forbidden shortcuts
 
