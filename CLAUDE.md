@@ -159,7 +159,12 @@ Known constraints:
 
 - The gateway and feed are loopback-only, unauthenticated simulator surfaces.
 - The core engine cannot depend on wall-clock time or floating-point prices.
-- M29 perf artifacts are constrained-environment evidence until issue #90 is completed.
+- Perf artifacts are now **partial hardware PMU evidence** from a bare-metal Apple M2 (aarch64)
+  Fedora Asahi host: real `cycles`/`instructions`/`branches`/`branch-misses`, but
+  `cache-references`/`cache-misses` are unsupported by the Apple Silicon PMU. Issue #90's residual
+  is the cache-counter set specifically, which needs a PMU microarchitecture that exposes it
+  (x86_64, or an ARM server core) — bare metal alone is not enough. Do not relabel these as either
+  "full PMU evidence" or "constrained Docker validation".
 - Issue #94 external review remains one of the highest remaining credibility signals; do not imply
   independent review has happened until `docs/review_feedback.md` records it.
 
@@ -1142,10 +1147,14 @@ aesthetic product work before M24–M49 unless the human explicitly changes prio
 The correct claim after this arc is:
 
 > "correctness-first deterministic exchange-systems lab with measured concurrency, allocator,
-> constrained Linux perf workflow, and socket-profiling evidence."
+> bare-metal partial-PMU Linux perf, and socket-profiling evidence."
 
-Do not claim real hardware PMU evidence until issue #90 is completed on a bare-metal or
-PMU-capable Linux target. Current M29 artifacts are constrained-environment validation only.
+Real hardware PMU evidence now exists on a bare-metal Apple M2 (aarch64) Fedora Asahi host —
+`cycles`/`instructions`/`branches`/`branch-misses` are genuine counters. Do not claim *full* PMU
+evidence (the Apple Silicon PMU does not expose `cache-references`/`cache-misses`), and do not call
+the current artifacts "constrained Docker validation" either: they are **partial hardware PMU
+evidence**. Issue #90's residual is the cache-counter set, which needs a PMU microarchitecture that
+exposes it (x86_64, or an ARM server core).
 
 The incorrect claims remain forbidden:
 

@@ -8,12 +8,12 @@ Build type:  Debug
 strace:      strace -- version 7.1
 CLK_TCK:     100
 Provenance version: 1
-Git commit (informational): a34a927
-Source digest: sha256:84bde978915b9bf22b8684fcef1531509e74f71ad1ac817fe71019a95ab1cf6f
+Git commit (informational): 33f8d11
+Source digest: sha256:b5e71f8f19427217a89854903a73fcfa796acf2217b706b718acd93c3410fa4c
 Source digest scope: gateway-io-profile
 Dirty inputs: no
 Generated output: results/socket_profile_loopback.txt
-Date: 2026-06-20T19:08:44Z
+Date: 2026-06-21T05:25:30Z
 Transport:   TCP over 127.0.0.1 (loopback), portable threaded TcpServer
 Load:        500 sequential client round trips (NewOrder + Heartbeat each)
 
@@ -22,12 +22,12 @@ User (engine-side) vs System (kernel/socket) CPU time splits user-space matching
 from time spent in the kernel servicing accept/read/write/close on the socket path.
 
 User (engine-side) CPU time:   0.000 s  (0 ticks)
-System (kernel/socket) CPU time: 0.030 s  (3 ticks)
+System (kernel/socket) CPU time: 0.040 s  (4 ticks)
 System share of CPU:           100.0%
-Minor page faults: 172    Major page faults: 0
+Minor page faults: 172    Major page faults: 1
 VmHWM:	    3872 kB
-voluntary_ctxt_switches:	502
-nonvoluntary_ctxt_switches:	3
+voluntary_ctxt_switches:	503
+nonvoluntary_ctxt_switches:	12
 
 == Pass 2: strace -f -c (syscall mix on the gateway socket path) ==
 Call counts and in-kernel time per syscall. strace perturbs timing heavily, so read the
@@ -35,35 +35,35 @@ syscall *mix* (which calls dominate the socket path), not the absolute seconds.
 
 % time     seconds  usecs/call     calls    errors syscall
 ------ ----------- ----------- --------- --------- ----------------
- 47.08    0.039473          78       502         1 accept
- 21.29    0.017852          35       501           clone3
-  7.45    0.006250           3      2005           rt_sigprocmask
-  5.25    0.004403           8       506           close
-  4.88    0.004092           8       500           sendto
-  4.63    0.003881           7       502           rseq
-  3.73    0.003128           3      1005           read
-  3.58    0.003004           5       502           set_robust_list
-  2.03    0.001699           3       504           madvise
+ 46.85    0.041831          83       502         1 accept
+ 21.65    0.019334          38       501           clone3
+  7.52    0.006711           3      2005           rt_sigprocmask
+  5.28    0.004715           9       506           close
+  5.09    0.004543           9       500           sendto
+  4.53    0.004042           8       502           rseq
+  3.63    0.003241           3      1005           read
+  3.30    0.002947           5       502           set_robust_list
+  2.03    0.001811           3       504           madvise
+  0.04    0.000036           3        11           mprotect
   0.03    0.000025           1        24           mmap
-  0.02    0.000014           1        11           munmap
-  0.01    0.000006           0        11           mprotect
-  0.01    0.000005           5         1           socket
+  0.02    0.000016           8         2         1 futex
+  0.01    0.000007           7         1           socket
+  0.01    0.000005           5         1           rt_sigaction
   0.01    0.000005           5         1           bind
-  0.00    0.000003           3         1           rt_sigaction
+  0.01    0.000005           0         9           munmap
+  0.00    0.000003           3         1           set_tid_address
   0.00    0.000003           3         1           listen
   0.00    0.000003           3         1           setsockopt
   0.00    0.000003           1         3           brk
-  0.00    0.000001           1         1         1 ioctl
-  0.00    0.000001           0         6           fstat
+  0.00    0.000002           2         1         1 ioctl
+  0.00    0.000002           0         6           fstat
   0.00    0.000000           0         1         1 faccessat
   0.00    0.000000           0         5           openat
-  0.00    0.000000           0         1           set_tid_address
-  0.00    0.000000           0         1           futex
   0.00    0.000000           0         1           execve
   0.00    0.000000           0         1           prlimit64
   0.00    0.000000           0         1           getrandom
 ------ ----------- ----------- --------- --------- ----------------
-100.00    0.083851          12      6599         3 total
+100.00    0.089290          13      6598         4 total
 
 Caveats:
 - Loopback only: no NIC, device driver, routing, or real-network behaviour is exercised.

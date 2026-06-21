@@ -61,9 +61,9 @@ gateway; the two passes use adjacent ports to avoid `TIME_WAIT` reuse stalls.
 - **Syscall counts (Pass 2)** confirm the path is dominated by the expected stream-socket calls
   and that there is no surprising syscall (e.g. unexpected `fcntl`/`poll` churn).
 
-On a representative constrained run (300 round trips, containerized Linux), the gateway's
-*measurable* CPU was effectively all in the kernel/socket path — user-space matching fell below
-the clock-tick (10 ms) granularity, with roughly one voluntary context switch per connection —
+On a representative loopback run (500 round trips, bare-metal Apple M2 Fedora Asahi Linux), the
+gateway's *measurable* CPU was effectively all in the kernel/socket path — user-space matching fell
+below the clock-tick (10 ms) granularity, with roughly one voluntary context switch per connection —
 and the syscall mix was dominated by the per-request `accept` / `read` / `sendto` / `close`
 (alongside one-time process and socket setup such as `execve` / `socket` / `bind` / `listen`).
 The honest takeaway: for this trivial-per-order loopback workload the socket servicing dominates,
@@ -118,11 +118,11 @@ make socket-load
 #   tunables: QSL_LOAD_COUNTS, QSL_LOAD_TRIALS, QSL_LOAD_PORT, QSL_LOAD_ALLOW_PARTIAL
 ```
 
-The committed gateway artifact was generated in a **containerized Linux** environment (Docker)
-because the primary development host is macOS, which has no `strace`. Like the M29 `perf`
-artifacts, it is therefore **constrained-environment evidence**, and its metadata records the
-OS, kernel, compiler, commit, and working-tree state it was produced from. Regenerate it on a
-clean checkout on a bare-metal Linux host for a clean-tree version.
+The committed gateway artifact is now generated on a **bare-metal** Apple M2 (aarch64) Fedora Asahi
+Linux host (which has `strace` and procfs natively); the earlier macOS development host had no
+`strace`, so prior versions were produced in containerized Linux. It remains **loopback-only**
+evidence — real NIC/driver/routing behaviour is still not exercised — and its metadata records the
+OS, kernel, compiler, source digest, and working-tree state it was produced from.
 
 ## Limitations
 
@@ -157,7 +157,7 @@ this constrained load, not a demonstrated general win for either mode. The absol
 conns/s figures are loopback, single-machine, and bounded by client process-spawn cost, so they are
 **not** a production-capacity or throughput claim. The script is Linux-only (epoll mode + the high-resolution
 timer) and skips cleanly elsewhere; the committed artifact is regenerated with `make socket-load`
-in containerized Linux (constrained-environment), like the gateway profile above. Receiver-side socket-buffer pressure is
+on the bare-metal Apple M2 Linux host (loopback), like the gateway profile above. Receiver-side socket-buffer pressure is
 covered separately by the UDP experiment ([`make socket-stress`](#udp-socket-buffer--burst-loss-experiment-make-socket-stress)).
 
 ## What this does and does not show

@@ -1,9 +1,16 @@
 # OCaml Replay Verifier
 
 An independent replay-invariant checker for exported exchange event logs, written in OCaml
-(`ocaml/`). It is deliberately small and external: it does **not** re-implement the matching
-engine and it does **not** prove the engine correct. It re-derives a set of replay invariants
-from a normalized event-log fixture and reports pass/fail.
+(`ocaml/`). It is deliberately small and external: this *log verifier* (`verify_replay`, M14) does
+**not** re-implement the matching engine and does **not** prove the engine correct — it re-derives a
+set of replay invariants from a normalized event-log fixture and reports pass/fail.
+
+The OCaml side also includes a separate, stronger component: an **independent replay engine**
+(`ocaml/lib/replay_engine.ml`, M16) that *does* re-implement price-time matching (GTC/IOC/market/
+cancel/modify plus gateway risk) from the command stream and computes its own final snapshot, which
+the differential tests assert equals the C++ snapshot. That engine — not this verifier — is the
+matching-independent oracle; see [`differential_testing.md`](differential_testing.md). This page
+covers only the log-invariant checker.
 
 ## Why a second language
 

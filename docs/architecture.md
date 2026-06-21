@@ -61,10 +61,19 @@ flowchart LR
   seeded property generator, and a shrinker that minimizes any divergence (M15–M19)
 - **Concurrency primitive + threaded pipeline** — a bounded SPSC ring buffer and an optional
   three-thread gateway→engine→publisher/log pipeline prototype (M24–M26)
+- **Order-book storage modes** — baseline, PMR-pooled (M32), intrusive `OrderPool` (PR #112),
+  and a bounded-domain contiguous direct-price-index layout (M47); all produce identical
+  deterministic event streams and snapshots
+- **epoll gateway prototype** — an optional Linux event-driven multi-client transport alongside
+  the default portable threaded TCP server (M34)
+- **Event-log durability + recovery** — caller-chosen durability modes (buffered / flush / fsync)
+  with torn-tail classification and provably-torn repair (M45)
 
 The first block is the runtime simulator; the last two are the cross-language verification
 pipeline (the **Verification** subgraph above). Detailed differential-testing docs are in
 [differential_testing.md](differential_testing.md) and [property_testing.md](property_testing.md).
+Storage modes, durability/recovery, the epoll prototype, and the Linux perf/socket/NUMA studies
+each have their own doc under `docs/` and a dedicated `make` target.
 
 ## Core domain model (M1)
 

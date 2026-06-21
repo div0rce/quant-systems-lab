@@ -1,28 +1,51 @@
 # Release Readiness Audit
 
-A pre-release pass verifying the repo builds, demos, reproduces, and reads honestly across
-**M0–M22 and the post-M22 backlog (#34–#51)**. No GitHub release is created here (that is the
-optional, human-approved M23). This audit was re-run after the backlog landed, so it reflects
-the current state, not the original M22 snapshot.
+A pre-release pass verifying the repo builds, demos, reproduces, and reads honestly. This audit
+covers **M0–M49 plus the v0.2.0 evidence refresh** (bare-metal Linux artifact regeneration and the
+documentation/staleness sweep). It supersedes the v0.1.0-era audit; the actual GitHub release is
+cut by a human after squash-merge.
 
-## Verification (this session, arm64 / Apple clang 17)
+## Verification (this session, bare-metal Apple M2 / aarch64 / GCC 16.1.1, Fedora Asahi Remix)
 
 | Check | Result |
 |---|---|
-| `make check` | 157/157 tests pass, no warnings |
-| `make asan` (ASan + UBSan) | 157/157, sanitizer-clean |
+| `make check` | 241/241 tests pass, no warnings |
+| `make asan` (ASan + UBSan) | 241/241, sanitizer-clean |
+| `make tsan` (ThreadSanitizer) | 20/20 concurrency-labelled tests, race-clean |
 | `make check-fixtures` | committed differential fixtures match current C++ output |
 | `make check-manifest` | provenance manifest matches the committed fixtures |
-| `make determinism` | every generated fixture (incl. all 50 property seeds) is byte-identical across gcc/clang and vs the committed macOS/AppleClang copies |
+| `make determinism` | every generated fixture (incl. all 50 property seeds) is byte-identical across gcc/clang and vs the committed copies |
 | `make divergence-demo` | the shrinker reduces an injected C++/OCaml divergence to a 3-command counterexample; the honest OCaml replay agrees, the `--drop-cancels` oracle diverges |
-| `dune runtest --root ocaml` | 5 suites pass: log-invariant verifier, independent replay engine, differential replay (50 property fixtures), failure-bundle (`diff_report`), and oracle mutation testing |
+| `dune runtest --root ocaml` | suites pass: log-invariant verifier, independent replay engine, differential replay (50 property fixtures), failure-bundle (`diff_report`), and oracle mutation testing |
 | `make demo` | clean, deterministic (replay/recovery + loopback gateway round-trip) |
-| `make bench` / `make bench-diff` | reproduce from the committed harness; `results/latest.txt` and `results/differential.txt` are retained (single-machine, run-to-run variance — not overwritten here) |
+| `make bench` / `make bench-diff` | reproduce from the committed harness; `results/latest.txt` and `results/differential.txt` are bare-metal Apple M2 runs (single-machine, run-to-run variance) |
 
-CI mirrors these across five jobs: `build-test` (build + test + bench compile-check +
-`check-fixtures` + `check-manifest` + fmt), `sanitizers`, `ocaml-verifier` (with a failure
-artifact bundle uploaded on divergence), `differential-sweep` (seeds 1..64 + the divergence
-demo), and `determinism` (gcc + clang).
+CI mirrors these across six jobs: `build-test` (build + test + bench compile-check +
+`check-fixtures` + `check-manifest` + fmt), `sanitizers` (ASan/UBSan), `thread-sanitizer`,
+`ocaml-verifier` (with a failure artifact bundle uploaded on divergence), `differential-sweep`
+(seeds 1..64 + the divergence demo), and `determinism` (gcc + clang). External checks add CodeScene
+Code Health and CodeRabbit review.
+
+## Evidence environment (v0.2.0)
+
+The committed `results/*.txt` artifacts are now generated on a **bare-metal** Apple MacBook Air
+(M2, aarch64) running Fedora Asahi Remix, not the earlier Docker Desktop Linux. What that does and
+does not buy:
+
+- **Perf** — `results/perf_stat_linux.txt` is **partial hardware PMU evidence**: real `cycles` /
+  `instructions` / `branches` / `branch-misses` off the Apple Avalanche/Blizzard PMUs, with
+  `cache-references` / `cache-misses` reported `<not supported>` (Apple Silicon PMU limitation).
+  Not full PMU evidence; issue #90 tracks the cache-counter set, which needs a different PMU.
+- **Sockets** — `socket_profile_loopback.txt`, `socket_stress_summary.txt`, and
+  `socket_load_summary.txt` are bare-metal but **loopback-only**: no NIC/driver/routing.
+- **NUMA** — `numa_affinity_study.txt` is bare-metal but the M2 is a **single-NUMA-node** machine,
+  so it is `linux-constrained` for NUMA (real CPU pinning, no cross-node binding to measure).
+- **Benchmarks** — `latest.txt`, `pool_backed_storage.txt`, `recovery_benchmarks.txt`,
+  `allocator_experiment.txt`, `false_sharing_study.txt`, `differential.txt` are bare-metal but
+  **synthetic, single-process microbenchmarks**.
+
+Every artifact carries source-digest provenance and reports `Dirty inputs: no`; no committed
+artifact leaks host identifiers (a publish-time MAC sanitizer redacts every non-broadcast MAC).
 
 ## Documentation
 
@@ -33,52 +56,32 @@ demo), and `determinism` (gcc + clang).
 - **No overclaiming.** A scan for forbidden phrases (production-grade, formal verification, HFT
   platform, low-latency trading, real exchange, trading bot, production exchange) finds only
   negations and the project's own avoid-lists/specs — no positive claims.
-- **Benchmark language** remains measured, synthetic, hardware-dependent, and reproducible from
-  the committed harness; core numbers are cited from `results/latest.txt` and the
-  differential-harness numbers from `results/differential.txt` only.
-- **Differential-testing vocabulary is distinct and current**: log-invariant checking
-  (`docs/ocaml_verifier.md`), independent OCaml replay (M16), C++-vs-OCaml differential snapshot
-  comparison (M17), property generation (M18), shrinking to minimal fixtures (M19), plus the
-  backlog hardening — oracle self-test (#34), CI seed sweep (#35), negative fixtures (#36),
-  synthetic divergence demo (#37), coverage matrix (#38), oracle-independence audit (#39),
-  failure artifact bundle (#40), price/symbol-id shrink passes (#42, #43), reject-reason coverage
-  (#44), cross-compiler determinism (#45), shrinker metrics (#46), reproducibility manifest
-  (#47), oracle mutation testing (#48), 50-seed corpus (#49), regression archive (#50), and
-  differential-harness benchmarks (#51).
-- **Architecture decisions** are recorded in `docs/adr/` (independent OCaml oracle, golden
-  fixture regeneration, deterministic shrinker, dynamic concurrency validation limits,
-  allocator-vs-storage separation, constrained perf artifacts).
-- **No stale milestone references**: PROGRESS and the milestone tables reflect the current merged
-  milestones and clearly distinguish still-open backlog from follow-ups already addressed by later
-  branches.
+- **Benchmark language** remains measured, synthetic, hardware-dependent, and reproducible from the
+  committed harness; core numbers are cited from `results/latest.txt` and the differential-harness
+  numbers from `results/differential.txt` only.
+- **Architecture decisions** are recorded in `docs/adr/` (independent OCaml oracle, golden fixture
+  regeneration, deterministic shrinker, dynamic concurrency validation limits, allocator-vs-storage
+  separation, constrained/partial perf artifacts, loopback socket evidence, PMR node allocation,
+  epoll prototype, durability modes and tail repair).
+- **No stale milestone references**: PROGRESS, HANDOFF, and the milestone tables reflect the merged
+  M0–M49 state and the v0.2.0 artifact refresh.
 
 ## Scope and honesty
 
 This is a deterministic exchange-systems lab / research portfolio project — not a production
-exchange, not connected to real markets, and making no latency or profitability claims. The
-demo network services are unauthenticated and loopback-only (`SECURITY.md`). The cross-language
+exchange, not connected to real markets, and making no latency or profitability claims. The demo
+network services are unauthenticated and loopback-only (`SECURITY.md`). The cross-language
 differential layer is property-based testing against the C++ system under test, **not** formal
 verification.
 
+## Standing credibility gaps (open, not blockers)
+
+- **Issue #94** — no independent external technical review yet. The repo is self-certified.
+- **Issue #90** — full cache-counter PMU evidence still absent; the bare-metal Apple PMU provides a
+  partial counter set only.
+
 ## Outcome
 
-Release-ready as a portfolio artifact. An optional, conservative GitHub-only `v0.1.0` release is
-deferred to M23 and requires explicit human approval.
-
-## Post-Release Roadmap Note
-
-After M28/M29 review, the roadmap distinguishes workflow validation from final evidence:
-
-- M29 lands Linux `perf` tooling, metadata-rich artifacts, dirty-tree handling, PMU validation,
-  constrained-environment validation, and CI validation.
-- The current committed M29 artifacts were generated in a constrained Docker Desktop Linux
-  environment and are not real hardware PMU evidence.
-- Issue #90 tracks full PMU-backed artifacts on a bare-metal or PMU-capable Linux target.
-- TSan coverage is dynamic-analysis evidence over executed schedules, not proof over all possible
-  interleavings.
-- M28 allocator evidence did not change order-book storage architecture. M32 later measured
-  PMR-backed node allocation, PR #112 added an opt-in intrusive pooled resting-order storage mode,
-  and M47 studies a bounded-domain contiguous direct-price-indexed layout without making a general
-  cache-locality or production-latency claim.
-- M43-M49 now keep CPU locality, false sharing, contiguous storage, Linux evidence, and external
-  review ahead of late-stage DPDK/NIC research.
+Release-ready as a portfolio artifact. The next GitHub-only release is `v0.2.0` (Phase III/IV
+systems work — M24–M49 — plus the bare-metal evidence refresh); it requires explicit human approval
+and a squash-merge before tagging.

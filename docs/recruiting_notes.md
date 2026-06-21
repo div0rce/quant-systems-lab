@@ -59,11 +59,11 @@ Single-machine synthetic, in-process microbenchmark (aarch64 Fedora Asahi Linux,
 Release, seed 42; from `results/latest.txt`). **Excludes** network I/O, disk fsync, the
 kernel/socket path, and allocator tuning — not production throughput or end-to-end latency:
 
-- matching-engine flow ~99 ns/command (~10.1M commands/sec)
-- order-book add/modify/cancel ~114 ns/op
-- protocol `NewOrder` encode+decode ~19 ns/op
-- gateway session crossing-fill round-trip ~121 ns/op
-- replay from command log ~114 ns/command
+- matching-engine flow ~98 ns/command (~10.2M commands/sec)
+- order-book add/modify/cancel ~87 ns/op
+- protocol `NewOrder` encode+decode ~16 ns/op
+- gateway session crossing-fill round-trip ~110 ns/op
+- replay from command log ~110 ns/command
 
 ## Interview-defense notes
 
@@ -80,14 +80,22 @@ kernel/socket path, and allocator tuning — not production throughput or end-to
 - **Are the benchmarks meaningful?** As regression/order-of-magnitude signals, yes; they are
   explicitly microbenchmarks and I can enumerate what they exclude. I will not present them as
   production numbers.
-- **Biggest weaknesses?** Synthetic, loopback-only, no real venue, no external review yet, and no
-  full PMU evidence until a suitable Linux host is available — see the README Limitations section.
-- **What would you do next?** CPU-affinity/scheduler-migration measurement, ingress false-sharing
-  validation, contiguous order-book storage/cache-locality study, persistence/recovery
-  benchmarking, and independent external review. DPDK/NIC research remains late-stage because the
-  stronger signal is evidence that exercises the current simulator directly.
+- **Biggest weaknesses?** Synthetic, loopback-only, no real venue, no independent external review
+  yet, and *partial* (not full) hardware PMU evidence: the bare-metal Apple Silicon host gives real
+  `cycles`/`instructions`/`branches`/`branch-misses`, but its PMU does not expose
+  `cache-references`/`cache-misses`, so cache-level evidence needs a different PMU (x86_64 or an ARM
+  server core). See the README Limitations section.
+- **What would you do next?** The CPU-affinity/scheduler-migration study, ingress false-sharing
+  validation, contiguous order-book storage/cache-locality study, and persistence/recovery
+  benchmarking are already done (M43–M47). The genuinely-remaining moves are *not more features*:
+  independent external review (issue #94) and full cache-counter PMU evidence on a host whose PMU
+  exposes it (issue #90). DPDK/NIC work stays research-only — the stronger signal is tightening what
+  the simulator already proves, not adding surface area.
 - **Why OCaml, and what does it actually prove?** It's an independent cross-check: a small
-  typed/immutable verifier parses the exported event log and re-derives replay invariants, so
-  a bug in a shared C++ assumption is less likely to pass unnoticed. It does not re-implement
-  matching and is explicitly not formal verification — I'd describe it as a disciplined
-  external checker, not OCaml expertise theater.
+  typed/immutable OCaml engine (`ocaml/lib/replay_engine.ml`) re-derives the final book state from
+  the exported *command stream* using its own price-time matching (GTC/IOC/market/cancel/modify plus
+  gateway risk) — it does **not** consume the C++ event stream while replaying — then asserts
+  snapshot equality (best bid/ask, level aggregates, order counts, `last_seq`, trade count) against
+  the C++ engine across 50+ committed property fixtures and a CI seed sweep. So it is a genuinely
+  independent matching model, not just a log re-reader; it is empirical differential testing, not
+  formal verification.

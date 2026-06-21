@@ -87,11 +87,28 @@ if grep -Eiq '<not supported>|not supported|No permission|not counted|Operation 
     UNSUPPORTED=yes
 fi
 
+# Detect whether at least one *hardware* PMU counter (not the always-available software
+# events context-switches/page-faults) produced a real numeric value. This separates a
+# bare-metal host that exposes only a partial counter set (e.g. Apple Silicon: cycles,
+# instructions, branches, branch-misses are real, but cache-references/cache-misses are
+# unsupported by the SoC PMU) from a fully constrained environment (VM/container) that
+# exposes no hardware PMU at all.
+HARDWARE_COUNTS_PRESENT=no
+if grep -Eq '^[[:space:]]*[0-9][0-9,]*[[:space:]]+.*(cycles|instructions|branches|branch-misses|cache-references|cache-misses)' "$PERF_OUT"; then
+    HARDWARE_COUNTS_PRESENT=yes
+fi
+
 ARTIFACT_TYPE="hardware PMU evidence"
 HARDWARE_COUNTERS_SUPPORTED=yes
 if [[ "$UNSUPPORTED" == "yes" ]]; then
-    ARTIFACT_TYPE="constrained-environment validation (partial; not full hardware PMU evidence)"
-    HARDWARE_COUNTERS_SUPPORTED=no
+    if [[ "$HARDWARE_COUNTS_PRESENT" == "yes" ]]; then
+        # Real hardware counters were collected, but the requested set is incomplete.
+        ARTIFACT_TYPE="partial hardware PMU evidence (real bare-metal counters; some requested events unsupported)"
+        HARDWARE_COUNTERS_SUPPORTED=partial
+    else
+        ARTIFACT_TYPE="constrained-environment validation (no hardware PMU access)"
+        HARDWARE_COUNTERS_SUPPORTED=no
+    fi
 elif [[ "$PERF_STATUS" -ne 0 ]]; then
     ARTIFACT_TYPE="failed perf stat run (not accepted evidence)"
 fi
@@ -116,8 +133,9 @@ fi
     echo "Hardware counters supported: $HARDWARE_COUNTERS_SUPPORTED"
     echo
     echo "Caveat: Linux perf counters are hardware/kernel/permission dependent."
-    echo "Partial artifacts document environment behavior only; they are not full PMU evidence."
-    echo "This is profiling evidence for investigation, not a production-latency claim."
+    echo "A partial artifact may still hold real hardware counters; it is not full PMU evidence"
+    echo "until every requested counter is supported. Profiling evidence for investigation,"
+    echo "not a production-latency claim."
     echo
     echo "Benchmark output:"
     cat "$BENCH_OUT"
