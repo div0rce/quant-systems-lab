@@ -4,12 +4,12 @@ OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): a34a927
-Source digest: sha256:fa9379bc5e417e8e8d505bb1e4d0e2e1ba3d17313d63665a9f6adff5ee379eb5
+Git commit (informational): 33f8d11
+Source digest: sha256:3fe4614b9c004642e244fafaf8d01905ed2dd92ca843bbd579e33e66f5e23836
 Source digest scope: differential-benchmark-suite
 Dirty inputs: no
 Generated output: results/differential.txt
-Date: 2026-06-20T19:10:12Z
+Date: 2026-06-21T05:25:21Z
 Dataset:     property command streams (generate_property_flow, 3 symbols, 120 orders)
 Warmup:      iters/10 (or 1 throughput pass) per benchmark, before timing
 Units:       latency = ns/op + ops/sec; throughput = ns/item + items/sec
@@ -19,6 +19,6 @@ measure the differential-testing harness (generation, gateway replay, shrinking)
 production throughput; hardware/compiler/build dependent.
 
 Scenario / Metric / Result:
-property flow generation         123 items      107.4 ns/item      9310384 items/sec
-differential gateway replay       123 items      116.1 ns/item      8616203 items/sec
-shrink property flow             300 ops      49119.6 ns/op          20358 ops/sec
+property flow generation         123 items       58.0 ns/item     17228399 items/sec
+differential gateway replay       123 items       62.2 ns/item     16071425 items/sec
+shrink property flow             300 ops      31175.3 ns/op          32077 ops/sec

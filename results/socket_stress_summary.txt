@@ -8,12 +8,12 @@ rmem_max:     4194304
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Debug
 Provenance version: 1
-Git commit (informational): a34a927
-Source digest: sha256:1369fe3902c7f43b251eeb3aeb8239708a4fb0c11fabffe0639f2e1b580df66e
+Git commit (informational): 33f8d11
+Source digest: sha256:b787480b33b16e7b8ab0d2ff6fc3baa5e5ab7162b3bc3d8de691656e4692cdc1
 Source digest scope: socket-stress
 Dirty inputs: no
 Generated output: results/socket_stress_summary.txt
-Date: 2026-06-20T19:09:43Z
+Date: 2026-06-21T05:26:28Z
 Transport:   UDP unicast over 127.0.0.1 (loopback)
 Dataset:     qsl-mdfeed publish, seed 42, 20000 orders, 3 symbols
 Trials/setting: 4
@@ -25,8 +25,8 @@ clamp the request, so the effective (granted) size is read back via getsockopt.
 
 setting  requested(B) effective(B)  published  lost/trial      maxlost  seq-gaps/trial
 -------  ------------ ------------  ---------  ----------      -------  --------------
-small            2048         4096      14820  0,1127,11,4951     4951  0,1127,11,4948
-default             0       212992      14820  0,457,2319,2449    2449  0,457,2319,2449
+small            2048         4096      14820  5,0,0,9               9  5,0,0,9
+default             0       212992      14820  0,11,298,0          298  0,11,298,0
 large         8388608      8388608      14820  0,0,0,0               0  0,0,0,0
 
 Reading the result: 'lost/trial' is the honest loss metric -- published minus received

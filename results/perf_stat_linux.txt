@@ -1,5 +1,5 @@
 Command:     make perf-stat
-Artifact:    constrained-environment validation (partial; not full hardware PMU evidence)
+Artifact:    partial hardware PMU evidence (real bare-metal counters; some requested events unsupported)
 Hardware:    aarch64
 OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
 CPU:         Avalanche-M2
@@ -8,58 +8,59 @@ Perf:        perf version 6.19.14-400.asahi.fc44.aarch64
 Perf paranoid: 2
 Build type:  Release
 Provenance version: 1
-Git commit (informational): a34a927
-Source digest: sha256:95ae3820c75d216fe2c39dd0645196e065e7037a0dc8940184a541b1db63104c
+Git commit (informational): 33f8d11
+Source digest: sha256:d8856d2f599416a9e74050726279a67f88d61a3bb3d06de86eb3bf948d2a16a5
 Source digest scope: perf-stat-benchmark
 Dirty inputs: no
 Generated output: results/perf_stat_linux.txt
-Date: 2026-06-20T19:08:37Z
+Date: 2026-06-21T05:25:23Z
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
 Dataset:     qsl-bench default synthetic benchmark suite
 Events:      cycles,instructions,branches,branch-misses,cache-references,cache-misses,context-switches,page-faults
 Perf status: 0
 Unsupported counters detected: yes
-Hardware counters supported: no
+Hardware counters supported: partial
 
 Caveat: Linux perf counters are hardware/kernel/permission dependent.
-Partial artifacts document environment behavior only; they are not full PMU evidence.
-This is profiling evidence for investigation, not a production-latency claim.
+A partial artifact may still hold real hardware counters; it is not full PMU evidence
+until every requested counter is supported. Profiling evidence for investigation,
+not a production-latency claim.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops        129.8 ns/op        7705241 ops/sec
-protocol encode+decode        500000 ops         20.0 ns/op       50003700 ops/sec
-gateway session (fill)        200000 ops        125.8 ns/op        7950000 ops/sec
-matching engine flow            5004 items      100.4 ns/item      9959893 items/sec
-replay command log              5004 items      112.9 ns/item      8854344 items/sec
+order_book add/mod/cancel     200000 ops        143.9 ns/op        6947208 ops/sec
+protocol encode+decode        500000 ops         21.5 ns/op       46599221 ops/sec
+gateway session (fill)        200000 ops        129.7 ns/op        7710496 ops/sec
+matching engine flow            5004 items      102.4 ns/item      9769779 items/sec
+replay command log              5004 items      110.3 ns/item      9064737 items/sec
 
 Benchmark output under perf:
-order_book add/mod/cancel     200000 ops        146.6 ns/op        6820694 ops/sec
-protocol encode+decode        500000 ops         23.5 ns/op       42638883 ops/sec
-gateway session (fill)        200000 ops        128.2 ns/op        7797454 ops/sec
-matching engine flow            5004 items      101.4 ns/item      9858712 items/sec
-replay command log              5004 items      114.2 ns/item      8756600 items/sec
+order_book add/mod/cancel     200000 ops         92.7 ns/op       10785353 ops/sec
+protocol encode+decode        500000 ops         16.3 ns/op       61508483 ops/sec
+gateway session (fill)        200000 ops        110.8 ns/op        9023997 ops/sec
+matching engine flow            5004 items       98.1 ns/item     10190493 items/sec
+replay command log              5004 items      109.4 ns/item      9137639 items/sec
 
 perf stat output:
 
  Performance counter stats for 'build/bench/qsl-bench':
 
-       287,995,594      apple_avalanche_pmu/cycles/u                                            (59.88%)
-       235,879,098      apple_blizzard_pmu/cycles/u                                             (40.12%)
-     1,510,519,510      apple_avalanche_pmu/instructions/u                                        (59.88%)
-       855,745,878      apple_blizzard_pmu/instructions/u                                        (40.12%)
-       300,505,281      apple_avalanche_pmu/branches/u                                          (59.88%)
-       163,381,310      apple_blizzard_pmu/branches/u                                           (40.12%)
-         2,094,842      apple_avalanche_pmu/branch-misses/u                                        (59.88%)
-            33,122      apple_blizzard_pmu/branch-misses/u                                        (40.12%)
+       233,479,932      apple_avalanche_pmu/cycles/u
+     <not counted>      apple_blizzard_pmu/cycles/u                                             (0.00%)
+     1,247,839,058      apple_avalanche_pmu/instructions/u
+     <not counted>      apple_blizzard_pmu/instructions/u                                        (0.00%)
+       245,495,434      apple_avalanche_pmu/branches/u
+     <not counted>      apple_blizzard_pmu/branches/u                                           (0.00%)
+         1,272,574      apple_avalanche_pmu/branch-misses/u
+     <not counted>      apple_blizzard_pmu/branch-misses/u                                        (0.00%)
    <not supported>      apple_avalanche_pmu/cache-references/u
    <not supported>      apple_blizzard_pmu/cache-references/u
    <not supported>      apple_avalanche_pmu/cache-misses/u
    <not supported>      apple_blizzard_pmu/cache-misses/u
                  0      context-switches:u
-               950      page-faults:u
+               208      page-faults:u
 
-       0.104252393 seconds time elapsed
+       0.081496718 seconds time elapsed
 
-       0.102945000 seconds user
-       0.000992000 seconds sys
+       0.080390000 seconds user
+       0.000988000 seconds sys

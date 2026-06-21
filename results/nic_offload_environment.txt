@@ -8,12 +8,12 @@ CPU:         Avalanche-M2
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  n/a
 Provenance version: 1
-Git commit (informational): 542aa1c
-Source digest: sha256:8d0bc5a19455d8d50119c10068769ff418a5bf8c55bacde5e6837f51f8d414d6
+Git commit (informational): 8ab07b5
+Source digest: sha256:904cbf8c83cd9ee0107e11be380c53f9509b28b2df2f96a2db8b54b323091a30
 Source digest scope: nic-offload-environment-check
 Dirty inputs: no
 Generated output: results/nic_offload_environment.txt
-Date: 2026-06-20T19:20:38Z
+Date: 2026-06-21T05:43:48Z
 ethtool:     /usr/bin/ethtool
 ip:          /usr/bin/ip
 lspci:       /usr/bin/lspci

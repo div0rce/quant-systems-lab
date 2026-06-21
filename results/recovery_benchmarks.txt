@@ -4,12 +4,12 @@ OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): a34a927
-Source digest: sha256:9996f833bc448a3c772c2c5241ac1fb77411ed4714c26db1d3c44ad1c4b57786
+Git commit (informational): 33f8d11
+Source digest: sha256:66d9841df48c833aeecd1da299536f7a7b16300ea83683d1bc209580ae0bebfe
 Source digest scope: recovery-benchmark
 Dirty inputs: no
 Generated output: results/recovery_benchmarks.txt
-Date: 2026-06-20T19:10:11Z
+Date: 2026-06-21T05:25:22Z
 Dataset:     deterministic generated flows (seed 42, 4 symbols, 5k/20k/80k commands)
              plus synthetic non-crossing resting books (1k/10k/50k resting orders)
 Scenario:    full-replay restart (recover_log_file + replay) vs in-memory book rebuild
@@ -30,35 +30,35 @@ and build-dependent; not a production recovery-time claim.
 
 Scenario / Metric / Result:
 log 5004 commands  file 0.24 MiB  resting 37 orders
-  recover_log_file (read+verify+classify)      10 reps        0.676 ms/run        135.1 ns/record
-  replay into fresh engine (decode+apply)      10 reps        0.779 ms/run        155.7 ns/command
-  full restart (recover + replay)              10 reps        1.262 ms/run        252.1 ns/command
-  capture resting state (snapshot proto)       10 reps        0.000 ms/run          7.1 ns/order
-  rebuild book from captured state             10 reps        0.007 ms/run        197.7 ns/order
+  recover_log_file (read+verify+classify)      10 reps        0.460 ms/run         92.0 ns/record
+  replay into fresh engine (decode+apply)      10 reps        0.709 ms/run        141.8 ns/command
+  full restart (recover + replay)              10 reps        1.017 ms/run        203.2 ns/command
+  capture resting state (snapshot proto)       10 reps        0.000 ms/run          6.4 ns/order
+  rebuild book from captured state             10 reps        0.006 ms/run        168.8 ns/order
 
 log 20004 commands  file 0.95 MiB  resting 30 orders
-  recover_log_file (read+verify+classify)      10 reps        1.407 ms/run         70.3 ns/record
-  replay into fresh engine (decode+apply)      10 reps        2.235 ms/run        111.7 ns/command
-  full restart (recover + replay)              10 reps        3.645 ms/run        182.2 ns/command
-  capture resting state (snapshot proto)       10 reps        0.000 ms/run          5.4 ns/order
-  rebuild book from captured state             10 reps        0.004 ms/run        127.8 ns/order
+  recover_log_file (read+verify+classify)      10 reps        1.331 ms/run         66.5 ns/record
+  replay into fresh engine (decode+apply)      10 reps        2.270 ms/run        113.5 ns/command
+  full restart (recover + replay)              10 reps        3.668 ms/run        183.4 ns/command
+  capture resting state (snapshot proto)       10 reps        0.000 ms/run          5.7 ns/order
+  rebuild book from captured state             10 reps        0.004 ms/run        127.4 ns/order
 
 log 80004 commands  file 3.81 MiB  resting 24 orders
   recover_log_file (read+verify+classify)      10 reps        5.653 ms/run         70.7 ns/record
-  replay into fresh engine (decode+apply)      10 reps        8.870 ms/run        110.9 ns/command
-  full restart (recover + replay)              10 reps       14.684 ms/run        183.5 ns/command
-  capture resting state (snapshot proto)       10 reps        0.000 ms/run          6.4 ns/order
-  rebuild book from captured state             10 reps        0.003 ms/run        122.0 ns/order
+  replay into fresh engine (decode+apply)      10 reps        9.050 ms/run        113.1 ns/command
+  full restart (recover + replay)              10 reps       14.736 ms/run        184.2 ns/command
+  capture resting state (snapshot proto)       10 reps        0.000 ms/run          6.6 ns/order
+  rebuild book from captured state             10 reps        0.003 ms/run        117.9 ns/order
 
 synthetic resting book  4 symbols  1000 resting orders
-  capture resting state (snapshot proto)       10 reps        0.002 ms/run          2.0 ns/order
+  capture resting state (snapshot proto)       10 reps        0.002 ms/run          2.1 ns/order
   rebuild book from captured state             10 reps        0.111 ms/run        110.9 ns/order
 
 synthetic resting book  4 symbols  10000 resting orders
-  capture resting state (snapshot proto)       10 reps        0.053 ms/run          5.3 ns/order
-  rebuild book from captured state             10 reps        0.999 ms/run         99.9 ns/order
+  capture resting state (snapshot proto)       10 reps        0.054 ms/run          5.4 ns/order
+  rebuild book from captured state             10 reps        0.996 ms/run         99.6 ns/order
 
 synthetic resting book  4 symbols  50000 resting orders
   capture resting state (snapshot proto)       10 reps        0.382 ms/run          7.6 ns/order
-  rebuild book from captured state             10 reps        4.764 ms/run         95.3 ns/order
+  rebuild book from captured state             10 reps        4.775 ms/run         95.5 ns/order
 

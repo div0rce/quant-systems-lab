@@ -8,12 +8,12 @@ CPU:         Avalanche-M2
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  n/a
 Provenance version: 1
-Git commit (informational): 542aa1c
-Source digest: sha256:67188fe843d4923ecad4264e0a1b1fb8cb768e703269379b691ddebf20ca9f1f
+Git commit (informational): 8ab07b5
+Source digest: sha256:a15964c68f12b761a2e60e164dd8dfdc1f56d9fdc896cfe4f867ec5d22b3c8d0
 Source digest scope: dpdk-environment-check
 Dirty inputs: no
 Generated output: results/dpdk_environment.txt
-Date: 2026-06-20T19:20:38Z
+Date: 2026-06-21T05:43:48Z
 pkg-config:  /usr/bin/pkg-config
 libdpdk pkg-config status: not-available
 libdpdk version: not-found
