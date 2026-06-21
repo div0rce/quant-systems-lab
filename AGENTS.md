@@ -159,7 +159,12 @@ Known constraints:
 
 - The gateway and feed are loopback-only, unauthenticated simulator surfaces.
 - The core engine cannot depend on wall-clock time or floating-point prices.
-- M29 perf artifacts are constrained-environment evidence until issue #90 is completed.
+- Perf artifacts are now **partial hardware PMU evidence** from a bare-metal Apple M2 (aarch64)
+  Fedora Asahi host: real `cycles`/`instructions`/`branches`/`branch-misses`, but
+  `cache-references`/`cache-misses` are unsupported by the Apple Silicon PMU. Issue #90's residual
+  is the cache-counter set specifically, which needs a PMU microarchitecture that exposes it
+  (x86_64, or an ARM server core) — bare metal alone is not enough. Do not relabel these as either
+  "full PMU evidence" or "constrained Docker validation".
 - Issue #94 external review remains one of the highest remaining credibility signals; do not imply
   independent review has happened until `docs/review_feedback.md` records it.
 
@@ -1144,10 +1149,14 @@ aesthetic product work before M24-M49 unless the human explicitly changes priori
 The correct claim after this arc is:
 
 > "correctness-first deterministic exchange-systems lab with measured concurrency, allocator,
-> constrained Linux perf workflow, and socket-profiling evidence."
+> bare-metal partial-PMU Linux perf, and socket-profiling evidence."
 
-Do not claim real hardware PMU evidence until issue #90 is completed on a bare-metal or
-PMU-capable Linux target. Current M29 artifacts are constrained-environment validation only.
+Real hardware PMU evidence now exists on a bare-metal Apple M2 (aarch64) Fedora Asahi host —
+`cycles`/`instructions`/`branches`/`branch-misses` are genuine counters. Do not claim *full* PMU
+evidence (the Apple Silicon PMU does not expose `cache-references`/`cache-misses`), and do not call
+the current artifacts "constrained Docker validation" either: they are **partial hardware PMU
+evidence**. Issue #90's residual is the cache-counter set, which needs a PMU microarchitecture that
+exposes it (x86_64, or an ARM server core).
 
 The incorrect claims remain forbidden:
 
@@ -1185,18 +1194,20 @@ M29 currently means:
 - Metadata-rich profiling artifacts exist.
 - Dirty-tree handling exists.
 - PMU preflight/validation exists.
-- Constrained-environment validation exists.
+- Bare-metal partial-PMU validation exists.
 - CI validation exists.
 - The workflow is reproducible.
 
-M29 does **not** currently mean real hardware PMU evidence has been captured. The committed
-artifacts were generated in a constrained Docker Desktop Linux environment where hardware PMU
-counters and sampling were unavailable or permission-limited. Do not claim real PMU evidence at
-this time.
+M29 now means **partial hardware PMU evidence**: the committed artifacts were regenerated on a
+bare-metal Apple M2 (aarch64) Fedora Asahi host (`systemd-detect-virt` reports `none`), where
+`perf stat` reads genuine `cycles`/`instructions`/`branches`/`branch-misses` counters off the Apple
+Avalanche P-core PMU. They are no longer "constrained Docker validation" — but they are not *full*
+PMU evidence either, because the Apple Silicon PMU does not expose `cache-references`/`cache-misses`.
 
-Issue #90 tracks full PMU-backed evidence generation on a bare-metal Linux host or a Linux VM/server
-with real `perf_event` hardware counter access. Treat this as: problem identified -> limitation
-documented -> follow-up issue created -> acceptance criteria defined. This is intentional
+Issue #90 now tracks only that residual: a *full* counter set (including cache events) requires a
+PMU microarchitecture that exposes those events to Linux (e.g. an x86_64 Intel/AMD host, or an ARM
+server core such as Graviton/Ampere) — not "more bare metal." Treat this as: problem identified ->
+limitation documented -> follow-up issue created -> acceptance criteria defined. This is intentional
 engineering transparency, not a repo deficiency.
 
 ## Dynamic-analysis limits
@@ -1241,8 +1252,10 @@ M45 exchange-grade persistence prototype; M46 recovery benchmarking; M47 contigu
 storage and cache-locality study; M48 DPDK research/prototype; M49 NIC offload and low-latency
 networking study.
 
-Issue #90 remains the full hardware-PMU evidence debt. Issues #99 and #110 were addressed by PR
-#111. Issues #95, #28, and #26 were addressed by PR #112. Issue #94 is the external technical
-review request and remains one of the highest remaining credibility signals. PR #124 completed M49;
-the current follow-up branch `perf/linux-host-artifact-refresh` refreshes Linux host artifacts on
-Fedora Asahi without adding new networking claims.
+Issue #90 remains the full hardware-PMU evidence debt (the cache-counter set specifically). Issues
+#99 and #110 were addressed by PR #111. Issues #95, #28, and #26 were addressed by PR #112. Issue
+#94 is the external technical review request and remains one of the highest remaining credibility
+signals. PR #124 completed M49, PR #125 (d9094df) refreshed the Linux host artifacts on bare-metal
+Fedora Asahi, and `v0.2.0` was released (PR #127 ded6e80; resume-anchor sync PR #128 ae93545). There
+is no active milestone; the highest-value remaining work is non-code and gated on #94 (external
+review) and #90 (full cache-PMU evidence on a PMU-capable microarchitecture).

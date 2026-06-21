@@ -350,6 +350,18 @@ Lower priority:
   supersedes CodeRabbit's PR #126, whose generated tests covered only trimming and were based on
   `d8c16b2` (where `qsl_publish_artifact` does not yet exist, so #126 could not merge before #125);
   #126 was closed as superseded. Do not merge from automation; the human squash-merges PR #125.
+- [2026-06-21] Codex-followup resume-anchor sync (`docs/codex-resume-anchor-sync`). Resolved the
+  Codex review findings left on `main` by PRs #127 and #128: (1) removed PROGRESS.md's stale
+  "Next action remains" block that still pointed `/resume` at the merged PR #125 on
+  `perf/linux-host-artifact-refresh`, replacing it with the v0.2.0 between-releases state (#94/#90
+  gated); (2) brought AGENTS.md into sync with CLAUDE.md's v0.2.0 partial-PMU reframe — the
+  constraints bullet, the "correct claim" block, and the "M29 perf evidence status" subsection no
+  longer call the artifacts "constrained Docker validation," and the stale
+  `perf/linux-host-artifact-refresh` follow-up line was updated in both AGENTS.md and CLAUDE.md to
+  the released state; (3) narrowed docs/perf_analysis.md so it no longer implies the Apple Blizzard
+  (E-core) PMU carries live counts — the `apple_blizzard_pmu/...` rows read `<not counted>` in
+  `results/perf_stat_linux.txt` because the single-threaded benchmark stays on the Avalanche P-cores.
+  Docs/memory only; no code or artifacts changed.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
@@ -756,14 +768,17 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-Current action is the Linux host artifact refresh PR #125 on `perf/linux-host-artifact-refresh`:
-wait for human review / CI and do not merge from automation. M49 (PR #124) is already merged to
-`main` as d8c16b2. The refreshed artifacts are host-specific Linux evidence — partial Apple PMU
-counters (cycles/instructions/branches/branch-misses) with cache-reference/cache-miss counters
-unsupported — not NIC-offload, latency, or full hardware-PMU evidence.
+There is no active milestone. `v0.2.0` is released (PR #127 ded6e80, tag on ded6e80, marked Latest;
+resume-anchor sync PR #128 ae93545). M0–M49, the Linux host artifact refresh (PR #125, d9094df), and
+the v0.2.0 release are all merged to `main`. The committed perf artifacts are **partial hardware PMU
+evidence** from this bare-metal Apple M2 (aarch64) Fedora Asahi host — real
+cycles/instructions/branches/branch-misses with cache-reference/cache-miss counters unsupported by
+the Apple Silicon PMU — not NIC-offload, latency, or full hardware-PMU evidence.
 
-Issue #90 remains the evidence debt for full Linux hardware PMU artifacts (cache counters). Work it
-only on a PMU-capable Linux host; do not relabel constrained or partial artifacts as full evidence.
+Highest-value remaining work is non-code and gated: issue #94 (independent external review) and
+issue #90 (full cache-PMU evidence). Issue #90 needs a PMU **microarchitecture** that exposes cache
+counters to Linux (x86_64, or an ARM server core); do not relabel partial artifacts as full
+evidence. Do not work either from automation; the human drives them.
 
 After each squash merge, return to this file and update state factually. If benchmark numbers are not measured, write `not measured`. Do not guess. Nobody is impressed by imaginary throughput.
 
