@@ -93,18 +93,27 @@ def fold_perf_script(lines) -> dict[str, int]:
 
 
 def parse_collapsed(lines) -> dict[str, int]:
-    """Parse pre-collapsed `stack count` lines."""
+    """Parse pre-collapsed `stack<sep>count` lines.
+
+    The canonical folded separator is a space, but a tab is tolerated. Tab is
+    preferred when present so a stack containing spaces (C++ signatures) still
+    splits on the trailing count rather than on an interior space. Non-positive
+    counts are ignored.
+    """
     folded: dict[str, int] = {}
     for raw in lines:
         line = raw.rstrip("\n")
         if not line.strip():
             continue
-        stack, _, count = line.rpartition(" ")
-        if not stack:
-            stack, _, count = line.rpartition("\t")
+        sep = "\t" if "\t" in line else " "
+        stack, found, count = line.rpartition(sep)
+        if not found:
+            continue
         try:
             n = int(count)
         except ValueError:
+            continue
+        if n <= 0:
             continue
         folded[stack] = folded.get(stack, 0) + n
     return folded
