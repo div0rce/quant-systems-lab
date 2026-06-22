@@ -83,19 +83,29 @@ template <class Int> [[nodiscard]] bool parse_int(std::string_view sv, Int &out)
         if (out.count >= kMaxFields) {
             return FixError::Malformed; // too many fields
         }
+        if (find_field(out, tag) != nullptr) {
+            // This adapter maps each business tag exactly once (no repeating
+            // groups), so a repeated tag is an ambiguous/malformed frame rather
+            // than a silently-ignored later value (e.g. 55=2 then 55=999).
+            return FixError::Malformed; // duplicate tag
+        }
         out.fields[out.count++] = Field{tag, msg.substr(eq + 1, soh - (eq + 1)), field_start};
         pos = soh + 1;
     }
     return FixError::None;
 }
 
-// Confirm the 8 / 9 / ... / 10 field ordering and the supported BeginString.
+// Confirm the standard 8 / 9 / 35 / ... / 10 envelope: BeginString, BodyLength,
+// MsgType as the first body field, CheckSum last, and a supported BeginString.
 [[nodiscard]] FixError check_envelope_shape(const Parsed &p) noexcept {
     if (p.count < 3) {
         return FixError::Malformed;
     }
     const Field &begin = p.fields[0];
+    // MsgType (35) must be the first body field, immediately after BodyLength, so
+    // a frame like 8/9/34/35/.../10 is rejected rather than decoded.
     const bool ordered = begin.tag == kTagBeginString && p.fields[1].tag == kTagBodyLength &&
+                         p.fields[2].tag == kTagMsgType &&
                          p.fields[p.count - 1].tag == kTagCheckSum;
     if (!ordered) {
         return FixError::Malformed;

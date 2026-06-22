@@ -1,16 +1,18 @@
 # Release Readiness Audit
 
 A pre-release pass verifying the repo builds, demos, reproduces, and reads honestly. This audit
-covers **M0–M49 plus the v0.2.0 evidence refresh** (bare-metal Linux artifact regeneration and the
-documentation/staleness sweep). It supersedes the v0.1.0-era audit; the actual GitHub release is
-cut by a human after squash-merge.
+covers **M0–M49, the v0.2.0 evidence refresh** (bare-metal Linux artifact regeneration and the
+documentation/staleness sweep), **and the v0.2.1 content** (the FIX-like text protocol adapter #29,
+the perf call-graph flamegraph + `make flamegraph` #32, and a Codex resume-anchor/PMU consistency
+sweep). It supersedes the v0.1.0-era audit; the actual GitHub release is cut by a human after
+squash-merge.
 
 ## Verification (this session, bare-metal Apple M2 / aarch64 / GCC 16.1.1, Fedora Asahi Remix)
 
 | Check | Result |
 |---|---|
-| `make check` | 241/241 tests pass, no warnings |
-| `make asan` (ASan + UBSan) | 241/241, sanitizer-clean |
+| `make check` | 263/263 tests pass, no warnings (incl. the v0.2.1 FIX-adapter + flamegraph-renderer tests) |
+| `make asan` (ASan + UBSan) | 263/263, sanitizer-clean (the FIX text parser handles untrusted input) |
 | `make tsan` (ThreadSanitizer) | 20/20 concurrency-labelled tests, race-clean |
 | `make check-fixtures` | committed differential fixtures match current C++ output |
 | `make check-manifest` | provenance manifest matches the committed fixtures |
@@ -19,6 +21,7 @@ cut by a human after squash-merge.
 | `dune runtest --root ocaml` | suites pass: log-invariant verifier, independent replay engine, differential replay (50 property fixtures), failure-bundle (`diff_report`), and oracle mutation testing |
 | `make demo` | clean, deterministic (replay/recovery + loopback gateway round-trip) |
 | `make bench` / `make bench-diff` | reproduce from the committed harness; `results/latest.txt` and `results/differential.txt` are bare-metal Apple M2 runs (single-machine, run-to-run variance) |
+| `make flamegraph` (Linux perf, v0.2.1) | bare-metal cpu-clock call-graph profile → `results/flamegraph.svg`/`.txt`, classified `software cpu-clock sampling hot-symbol profile`, gated on the folded sample total, `Dirty inputs: no` |
 
 CI mirrors these across six jobs: `build-test` (build + test + bench compile-check +
 `check-fixtures` + `check-manifest` + fmt), `sanitizers` (ASan/UBSan), `thread-sanitizer`,
@@ -36,6 +39,8 @@ does not buy:
   `instructions` / `branches` / `branch-misses` off the Apple Avalanche/Blizzard PMUs, with
   `cache-references` / `cache-misses` reported `<not supported>` (Apple Silicon PMU limitation).
   Not full PMU evidence; issue #90 tracks the cache-counter set, which needs a different PMU.
+  `results/flamegraph.svg`/`.txt` (v0.2.1) is a **software cpu-clock sampling** hot-symbol profile
+  from the same host — a hot-symbol investigation aid, not a latency or throughput claim.
 - **Sockets** — `socket_profile_loopback.txt`, `socket_stress_summary.txt`, and
   `socket_load_summary.txt` are bare-metal but **loopback-only**: no NIC/driver/routing.
 - **NUMA** — `numa_affinity_study.txt` is bare-metal but the M2 is a **single-NUMA-node** machine,
@@ -64,7 +69,8 @@ artifact leaks host identifiers (a publish-time MAC sanitizer redacts every non-
   separation, constrained/partial perf artifacts, loopback socket evidence, PMR node allocation,
   epoll prototype, durability modes and tail repair).
 - **No stale milestone references**: PROGRESS, HANDOFF, and the milestone tables reflect the merged
-  M0–M49 state and the v0.2.0 artifact refresh.
+  M0–M49 state, the v0.2.0 artifact refresh, and the v0.2.1 content (#29/#32 closed; resume anchors
+  consistent across PROGRESS/HANDOFF/AGENTS/CLAUDE).
 
 ## Scope and honesty
 
@@ -82,6 +88,7 @@ verification.
 
 ## Outcome
 
-Release-ready as a portfolio artifact. The next GitHub-only release is `v0.2.0` (Phase III/IV
-systems work — M24–M49 — plus the bare-metal evidence refresh); it requires explicit human approval
-and a squash-merge before tagging.
+Release-ready as a portfolio artifact. The next GitHub-only release is `v0.2.1` (the FIX-like text
+protocol adapter #29, the perf flamegraph #32, and a Codex resume-anchor/PMU consistency sweep) on
+top of `v0.2.0` (Phase III/IV systems work — M24–M49 — plus the bare-metal evidence refresh); it
+requires explicit human approval and a squash-merge before tagging.

@@ -80,7 +80,7 @@ Current state:
 - current active branch, if active: none (work lands via scoped PRs from `main`)
 - current active status: `v0.2.1` is the current release on top of `v0.2.0`. It adds the FIX-like
   text protocol adapter (#29), `make flamegraph` + a bare-metal flamegraph artifact (#32), and a
-  Codex resume-anchor/PMU consistency sweep. `make check` 261/261 and `make asan` 261/261 on the
+  Codex resume-anchor/PMU consistency sweep. `make check` 263/263 and `make asan` 263/263 on the
   bare-metal Apple M2 Fedora Asahi host; both new code files pass the CI CodeScene Code Health gate.
   No active milestone
 - release tag: `v0.2.1` (Latest, tagged on the release-PR merge commit), after `v0.2.0` and `v0.1.0`
@@ -89,6 +89,8 @@ Current state:
 - issues #95, #28, and #26 were closed by PR #112; issues #32 and #29 were closed by PR #130 and
   PR #131 (now part of `v0.2.1`)
 - open review request issue: #94
+- legacy backlog: clear — #32 (flamegraph) and #29 (FIX adapter) shipped in `v0.2.1` (PR #130,
+  PR #131)
 
 ### Next milestone
 
@@ -114,7 +116,7 @@ Current priority order (post-v0.2.1):
 2. Issue #90 — full cache-counter PMU evidence. The bare-metal Apple host gives real
    cycles/instructions/branches/branch-misses but no cache-reference/cache-miss counters, so this
    needs a PMU microarchitecture that exposes cache events (x86_64, or an ARM server core).
-3. Low-signal backlog only after the above: #32 (flamegraph), #29 (FIX adapter).
+3. No low-signal backlog remains: #32 (flamegraph) and #29 (FIX adapter) shipped in `v0.2.1`.
 
 ### Forbidden shortcuts
 

@@ -32,27 +32,33 @@ Do not rely on prior chat memory.
 - **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.2.1` (tag created on the
   squash-merge of the release PR, marked Latest) published as GitHub-only releases; no packages
   published
-- **`make check` passing:** yes — `make check` 261/261 and `make asan` 261/261 on the bare-metal
+- **`make check` passing:** yes — `make check` 263/263 and `make asan` 263/263 on the bare-metal
   Apple M2 (aarch64) Fedora Asahi host on 2026-06-21 (includes the v0.2.1 FIX-adapter and flamegraph
   renderer tests)
 - **Last action:** delivered the `v0.2.1` content as scoped PRs and prepared this version-bump
   release. Two reprioritized backlog items — the FIX-like text protocol adapter (#29) and the perf
   call-graph flamegraph (#32) — plus the Codex resume-anchor/PMU consistency sweep (#127/#128
-  follow-up). Ran Codex as an independent reviewer and fixed its findings; brought every touched file
-  through the CodeScene Code Health gate (table-driven enum maps, a `decode_typed` skeleton, split
-  `parse_envelope`, flattened `flamegraph.py`). `make check`/`make asan` 261/261.
+  follow-up). Ran Codex as an independent reviewer across the stack and resolved every finding: the
+  FIX envelope now requires MsgType as the first body field and rejects duplicate tags;
+  `flamegraph.sh` classifies zero-sample/partial runs honestly, fails hard on renderer errors, and
+  gates on the folded sample total (not perf's estimate); and the resume anchors were made
+  consistent across PROGRESS/HANDOFF/AGENTS/CLAUDE. Brought every touched file through the CodeScene
+  Code Health gate (table-driven enum maps, a `decode_typed` skeleton, split `parse_envelope`,
+  flattened `flamegraph.py`). `make check`/`make asan` 263/263.
 - **Next action:** no active milestone. Highest-value remaining work is non-code and gated:
   issue #94 (independent external review — needs a human reviewer) and issue #90 (full
   cache-counter PMU evidence — needs a PMU microarchitecture that exposes cache events, e.g.
-  x86_64). Low-signal backlog: #32 (flamegraph), #29 (FIX adapter).
+  x86_64). The #32 (flamegraph) and #29 (FIX adapter) backlog items are done — shipped in `v0.2.1`
+  (PR #130 and PR #131) — so do not reopen them.
 - **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap — this bare-metal
   Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
   implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
   cache events (x86_64, or an ARM server core). Issue #94 remains open for independent external
   review (human-gated). Hardware NIC/offload latency measurement still requires suitable wired NIC
   hardware, driver support, timestamping/offload/RSS access, and a measured packet workload; the
-  current `wld0` Wi-Fi capability observation is not NIC-offload latency evidence. Legacy backlog
-  still includes #32 and #29. Issues #95, #28, and #26 were closed by PR #112.
+  current `wld0` Wi-Fi capability observation is not NIC-offload latency evidence. The legacy
+  backlog is now clear: #32 and #29 shipped in `v0.2.1` (PR #130, PR #131); issues #95, #28, and
+  #26 were closed by PR #112.
 
 ---
 
@@ -411,6 +417,20 @@ Lower priority:
   flamegraph #32, resume-anchor/PMU sweep), and brought the PROGRESS/HANDOFF release anchors current.
   No code or benchmark artifacts change in the release PR itself. On squash-merge the human tags
   `v0.2.1` on the merge commit and publishes the GitHub release. Do not merge from automation.
+- [2026-06-22] Second Codex review round on the open `v0.2.1` stack — addressed every remaining
+  inline finding across PRs #129/#130/#131/#133. #131 (`fix.cpp`): the FIX envelope now requires
+  MsgType (35) as the first body field (rejecting `8/9/34/35/.../10`) and `tokenize` rejects
+  duplicate tags (no repeating groups), with a deterministic rejection test for each; the older
+  cancel-`ClOrdID` finding was already resolved and is covered by an existing test. #130
+  (`flamegraph.sh`): classify `zero-sized data` as a perf limitation (matching `perf_record.sh`),
+  remove a stale SVG on zero-stack partial runs, accept perf's `(~N samples)` estimate marker and
+  gate on the **folded** sample total instead of perf's estimate, fail hard (exit 4) on renderer
+  errors instead of `|| true`, and derive the software/hardware sampling label+caveat from the
+  selected event; regenerated the bare-metal artifact (329 folded samples, `Dirty inputs: no`).
+  #129: recorded the resume-anchor sync in PROGRESS's top current-state. #133: bumped the v0.2.1
+  release anchors and removed completed #29/#32 from every backlog list, synced AGENTS.md/CLAUDE.md
+  to the v0.2.1 released state, and refreshed this release-readiness audit to 263 tests. `make
+  check`/`make asan` 263/263. CodeScene MCP token still expired; CI is the authoritative gate.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.

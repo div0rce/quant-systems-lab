@@ -156,6 +156,25 @@ TEST_CASE("FIX malformed framing rejects deterministically", "[fix]") {
             fix::FixError::Malformed);
 }
 
+TEST_CASE("FIX MsgType must be the first body field", "[fix]") {
+    // 8/9/34/35/.../10 — every required NewOrder field is present, but MsgType
+    // (35) does not immediately follow BodyLength. A first-match scan would still
+    // decode this; the standard envelope requires 35 first, so it is malformed.
+    std::string body = field(34, "1") + field(35, "D") + field(11, "1") + field(55, "2") +
+                       field(54, "1") + field(38, "10") + field(40, "2") + field(44, "100") +
+                       field(59, "1");
+    REQUIRE(fix::decode_new_order(wrap(body)).error == fix::FixError::Malformed);
+}
+
+TEST_CASE("FIX duplicate tag rejects deterministically", "[fix]") {
+    // Symbol (55) repeated. First-wins parsing would silently take 2 and ignore
+    // 999; with no repeating groups, the frame is ambiguous and rejected.
+    std::string body = field(35, "D") + field(34, "1") + field(11, "1") + field(55, "2") +
+                       field(55, "999") + field(54, "1") + field(38, "10") + field(40, "2") +
+                       field(44, "100") + field(59, "1");
+    REQUIRE(fix::decode_new_order(wrap(body)).error == fix::FixError::Malformed);
+}
+
 TEST_CASE("FIX oversized message rejects", "[fix]") {
     std::string body = field(35, "D");
     body += field(34, "1");
