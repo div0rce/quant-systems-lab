@@ -61,66 +61,60 @@ template <class Int> [[nodiscard]] bool parse_int(std::string_view sv, Int &out)
     return nullptr;
 }
 
-// Validate the FIX envelope: SOH-delimited tag=value framing, the 8/9/.../10
-// ordering, BodyLength (tag 9), and the mod-256 CheckSum (tag 10). On success the
-// field table is filled; business fields are looked up by the typed decoders.
-[[nodiscard]] FixError parse_envelope(std::string_view msg, Parsed &out) noexcept {
-    if (msg.empty() || msg.size() > kMaxMessageLen) {
-        return FixError::Malformed;
-    }
-
+// Split the message into SOH-delimited tag=value fields. Malformed framing
+// (missing SOH, missing '=', non-numeric tag, too many fields) is rejected.
+[[nodiscard]] FixError tokenize(std::string_view msg, Parsed &out) noexcept {
     std::size_t pos = 0;
     while (pos < msg.size()) {
         const std::size_t field_start = pos;
         const std::size_t soh = msg.find(kSoh, pos);
         if (soh == std::string_view::npos) {
-            return FixError::Malformed; // a field is not SOH-terminated
+            return FixError::Malformed; // field not SOH-terminated
         }
         const std::size_t eq = msg.find('=', pos);
         if (eq == std::string_view::npos || eq >= soh) {
             return FixError::Malformed; // no '=' within the field
         }
-        const std::string_view tag_sv = msg.substr(field_start, eq - field_start);
-        const std::string_view val_sv = msg.substr(eq + 1, soh - (eq + 1));
         unsigned tag = 0;
-        if (!parse_int(tag_sv, tag)) {
+        if (!parse_int(msg.substr(field_start, eq - field_start), tag)) {
             return FixError::Malformed; // non-numeric tag
         }
         if (out.count >= kMaxFields) {
             return FixError::Malformed; // too many fields
         }
-        out.fields[out.count++] = Field{tag, val_sv, field_start};
+        out.fields[out.count++] = Field{tag, msg.substr(eq + 1, soh - (eq + 1)), field_start};
         pos = soh + 1;
     }
+    return FixError::None;
+}
 
-    if (out.count < 3) {
+// Confirm the 8 / 9 / ... / 10 field ordering and the supported BeginString.
+[[nodiscard]] FixError check_envelope_shape(const Parsed &p) noexcept {
+    if (p.count < 3) {
         return FixError::Malformed;
     }
-    const Field &f_begin = out.fields[0];
-    const Field &f_len = out.fields[1];
-    const Field &f_csum = out.fields[out.count - 1];
-    if (f_begin.tag != kTagBeginString || f_len.tag != kTagBodyLength ||
-        f_csum.tag != kTagCheckSum) {
+    const Field &begin = p.fields[0];
+    const bool ordered = begin.tag == kTagBeginString && p.fields[1].tag == kTagBodyLength &&
+                         p.fields[p.count - 1].tag == kTagCheckSum;
+    if (!ordered) {
         return FixError::Malformed;
     }
-    if (f_begin.value != kBeginString) {
-        return FixError::UnsupportedBeginString;
-    }
+    return begin.value == kBeginString ? FixError::None : FixError::UnsupportedBeginString;
+}
 
-    // BodyLength counts the bytes from the first field after tag 9 through the
-    // SOH preceding tag 10, i.e. [fields[2].start, checksum_field.start).
-    const std::size_t body_start = out.fields[2].start;
+// Verify BodyLength (tag 9) against the actual body span and the mod-256
+// CheckSum (tag 10) against the sum of every byte before the tag-10 field.
+[[nodiscard]] FixError verify_length_and_checksum(std::string_view msg, const Parsed &p) noexcept {
+    const Field &f_csum = p.fields[p.count - 1];
+    // BodyLength spans [fields[2].start, checksum_field.start).
     const std::size_t checksum_start = f_csum.start;
     std::size_t body_len = 0;
-    if (!parse_int(f_len.value, body_len)) {
+    if (!parse_int(p.fields[1].value, body_len)) {
         return FixError::InvalidField;
     }
-    if (body_len != checksum_start - body_start) {
+    if (body_len != checksum_start - p.fields[2].start) {
         return FixError::BodyLengthMismatch;
     }
-
-    // CheckSum is the mod-256 sum of every byte up to the SOH before tag 10,
-    // formatted as exactly three digits.
     unsigned declared = 0;
     if (f_csum.value.size() != 3 || !parse_int(f_csum.value, declared)) {
         return FixError::InvalidField;
@@ -129,10 +123,22 @@ template <class Int> [[nodiscard]] bool parse_int(std::string_view sv, Int &out)
     for (std::size_t i = 0; i < checksum_start; ++i) {
         sum += static_cast<unsigned char>(msg[i]);
     }
-    if ((sum & 0xFFu) != declared) {
-        return FixError::ChecksumMismatch;
+    return (sum & 0xFFu) == declared ? FixError::None : FixError::ChecksumMismatch;
+}
+
+// Validate the FIX envelope and fill the field table; business fields are then
+// looked up by the typed decoders.
+[[nodiscard]] FixError parse_envelope(std::string_view msg, Parsed &out) noexcept {
+    if (msg.empty() || msg.size() > kMaxMessageLen) {
+        return FixError::Malformed;
     }
-    return FixError::None;
+    if (const FixError e = tokenize(msg, out); e != FixError::None) {
+        return e;
+    }
+    if (const FixError e = check_envelope_shape(out); e != FixError::None) {
+        return e;
+    }
+    return verify_length_and_checksum(msg, out);
 }
 
 // Extract a required integer field; map absence/format/overflow to structured
@@ -330,55 +336,52 @@ std::string encode(const CancelOrder &msg, SeqNo seq) {
     return frame(body);
 }
 
-FixDecodeResult<NewOrder> decode_new_order(std::string_view msg) noexcept {
+// Shared typed-decode skeleton: validate the envelope, confirm MsgType, then let
+// `fill` read the body fields through a FieldReader (which short-circuits on the
+// first error). Keeps the two public decoders to just their field maps.
+template <class T, class Fill>
+[[nodiscard]] FixDecodeResult<T> decode_typed(std::string_view msg, char expected,
+                                              Fill fill) noexcept {
     Parsed p;
     if (const FixError e = parse_envelope(msg, p); e != FixError::None) {
         return {e, {}};
     }
-    if (const FixError e = expect_msg_type(p, kMsgNewOrderSingle); e != FixError::None) {
+    if (const FixError e = expect_msg_type(p, expected); e != FixError::None) {
         return {e, {}};
     }
-
-    NewOrder out{};
-    SeqNo seq = 0; // tag 34 (standard header); validated but not stored.
-    const FixError e = FieldReader(p)
-                           .integer(kTagMsgSeqNum, seq)
-                           .integer(kTagClOrdID, out.order_id)
-                           .integer(kTagSymbol, out.symbol)
-                           .integer(kTagOrderQty, out.quantity)
-                           .integer(kTagPrice, out.price)
-                           .side(kTagSide, out.side)
-                           .ord_type(kTagOrdType, out.type)
-                           .tif(kTagTimeInForce, out.tif)
-                           .error();
-    if (e != FixError::None) {
-        return {e, {}};
+    T out{};
+    FieldReader reader(p);
+    fill(reader, out);
+    if (reader.error() != FixError::None) {
+        return {reader.error(), {}};
     }
     return {FixError::None, out};
 }
 
-FixDecodeResult<CancelOrder> decode_cancel_order(std::string_view msg) noexcept {
-    Parsed p;
-    if (const FixError e = parse_envelope(msg, p); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = expect_msg_type(p, kMsgOrderCancelRequest); e != FixError::None) {
-        return {e, {}};
-    }
+FixDecodeResult<NewOrder> decode_new_order(std::string_view msg) noexcept {
+    return decode_typed<NewOrder>(msg, kMsgNewOrderSingle, [](FieldReader &r, NewOrder &o) {
+        SeqNo seq = 0; // tag 34 (standard header); validated but not stored.
+        r.integer(kTagMsgSeqNum, seq)
+            .integer(kTagClOrdID, o.order_id)
+            .integer(kTagSymbol, o.symbol)
+            .integer(kTagOrderQty, o.quantity)
+            .integer(kTagPrice, o.price)
+            .side(kTagSide, o.side)
+            .ord_type(kTagOrdType, o.type)
+            .tif(kTagTimeInForce, o.tif);
+    });
+}
 
-    CancelOrder out{};
-    SeqNo seq = 0;        // tag 34
-    OrderId clord_id = 0; // tag 11 (ClOrdID): required by FIX, validated but not stored.
-    const FixError e = FieldReader(p)
-                           .integer(kTagMsgSeqNum, seq)
-                           .integer(kTagOrigClOrdID, out.order_id)
-                           .integer(kTagClOrdID, clord_id)
-                           .integer(kTagSymbol, out.symbol)
-                           .error();
-    if (e != FixError::None) {
-        return {e, {}};
-    }
-    return {FixError::None, out};
+FixDecodeResult<CancelOrder> decode_cancel_order(std::string_view msg) noexcept {
+    return decode_typed<CancelOrder>(
+        msg, kMsgOrderCancelRequest, [](FieldReader &r, CancelOrder &o) {
+            SeqNo seq = 0;        // tag 34
+            OrderId clord_id = 0; // tag 11 (ClOrdID): required by FIX, validated but not stored.
+            r.integer(kTagMsgSeqNum, seq)
+                .integer(kTagOrigClOrdID, o.order_id)
+                .integer(kTagClOrdID, clord_id)
+                .integer(kTagSymbol, o.symbol);
+        });
 }
 
 FixDecodeResult<char> peek_msg_type(std::string_view msg) noexcept {
