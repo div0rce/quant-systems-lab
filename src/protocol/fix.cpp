@@ -172,6 +172,93 @@ template <class Int>
     return FixError::None;
 }
 
+// Map FIX coded-enum characters to internal enums (Side 1/2, OrdType 1/2,
+// TIF 1/3). An unrecognized code is InvalidEnumValue.
+[[nodiscard]] FixError map_side(char c, Side &out) noexcept {
+    switch (c) {
+    case '1':
+        out = Side::Buy;
+        return FixError::None;
+    case '2':
+        out = Side::Sell;
+        return FixError::None;
+    default:
+        return FixError::InvalidEnumValue;
+    }
+}
+
+[[nodiscard]] FixError map_ord_type(char c, OrderType &out) noexcept {
+    switch (c) {
+    case '1':
+        out = OrderType::Market;
+        return FixError::None;
+    case '2':
+        out = OrderType::Limit;
+        return FixError::None;
+    default:
+        return FixError::InvalidEnumValue;
+    }
+}
+
+[[nodiscard]] FixError map_tif(char c, TimeInForce &out) noexcept {
+    switch (c) {
+    case '1':
+        out = TimeInForce::GTC;
+        return FixError::None;
+    case '3':
+        out = TimeInForce::IOC;
+        return FixError::None;
+    default:
+        return FixError::InvalidEnumValue;
+    }
+}
+
+// Confirm MsgType (tag 35) is present, single-character, and the expected type.
+[[nodiscard]] FixError expect_msg_type(const Parsed &p, char expected) noexcept {
+    const Field *type = find_field(p, kTagMsgType);
+    if (type == nullptr || type->value.size() != 1 || type->value.front() != expected) {
+        return FixError::UnknownMsgType;
+    }
+    return FixError::None;
+}
+
+// Reads required fields and short-circuits on the first error, so the typed
+// decoders stay a flat chain instead of a long if-return ladder.
+class FieldReader {
+  public:
+    explicit FieldReader(const Parsed &p) noexcept : p_(p) {}
+
+    template <class Int> FieldReader &integer(unsigned tag, Int &out) noexcept {
+        if (err_ == FixError::None) {
+            err_ = require_int(p_, tag, out);
+        }
+        return *this;
+    }
+    FieldReader &side(unsigned tag, Side &out) noexcept { return coded(tag, out, map_side); }
+    FieldReader &ord_type(unsigned tag, OrderType &out) noexcept {
+        return coded(tag, out, map_ord_type);
+    }
+    FieldReader &tif(unsigned tag, TimeInForce &out) noexcept { return coded(tag, out, map_tif); }
+
+    [[nodiscard]] FixError error() const noexcept { return err_; }
+
+  private:
+    template <class Enum, class Map> FieldReader &coded(unsigned tag, Enum &out, Map map) noexcept {
+        if (err_ != FixError::None) {
+            return *this;
+        }
+        char code = 0;
+        err_ = require_code(p_, tag, code);
+        if (err_ == FixError::None) {
+            err_ = map(code, out);
+        }
+        return *this;
+    }
+
+    const Parsed &p_;
+    FixError err_{FixError::None};
+};
+
 void append_field(std::string &dst, unsigned tag, std::string_view value) {
     dst += std::to_string(tag);
     dst += '=';
@@ -248,71 +335,24 @@ FixDecodeResult<NewOrder> decode_new_order(std::string_view msg) noexcept {
     if (const FixError e = parse_envelope(msg, p); e != FixError::None) {
         return {e, {}};
     }
-    const Field *type = find_field(p, kTagMsgType);
-    if (type == nullptr || type->value.size() != 1 || type->value.front() != kMsgNewOrderSingle) {
-        return {FixError::UnknownMsgType, {}};
+    if (const FixError e = expect_msg_type(p, kMsgNewOrderSingle); e != FixError::None) {
+        return {e, {}};
     }
 
     NewOrder out{};
-    SeqNo seq = 0; // standard header field (tag 34); validated but not stored.
-    if (const FixError e = require_int(p, kTagMsgSeqNum, seq); e != FixError::None) {
+    SeqNo seq = 0; // tag 34 (standard header); validated but not stored.
+    const FixError e = FieldReader(p)
+                           .integer(kTagMsgSeqNum, seq)
+                           .integer(kTagClOrdID, out.order_id)
+                           .integer(kTagSymbol, out.symbol)
+                           .integer(kTagOrderQty, out.quantity)
+                           .integer(kTagPrice, out.price)
+                           .side(kTagSide, out.side)
+                           .ord_type(kTagOrdType, out.type)
+                           .tif(kTagTimeInForce, out.tif)
+                           .error();
+    if (e != FixError::None) {
         return {e, {}};
-    }
-    if (const FixError e = require_int(p, kTagClOrdID, out.order_id); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = require_int(p, kTagSymbol, out.symbol); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = require_int(p, kTagOrderQty, out.quantity); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = require_int(p, kTagPrice, out.price); e != FixError::None) {
-        return {e, {}};
-    }
-
-    char side = 0;
-    char ord_type = 0;
-    char tif = 0;
-    if (const FixError e = require_code(p, kTagSide, side); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = require_code(p, kTagOrdType, ord_type); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = require_code(p, kTagTimeInForce, tif); e != FixError::None) {
-        return {e, {}};
-    }
-
-    switch (side) {
-    case '1':
-        out.side = Side::Buy;
-        break;
-    case '2':
-        out.side = Side::Sell;
-        break;
-    default:
-        return {FixError::InvalidEnumValue, {}};
-    }
-    switch (ord_type) {
-    case '1':
-        out.type = OrderType::Market;
-        break;
-    case '2':
-        out.type = OrderType::Limit;
-        break;
-    default:
-        return {FixError::InvalidEnumValue, {}};
-    }
-    switch (tif) {
-    case '1':
-        out.tif = TimeInForce::GTC;
-        break;
-    case '3':
-        out.tif = TimeInForce::IOC;
-        break;
-    default:
-        return {FixError::InvalidEnumValue, {}};
     }
     return {FixError::None, out};
 }
@@ -322,28 +362,20 @@ FixDecodeResult<CancelOrder> decode_cancel_order(std::string_view msg) noexcept 
     if (const FixError e = parse_envelope(msg, p); e != FixError::None) {
         return {e, {}};
     }
-    const Field *type = find_field(p, kTagMsgType);
-    if (type == nullptr || type->value.size() != 1 ||
-        type->value.front() != kMsgOrderCancelRequest) {
-        return {FixError::UnknownMsgType, {}};
+    if (const FixError e = expect_msg_type(p, kMsgOrderCancelRequest); e != FixError::None) {
+        return {e, {}};
     }
 
     CancelOrder out{};
-    SeqNo seq = 0;
-    if (const FixError e = require_int(p, kTagMsgSeqNum, seq); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = require_int(p, kTagOrigClOrdID, out.order_id); e != FixError::None) {
-        return {e, {}};
-    }
-    // ClOrdID (tag 11) is required by FIX on an OrderCancelRequest. CancelOrder
-    // does not model a separate cancel-request id, so it is validated (present
-    // and numeric) but not stored — keeping decode symmetric with encode.
-    OrderId clord_id = 0;
-    if (const FixError e = require_int(p, kTagClOrdID, clord_id); e != FixError::None) {
-        return {e, {}};
-    }
-    if (const FixError e = require_int(p, kTagSymbol, out.symbol); e != FixError::None) {
+    SeqNo seq = 0;        // tag 34
+    OrderId clord_id = 0; // tag 11 (ClOrdID): required by FIX, validated but not stored.
+    const FixError e = FieldReader(p)
+                           .integer(kTagMsgSeqNum, seq)
+                           .integer(kTagOrigClOrdID, out.order_id)
+                           .integer(kTagClOrdID, clord_id)
+                           .integer(kTagSymbol, out.symbol)
+                           .error();
+    if (e != FixError::None) {
         return {e, {}};
     }
     return {FixError::None, out};
