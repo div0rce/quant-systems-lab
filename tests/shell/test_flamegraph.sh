@@ -122,6 +122,22 @@ ESC_SVG="$(printf 'bench;a<b>&c 3\n' | python3 "$FG" --from-collapsed)"
 expect_contains "frame names are XML-escaped" '&lt;b&gt;&amp;c' "$ESC_SVG"
 expect_not_contains "raw unescaped angle bracket is not emitted in a frame title" '<title>a<b>' "$ESC_SVG"
 
+# --- Collapsed input parsing ------------------------------------------------
+
+# A tab-separated stack that itself contains spaces must split on the count, not
+# on an interior space.
+TAB_COLLAPSED="$(printf 'main;foo(unsigned int)\t7\n' | python3 "$FG" --from-collapsed --collapse-only)"
+expect_eq "tab-separated collapsed line keeps its count" \
+    'main;foo(unsigned int) 7' "$TAB_COLLAPSED"
+
+# Non-positive counts are ignored; a stack with only such counts yields nothing.
+NONPOS="$(printf 'a;b 0\nc;d -3\n' | python3 "$FG" --from-collapsed --collapse-only)"
+expect_eq "non-positive collapsed counts are dropped" "" "$NONPOS"
+
+printf 'a;b 0\n' | python3 "$FG" --from-collapsed >/dev/null 2>&1
+rc=$?
+expect_eq "all-non-positive collapsed input fails SVG with exit 1" "1" "$rc"
+
 # --- Empty input ------------------------------------------------------------
 
 EMPTY_COLLAPSE="$(printf '' | python3 "$FG" --collapse-only)"

@@ -82,9 +82,10 @@ RECORD_ERR="$(mktemp)"
 SCRIPT_OUT="$(mktemp)"
 SCRIPT_ERR="$(mktemp)"
 FOLDED="$(mktemp)"
+COLLAPSE_ERR="$(mktemp)"
 SVG_TMP="$(mktemp)"
 TXT_TMP="$(mktemp)"
-trap 'rm -f "$BENCH_OUT" "$RECORD_BENCH_OUT" "$RECORD_ERR" "$SCRIPT_OUT" "$SCRIPT_ERR" "$FOLDED" "$SVG_TMP" "$TXT_TMP"' EXIT
+trap 'rm -f "$BENCH_OUT" "$RECORD_BENCH_OUT" "$RECORD_ERR" "$SCRIPT_OUT" "$SCRIPT_ERR" "$FOLDED" "$COLLAPSE_ERR" "$SVG_TMP" "$TXT_TMP"' EXIT
 
 # Fail fast if the benchmark itself is broken (partial mode must not mask this).
 BENCH_STATUS=0
@@ -105,31 +106,52 @@ if [[ "$RECORD_STATUS" -eq 0 ]]; then
 fi
 
 PERF_LIMITATION=no
-if grep -Eiq 'No samples|failed to open|Permission denied|Operation not permitted|perf_event_open|not supported|Operation not supported|perf not found for kernel|linux-tools' \
+# `zero-sized data` is how `perf script` reports a no-sample capture; classify it
+# as a perf limitation here exactly as scripts/perf_record.sh does, so the
+# documented constrained-host (QSL_PERF_ALLOW_PARTIAL=1) path works instead of
+# tripping the unexpected-failure exit.
+if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operation not permitted|perf_event_open|not supported|Operation not supported|perf not found for kernel|linux-tools' \
     "$RECORD_ERR" "$SCRIPT_ERR"; then
     PERF_LIMITATION=yes
 fi
 
-SAMPLE_TOKEN="$(sed -nE 's/.*\(([0-9][0-9.,]*[KkMm]?) samples\).*/\1/p' "$RECORD_ERR" | head -1)"
-SAMPLE_COUNT="$(parse_sample_count_token "$SAMPLE_TOKEN")"
-[[ -z "$SAMPLE_COUNT" ]] && SAMPLE_COUNT=0
+# perf record prints its sample summary as "(N samples)" or, on some versions,
+# "(~N samples)" — and that count is only its own estimate. Accept the optional
+# `~` so the token is not dropped, but keep this value informational; the sample
+# gate below uses the authoritative folded total, not this estimate.
+SAMPLE_TOKEN="$(sed -nE 's/.*\(~?([0-9][0-9.,]*[KkMm]?) samples\).*/\1/p' "$RECORD_ERR" | head -1)"
+PERF_EST_SAMPLES="$(parse_sample_count_token "$SAMPLE_TOKEN")"
+[[ -z "$PERF_EST_SAMPLES" ]] && PERF_EST_SAMPLES=0
 
-# Fold to collapsed stacks for the text summary and as an SVG precondition.
+# Fold to collapsed stacks for the text summary and as an SVG precondition. A
+# nonzero COLLAPSE_STATUS means the renderer/parser itself failed (a generator
+# regression), which is handled as an unexpected failure below — never masked as
+# a perf sampling limitation. FOLDED_SAMPLES is the real sample total carried by
+# the folded stacks (sum of trailing counts), the authoritative gate input.
 STACK_COUNT=0
+FOLDED_SAMPLES=0
+COLLAPSE_STATUS=0
 if [[ "$SCRIPT_STATUS" -eq 0 && -s "$SCRIPT_OUT" ]]; then
-    python3 scripts/flamegraph.py --collapse-only <"$SCRIPT_OUT" >"$FOLDED" 2>/dev/null || true
+    python3 scripts/flamegraph.py --collapse-only <"$SCRIPT_OUT" >"$FOLDED" 2>"$COLLAPSE_ERR" ||
+        COLLAPSE_STATUS=$?
     STACK_COUNT="$(wc -l <"$FOLDED" | tr -d ' ')"
+    FOLDED_SAMPLES="$(awk '{ s += $NF } END { printf "%d\n", s + 0 }' "$FOLDED")"
 fi
 
 INSUFFICIENT_SAMPLES=no
-if [[ "$RECORD_STATUS" -eq 0 && "$SCRIPT_STATUS" -eq 0 && "$SAMPLE_COUNT" -lt "$MIN_SAMPLES" ]]; then
+if [[ "$RECORD_STATUS" -eq 0 && "$SCRIPT_STATUS" -eq 0 && "$COLLAPSE_STATUS" -eq 0 &&
+    "$FOLDED_SAMPLES" -lt "$MIN_SAMPLES" ]]; then
     INSUFFICIENT_SAMPLES=yes
 fi
 
-ARTIFACT_TYPE="flamegraph ($EVENT software sampling hot-symbol profile)"
-if [[ "$EVENT" == "cycles" ]]; then
-    ARTIFACT_TYPE="flamegraph (cycles hardware-PMU sampling hot-symbol profile)"
-fi
+# Describe the sampling source once so every label/caveat (artifact type, SVG
+# comment, text companion) stays consistent: software timers vs a hardware PMU
+# event. cpu-clock/task-clock are software; cycles/instructions/etc. are PMU.
+case "$EVENT" in
+cpu-clock | task-clock) SAMPLE_KIND="software $EVENT sampling" ;;
+*) SAMPLE_KIND="$EVENT hardware-PMU sampling" ;;
+esac
+ARTIFACT_TYPE="flamegraph ($SAMPLE_KIND hot-symbol profile)"
 if [[ "$RECORD_STATUS" -ne 0 || "$SCRIPT_STATUS" -ne 0 || "$STACK_COUNT" -eq 0 ]]; then
     ARTIFACT_TYPE="constrained-environment validation (partial; no clean sample report)"
 elif [[ "$INSUFFICIENT_SAMPLES" == "yes" ]]; then
@@ -139,7 +161,7 @@ fi
 PROVENANCE="$(qsl_emit_provenance "$PROVENANCE_SCOPE" "$OUT_SVG" "${PROVENANCE_INPUTS[@]}")"
 HOST="$(uname -s) $(uname -m)"
 DATE="$(qsl_utc_timestamp)"
-SUBTITLE="$ARTIFACT_TYPE | $HOST | $EVENT @ ${FREQ}Hz | ${SAMPLE_COUNT} samples | ${STACK_COUNT} stacks | $DATE"
+SUBTITLE="$ARTIFACT_TYPE | $HOST | $EVENT @ ${FREQ}Hz | ${FOLDED_SAMPLES} samples | ${STACK_COUNT} stacks | $DATE"
 
 # Render the SVG (deterministic for a fixed folded input + fixed subtitle).
 if [[ "$STACK_COUNT" -gt 0 ]]; then
@@ -154,9 +176,9 @@ if [[ "$STACK_COUNT" -gt 0 ]]; then
             echo "     Command: make flamegraph"
             echo "     Artifact: $ARTIFACT_TYPE"
             echo "     Record: perf record [call-graph $CALLGRAPH | -F $FREQ | -g | -e $EVENT]"
-            echo "     Samples: $SAMPLE_COUNT | Folded stacks: $STACK_COUNT"
-            echo "     Caveat: software cpu-clock sampling shows on-CPU time by symbol; it is"
-            echo "     not a latency or throughput measurement and is hardware/build dependent."
+            echo "     Samples (folded): $FOLDED_SAMPLES | perf record estimate: $PERF_EST_SAMPLES | Folded stacks: $STACK_COUNT"
+            echo "     Caveat: $SAMPLE_KIND shows on-CPU time by symbol; it is not a latency"
+            echo "     or throughput measurement and is hardware/build dependent."
         } | sed 's/--/- -/g'
         echo "-->"
         # Drop the renderer's own XML declaration; we emitted ours above.
@@ -167,6 +189,11 @@ if [[ "$STACK_COUNT" -gt 0 ]]; then
             --from-collapsed <"$FOLDED" | tail -n +2
     } >"$SVG_TMP"
     qsl_publish_artifact "$SVG_TMP" "$OUT_SVG"
+else
+    # No clean folded stacks. Remove any prior SVG so a constrained rerun cannot
+    # leave a previous host's flamegraph beside a .txt that says there is no
+    # sample report — which could be committed as if the two still matched.
+    rm -f "$OUT_SVG"
 fi
 
 # Text companion: provenance + classification + top folded stacks (human/queryable).
@@ -186,7 +213,8 @@ fi
     echo "Call graph:    $CALLGRAPH"
     echo "Record event:  $EVENT"
     echo "Sample freq:   $FREQ Hz"
-    echo "Sample count:  $SAMPLE_COUNT"
+    echo "Sample count (folded total):      $FOLDED_SAMPLES"
+    echo "Sample count (perf record est.):  $PERF_EST_SAMPLES"
     echo "Folded stacks: $STACK_COUNT"
     echo "Minimum samples for hot profile: $MIN_SAMPLES"
     echo "Insufficient samples: $INSUFFICIENT_SAMPLES"
@@ -197,13 +225,13 @@ fi
     echo "Perf data:     $DATA (generated, not intended for commit)"
     echo
     if [[ "$ARTIFACT_TYPE" == flamegraph* ]]; then
-        echo "Caveat: this flamegraph is a software cpu-clock sampling profile for hot-symbol"
+        echo "Caveat: this flamegraph is a $SAMPLE_KIND profile for hot-symbol"
         echo "investigation. Frame width is proportional to on-CPU samples, not wall-clock"
         echo "latency or throughput, and is hardware/kernel/compiler/build dependent."
     else
         echo "Caveat: constrained/partial perf validation, not a hot-symbol flamegraph. Treat"
-        echo "frame widths as unusable until sampling succeeds and Sample count meets the"
-        echo "Minimum samples for hot profile."
+        echo "frame widths as unusable until sampling succeeds and the folded sample total"
+        echo "meets the Minimum samples for hot profile."
     fi
     echo
     echo "Top $TOP_STACKS folded stacks (count  stack):"
@@ -224,6 +252,14 @@ qsl_publish_artifact "$TXT_TMP" "$OUT_TXT"
 echo "wrote $OUT_TXT"
 [[ "$STACK_COUNT" -gt 0 ]] && echo "wrote $OUT_SVG"
 
+# A renderer/parser failure (perf script succeeded but flamegraph.py errored) is
+# a generator bug, not a perf sampling limitation — fail hard so partial mode
+# cannot publish a Python/parser regression as a constrained-environment artifact.
+if [[ "$SCRIPT_STATUS" -eq 0 && "$COLLAPSE_STATUS" -ne 0 ]]; then
+    echo "error: flamegraph.py --collapse-only failed (status $COLLAPSE_STATUS); this is a renderer/parser failure, not a perf limitation, and partial mode cannot mask it." >&2
+    cat "$COLLAPSE_ERR" >&2
+    exit 4
+fi
 if [[ ("$RECORD_STATUS" -ne 0 || "$SCRIPT_STATUS" -ne 0) && "$PERF_LIMITATION" != "yes" ]]; then
     echo "error: perf record/script failed for a reason other than a perf access limitation." >&2
     exit 3
