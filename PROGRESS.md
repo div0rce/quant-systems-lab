@@ -20,27 +20,27 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** none — `v0.2.0` released; project is between releases
-- **Status:** ☑ `v0.2.0` published (Phase III/IV systems arc + bare-metal evidence refresh)
+- **Active milestone:** none — `v0.3.0` released; project is between releases
+- **Status:** ☑ `v0.3.0` published (FIX-like text protocol adapter #29, perf flamegraph #32, and a
+  resume-anchor/PMU consistency sweep) on top of `v0.2.0`
 - **Active branch:** none (work lands via scoped PRs from `main`)
 - **Last completed milestone:** M49 — NIC offload and low-latency networking study (PR #124,
-  d8c16b2), then the Linux host artifact refresh (PR #125, d9094df) and the v0.2.0 release
-  (PR #127, ded6e80)
-- **Last completed docs sync:** v0.2.0 documentation staleness sweep (PR #127): perf evidence
-  reframed as bare-metal partial PMU, release-readiness rewritten, every doc read and brought current
-- **Release:** `v0.1.0` (tag on 9857e1a) and `v0.2.0` (tag on ded6e80, marked Latest) published as
-  GitHub-only releases; no packages published
-- **`make check` passing:** yes — `make check` 241/241 and `make asan` 241/241 on the bare-metal
-  Apple M2 (aarch64) Fedora Asahi host on 2026-06-21
-- **Last action:** prepared and released `v0.2.0`. Reframed the perf evidence from "constrained
-  Docker validation" to **partial hardware PMU evidence** on a bare-metal Apple M2 (real
-  cycles/instructions/branches/branch-misses; cache-references/cache-misses unsupported by the Apple
-  Silicon PMU), with a new three-way `perf_stat.sh` classifier and a reframed issue #90. Regenerated
-  all 15 `results/*.txt` on bare metal (`Dirty inputs: no`, MAC-leak grep clean), bumped the project
-  version to 0.2.0, swept every doc for staleness (release-readiness rewritten to 241 tests / six CI
-  jobs; architecture/socket/storage/OCaml framing corrected), verified all six mermaid diagrams, and
-  synced README/recruiting benchmark numbers to `results/latest.txt` (~87/16/110/98/110 ns).
-  PR #127 squash-merged to `main` as ded6e80; `v0.2.0` tagged and published.
+  d8c16b2); since then `v0.2.0` (PR #127, ded6e80) and the `v0.3.0` content: Codex resume-anchor
+  sweep (PR #129), perf flamegraph #32 (PR #130), and the FIX text adapter #29 (PR #131)
+- **Last completed docs sync:** v0.3.0 release prep (this PR): version bump + CHANGELOG `[0.3.0]`
+  and resume/release anchors brought current
+- **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.3.0` (tag created on the
+  squash-merge of the release PR, marked Latest) published as GitHub-only releases; no packages
+  published
+- **`make check` passing:** yes — `make check` 261/261 and `make asan` 261/261 on the bare-metal
+  Apple M2 (aarch64) Fedora Asahi host on 2026-06-21 (includes the v0.3.0 FIX-adapter and flamegraph
+  renderer tests)
+- **Last action:** delivered the `v0.3.0` content as scoped PRs and prepared this version-bump
+  release. Two reprioritized backlog items — the FIX-like text protocol adapter (#29) and the perf
+  call-graph flamegraph (#32) — plus the Codex resume-anchor/PMU consistency sweep (#127/#128
+  follow-up). Ran Codex as an independent reviewer and fixed its findings; brought every touched file
+  through the CodeScene Code Health gate (table-driven enum maps, a `decode_typed` skeleton, split
+  `parse_envelope`, flattened `flamegraph.py`). `make check`/`make asan` 261/261.
 - **Next action:** no active milestone. Highest-value remaining work is non-code and gated:
   issue #94 (independent external review — needs a human reviewer) and issue #90 (full
   cache-counter PMU evidence — needs a PMU microarchitecture that exposes cache events, e.g.
@@ -396,6 +396,21 @@ Lower priority:
   in `docs/fix_protocol.md` (+ pointer from `docs/binary_protocol.md`). `make check` 260/260 and
   `make asan` 260/260 clean (the parser handles untrusted text). Closes #29. Do not merge from
   automation; human squash-merges.
+- [2026-06-21] Post-review code-health pass on #130/#131 after Codex + the CI CodeScene Code Health
+  gate flagged `flamegraph.py` and `fix.cpp` below the 10.0 health bar. `flamegraph.py`: bundled
+  render args into a `FlameOptions` dataclass + extracted `_append_chrome`/`_frame_svg`, flattened
+  `fold_perf_script` into a `_Folder`, replaced the nested dso scan with a regex, and dropped an
+  unused `_layout` arg. `fix.cpp`: table-driven enum maps via `FieldReader::coded`, a `decode_typed`
+  skeleton to remove decoder duplication, and `parse_envelope` split into
+  tokenize/check-shape/verify-length-checksum. Behavior unchanged (`make check`/`make asan` 261/261);
+  both PRs' CodeScene gate now passes. Also fixed three Codex findings (cancel `ClOrdID` enforcement;
+  flamegraph tab/non-positive collapsed parsing). The local CodeScene MCP token is expired, so the
+  authoritative gate is the CI `CodeScene Code Health Review` check.
+- [2026-06-21] Prepared the `v0.3.0` release (`docs/v0.3.0-release`, stacked on the FIX adapter PR):
+  bumped `CMakeLists.txt` to 0.3.0, added the CHANGELOG `[0.3.0]` section (FIX adapter #29, perf
+  flamegraph #32, resume-anchor/PMU sweep), and brought the PROGRESS/HANDOFF release anchors current.
+  No code or benchmark artifacts change in the release PR itself. On squash-merge the human tags
+  `v0.3.0` on the merge commit and publishes the GitHub release. Do not merge from automation.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
@@ -802,12 +817,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-There is no active milestone. `v0.2.0` is released (PR #127 ded6e80, tag on ded6e80, marked Latest;
-resume-anchor sync PR #128 ae93545). M0–M49, the Linux host artifact refresh (PR #125, d9094df), and
-the v0.2.0 release are all merged to `main`. The committed perf artifacts are **partial hardware PMU
-evidence** from this bare-metal Apple M2 (aarch64) Fedora Asahi host — real
-cycles/instructions/branches/branch-misses with cache-reference/cache-miss counters unsupported by
-the Apple Silicon PMU — not NIC-offload, latency, or full hardware-PMU evidence.
+There is no active milestone. `v0.3.0` is the current release, on top of `v0.2.0` (PR #127 ded6e80)
+and `v0.1.0`. The `v0.3.0` content lands as the Codex resume-anchor sweep (PR #129), the perf
+flamegraph #32 (PR #130), the FIX text adapter #29 (PR #131), and the version-bump release PR; the
+human squash-merges those in order and tags `v0.3.0` on the release merge commit. The committed perf
+artifacts remain **partial hardware PMU evidence** from this bare-metal Apple M2 (aarch64) Fedora
+Asahi host — real cycles/instructions/branches/branch-misses with cache-reference/cache-miss counters
+unsupported by the Apple Silicon PMU — not NIC-offload, latency, or full hardware-PMU evidence.
 
 Highest-value remaining work is non-code and gated: issue #94 (independent external review) and
 issue #90 (full cache-PMU evidence). Issue #90 needs a PMU **microarchitecture** that exposes cache

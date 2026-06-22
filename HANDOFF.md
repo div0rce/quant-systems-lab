@@ -16,7 +16,8 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ---
 ## Current handoff
 
-The repo is released at `v0.2.0` (tag on ded6e80, marked Latest), after `v0.1.0`. M0–M49 are
+The repo's current release is `v0.3.0` (tagged on the release-PR merge commit, marked Latest), after
+`v0.2.0` (ded6e80) and `v0.1.0`. M0–M49 are
 merged. PR #101 (40f9249) and PR #102 (7092423)
 synchronized project-memory files after M35. PR #103 (0f2ceb7) inserted the repository-health
 refactor phase **M36–M42** and shifted the original networking/persistence roadmap after those
@@ -28,8 +29,12 @@ refactors. PR #113 extended the future roadmap to **M43–M49**. M36–M42 lande
 PR #123 (c643b62), and PR #124 (d8c16b2), with M45B provenance migration in PR #116 (b9ea27a) and
 the M47 storage diagnosis follow-up in PR #122 (548cb68). The Linux host artifact refresh landed as
 PR #125 (d9094df), and the **v0.2.0 release** — a bare-metal Linux evidence refresh, the
-partial-PMU reframe, and a full documentation staleness sweep — landed as PR #127 (ded6e80). There
-is no active milestone; the project is between releases.
+partial-PMU reframe, and a full documentation staleness sweep — landed as PR #127 (ded6e80). The
+**v0.3.0 release** then adds two reprioritized backlog items and a consistency sweep: a Codex
+resume-anchor/PMU sweep (PR #129), a perf call-graph flamegraph + `make flamegraph` (PR #130,
+issue #32), the FIX-like text protocol adapter (PR #131, issue #29), and the version-bump release
+PR — merged in that order, with `v0.3.0` tagged on the release merge commit. There is no active
+milestone; the project is between releases.
 
 Background — Linux perf evidence (merged, now bare-metal partial PMU):
 
@@ -65,32 +70,34 @@ git pull --ff-only
 git log --oneline -10
 gh pr list --state open
 git tag -l
-gh release view v0.2.0
+gh release view v0.3.0
 ```
 
 Current state:
 
-- latest synced main baseline: `ded6e80` (PR #127, v0.2.0 release)
+- latest synced main baseline: `ded6e80` (PR #127, v0.2.0); the `v0.3.0` baseline is the release-PR
+  merge commit, after PRs #129/#130/#131
 - current active branch, if active: none (work lands via scoped PRs from `main`)
-- current active status: `v0.2.0` released. The bare-metal Linux evidence refresh, the
-  partial-PMU reframe (real Apple PMU counters; cache counters unsupported), and a full
-  documentation staleness sweep are merged. All 15 `results/*.txt` are bare-metal with
-  `Dirty inputs: no` and no MAC leaks; `make check` 241/241 and `make asan` 241/241; README and
-  recruiting benchmark numbers match `results/latest.txt`. No active milestone
-- release tag: `v0.2.0` (Latest), after `v0.1.0`
+- current active status: `v0.3.0` is the current release on top of `v0.2.0`. It adds the FIX-like
+  text protocol adapter (#29), `make flamegraph` + a bare-metal flamegraph artifact (#32), and a
+  Codex resume-anchor/PMU consistency sweep. `make check` 261/261 and `make asan` 261/261 on the
+  bare-metal Apple M2 Fedora Asahi host; both new code files pass the CI CodeScene Code Health gate.
+  No active milestone
+- release tag: `v0.3.0` (Latest, tagged on the release-PR merge commit), after `v0.2.0` and `v0.1.0`
 - open follow-up issue: #90 — narrowed to the full cache-counter PMU set; the bare-metal Apple host
   provides real cycles/instructions/branches/branch-misses but no cache-reference/cache-miss support
-- issues #95, #28, and #26 were closed by PR #112
+- issues #95, #28, and #26 were closed by PR #112; issues #32 and #29 were closed by PR #130 and
+  PR #131 (now part of `v0.3.0`)
 - open review request issue: #94
-- legacy backlog still open: #29 and #32
 
 ### Next milestone
 
-There is no active milestone. M0–M49, the Linux artifact refresh (PR #125), and the v0.2.0 release
-(PR #127) are merged. The highest-value remaining work is non-code and externally gated: issue #94
-(independent external review — needs a human reviewer) and issue #90 (full cache-counter PMU
-evidence — needs a PMU microarchitecture that exposes cache events). Low-signal backlog: #32
-(flamegraph) and #29 (FIX adapter). Do not invent a new milestone without an explicit human request.
+There is no active milestone. M0–M49, the Linux artifact refresh (PR #125), the v0.2.0 release
+(PR #127), and the v0.3.0 content (PRs #129/#130/#131 + release PR) are merged. The highest-value
+remaining work is non-code and externally gated: issue #94 (independent external review — needs a
+human reviewer) and issue #90 (full cache-counter PMU evidence — needs a PMU microarchitecture that
+exposes cache events). The #32 (flamegraph) and #29 (FIX adapter) backlog items are now done. Do not
+invent a new milestone without an explicit human request.
 
 ### Phase III / IV purpose
 
@@ -100,7 +107,7 @@ studies, advanced concurrency validation, event-driven gateway architecture, mul
 pressure, NUMA/affinity and scheduler-migration studies, ingress memory ordering and false-sharing
 evidence, persistence/recovery benchmarking, and late-stage low-latency networking research.
 
-Current priority order (post-v0.2.0):
+Current priority order (post-v0.3.0):
 
 1. Issue #94 — independent external technical review remains the single highest credibility gap
    (human-gated; cannot be self-certified).

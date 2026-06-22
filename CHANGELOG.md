@@ -7,6 +7,41 @@ All notable changes to this project. The format is loosely based on
 
 _Nothing yet._
 
+## [0.3.0] - 2026-06-21
+
+Two backlog items — reprioritized by the maintainer and delivered — plus a resume-anchor and
+perf-evidence consistency sweep. Same honesty bar as prior releases: a deterministic C++20 exchange
+simulator and cross-language differential-testing harness — **not** a production exchange, no
+real-market connectivity, no latency or profitability claims, and not formal verification.
+
+### Added
+
+- **FIX-like text protocol adapter (#29).** A human-readable `tag=value` (SOH-framed) codec
+  (`include/qsl/protocol/fix.hpp`, `src/protocol/fix.cpp`) over the **same internal message structs**
+  as the binary codec, with genuine FIX framing — BeginString (8) / BodyLength (9) / MsgType (35) /
+  … / mod-256 CheckSum (10) — for the client→gateway order path: NewOrderSingle (`35=D`) → `NewOrder`
+  and OrderCancelRequest (`35=F`) → `CancelOrder`. Decoding is total, deterministic, and `noexcept`
+  (fixed field table, `std::from_chars`, `std::string_view`; no heap on the decode path) and reports
+  every malformed input through a `FixError` taxonomy mirroring the binary codec's `DecodeError`.
+  Covered by `tests/unit/test_fix_protocol.cpp`, including a **cross-codec equivalence** test (binary
+  and FIX decode the same order to identical structs) and a byte-pinned fixture; documented in
+  `docs/fix_protocol.md`. Prices stay integer ticks and Symbol carries the numeric `SymbolId`
+  (documented simplifications, never floating-point price).
+- **`make flamegraph` (#32).** Renders a Linux `perf` call-graph flamegraph
+  (`results/flamegraph.svg` + a provenance/classification `results/flamegraph.txt`) from the
+  benchmark harness via `scripts/flamegraph.py` — a dependency-free (stdlib-only) stackcollapse + SVG
+  renderer (deterministic; unit-tested in `tests/shell/test_flamegraph.sh`), so the artifact is
+  reproducible from the repo without vendoring the Perl FlameGraph toolkit. The committed artifact is
+  a software cpu-clock sampling **hot-symbol profile** from the bare-metal Fedora Asahi host — not a
+  latency/throughput claim; full hardware cache-PMU evidence stays in issue #90.
+
+### Changed
+
+- Synced the `/resume` anchors and perf-evidence wording to the released `v0.2.0` state and narrowed
+  an overstated Apple **Blizzard** (E-core) PMU claim — those rows read `<not counted>` because the
+  single-threaded benchmark stays on the Avalanche P-cores (Codex follow-up to PRs #127/#128):
+  `PROGRESS.md`, `AGENTS.md`/`CLAUDE.md` agreement, and `docs/perf_analysis.md`.
+
 ## [0.2.0] - 2026-06-21
 
 Quant Systems Lab v0.2.0 — the Phase III/IV systems arc (M24–M49: a bounded SPSC queue and threaded
