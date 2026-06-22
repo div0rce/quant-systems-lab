@@ -40,6 +40,10 @@ _PAD_BOTTOM = 16 # space below the frames for the detail line
 # parenthesized group and the symbol is everything between the address and it.
 _FRAME_RE = re.compile(r"^\s+(?P<addr>[0-9a-fA-F]+)\s+(?P<rest>.*\S)\s*$")
 _OFFSET_RE = re.compile(r"\+0x[0-9a-fA-F]+$")
+# Trailing " (dso)" group. perf prints a space before the dso, and dso strings
+# (paths or "[unknown]") never contain parens, so a non-nested match is exact and
+# avoids stripping a C++ signature's own "(...)" (which has no preceding space).
+_DSO_RE = re.compile(r"\s+\([^()]*\)$")
 
 
 def _clean_symbol(rest: str) -> str:
@@ -47,21 +51,9 @@ def _clean_symbol(rest: str) -> str:
 
     Drops the trailing `(dso)` and the `+0xoffset`, matching stackcollapse-perf.
     """
-    # Strip the final "(...)" dso group if present (balanced at end of line).
-    if rest.endswith(")"):
-        depth = 0
-        for i in range(len(rest) - 1, -1, -1):
-            if rest[i] == ")":
-                depth += 1
-            elif rest[i] == "(":
-                depth -= 1
-                if depth == 0:
-                    rest = rest[:i].rstrip()
-                    break
+    rest = _DSO_RE.sub("", rest)
     rest = _OFFSET_RE.sub("", rest).strip()
-    if not rest:
-        return "[unknown]"
-    return rest
+    return rest if rest else "[unknown]"
 
 
 class _Folder:
@@ -181,12 +173,13 @@ def _color(name: str) -> str:
     return f"rgb({r},{g},{b})"
 
 
-def _layout(node: _Node, depth: int, x: int, total: int, out: list) -> None:
+def _layout(node: _Node, depth: int, x: int, out: list) -> None:
+    """Pre-order walk assigning each node a (depth, x-offset-in-samples)."""
     out.append((node, depth, x))
     cursor = x
     for name in sorted(node.children):
         child = node.children[name]
-        _layout(child, depth + 1, cursor, total, out)
+        _layout(child, depth + 1, cursor, out)
         cursor += child.value
 
 
@@ -286,7 +279,7 @@ def render_svg(root: _Node, opts: FlameOptions | None = None) -> str:
     opts = opts or FlameOptions()
     total = root.value or 1
     placed: list = []
-    _layout(root, 0, 0, total, placed)
+    _layout(root, 0, 0, placed)
     max_depth = max((d for _, d, _ in placed), default=0)
     height = _PAD_TOP + (max_depth + 1) * opts.frame_height + _PAD_BOTTOM
     canvas = _Canvas(
