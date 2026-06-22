@@ -208,6 +208,12 @@ TEST_CASE("FIX missing required field rejects", "[fix]") {
     REQUIRE(fix::decode_new_order(wrap(body)).error == fix::FixError::MissingField);
 }
 
+TEST_CASE("FIX cancel without required ClOrdID rejects", "[fix]") {
+    // OrderCancelRequest lacking ClOrdID (tag 11), which FIX requires.
+    std::string body = field(35, "F") + field(34, "1") + field(41, "42") + field(55, "3");
+    REQUIRE(fix::decode_cancel_order(wrap(body)).error == fix::FixError::MissingField);
+}
+
 TEST_CASE("FIX invalid integer field rejects", "[fix]") {
     std::string body = field(35, "D") + field(34, "1") + field(11, "1") + field(55, "2") +
                        field(54, "1") + field(38, "abc") + field(40, "2") + field(44, "100") +

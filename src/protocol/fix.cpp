@@ -336,6 +336,13 @@ FixDecodeResult<CancelOrder> decode_cancel_order(std::string_view msg) noexcept 
     if (const FixError e = require_int(p, kTagOrigClOrdID, out.order_id); e != FixError::None) {
         return {e, {}};
     }
+    // ClOrdID (tag 11) is required by FIX on an OrderCancelRequest. CancelOrder
+    // does not model a separate cancel-request id, so it is validated (present
+    // and numeric) but not stored — keeping decode symmetric with encode.
+    OrderId clord_id = 0;
+    if (const FixError e = require_int(p, kTagClOrdID, clord_id); e != FixError::None) {
+        return {e, {}};
+    }
     if (const FixError e = require_int(p, kTagSymbol, out.symbol); e != FixError::None) {
         return {e, {}};
     }
