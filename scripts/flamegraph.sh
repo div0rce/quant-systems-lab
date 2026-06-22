@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Generate a Linux perf flamegraph from the benchmark harness.
 #
-# Records call-graph samples with `perf record --call-graph dwarf`, folds them
-# with scripts/flamegraph.py (a dependency-free stackcollapse + SVG renderer),
-# and writes:
+# Records call-graph samples with `perf record --call-graph fp` against the
+# dedicated frame-pointer build (build/flamegraph, -fno-omit-frame-pointer -g)
+# while qsl-bench runs its long-running `profile` workload, then folds them with
+# scripts/flamegraph.py (a dependency-free stackcollapse + SVG renderer), and
+# writes:
 #   results/flamegraph.svg  -- the visual flamegraph (provenance embedded as a
 #                              leading XML comment + a visible subtitle)
 #   results/flamegraph.txt  -- provenance + classification + top folded stacks
@@ -18,13 +20,19 @@ cd "$(dirname "$0")/.."
 # shellcheck source=scripts/qsl_common.sh
 source scripts/qsl_common.sh
 
-BIN="${QSL_BENCH_BIN:-build/bench/qsl-bench}"
+BIN="${QSL_BENCH_BIN:-build/flamegraph/qsl-bench}"
 OUT_SVG="${QSL_FLAMEGRAPH_SVG:-results/flamegraph.svg}"
 OUT_TXT="${QSL_FLAMEGRAPH_TXT:-results/flamegraph.txt}"
 DATA="${QSL_FLAMEGRAPH_DATA:-build/perf/qsl-bench.flame.data}"
 EVENT="${QSL_FLAMEGRAPH_EVENT:-cpu-clock}"
 FREQ="${QSL_FLAMEGRAPH_FREQ:-4000}"
-CALLGRAPH="${QSL_FLAMEGRAPH_CALLGRAPH:-dwarf}"
+# Frame-pointer unwinding (the flamegraph preset keeps frame pointers) gives clean, fully-symbolized
+# stacks; the prior dwarf default left [unknown] gaps because the Release bench build omits them.
+CALLGRAPH="${QSL_FLAMEGRAPH_CALLGRAPH:-fp}"
+# Seconds of warm steady-state order flow to sample. ~5s at -F 4000 yields tens of thousands of
+# samples, versus the ~80ms (~329-sample) one-shot benchmark suite.
+PROFILE_SECONDS="${QSL_FLAMEGRAPH_SECONDS:-5}"
+BENCH_ARGS=(profile "$PROFILE_SECONDS")
 MIN_SAMPLES="${QSL_FLAMEGRAPH_MIN_SAMPLES:-200}"
 TOP_STACKS="${QSL_FLAMEGRAPH_TOP_STACKS:-15}"
 BUILD_DIR="$(dirname "$BIN")"
@@ -87,9 +95,10 @@ SVG_TMP="$(mktemp)"
 TXT_TMP="$(mktemp)"
 trap 'rm -f "$BENCH_OUT" "$RECORD_BENCH_OUT" "$RECORD_ERR" "$SCRIPT_OUT" "$SCRIPT_ERR" "$FOLDED" "$COLLAPSE_ERR" "$SVG_TMP" "$TXT_TMP"' EXIT
 
-# Fail fast if the benchmark itself is broken (partial mode must not mask this).
+# Fail fast if the benchmark itself is broken (partial mode must not mask this). A short profile
+# run validates the workload quickly without paying the full sampling duration.
 BENCH_STATUS=0
-"$BIN" >"$BENCH_OUT" 2>&1 || BENCH_STATUS=$?
+"$BIN" profile 0.2 >"$BENCH_OUT" 2>&1 || BENCH_STATUS=$?
 if [[ "$BENCH_STATUS" -ne 0 ]]; then
     echo "error: benchmark command failed before perf record (status $BENCH_STATUS); partial mode cannot override this." >&2
     cat "$BENCH_OUT" >&2
@@ -97,7 +106,7 @@ if [[ "$BENCH_STATUS" -ne 0 ]]; then
 fi
 
 RECORD_STATUS=0
-perf record --call-graph "$CALLGRAPH" -F "$FREQ" -g -e "$EVENT" -o "$DATA" -- "$BIN" \
+perf record --call-graph "$CALLGRAPH" -F "$FREQ" -g -e "$EVENT" -o "$DATA" -- "$BIN" "${BENCH_ARGS[@]}" \
     >"$RECORD_BENCH_OUT" 2>"$RECORD_ERR" || RECORD_STATUS=$?
 
 SCRIPT_STATUS=0
@@ -209,7 +218,7 @@ fi
     echo "Build type:    $(qsl_build_type "$BUILD_DIR")"
     echo "$PROVENANCE"
     echo "Benchmark binary: $BIN"
-    echo "Dataset:       qsl-bench default synthetic benchmark suite"
+    echo "Dataset:       qsl-bench profile workload (warm bounded order flow, ${PROFILE_SECONDS}s)"
     echo "Call graph:    $CALLGRAPH"
     echo "Record event:  $EVENT"
     echo "Sample freq:   $FREQ Hz"
@@ -246,7 +255,13 @@ fi
     fi
     echo
     echo "Benchmark output:"
-    cat "$BENCH_OUT"
+    # Prefer the actually-sampled run's summary; fall back to the fail-fast pre-check on a
+    # partial/failed record so the section is never empty.
+    if [[ -s "$RECORD_BENCH_OUT" ]]; then
+        cat "$RECORD_BENCH_OUT"
+    else
+        cat "$BENCH_OUT"
+    fi
 } >"$TXT_TMP"
 qsl_publish_artifact "$TXT_TMP" "$OUT_TXT"
 echo "wrote $OUT_TXT"

@@ -62,12 +62,29 @@ make flamegraph
 ```
 
 This runs `scripts/flamegraph.sh`, which records call-graph samples
-(`perf record --call-graph dwarf -F 4000 -g -e cpu-clock`), folds them, and renders an SVG to
-`results/flamegraph.svg` plus a text companion `results/flamegraph.txt` (provenance, classification,
-and the top folded stacks). DWARF call graphs are used so stacks unwind correctly even though the
-`bench` (Release) preset omits frame pointers — the application symbols (`OrderBook::add_limit`,
-`MatchingEngine::new_limit`, the replay path, …) resolve from the symbol table without changing the
-optimization level under measurement.
+(`perf record --call-graph fp -F 4000 -g -e cpu-clock`) against a dedicated **frame-pointer build**
+(the `flamegraph` CMake preset → `build/flamegraph`, which adds `-fno-omit-frame-pointer -g` on top
+of the Release `bench` flags) while `qsl-bench profile` drives a long, warm, bounded order flow. It
+folds the samples and renders an SVG to `results/flamegraph.svg` plus a text companion
+`results/flamegraph.txt` (provenance, classification, and the top folded stacks). Frame-pointer
+unwinding is used because it produces clean, fully-symbolized stacks: the earlier DWARF default left
+`[unknown]` gaps (the Release build omits frame pointers and DWARF unwinding truncated deep stacks).
+The dedicated build keeps the latency `bench` numbers in `results/latest.txt` untouched — they come
+from the unmodified Release `bench` preset.
+
+Two design points address common flamegraph problems:
+
+- **Sample density and duration.** The artifact profiles `qsl-bench profile [seconds]` — a warm,
+  bounded, deterministic steady-state order flow (add / cross / cancel / modify, book held ~512
+  deep) — for 5s by default, so the capture carries tens of thousands of samples instead of the
+  ~80ms (~329-sample) one-shot benchmark suite. `QSL_FLAMEGRAPH_SECONDS` tunes the duration and
+  `QSL_BENCH_STORAGE={baseline,pooled,intrusive,contiguous}` selects the order-book storage mode.
+- **No `[unknown]` frames.** Frame-pointer unwinding resolves the whole application and C-runtime
+  startup chain. The one residual unresolvable frame is the glibc allocator boundary (Fedora's libc
+  is built without frame pointers), so `flamegraph.py` folds a lone `[unknown]` frame into its
+  caller by default — the sample is preserved and the real neighbours (the app frame and the named
+  libc symbol such as `cfree` / `operator new`) stay in the stack. Pass `--keep-unknown` to disable
+  the fold.
 
 The folding and SVG rendering live in `scripts/flamegraph.py`, a dependency-free Python script
 (standard library only) that reimplements the `stackcollapse` + flamegraph data model rather than

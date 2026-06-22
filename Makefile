@@ -64,11 +64,13 @@ perf-record:
 	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/perf_record.sh
 
 # Issue #32: render a perf call-graph flamegraph (SVG) from the benchmark harness. Linux-only.
+# Uses the dedicated frame-pointer build (build/flamegraph) so `perf --call-graph fp` yields clean,
+# fully-symbolized stacks (no [unknown] gaps); the latency `bench` build stays untouched.
 flamegraph:
 	@test "$$(uname -s)" = "Linux" || { echo "error: make flamegraph requires Linux perf; current OS is $$(uname -s)." >&2; exit 2; }
-	cmake --preset bench
-	cmake --build --preset bench --target qsl-bench
-	QSL_BENCH_BIN=build/bench/qsl-bench bash scripts/flamegraph.sh
+	cmake --preset flamegraph
+	cmake --build --preset flamegraph --target qsl-bench
+	QSL_BENCH_BIN=build/flamegraph/qsl-bench bash scripts/flamegraph.sh
 
 # M43: CPU-affinity / scheduler-migration / NUMA locality study. Linux-only.
 numa-study:

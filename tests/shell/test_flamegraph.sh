@@ -104,6 +104,26 @@ expect_eq "collapse-only is deterministic" "$FOLDED" "$FOLDED2"
 SORTED="$(printf '%s\n' "$FOLDED" | LC_ALL=C sort)"
 expect_eq "collapse-only output is sorted" "$SORTED" "$FOLDED"
 
+# --- [unknown] frame folding ------------------------------------------------
+# Frame-pointer unwinding emits a lone unresolvable "[unknown]" frame at the glibc allocator
+# boundary. By default it is folded into its caller: the sample is preserved and the real
+# neighbours (the app frame and the named libc symbol) stay. --keep-unknown disables the fold.
+make_unknown_script() {
+    printf '%s\n' \
+        "qsl-bench 100 1.0: 1000 cpu-clock:u:" \
+        "${TAB}aaaa cfree+0x5 (/usr/lib64/libc.so.6)" \
+        "${TAB}bbbb [unknown] (/usr/lib64/libc.so.6)" \
+        "${TAB}415cd0 qsl::engine::OrderBook::add_limit(unsigned long)+0x10 (/path/qsl-bench)" \
+        "${TAB}402887 main+0x10 (/path/qsl-bench)" \
+        ""
+}
+UNK_FOLDED="$(make_unknown_script | python3 "$FG" --collapse-only 2>/dev/null)"
+expect_eq "lone [unknown] frame is folded into caller, sample preserved with cfree leaf" \
+    'qsl-bench;main;qsl::engine::OrderBook::add_limit(unsigned long);cfree 1' "$UNK_FOLDED"
+expect_not_contains "folded output has no [unknown]" '[unknown]' "$UNK_FOLDED"
+UNK_KEPT="$(make_unknown_script | python3 "$FG" --collapse-only --keep-unknown 2>/dev/null)"
+expect_contains "--keep-unknown preserves the [unknown] frame" '[unknown]' "$UNK_KEPT"
+
 # --- SVG rendering ----------------------------------------------------------
 
 SVG="$(make_perf_script | python3 "$FG" --title "T" --subtitle "S")"

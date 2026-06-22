@@ -63,8 +63,10 @@ class _Folder:
     loop flat (one if/elif/else) instead of a deeply nested block.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, drop_unknown: bool = True) -> None:
         self.folded: dict[str, int] = {}
+        self.dropped_unknown = 0  # count of unresolved frames folded into their caller
+        self._drop_unknown = drop_unknown
         self._comm = ""
         self._stack: list[str] = []
 
@@ -86,10 +88,19 @@ class _Folder:
     def _flush(self) -> None:
         if self._stack:
             frames = list(reversed(self._stack))  # perf prints leaf-first
+            if self._drop_unknown:
+                # Frame-pointer unwinding emits a single unresolvable "[unknown]" frame at the
+                # glibc allocator boundary (Fedora's libc is built without frame pointers). Fold it
+                # into its caller: the sample is preserved and the real neighbours (the app frame and
+                # the named libc symbol such as cfree/operator new) stay in the stack.
+                kept = [f for f in frames if f != "[unknown]"]
+                self.dropped_unknown += len(frames) - len(kept)
+                frames = kept
             if self._comm:
                 frames.insert(0, self._comm)
-            key = ";".join(frames)
-            self.folded[key] = self.folded.get(key, 0) + 1
+            if frames:
+                key = ";".join(frames)
+                self.folded[key] = self.folded.get(key, 0) + 1
         self._stack = []
 
     def result(self) -> dict[str, int]:
@@ -97,9 +108,9 @@ class _Folder:
         return self.folded
 
 
-def fold_perf_script(lines) -> dict[str, int]:
+def fold_perf_script(lines, drop_unknown: bool = True) -> dict[str, int]:
     """Collapse `perf script` output into {stack_string: sample_count}."""
-    folder = _Folder()
+    folder = _Folder(drop_unknown=drop_unknown)
     for raw in lines:
         line = raw.rstrip("\n")
         if not line.strip():
@@ -108,7 +119,14 @@ def fold_perf_script(lines) -> dict[str, int]:
             folder.add_frame(line)
         else:
             folder.start_sample(line)
-    return folder.result()
+    result = folder.result()
+    if folder.dropped_unknown:
+        print(
+            f"flamegraph.py: folded {folder.dropped_unknown} unresolved [unknown] frame(s) "
+            "into their caller",
+            file=sys.stderr,
+        )
+    return result
 
 
 def parse_collapsed(lines) -> dict[str, int]:
@@ -333,12 +351,14 @@ def main(argv=None) -> int:
     ap.add_argument("--countname", default="samples")
     ap.add_argument("--root-name", default="all")
     ap.add_argument("--width", type=int, default=1200)
+    ap.add_argument("--keep-unknown", action="store_true",
+                    help="keep unresolved [unknown] frames instead of folding them into the caller")
     args = ap.parse_args(argv)
 
     if args.from_collapsed:
         folded = parse_collapsed(sys.stdin)
     else:
-        folded = fold_perf_script(sys.stdin)
+        folded = fold_perf_script(sys.stdin, drop_unknown=not args.keep_unknown)
 
     if args.collapse_only:
         for stack in sorted(folded):

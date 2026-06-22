@@ -13,7 +13,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace qsl::bench {
@@ -103,6 +105,113 @@ void run_diff_benchmarks() {
     }
 }
 
+const char *storage_name(qsl::engine::OrderBook::Storage s) {
+    switch (s) {
+    case qsl::engine::OrderBook::Storage::Baseline:
+        return "baseline";
+    case qsl::engine::OrderBook::Storage::Pooled:
+        return "pooled";
+    case qsl::engine::OrderBook::Storage::IntrusivePooled:
+        return "intrusive";
+    case qsl::engine::OrderBook::Storage::Contiguous:
+        return "contiguous";
+    }
+    return "baseline";
+}
+
+// QSL_BENCH_STORAGE lets the profiling workload A/B the order-book storage mode without rebuilding.
+qsl::engine::OrderBook::Storage profile_storage_from_env() {
+    const char *s = std::getenv("QSL_BENCH_STORAGE");
+    const std::string_view v = (s != nullptr) ? s : "";
+    if (v == "pooled") {
+        return qsl::engine::OrderBook::Storage::Pooled;
+    }
+    if (v == "intrusive") {
+        return qsl::engine::OrderBook::Storage::IntrusivePooled;
+    }
+    if (v == "contiguous") {
+        return qsl::engine::OrderBook::Storage::Contiguous;
+    }
+    return qsl::engine::OrderBook::Storage::Baseline;
+}
+
+// Long-running, warm, deterministic profiling workload for `make flamegraph`. Drives a bounded
+// steady-state order flow (add / cross / cancel / modify) through the matching engine for a
+// wall-clock duration, so perf collects a dense sample set on a stable working set rather than the
+// ~80ms one-shot benchmark suite. Wall-clock is fine here: this is the benchmark layer, never the
+// deterministic engine path. The book stays ~W deep (cancel-oldest), keeping a pooled allocator
+// warm so steady state issues no malloc/free.
+void run_profile_workload(int argc, char **argv) {
+    using namespace qsl;
+    using core::Side;
+    using core::TimeInForce;
+
+    double seconds = 5.0;
+    if (argc >= 3) {
+        seconds = std::strtod(argv[2], nullptr);
+    } else if (const char *e = std::getenv("QSL_BENCH_PROFILE_SECONDS")) {
+        seconds = std::strtod(e, nullptr);
+    }
+    if (!(seconds > 0.0)) {
+        seconds = 5.0;
+    }
+
+    const auto storage = profile_storage_from_env();
+    engine::MatchingEngine eng{storage};
+    const auto sym = eng.register_symbol("AAPL");
+
+    constexpr std::size_t kRing = 512; // bounded resting depth
+    std::vector<core::OrderId> ring;
+    ring.reserve(kRing);
+    std::size_t head = 0;
+
+    // splitmix64 keeps the flow reproducible across runs/compilers without <random> overhead.
+    std::uint64_t state = 0x9E3779B97F4A7C15ULL;
+    const auto next = [&state] {
+        state += 0x9E3779B97F4A7C15ULL;
+        std::uint64_t z = state;
+        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+        z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+        return z ^ (z >> 31);
+    };
+
+    core::OrderId id = 1;
+    std::uint64_t ops = 0;
+    const auto t0 = clock_type::now();
+    const auto deadline = t0 + std::chrono::duration_cast<clock_type::duration>(
+                                   std::chrono::duration<double>(seconds));
+    while (clock_type::now() < deadline) {
+        for (int k = 0; k < 4096; ++k) { // batch between clock reads
+            const std::uint64_t r = next();
+            const Side side = ((r & 1U) != 0U) ? Side::Buy : Side::Sell;
+            const core::Price price = 100 + static_cast<core::Price>((r >> 1) % 64); // [100,164)
+            const auto qty = 1 + static_cast<core::Quantity>((r >> 8) % 8);
+            const core::OrderId oid = id++;
+            g_sink += eng.new_limit(sym, oid, side, price, qty, TimeInForce::GTC).size();
+            if (ring.size() < kRing) {
+                ring.push_back(oid);
+            } else {
+                g_sink += eng.cancel(sym, ring[head]).size();
+                ring[head] = oid;
+                head = (head + 1) % kRing;
+            }
+            if ((r & 7U) == 0U && !ring.empty()) {
+                const core::OrderId mid = ring[(head + (ring.size() / 2)) % ring.size()];
+                g_sink += eng.modify(sym, mid, price, qty).size();
+            }
+            if ((r & 15U) == 0U) {
+                g_sink +=
+                    eng.new_market(sym, id++, ((r & 2U) != 0U) ? Side::Sell : Side::Buy, 3).size();
+            }
+            ++ops;
+        }
+    }
+    const double secs = std::chrono::duration<double>(clock_type::now() - t0).count();
+    std::printf("profile workload: storage=%s ops=%llu elapsed=%.3fs (%.0f ops/sec) resting~%zu\n",
+                storage_name(storage), static_cast<unsigned long long>(ops), secs,
+                static_cast<double>(ops) / secs, ring.size());
+}
+
 // Run a named benchmark subcommand (argv[1]); returns true if one matched and ran, so main exits.
 bool run_subcommand(int argc, char **argv) {
     if (argc < 2) {
@@ -111,6 +220,8 @@ bool run_subcommand(int argc, char **argv) {
     const std::string command = argv[1];
     if (command == "diff") {
         run_diff_benchmarks();
+    } else if (command == "profile") {
+        run_profile_workload(argc, argv);
     } else if (command == "pool") {
         qsl::bench::run_order_pool_benchmarks();
     } else if (command == "storage") {
