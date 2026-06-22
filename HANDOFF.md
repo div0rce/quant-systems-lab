@@ -82,15 +82,16 @@ Current state:
   provides real cycles/instructions/branches/branch-misses but no cache-reference/cache-miss support
 - issues #95, #28, and #26 were closed by PR #112
 - open review request issue: #94
-- legacy backlog still open: #29 and #32
+- legacy backlog still open: #32 (#29 delivered in this PR, `feat/fix-text-protocol-adapter`)
 
 ### Next milestone
 
 There is no active milestone. M0–M49, the Linux artifact refresh (PR #125), and the v0.2.0 release
 (PR #127) are merged. The highest-value remaining work is non-code and externally gated: issue #94
 (independent external review — needs a human reviewer) and issue #90 (full cache-counter PMU
-evidence — needs a PMU microarchitecture that exposes cache events). Low-signal backlog: #32
-(flamegraph) and #29 (FIX adapter). Do not invent a new milestone without an explicit human request.
+evidence — needs a PMU microarchitecture that exposes cache events). #29 (FIX-like text protocol
+adapter) is delivered in this PR; low-signal backlog: #32 (flamegraph). Do not invent a new
+milestone without an explicit human request.
 
 ### Phase III / IV purpose
 
@@ -107,7 +108,8 @@ Current priority order (post-v0.2.0):
 2. Issue #90 — full cache-counter PMU evidence. The bare-metal Apple host gives real
    cycles/instructions/branches/branch-misses but no cache-reference/cache-miss counters, so this
    needs a PMU microarchitecture that exposes cache events (x86_64, or an ARM server core).
-3. Low-signal backlog only after the above: #32 (flamegraph), #29 (FIX adapter).
+3. Low-signal backlog only after the above: #32 (flamegraph). #29 (FIX adapter) is delivered in
+   this PR (`feat/fix-text-protocol-adapter`).
 
 ### Forbidden shortcuts
 

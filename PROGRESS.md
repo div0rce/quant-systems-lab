@@ -52,7 +52,8 @@ Do not rely on prior chat memory.
 - **Next action:** no active milestone. Highest-value remaining work is non-code and gated:
   issue #94 (independent external review — needs a human reviewer) and issue #90 (full
   cache-counter PMU evidence — needs a PMU microarchitecture that exposes cache events, e.g.
-  x86_64). Low-signal backlog: #32 (flamegraph), #29 (FIX adapter).
+  x86_64). #29 (FIX-like text protocol adapter) is delivered in this PR
+  (`feat/fix-text-protocol-adapter`). Low-signal backlog: #32 (flamegraph).
 - **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap — this bare-metal
   Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
   implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
@@ -60,7 +61,7 @@ Do not rely on prior chat memory.
   review (human-gated). Hardware NIC/offload latency measurement still requires suitable wired NIC
   hardware, driver support, timestamping/offload/RSS access, and a measured packet workload; the
   current `wld0` Wi-Fi capability observation is not NIC-offload latency evidence. Legacy backlog
-  still includes #32 and #29. Issues #95, #28, and #26 were closed by PR #112.
+  still includes #32 (#29 delivered in this PR). Issues #95, #28, and #26 were closed by PR #112.
 
 ---
 
