@@ -6,6 +6,7 @@
 #include <charconv>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace qsl::protocol::fix {
 
@@ -178,54 +179,13 @@ template <class Int>
     return FixError::None;
 }
 
-// Map FIX coded-enum characters to internal enums (Side 1/2, OrdType 1/2,
-// TIF 1/3). An unrecognized code is InvalidEnumValue.
-[[nodiscard]] FixError map_side(char c, Side &out) noexcept {
-    switch (c) {
-    case '1':
-        out = Side::Buy;
-        return FixError::None;
-    case '2':
-        out = Side::Sell;
-        return FixError::None;
-    default:
-        return FixError::InvalidEnumValue;
-    }
-}
-
-[[nodiscard]] FixError map_ord_type(char c, OrderType &out) noexcept {
-    switch (c) {
-    case '1':
-        out = OrderType::Market;
-        return FixError::None;
-    case '2':
-        out = OrderType::Limit;
-        return FixError::None;
-    default:
-        return FixError::InvalidEnumValue;
-    }
-}
-
-[[nodiscard]] FixError map_tif(char c, TimeInForce &out) noexcept {
-    switch (c) {
-    case '1':
-        out = TimeInForce::GTC;
-        return FixError::None;
-    case '3':
-        out = TimeInForce::IOC;
-        return FixError::None;
-    default:
-        return FixError::InvalidEnumValue;
-    }
-}
-
 // Confirm MsgType (tag 35) is present, single-character, and the expected type.
 [[nodiscard]] FixError expect_msg_type(const Parsed &p, char expected) noexcept {
     const Field *type = find_field(p, kTagMsgType);
-    if (type == nullptr || type->value.size() != 1 || type->value.front() != expected) {
+    if (type == nullptr || type->value.size() != 1) {
         return FixError::UnknownMsgType;
     }
-    return FixError::None;
+    return type->value.front() == expected ? FixError::None : FixError::UnknownMsgType;
 }
 
 // Reads required fields and short-circuits on the first error, so the typed
@@ -240,27 +200,34 @@ class FieldReader {
         }
         return *this;
     }
-    FieldReader &side(unsigned tag, Side &out) noexcept { return coded(tag, out, map_side); }
-    FieldReader &ord_type(unsigned tag, OrderType &out) noexcept {
-        return coded(tag, out, map_ord_type);
-    }
-    FieldReader &tif(unsigned tag, TimeInForce &out) noexcept { return coded(tag, out, map_tif); }
 
-    [[nodiscard]] FixError error() const noexcept { return err_; }
-
-  private:
-    template <class Enum, class Map> FieldReader &coded(unsigned tag, Enum &out, Map map) noexcept {
+    // Read a single-character coded field and map it via a {code, enum} table
+    // (Side 1/2, OrdType 1/2, TIF 1/3). One generic method covers every enum, so
+    // there is no per-enum mapping duplication. An unknown code is InvalidEnumValue.
+    template <class Enum, std::size_t N>
+    FieldReader &coded(unsigned tag, Enum &out,
+                       const std::array<std::pair<char, Enum>, N> &table) noexcept {
         if (err_ != FixError::None) {
             return *this;
         }
         char code = 0;
         err_ = require_code(p_, tag, code);
-        if (err_ == FixError::None) {
-            err_ = map(code, out);
+        if (err_ != FixError::None) {
+            return *this;
         }
+        for (const auto &entry : table) {
+            if (entry.first == code) {
+                out = entry.second;
+                return *this;
+            }
+        }
+        err_ = FixError::InvalidEnumValue;
         return *this;
     }
 
+    [[nodiscard]] FixError error() const noexcept { return err_; }
+
+  private:
     const Parsed &p_;
     FixError err_{FixError::None};
 };
@@ -360,15 +327,21 @@ template <class T, class Fill>
 
 FixDecodeResult<NewOrder> decode_new_order(std::string_view msg) noexcept {
     return decode_typed<NewOrder>(msg, kMsgNewOrderSingle, [](FieldReader &r, NewOrder &o) {
+        static constexpr std::array<std::pair<char, Side>, 2> sides{
+            {{'1', Side::Buy}, {'2', Side::Sell}}};
+        static constexpr std::array<std::pair<char, OrderType>, 2> types{
+            {{'1', OrderType::Market}, {'2', OrderType::Limit}}};
+        static constexpr std::array<std::pair<char, TimeInForce>, 2> tifs{
+            {{'1', TimeInForce::GTC}, {'3', TimeInForce::IOC}}};
         SeqNo seq = 0; // tag 34 (standard header); validated but not stored.
         r.integer(kTagMsgSeqNum, seq)
             .integer(kTagClOrdID, o.order_id)
             .integer(kTagSymbol, o.symbol)
             .integer(kTagOrderQty, o.quantity)
             .integer(kTagPrice, o.price)
-            .side(kTagSide, o.side)
-            .ord_type(kTagOrdType, o.type)
-            .tif(kTagTimeInForce, o.tif);
+            .coded(kTagSide, o.side, sides)
+            .coded(kTagOrdType, o.type, types)
+            .coded(kTagTimeInForce, o.tif, tifs);
     });
 }
 
