@@ -86,16 +86,16 @@ Current state:
 - release tag: `v0.2.1` (Latest, tagged on the release-PR merge commit), after `v0.2.0` and `v0.1.0`
 - open follow-up issue: #90 — narrowed to the full cache-counter PMU set; the bare-metal Apple host
   provides real cycles/instructions/branches/branch-misses but no cache-reference/cache-miss support
-- issues #95, #28, and #26 were closed by PR #112; issues #32 and #29 were closed by PR #130 and
+- issues #95, #28, and #26 were closed by PR #112; issues #32 and #29 were closed by PR #134 and
   PR #131 (now part of `v0.2.1`)
 - open review request issue: #94
-- legacy backlog: clear — #32 (flamegraph) and #29 (FIX adapter) shipped in `v0.2.1` (PR #130,
+- legacy backlog: clear — #32 (flamegraph) and #29 (FIX adapter) shipped in `v0.2.1` (PR #134,
   PR #131)
 
 ### Next milestone
 
 There is no active milestone. M0–M49, the Linux artifact refresh (PR #125), the v0.2.0 release
-(PR #127), and the v0.2.1 content (PRs #129/#130/#131 + release PR) are merged. The highest-value
+(PR #127), and the v0.2.1 content (PRs #129/#134/#131 + release PR) are merged. The highest-value
 remaining work is non-code and externally gated: issue #94 (independent external review — needs a
 human reviewer) and issue #90 (full cache-counter PMU evidence — needs a PMU microarchitecture that
 exposes cache events). The #32 (flamegraph) and #29 (FIX adapter) backlog items are now done. Do not

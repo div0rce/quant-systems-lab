@@ -26,7 +26,7 @@ Do not rely on prior chat memory.
 - **Active branch:** none (work lands via scoped PRs from `main`)
 - **Last completed milestone:** M49 — NIC offload and low-latency networking study (PR #124,
   d8c16b2); since then `v0.2.0` (PR #127, ded6e80) and the `v0.2.1` content: Codex resume-anchor
-  sweep (PR #129), perf flamegraph #32 (PR #130), and the FIX text adapter #29 (PR #131)
+  sweep (PR #129), perf flamegraph #32 (PR #134), and the FIX text adapter #29 (PR #131)
 - **Last completed docs sync:** v0.2.1 release prep (this PR): version bump + CHANGELOG `[0.2.1]`
   and resume/release anchors brought current
 - **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.2.1` (tag created on the
@@ -49,7 +49,7 @@ Do not rely on prior chat memory.
   issue #94 (independent external review — needs a human reviewer) and issue #90 (full
   cache-counter PMU evidence — needs a PMU microarchitecture that exposes cache events, e.g.
   x86_64). The #32 (flamegraph) and #29 (FIX adapter) backlog items are done — shipped in `v0.2.1`
-  (PR #130 and PR #131) — so do not reopen them.
+  (PR #134 and PR #131) — so do not reopen them.
 - **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap — this bare-metal
   Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
   implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
@@ -57,7 +57,7 @@ Do not rely on prior chat memory.
   review (human-gated). Hardware NIC/offload latency measurement still requires suitable wired NIC
   hardware, driver support, timestamping/offload/RSS access, and a measured packet workload; the
   current `wld0` Wi-Fi capability observation is not NIC-offload latency evidence. The legacy
-  backlog is now clear: #32 and #29 shipped in `v0.2.1` (PR #130, PR #131); issues #95, #28, and
+  backlog is now clear: #32 and #29 shipped in `v0.2.1` (PR #134, PR #131); issues #95, #28, and
   #26 were closed by PR #112.
 
 ---
@@ -838,12 +838,13 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 ## Next action remains
 
 There is no active milestone. `v0.2.1` is the current release, on top of `v0.2.0` (PR #127 ded6e80)
-and `v0.1.0`. The `v0.2.1` content lands as the Codex resume-anchor sweep (PR #129), the perf
-flamegraph #32 (PR #130), the FIX text adapter #29 (PR #131), and the version-bump release PR; the
-human squash-merges those in order and tags `v0.2.1` on the release merge commit. The committed perf
-artifacts remain **partial hardware PMU evidence** from this bare-metal Apple M2 (aarch64) Fedora
-Asahi host — real cycles/instructions/branches/branch-misses with cache-reference/cache-miss counters
-unsupported by the Apple Silicon PMU — not NIC-offload, latency, or full hardware-PMU evidence.
+and `v0.1.0`. The `v0.2.1` content is squash-merged to `main`: the Codex resume-anchor sweep
+(PR #129), the perf flamegraph #32 (PR #134, superseding the auto-closed #130), the FIX text adapter
+#29 (PR #131), and the version-bump release PR (#133), with `v0.2.1` tagged on the release merge
+commit. The committed perf artifacts remain **partial hardware PMU evidence** from this bare-metal
+Apple M2 (aarch64) Fedora Asahi host — real cycles/instructions/branches/branch-misses with
+cache-reference/cache-miss counters unsupported by the Apple Silicon PMU — not NIC-offload, latency,
+or full hardware-PMU evidence.
 
 Highest-value remaining work is non-code and gated: issue #94 (independent external review) and
 issue #90 (full cache-PMU evidence). Issue #90 needs a PMU **microarchitecture** that exposes cache

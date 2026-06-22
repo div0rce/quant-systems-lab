@@ -1205,7 +1205,8 @@ Issue #90 remains the full hardware-PMU evidence debt (the cache-counter set spe
 signals. PR #124 completed M49, PR #125 (d9094df) refreshed the Linux host artifacts on bare-metal
 Fedora Asahi, and `v0.2.0` was released (PR #127 ded6e80; resume-anchor sync PR #128 ae93545).
 `v0.2.1` then shipped two reprioritized backlog items plus a consistency sweep: a Codex
-resume-anchor/PMU sweep (PR #129), a perf call-graph flamegraph + `make flamegraph` (PR #130,
-closing #32), and the FIX-like text protocol adapter (PR #131, closing #29), with the version bump
-on the release PR. There is no active milestone; the highest-value remaining work is non-code and
-gated on #94 (external review) and #90 (full cache-PMU evidence on a PMU-capable microarchitecture).
+resume-anchor/PMU sweep (PR #129), a perf call-graph flamegraph + `make flamegraph` (PR #134,
+superseding the auto-closed #130, closing #32), and the FIX-like text protocol adapter (PR #131,
+closing #29), with the version bump on the release PR. There is no active milestone; the
+highest-value remaining work is non-code and gated on #94 (external review) and #90 (full cache-PMU
+evidence on a PMU-capable microarchitecture).
