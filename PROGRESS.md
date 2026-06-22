@@ -26,14 +26,22 @@ Do not rely on prior chat memory.
 - **Last completed milestone:** M49 — NIC offload and low-latency networking study (PR #124,
   d8c16b2), then the Linux host artifact refresh (PR #125, d9094df) and the v0.2.0 release
   (PR #127, ded6e80)
-- **Last completed docs sync:** v0.2.0 documentation staleness sweep (PR #127): perf evidence
-  reframed as bare-metal partial PMU, release-readiness rewritten, every doc read and brought current
+- **Last completed docs sync:** resume-anchor + PMU-claim sync (`docs/codex-resume-anchor-sync`,
+  this PR) resolving the Codex findings left on `main` by PRs #127/#128. Prior sweep: v0.2.0
+  documentation staleness sweep (PR #127): perf evidence reframed as bare-metal partial PMU,
+  release-readiness rewritten, every doc read and brought current
 - **Release:** `v0.1.0` (tag on 9857e1a) and `v0.2.0` (tag on ded6e80, marked Latest) published as
   GitHub-only releases; no packages published
 - **`make check` passing:** yes — `make check` 241/241 and `make asan` 241/241 on the bare-metal
   Apple M2 (aarch64) Fedora Asahi host on 2026-06-21
-- **Last action:** prepared and released `v0.2.0`. Reframed the perf evidence from "constrained
-  Docker validation" to **partial hardware PMU evidence** on a bare-metal Apple M2 (real
+- **Last action:** resume-anchor + PMU-claim sync on `docs/codex-resume-anchor-sync` resolving the
+  Codex review findings left on `main` by PRs #127/#128 — removed PROGRESS's stale "Next action
+  remains" block that still pointed `/resume` at the merged PR #125, brought AGENTS.md in line with
+  CLAUDE.md's v0.2.0 partial-PMU reframe (no more "constrained Docker validation" wording), and
+  narrowed docs/perf_analysis.md so the Apple Blizzard (E-core) PMU rows are not implied to carry
+  live counts. Docs/memory only; no code or artifacts changed (`make check` still 241/241).
+- **Prior action (v0.2.0 release):** prepared and released `v0.2.0`. Reframed the perf evidence from
+  "constrained Docker validation" to **partial hardware PMU evidence** on a bare-metal Apple M2 (real
   cycles/instructions/branches/branch-misses; cache-references/cache-misses unsupported by the Apple
   Silicon PMU), with a new three-way `perf_stat.sh` classifier and a reframed issue #90. Regenerated
   all 15 `results/*.txt` on bare metal (`Dirty inputs: no`, MAC-leak grep clean), bumped the project
