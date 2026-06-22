@@ -159,12 +159,14 @@ Known constraints:
 
 - The gateway and feed are loopback-only, unauthenticated simulator surfaces.
 - The core engine cannot depend on wall-clock time or floating-point prices.
-- Perf artifacts are now **partial hardware PMU evidence** from a bare-metal Apple M2 (aarch64)
-  Fedora Asahi host: real `cycles`/`instructions`/`branches`/`branch-misses`, but
-  `cache-references`/`cache-misses` are unsupported by the Apple Silicon PMU. Issue #90's residual
-  is the cache-counter set specifically, which needs a PMU microarchitecture that exposes it
-  (x86_64, or an ARM server core) — bare metal alone is not enough. Do not relabel these as either
-  "full PMU evidence" or "constrained Docker validation".
+- The `perf stat` artifact (`results/perf_stat_linux.txt`) is now **partial hardware PMU evidence**
+  from a bare-metal Apple M2 (aarch64) Fedora Asahi host: real
+  `cycles`/`instructions`/`branches`/`branch-misses`, but `cache-references`/`cache-misses` are
+  unsupported by the Apple Silicon PMU. Issue #90's residual is the cache-counter set specifically,
+  which needs a PMU microarchitecture that exposes it (x86_64, or an ARM server core) — bare metal
+  alone is not enough. Do not relabel it "full PMU evidence" or "constrained Docker validation". The
+  `perf record` hot-symbol report (`results/perf_report_linux.txt`) is a **software cpu-clock
+  sampling** profile, not PMU evidence.
 - Issue #94 external review remains one of the highest remaining credibility signals; do not imply
   independent review has happened until `docs/review_feedback.md` records it.
 
@@ -1196,8 +1198,10 @@ M45 exchange-grade persistence prototype; M46 recovery benchmarking; M47 contigu
 storage and cache-locality study; M48 DPDK research/prototype; M49 NIC offload and low-latency
 networking study.
 
-Issue #90 remains the full hardware-PMU evidence debt. Issues #99 and #110 were addressed by PR
-#111. Issues #95, #28, and #26 were addressed by PR #112. Issue #94 is the external technical
-review request and remains one of the highest remaining credibility signals. PR #124 completed M49;
-the current follow-up branch `perf/linux-host-artifact-refresh` refreshes Linux host artifacts on
-Fedora Asahi without adding new networking claims.
+Issue #90 remains the full hardware-PMU evidence debt (the cache-counter set specifically). Issues
+#99 and #110 were addressed by PR #111. Issues #95, #28, and #26 were addressed by PR #112. Issue
+#94 is the external technical review request and remains one of the highest remaining credibility
+signals. PR #124 completed M49, PR #125 (d9094df) refreshed the Linux host artifacts on bare-metal
+Fedora Asahi, and `v0.2.0` was released (PR #127 ded6e80; resume-anchor sync PR #128 ae93545). There
+is no active milestone; the highest-value remaining work is non-code and gated on #94 (external
+review) and #90 (full cache-PMU evidence on a PMU-capable microarchitecture).

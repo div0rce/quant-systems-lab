@@ -11,10 +11,14 @@ CI validation, and a reproducible command path.
 
 The committed artifacts are now generated on a **bare-metal Linux host** — an Apple MacBook Air
 (M2, aarch64) running Fedora Asahi Remix, directly on the hardware (`systemd-detect-virt` reports
-`none`, no `hypervisor` CPU flag). `perf stat` reads **real hardware counters** off the Apple
-Avalanche (P-core) and Blizzard (E-core) PMUs: `cycles`, `instructions`, `branches`, and
-`branch-misses` are live. The artifact is therefore classified **partial hardware PMU evidence**,
-not constrained-environment validation: the counters that are present are real, not emulated.
+`none`, no `hypervisor` CPU flag). On this heterogeneous SoC `perf` opens each event against both
+PMU instances — the Apple Avalanche (P-core) and Blizzard (E-core) PMUs — but the single-threaded
+benchmark is scheduled on the performance cores, so **the Avalanche counters carry the real
+counts**: `cycles`, `instructions`, `branches`, and `branch-misses` are live there. The
+corresponding `apple_blizzard_pmu/...` rows read `<not counted>` in `results/perf_stat_linux.txt`
+because the workload never ran on the E-cores — that is expected scheduling behavior, not a missing
+counter. The artifact is therefore classified **partial hardware PMU evidence**, not
+constrained-environment validation: the counters that are present are real, not emulated.
 
 The residual gap is specific and is what issue #90 now tracks: the Apple Silicon PMU, as exposed
 by the current Asahi kernel driver, does **not** implement the generic `cache-references` /
