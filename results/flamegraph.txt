@@ -8,19 +8,19 @@ Perf:          perf version 6.19.14-400.asahi.fc44.aarch64
 Perf paranoid: 2
 Build type:    Release
 Provenance version: 1
-Git commit (informational): 0c3b401
-Source digest: sha256:0d8061b5c92b9a8a1f3bffd14a340e733f28674b14d5716c2eaa6bdb00b31242
+Git commit (informational): 872600a
+Source digest: sha256:211e5835552616102fbe44d8f10dfa7cb6a4b35495dca98243bc87d37c45cfb0
 Source digest scope: flamegraph-benchmark
 Dirty inputs: no
 Generated output: results/flamegraph.svg
-Date: 2026-06-21T06:36:51Z
+Date: 2026-06-21T12:54:50Z
 Benchmark binary: build/bench/qsl-bench
 Dataset:       qsl-bench default synthetic benchmark suite
 Call graph:    dwarf
 Record event:  cpu-clock
 Sample freq:   4000 Hz
-Sample count:  397
-Folded stacks: 171
+Sample count:  423
+Folded stacks: 163
 Minimum samples for hot profile: 200
 Insufficient samples: no
 Record status: 0
@@ -34,25 +34,25 @@ investigation. Frame width is proportional to on-CPU samples, not wall-clock
 latency or throughput, and is hardware/kernel/compiler/build dependent.
 
 Top 15 folded stacks (count  stack):
-      15  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::protocol::decode_new_order(std::span<std::byte const, 18446744073709551615ul>)
-       9  qsl-bench;main;[unknown];[unknown];operator new(unsigned long);malloc
+      28  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::protocol::decode_new_order(std::span<std::byte const, 18446744073709551615ul>)
+      23  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::engine::OrderBook::modify(unsigned long, long, unsigned int)
+      19  qsl-bench;decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0];[unknown];[unknown];cfree@GLIBC_2.17
+      14  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::engine::OrderBook::cancel(unsigned long);decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0];qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
+      11  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce);qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int);qsl::engine::OrderBook::level_for[abi:cxx11](qsl::core::Side, long);std::pair<std::_Rb_tree_iterator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, bool> std::_Rb_tree<long, std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >, std::_Select1st<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, std::greater<long>, std::pmr::polymorphic_allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > > >::_M_emplace_unique<long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >(long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> >&&)
+      10  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::engine::OrderBook::cancel(unsigned long);decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
+       9  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce);qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
+       8  qsl-bench;[unknown];[unknown];qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce);[unknown];[unknown];cfree@GLIBC_2.17
+       8  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+       8  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>);qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long);qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long);qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce);qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
        7  qsl-bench;__libc_start_call_main;[unknown];[unknown];cfree@GLIBC_2.17
-       7  qsl-bench;[unknown];[unknown];qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce);[unknown];[unknown];cfree@GLIBC_2.17
-       7  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main
-       6  qsl-bench;decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0];[unknown];[unknown];cfree@GLIBC_2.17
-       6  qsl-bench;qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&);operator delete(void*, std::align_val_t)@plt
-       6  qsl-bench;qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&);operator delete(void*, unsigned long, std::align_val_t)@plt
-       6  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>);qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long);qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long);qsl::protocol::decode_new_order(std::span<std::byte const, 18446744073709551615ul>)
-       6  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&);qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&);qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-       5  qsl-bench;operator new(unsigned long);malloc@plt
-       5  qsl-bench;std::pair<std::_Rb_tree_iterator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, bool> std::_Rb_tree<long, std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >, std::_Select1st<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, std::greater<long>, std::pmr::polymorphic_allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > > >::_M_emplace_unique<long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >(long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> >&&);operator new(unsigned long, std::align_val_t)@plt
-       5  qsl-bench;[unknown];qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&);[unknown];[unknown];operator new(unsigned long);malloc
-       5  qsl-bench;[unknown];[unknown];qsl::engine::OrderBook::level_for[abi:cxx11](qsl::core::Side, long);[unknown];[unknown];[unknown];__posix_memalign;malloc
-       5  qsl-bench;[unknown];[unknown];qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long);[unknown];[unknown];operator new(unsigned long);malloc
+       7  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>);qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long);qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long);qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce);qsl::engine::MatchingEngine::has_symbol(unsigned int) const
+       6  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main
+       6  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce);qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&)
+       6  qsl-bench;[unknown];[unknown];[unknown];__libc_start_call_main;main;qsl::replay::generate_flow(unsigned long, unsigned int, unsigned long);qsl::engine::MatchingEngine::contains(unsigned int, unsigned long) const
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops        151.3 ns/op        6607667 ops/sec
-protocol encode+decode        500000 ops         21.8 ns/op       45829279 ops/sec
-gateway session (fill)        200000 ops        132.3 ns/op        7556487 ops/sec
-matching engine flow            5004 items      104.7 ns/item      9553139 items/sec
-replay command log              5004 items      115.1 ns/item      8690129 items/sec
+order_book add/mod/cancel     200000 ops        140.7 ns/op        7107229 ops/sec
+protocol encode+decode        500000 ops         21.0 ns/op       47719996 ops/sec
+gateway session (fill)        200000 ops        129.6 ns/op        7715309 ops/sec
+matching engine flow            5004 items      102.3 ns/item      9773521 items/sec
+replay command log              5004 items      111.8 ns/item      8946368 items/sec
