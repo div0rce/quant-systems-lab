@@ -159,12 +159,14 @@ Known constraints:
 
 - The gateway and feed are loopback-only, unauthenticated simulator surfaces.
 - The core engine cannot depend on wall-clock time or floating-point prices.
-- Perf artifacts are now **partial hardware PMU evidence** from a bare-metal Apple M2 (aarch64)
-  Fedora Asahi host: real `cycles`/`instructions`/`branches`/`branch-misses`, but
-  `cache-references`/`cache-misses` are unsupported by the Apple Silicon PMU. Issue #90's residual
-  is the cache-counter set specifically, which needs a PMU microarchitecture that exposes it
-  (x86_64, or an ARM server core) — bare metal alone is not enough. Do not relabel these as either
-  "full PMU evidence" or "constrained Docker validation".
+- The `perf stat` artifact (`results/perf_stat_linux.txt`) is now **partial hardware PMU evidence**
+  from a bare-metal Apple M2 (aarch64) Fedora Asahi host: real
+  `cycles`/`instructions`/`branches`/`branch-misses`, but `cache-references`/`cache-misses` are
+  unsupported by the Apple Silicon PMU. Issue #90's residual is the cache-counter set specifically,
+  which needs a PMU microarchitecture that exposes it (x86_64, or an ARM server core) — bare metal
+  alone is not enough. Do not relabel it "full PMU evidence" or "constrained Docker validation". The
+  `perf record` hot-symbol report (`results/perf_report_linux.txt`) is a **software cpu-clock
+  sampling** profile, not PMU evidence.
 - Issue #94 external review remains one of the highest remaining credibility signals; do not imply
   independent review has happened until `docs/review_feedback.md` records it.
 
