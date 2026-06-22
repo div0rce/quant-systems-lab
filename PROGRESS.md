@@ -52,7 +52,8 @@ Do not rely on prior chat memory.
 - **Next action:** no active milestone. Highest-value remaining work is non-code and gated:
   issue #94 (independent external review — needs a human reviewer) and issue #90 (full
   cache-counter PMU evidence — needs a PMU microarchitecture that exposes cache events, e.g.
-  x86_64). Low-signal backlog: #32 (flamegraph), #29 (FIX adapter).
+  x86_64). #29 (FIX-like text protocol adapter) is delivered in this PR
+  (`feat/fix-text-protocol-adapter`). Low-signal backlog: #32 (flamegraph).
 - **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap — this bare-metal
   Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
   implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
@@ -60,7 +61,7 @@ Do not rely on prior chat memory.
   review (human-gated). Hardware NIC/offload latency measurement still requires suitable wired NIC
   hardware, driver support, timestamping/offload/RSS access, and a measured packet workload; the
   current `wld0` Wi-Fi capability observation is not NIC-offload latency evidence. Legacy backlog
-  still includes #32 and #29. Issues #95, #28, and #26 were closed by PR #112.
+  still includes #32 (#29 delivered in this PR). Issues #95, #28, and #26 were closed by PR #112.
 
 ---
 
@@ -386,6 +387,24 @@ Lower priority:
   the bare-metal Fedora Asahi host (aarch64) from the clean committed tree (`Dirty inputs: no`).
   This is a software cpu-clock sampling hot-symbol profile, not a latency/throughput claim; full
   hardware cache-PMU evidence stays in #90. Do not merge from automation; human squash-merges.
+- [2026-06-21] Issue #29 FIX-like text protocol adapter (`feat/fix-text-protocol-adapter`, stacked
+  on the flamegraph branch). Added `include/qsl/protocol/fix.hpp` + `src/protocol/fix.cpp`: a
+  `tag=value` SOH-framed adapter over the SAME internal structs as the binary codec, with genuine
+  FIX framing (8 BeginString / 9 BodyLength / 35 MsgType / … / 10 mod-256 CheckSum) for the
+  client→gateway order path — NewOrderSingle (35=D)→`NewOrder` and OrderCancelRequest
+  (35=F)→`CancelOrder`. Decoding is total/deterministic/`noexcept` (fixed field table,
+  `std::from_chars`, `string_view`; no heap on decode) and reports every malformed input through a
+  `FixError` taxonomy mirroring the binary `DecodeError`. Documented, deliberate simplifications:
+  Symbol (55) carries the numeric SymbolId; Price (44) carries integer ticks and is always present,
+  making `NewOrder↔FIX` a lossless bijection like the binary codec (never float for price).
+  `tests/unit/test_fix_protocol.cpp` mirrors the binary required tests and adds a **cross-codec
+  equivalence** test (binary and FIX decode the same order to identical structs across all
+  Side×OrdType×TIF), a byte-pinned fixture (checksum 164 / body-length 50), and rejection of
+  malformed framing / unsupported BeginString / unknown-or-wrong MsgType / BodyLength mismatch /
+  CheckSum mismatch / missing field / invalid field / invalid enum / out-of-range / oversized. Docs
+  in `docs/fix_protocol.md` (+ pointer from `docs/binary_protocol.md`). `make check` 260/260 and
+  `make asan` 260/260 clean (the parser handles untrusted text). Closes #29. Do not merge from
+  automation; human squash-merges.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
