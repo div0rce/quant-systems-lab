@@ -23,6 +23,12 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `perf_report_linux.txt` — Linux `perf record/report` hot-symbol output for the benchmark
   harness (`make perf-record`). It is useful as a hot-symbol profile only when the file says
   `No samples: no`, `Insufficient samples: no`, and the sample count meets the reported minimum.
+- `flamegraph.svg` / `flamegraph.txt` — Linux `perf` call-graph flamegraph (`make flamegraph`,
+  issue #32) rendered by the dependency-free `scripts/flamegraph.py`. The `.svg` is the visual
+  (frame width ∝ on-CPU samples) with provenance in a leading XML comment; the `.txt` carries
+  provenance, the `Artifact:` classification, and the top folded stacks. It is a software cpu-clock
+  sampling profile for hot-symbol investigation, not a latency/throughput claim — trust frame widths
+  only when the `.txt` reports a `flamegraph (...)` artifact with enough samples.
 - `numa_affinity_study.txt` — Linux CPU-affinity / scheduler-migration / NUMA-locality study
   output (`make numa-study`). It must self-classify as `full-linux-numa`, `linux-constrained`, or
   `unsupported-host`; only `full-linux-numa` is full NUMA evidence.

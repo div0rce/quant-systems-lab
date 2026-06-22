@@ -109,6 +109,23 @@ Reproduce with `make bench` (numbers will differ by machine). The differential-t
 [`results/differential.txt`](results/differential.txt) — kept separate so it does not disturb
 the core numbers above.
 
+### Flamegraph
+
+Where on-CPU time goes in the `qsl-bench` synthetic suite, rendered by `make flamegraph`
+(`scripts/flamegraph.sh` → the dependency-free `scripts/flamegraph.py` — no external FlameGraph
+toolchain):
+
+[![qsl-bench cpu-clock flamegraph](results/flamegraph.svg)](results/flamegraph.svg)
+
+This is a **software cpu-clock sampling** hot-symbol profile, **not** PMU evidence: frame width is
+proportional to on-CPU samples (329 folded across 159 stacks on this run), not wall-clock latency or
+throughput, and it is hardware/kernel/compiler/build dependent. The hot frames are protocol
+`decode_new_order`, gateway session framing, `MatchingEngine::new_limit`, and order-book
+cancel/allocation. Provenance and classification are in
+[`results/flamegraph.txt`](results/flamegraph.txt); methodology in
+[docs/perf_analysis.md](docs/perf_analysis.md). GitHub renders the SVG statically; download the raw
+file for interactive zoom and search.
+
 ## Limitations
 
 - **Synthetic and local.** No real market data, no real venue connectivity, no order types

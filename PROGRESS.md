@@ -370,6 +370,22 @@ Lower priority:
   (E-core) PMU carries live counts — the `apple_blizzard_pmu/...` rows read `<not counted>` in
   `results/perf_stat_linux.txt` because the single-threaded benchmark stays on the Avalanche P-cores.
   Docs/memory only; no code or artifacts changed.
+- [2026-06-21] Issue #32 flamegraph profiling artifact (`perf/flamegraph-artifact`, stacked on the
+  Codex-followup branch). Added `make flamegraph` → `scripts/flamegraph.sh`, which records
+  `perf record --call-graph dwarf -F 4000 -g -e cpu-clock` on `qsl-bench` and renders
+  `results/flamegraph.svg` (+ `results/flamegraph.txt` provenance/classification companion). The
+  fold + SVG render live in `scripts/flamegraph.py`, a dependency-free stdlib-only stackcollapse +
+  flamegraph renderer (no vendored Perl FlameGraph toolkit), deterministic by design (frames sorted
+  by name; colors a pure function of the name; no RNG/timestamps in the drawn body). DWARF call
+  graphs are used because the Release `bench` preset omits frame pointers; application symbols
+  (`OrderBook::add_limit`, `MatchingEngine::new_limit`, the replay path, …) still resolve from the
+  symtab. Added `tests/shell/test_flamegraph.sh` (CTest-registered, python3-only, skips cleanly if
+  absent) covering folding (offset/dso stripping, perf-order reversal, comm-at-base, count
+  aggregation, sortedness), SVG well-formedness, XML escaping, determinism, and empty-input
+  handling; `make check` 242/242. The committed `results/flamegraph.svg`/`.txt` were generated on
+  the bare-metal Fedora Asahi host (aarch64) from the clean committed tree (`Dirty inputs: no`).
+  This is a software cpu-clock sampling hot-symbol profile, not a latency/throughput claim; full
+  hardware cache-PMU evidence stays in #90. Do not merge from automation; human squash-merges.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.

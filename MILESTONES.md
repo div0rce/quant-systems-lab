@@ -484,7 +484,9 @@ Do not pull backlog items into earlier PRs.
 - FIX-like text protocol adapter. (#29)
 - Web dashboard for visualization. (#30)
 - Docker packaging. (#31)
-- Perf/flamegraph docs. (#32)
+- Perf/flamegraph docs. (#32) — **done**: `make flamegraph` renders a perf call-graph flamegraph
+  via the dependency-free `scripts/flamegraph.py` (`results/flamegraph.svg` + `.txt`), unit-tested in
+  `tests/shell/test_flamegraph.sh`. Full hardware cache-PMU evidence stays in #90.
 - GitHub Pages documentation site. (#33)
 
 ### Differential-testing follow-ups (prioritized)
