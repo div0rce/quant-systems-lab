@@ -220,9 +220,11 @@ DecodeResult<Reject> decode_reject(std::span<const std::byte> frame) noexcept {
     if (b == nullptr) {
         return {err, {}};
     }
-    return {DecodeError::None,
-            Reject{load_be<std::uint64_t>(b + 0),
-                   static_cast<RejectReason>(std::to_integer<std::uint8_t>(b[8]))}};
+    const auto reason = static_cast<RejectReason>(std::to_integer<std::uint8_t>(b[8]));
+    if (!core::is_valid(reason)) {
+        return {DecodeError::InvalidEnumValue, {}};
+    }
+    return {DecodeError::None, Reject{load_be<std::uint64_t>(b + 0), reason}};
 }
 
 DecodeResult<Fill> decode_fill(std::span<const std::byte> frame) noexcept {

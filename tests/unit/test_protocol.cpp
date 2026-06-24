@@ -164,6 +164,17 @@ TEST_CASE("NewOrder rejects invalid time-in-force byte", "[protocol]") {
     REQUIRE(out.error == DecodeError::InvalidEnumValue);
 }
 
+TEST_CASE("Reject rejects invalid reason byte", "[protocol]") {
+    // RejectReason codes are 0..StorageExhausted; the reason byte is body offset 8 (after
+    // order_id).
+    std::vector<std::byte> frame = encode(Reject{8, RejectReason::UnknownSymbol});
+    frame[kHeaderSize + 8] = static_cast<std::byte>(99);
+
+    const auto out = decode_reject(as_span(frame));
+    REQUIRE_FALSE(out.ok());
+    REQUIRE(out.error == DecodeError::InvalidEnumValue);
+}
+
 TEST_CASE("deterministic byte fixture pins the wire format", "[protocol]") {
     const std::vector<std::byte> frame = encode(sample_new_order(), /*seq=*/7);
 

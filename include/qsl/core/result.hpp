@@ -44,6 +44,13 @@ enum class RejectReason : std::uint8_t {
     return "Unknown";
 }
 
+/// True if the byte value maps to a defined RejectReason (the codes are contiguous
+/// 0..StorageExhausted).
+[[nodiscard]] constexpr bool is_valid(RejectReason r) noexcept {
+    return static_cast<std::uint8_t>(r) <=
+           static_cast<std::uint8_t>(RejectReason::StorageExhausted);
+}
+
 /// Minimal success/failure result carrying a reject reason.
 struct Result {
     bool ok;
