@@ -626,14 +626,18 @@ std::size_t OrderBook::count_matches(const OppMap &opposite, MatchQuery query) c
 }
 
 OrderBook::Level &OrderBook::level_for(Side side, Price price) {
+    // try_emplace avoids allocating+freeing a map node (std::map::emplace constructs the node
+    // before checking for a duplicate key) and constructing a throwaway pmr list when the price
+    // level already exists — the steady-state common case with a bounded price band. The intrusive
+    // store already uses this; this brings the baseline path in line. Semantics are identical: an
+    // absent level is inserted empty with the same pmr allocator, and erase_level_if_empty still
+    // prunes it. The map carries resource_, so pmr scoped-allocator propagation constructs the
+    // inserted Level with that same resource — no explicit allocator argument needed (matching the
+    // intrusive store).
     if (side == Side::Buy) {
-        auto [it, inserted] = bids_.emplace(price, Level{Level::allocator_type{resource_}});
-        (void)inserted;
-        return it->second;
+        return bids_.try_emplace(price).first->second;
     }
-    auto [it, inserted] = asks_.emplace(price, Level{Level::allocator_type{resource_}});
-    (void)inserted;
-    return it->second;
+    return asks_.try_emplace(price).first->second;
 }
 
 void OrderBook::rest(OrderId id, Side side, Price price, Quantity quantity) {
