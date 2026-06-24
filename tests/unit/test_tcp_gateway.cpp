@@ -212,6 +212,85 @@ TEST_CASE("tcp server accepts a second client while the first remains open", "[g
     REQUIRE(server_ok);
 }
 
+TEST_CASE("tcp server caps concurrent connections and sheds load past the cap", "[gateway][tcp]") {
+    const int listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    REQUIRE(listen_fd >= 0);
+    int yes = 1;
+    ::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &yes, static_cast<socklen_t>(sizeof(yes)));
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = 0;
+    ::inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+    auto *addr_generic = reinterpret_cast<sockaddr *>(&addr); // NOLINT: POSIX socket API
+    REQUIRE(::bind(listen_fd, addr_generic, static_cast<socklen_t>(sizeof(addr))) == 0);
+    REQUIRE(::listen(listen_fd, 4) == 0);
+
+    sockaddr_in bound{};
+    socklen_t bound_len = sizeof(bound);
+    auto *bound_generic = reinterpret_cast<sockaddr *>(&bound); // NOLINT: POSIX socket API
+    REQUIRE(::getsockname(listen_fd, bound_generic, &bound_len) == 0);
+
+    qsl::engine::MatchingEngine engine;
+    engine.register_symbol("AAPL");
+    OrderGateway gateway{engine, RiskConfig{1000, 1'000'000}};
+    TcpServerOptions options;
+    options.max_accepts = 2;            // return after two *served* connections
+    options.max_active_connections = 1; // one worker at a time; over-cap connections are shed
+    TcpServer server{gateway, options};
+
+    bool server_ok = false;
+    std::thread server_thread([&] { server_ok = server.serve_listen_socket(listen_fd); });
+
+    const auto connect_fd = [&] {
+        const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+        REQUIRE(fd >= 0);
+        // Generous so a loaded CI host (e.g. right after the build) cannot trip a spurious EAGAIN
+        // on the worker's reply; the happy path replies in microseconds and never waits this long.
+        set_recv_timeout(fd, std::chrono::milliseconds(5000));
+        REQUIRE(::connect(fd, bound_generic, static_cast<socklen_t>(sizeof(bound))) == 0);
+        return fd;
+    };
+
+    // First client takes the single slot and is held open, so its worker blocks in read() after
+    // replying. Reading its HeartbeatAck is the sync point: the slot is now full.
+    const int first = connect_fd();
+    write_all(first, encode(Heartbeat{1}));
+    std::array<std::byte, kHeaderSize + kHeartbeatBodySize> ack{};
+    std::size_t got = 0;
+    while (got < ack.size()) {
+        const ssize_t n = ::read(first, ack.data() + got, ack.size() - got);
+        REQUIRE(n > 0);
+        got += static_cast<std::size_t>(n);
+    }
+    REQUIRE(is_heartbeat_ack(std::span<const std::byte>(ack), 1));
+
+    // A second client connects while the slot is full: the server sheds it (closes without
+    // serving), so its read returns EOF immediately with no response. No write -> no SIGPIPE race.
+    const int second = connect_fd();
+    REQUIRE(read_all(second).empty());
+    static_cast<void>(::close(second));
+
+    // Free the slot; a later client is then served, proving the cap re-admits once a worker drains.
+    // The retry absorbs the brief reap window between the first worker finishing and the next
+    // accept (a shed connection returns EOF fast, so this loop is cheap).
+    static_cast<void>(::shutdown(first, SHUT_WR));
+    bool served_after_free = false;
+    for (int attempt = 0; attempt < 100 && !served_after_free; ++attempt) {
+        const int retry = connect_fd();
+        write_all(retry, encode(Heartbeat{3}));
+        static_cast<void>(::shutdown(retry, SHUT_WR));
+        served_after_free = is_heartbeat_ack(read_all(retry), 3);
+        static_cast<void>(::close(retry));
+    }
+    REQUIRE(served_after_free);
+
+    static_cast<void>(::close(first));
+    server_thread.join();
+    static_cast<void>(::close(listen_fd));
+    REQUIRE(server_ok);
+}
+
 TEST_CASE("tcp server rejects non-numeric bind hosts", "[gateway][tcp]") {
     qsl::engine::MatchingEngine engine;
     engine.register_symbol("AAPL");

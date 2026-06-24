@@ -23,6 +23,11 @@ struct EpollServerOptions {
     // engine state. A client that reads its responses keeps the backlog near zero and never trips
     // this. 0 disables the hard cap.
     std::size_t max_outbuf_hard_bytes = 8U << 20; // 8 MiB
+    // Fairness bound: maximum connections accepted in one event-loop iteration before returning to
+    // service ready client read/write events. The listener is level-triggered, so any remaining
+    // backlog is accepted on later iterations; without this, a connection flood can monopolize a
+    // loop turn and starve already-ready clients. 0 drains the backlog fully each turn.
+    std::size_t max_accepts_per_tick = 64;
 };
 
 /// Linux epoll-based TCP front end for the order gateway. It is a transport prototype:

@@ -23,10 +23,16 @@ class UdpPublisher : public MarketDataSubscriber {
     [[nodiscard]] bool good() const noexcept { return fd_ >= 0; }
     void on_market_data(const MarketDataMessage &msg) override;
 
+    /// Count of datagrams that failed to send (sendto error or short write). The feed is
+    /// best-effort UDP, so a publish failure does not stop the publisher; this exposes it for
+    /// diagnostics instead of discarding it silently.
+    [[nodiscard]] std::uint64_t send_failures() const noexcept { return send_failures_; }
+
   private:
     int fd_ = -1;
     std::uint32_t dest_addr_ = 0; // network byte order
     std::uint16_t dest_port_ = 0; // network byte order
+    std::uint64_t send_failures_ = 0;
 };
 
 /// Receives market-data datagrams, decodes them, and tracks sequence gaps.

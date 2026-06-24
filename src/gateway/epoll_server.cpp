@@ -267,18 +267,32 @@ AcceptResult accept_one(EventLoop &loop) {
     return AcceptResult::Fatal;
 }
 
-// Drain the listener's backlog. Returns false only on a genuinely fatal listener error.
+// max_accepts_per_tick with 0 normalized to "unbounded", so the accept loop tests a single bound.
+std::size_t accepts_per_tick_limit(const EpollServerOptions &options) noexcept {
+    return options.max_accepts_per_tick == 0 ? std::numeric_limits<std::size_t>::max()
+                                             : options.max_accepts_per_tick;
+}
+
+// Accept pending connections, up to max_accepts_per_tick, then yield back to client I/O. Returns
+// false only on a genuinely fatal listener error. The listener is level-triggered, so a backlog
+// left after the per-tick bound is re-reported and accepted on the next event-loop iteration.
 bool accept_connections(EventLoop &loop) {
+    const std::size_t limit = accepts_per_tick_limit(loop.options);
+    std::size_t accepted = 0;
     for (;;) {
-        switch (accept_one(loop)) {
-        case AcceptResult::Accepted:
-        case AcceptResult::Retry:
-            continue;
-        case AcceptResult::Drained:
-            return true;
-        case AcceptResult::Fatal:
+        const AcceptResult result = accept_one(loop);
+        if (result == AcceptResult::Fatal) {
             return false;
         }
+        if (result == AcceptResult::Drained) {
+            return true;
+        }
+        // fairness: once the per-tick bound is hit, stop hogging the loop turn and service ready
+        // clients; the level-triggered listener re-reports any remaining backlog next iteration.
+        if (result == AcceptResult::Accepted && ++accepted >= limit) {
+            return true;
+        }
+        // Retry, or Accepted under the limit: keep accepting.
     }
 }
 

@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <array>
 #include <atomic>
+#include <cerrno>
 #include <cstddef>
 #include <limits>
 #include <memory>
@@ -40,7 +41,13 @@ bool write_all(int fd, std::span<const std::byte> data) {
         // the platform's default signal handling.
         const ssize_t n = ::send(fd, data.data() + offset, data.size() - offset, 0);
 #endif
-        if (n <= 0) {
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue; // a signal interrupted send() before any bytes moved: retry, don't drop
+            }
+            return false;
+        }
+        if (n == 0) {
             return false;
         }
         offset += static_cast<std::size_t>(n);
@@ -71,15 +78,43 @@ void join_all(std::vector<ConnectionWorker> &workers) {
     workers.clear();
 }
 
+// read() that retries on EINTR (a signal interruption is not a disconnect). Returns bytes read
+// (>0), 0 on EOF, or -1 on a real error.
+ssize_t read_retry(int fd, std::span<std::byte> buffer) {
+    for (;;) {
+        const ssize_t n = ::read(fd, buffer.data(), buffer.size());
+        if (n >= 0 || errno != EINTR) {
+            return n;
+        }
+    }
+}
+
+// Admission control: true when the worker count has reached a nonzero cap.
+bool at_capacity(const std::vector<ConnectionWorker> &workers, std::size_t cap) noexcept {
+    return cap != 0 && workers.size() >= cap;
+}
+
+// Spawn a worker thread to serve one connection. The worker closes the descriptor and flags itself
+// done (release) so the acceptor can reap and join it (acquire) without blocking on live clients.
+void spawn_worker(TcpServer &server, std::vector<ConnectionWorker> &workers, int conn) {
+    auto done = std::make_shared<std::atomic<bool>>(false);
+    workers.push_back(ConnectionWorker{std::thread([&server, conn, done] {
+                                           server.serve_connection(conn);
+                                           ::close(conn);
+                                           done->store(true, std::memory_order_release);
+                                       }),
+                                       done});
+}
+
 } // namespace
 
 void TcpServer::serve_connection(int fd) {
     Session session(gateway_);
     std::array<std::byte, 4096> buffer{};
     while (!session.logged_out()) {
-        const ssize_t n = ::read(fd, buffer.data(), buffer.size());
+        const ssize_t n = read_retry(fd, buffer);
         if (n <= 0) {
-            break; // EOF (0) or error (<0): graceful disconnect
+            break; // EOF (0) or real error (<0): graceful disconnect
         }
         std::vector<std::byte> response;
         SessionStatus status = SessionStatus::Ok;
@@ -106,15 +141,13 @@ bool TcpServer::serve_listen_socket(int listen_fd) {
         if (conn < 0) {
             break;
         }
-        auto done = std::make_shared<std::atomic<bool>>(false);
-        workers.push_back(ConnectionWorker{std::thread([this, conn, done] {
-                                               serve_connection(conn);
-                                               ::close(conn);
-                                               done->store(true, std::memory_order_release);
-                                           }),
-                                           done});
+        join_finished(workers); // reap drained workers so the active-connection count is current
+        if (at_capacity(workers, options_.max_active_connections)) {
+            ::close(conn); // at capacity: shed load rather than spawn an unbounded worker
+            continue;
+        }
+        spawn_worker(*this, workers, conn);
         ++accepted;
-        join_finished(workers);
         if (options_.max_accepts != 0 && accepted >= options_.max_accepts) {
             break;
         }
