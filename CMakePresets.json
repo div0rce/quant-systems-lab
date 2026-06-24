@@ -32,6 +32,15 @@
       }
     },
     {
+      "name": "flamegraph",
+      "displayName": "Flamegraph profiling (frame pointers + debug info)",
+      "inherits": "bench",
+      "binaryDir": "${sourceDir}/build/flamegraph",
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-fno-omit-frame-pointer -g"
+      }
+    },
+    {
       "name": "asan",
       "displayName": "ASan",
       "generator": "Ninja",
@@ -56,6 +65,7 @@
     { "name": "dev", "configurePreset": "dev" },
     { "name": "release", "configurePreset": "release" },
     { "name": "bench", "configurePreset": "bench" },
+    { "name": "flamegraph", "configurePreset": "flamegraph" },
     { "name": "asan", "configurePreset": "asan" },
     { "name": "tsan", "configurePreset": "tsan" }
   ],

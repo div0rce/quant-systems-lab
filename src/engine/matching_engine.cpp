@@ -40,10 +40,15 @@ OrderBook *MatchingEngine::find_book(SymbolId symbol) noexcept {
     return it == books_.end() ? nullptr : &it->second;
 }
 
-std::vector<EngineEvent> MatchingEngine::new_limit(SymbolId symbol, OrderId id, Side side,
-                                                   Price price, Quantity quantity,
-                                                   TimeInForce tif) {
-    std::vector<EngineEvent> events;
+std::vector<EngineEvent> &MatchingEngine::reset_events() {
+    events_.clear(); // retains capacity: no per-operation reallocation in steady state
+    return events_;
+}
+
+const std::vector<EngineEvent> &MatchingEngine::new_limit(SymbolId symbol, OrderId id, Side side,
+                                                          Price price, Quantity quantity,
+                                                          TimeInForce tif) {
+    std::vector<EngineEvent> &events = reset_events();
     OrderBook *book = find_book(symbol);
     if (book == nullptr) {
         return events; // unknown symbol: rejection is the risk layer's job (M5)
@@ -62,9 +67,9 @@ std::vector<EngineEvent> MatchingEngine::new_limit(SymbolId symbol, OrderId id, 
     return events;
 }
 
-std::vector<EngineEvent> MatchingEngine::new_market(SymbolId symbol, OrderId id, Side side,
-                                                    Quantity quantity) {
-    std::vector<EngineEvent> events;
+const std::vector<EngineEvent> &MatchingEngine::new_market(SymbolId symbol, OrderId id, Side side,
+                                                           Quantity quantity) {
+    std::vector<EngineEvent> &events = reset_events();
     OrderBook *book = find_book(symbol);
     if (book == nullptr) {
         return events;
@@ -80,8 +85,8 @@ std::vector<EngineEvent> MatchingEngine::new_market(SymbolId symbol, OrderId id,
     return events;
 }
 
-std::vector<EngineEvent> MatchingEngine::cancel(SymbolId symbol, OrderId id) {
-    std::vector<EngineEvent> events;
+const std::vector<EngineEvent> &MatchingEngine::cancel(SymbolId symbol, OrderId id) {
+    std::vector<EngineEvent> &events = reset_events();
     OrderBook *book = find_book(symbol);
     if (book == nullptr) {
         return events;
@@ -92,9 +97,9 @@ std::vector<EngineEvent> MatchingEngine::cancel(SymbolId symbol, OrderId id) {
     return events;
 }
 
-std::vector<EngineEvent> MatchingEngine::modify(SymbolId symbol, OrderId id, Price new_price,
-                                                Quantity new_quantity) {
-    std::vector<EngineEvent> events;
+const std::vector<EngineEvent> &MatchingEngine::modify(SymbolId symbol, OrderId id, Price new_price,
+                                                       Quantity new_quantity) {
+    std::vector<EngineEvent> &events = reset_events();
     OrderBook *book = find_book(symbol);
     if (book == nullptr || !book->contains(id)) {
         return events; // unknown symbol/order: rejection is the risk layer's job (M5)

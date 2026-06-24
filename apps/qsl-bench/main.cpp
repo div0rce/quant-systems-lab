@@ -9,11 +9,14 @@
 #include "qsl/replay/recovery.hpp"
 #include "qsl/replay/shrink.hpp"
 
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace qsl::bench {
@@ -103,6 +106,136 @@ void run_diff_benchmarks() {
     }
 }
 
+struct StorageOption {
+    const char *name;
+    qsl::engine::OrderBook::Storage storage;
+};
+
+// Single source of truth for the QSL_BENCH_STORAGE names, so naming and parsing cannot drift apart.
+constexpr std::array<StorageOption, 4> kStorageOptions{{
+    {"baseline", qsl::engine::OrderBook::Storage::Baseline},
+    {"pooled", qsl::engine::OrderBook::Storage::Pooled},
+    {"intrusive", qsl::engine::OrderBook::Storage::IntrusivePooled},
+    {"contiguous", qsl::engine::OrderBook::Storage::Contiguous},
+}};
+
+const char *storage_name(qsl::engine::OrderBook::Storage s) {
+    for (const auto &o : kStorageOptions) {
+        if (o.storage == s) {
+            return o.name;
+        }
+    }
+    return "baseline";
+}
+
+// QSL_BENCH_STORAGE lets the profiling workload A/B the order-book storage mode without rebuilding.
+qsl::engine::OrderBook::Storage profile_storage_from_env() {
+    const char *s = std::getenv("QSL_BENCH_STORAGE");
+    const std::string_view v = (s != nullptr) ? s : "";
+    for (const auto &o : kStorageOptions) {
+        if (v == o.name) {
+            return o.storage;
+        }
+    }
+    return qsl::engine::OrderBook::Storage::Baseline;
+}
+
+// Profiling-workload duration in seconds: argv[2] overrides QSL_BENCH_PROFILE_SECONDS, default 5s.
+double profile_seconds_from_args(int argc, char **argv) {
+    double seconds = 5.0;
+    if (argc >= 3) {
+        seconds = std::strtod(argv[2], nullptr);
+    } else if (const char *e = std::getenv("QSL_BENCH_PROFILE_SECONDS")) {
+        seconds = std::strtod(e, nullptr);
+    }
+    return (seconds > 0.0) ? seconds : 5.0;
+}
+
+// One bounded steady-state step of the profiling flow: add a limit order, cancel the oldest once
+// the book is ~kRing deep (keeping a pooled allocator warm so steady state issues no malloc/free),
+// and occasionally modify a resting order or cross with a market order. Driven by an external
+// splitmix64 value so the flow stays reproducible across runs and compilers.
+class ProfileFlow {
+  public:
+    ProfileFlow(qsl::engine::MatchingEngine &eng, qsl::core::SymbolId sym) : eng_(eng), sym_(sym) {
+        ring_.reserve(kRing);
+    }
+
+    void step(std::uint64_t r) {
+        using qsl::core::Side;
+        using qsl::core::TimeInForce;
+        const Side side = ((r & 1U) != 0U) ? Side::Buy : Side::Sell;
+        const auto price = 100 + static_cast<qsl::core::Price>((r >> 1) % 64); // [100,164)
+        const auto qty = 1 + static_cast<qsl::core::Quantity>((r >> 8) % 8);
+        const qsl::core::OrderId oid = id_++;
+        g_sink += eng_.new_limit(sym_, oid, side, price, qty, TimeInForce::GTC).size();
+        if (ring_.size() < kRing) {
+            ring_.push_back(oid);
+        } else {
+            g_sink += eng_.cancel(sym_, ring_[head_]).size();
+            ring_[head_] = oid;
+            head_ = (head_ + 1) % kRing;
+        }
+        if ((r & 7U) == 0U && !ring_.empty()) {
+            const qsl::core::OrderId mid = ring_[(head_ + (ring_.size() / 2)) % ring_.size()];
+            g_sink += eng_.modify(sym_, mid, price, qty).size();
+        }
+        if ((r & 15U) == 0U) {
+            const Side ms = ((r & 2U) != 0U) ? Side::Sell : Side::Buy;
+            g_sink += eng_.new_market(sym_, id_++, ms, 3).size();
+        }
+        ++ops_;
+    }
+
+    std::uint64_t ops() const { return ops_; }
+    std::size_t resting() const { return ring_.size(); }
+
+  private:
+    static constexpr std::size_t kRing = 512; // bounded resting depth
+    qsl::engine::MatchingEngine &eng_;
+    qsl::core::SymbolId sym_;
+    std::vector<qsl::core::OrderId> ring_;
+    std::size_t head_ = 0;
+    qsl::core::OrderId id_ = 1;
+    std::uint64_t ops_ = 0;
+};
+
+// splitmix64 keeps the profiling flow reproducible across runs/compilers without <random> overhead.
+std::uint64_t splitmix64(std::uint64_t &state) {
+    state += 0x9E3779B97F4A7C15ULL;
+    std::uint64_t z = state;
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+    return z ^ (z >> 31);
+}
+
+// Long-running, warm, deterministic profiling workload for `make flamegraph`. Drives a bounded
+// steady-state order flow through the matching engine for a wall-clock duration, so perf collects a
+// dense sample set on a stable working set rather than the ~80ms one-shot benchmark suite.
+// Wall-clock is fine here: this is the benchmark layer, never the deterministic engine path.
+void run_profile_workload(int argc, char **argv) {
+    using namespace qsl;
+
+    const double seconds = profile_seconds_from_args(argc, argv);
+    const auto storage = profile_storage_from_env();
+    engine::MatchingEngine eng{storage};
+    ProfileFlow flow{eng, eng.register_symbol("AAPL")};
+
+    std::uint64_t state = 0x9E3779B97F4A7C15ULL;
+    const auto t0 = clock_type::now();
+    const auto deadline = t0 + std::chrono::duration_cast<clock_type::duration>(
+                                   std::chrono::duration<double>(seconds));
+    while (clock_type::now() < deadline) {
+        for (int k = 0; k < 4096; ++k) { // batch between clock reads
+            flow.step(splitmix64(state));
+        }
+    }
+    const double secs = std::chrono::duration<double>(clock_type::now() - t0).count();
+    std::printf("profile workload: storage=%s ops=%llu elapsed=%.3fs (%.0f ops/sec) resting~%zu\n",
+                storage_name(storage), static_cast<unsigned long long>(flow.ops()), secs,
+                static_cast<double>(flow.ops()) / secs, flow.resting());
+}
+
 // Run a named benchmark subcommand (argv[1]); returns true if one matched and ran, so main exits.
 bool run_subcommand(int argc, char **argv) {
     if (argc < 2) {
@@ -111,6 +244,8 @@ bool run_subcommand(int argc, char **argv) {
     const std::string command = argv[1];
     if (command == "diff") {
         run_diff_benchmarks();
+    } else if (command == "profile") {
+        run_profile_workload(argc, argv);
     } else if (command == "pool") {
         qsl::bench::run_order_pool_benchmarks();
     } else if (command == "storage") {

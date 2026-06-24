@@ -111,17 +111,18 @@ the core numbers above.
 
 ### Flamegraph
 
-Where on-CPU time goes in the `qsl-bench` synthetic suite, rendered by `make flamegraph`
+Where on-CPU time goes in the matching engine, rendered by `make flamegraph`
 (`scripts/flamegraph.sh` → the dependency-free `scripts/flamegraph.py` — no external FlameGraph
-toolchain):
+toolchain). It records `perf --call-graph fp` against a dedicated frame-pointer build
+(`build/flamegraph`) while `qsl-bench profile` drives a warm, bounded order flow for 5s, so the
+capture is dense (~20k samples) and stacks are fully symbolized — no `[unknown]` frames:
 
-[![qsl-bench cpu-clock flamegraph](results/flamegraph.svg)](results/flamegraph.svg)
+[![qsl-bench matching-engine flamegraph](results/flamegraph.svg)](results/flamegraph.svg)
 
 This is a **software cpu-clock sampling** hot-symbol profile, **not** PMU evidence: frame width is
-proportional to on-CPU samples (329 folded across 159 stacks on this run), not wall-clock latency or
-throughput, and it is hardware/kernel/compiler/build dependent. The hot frames are protocol
-`decode_new_order`, gateway session framing, `MatchingEngine::new_limit`, and order-book
-cancel/allocation. Provenance and classification are in
+proportional to on-CPU samples, not wall-clock latency or throughput, and it is
+hardware/kernel/compiler/build dependent. The hot frames are `MatchingEngine::new_limit`/`cancel`,
+the order-book level/index operations, and the allocator. Provenance and classification are in
 [`results/flamegraph.txt`](results/flamegraph.txt); methodology in
 [docs/perf_analysis.md](docs/perf_analysis.md). GitHub renders the SVG statically; download the raw
 file for interactive zoom and search.

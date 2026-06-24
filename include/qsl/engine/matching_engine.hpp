@@ -59,12 +59,17 @@ class MatchingEngine {
     SymbolId register_symbol(std::string_view name);
     [[nodiscard]] std::optional<SymbolId> symbol_id(std::string_view name) const;
 
-    std::vector<EngineEvent> new_limit(SymbolId symbol, OrderId id, Side side, Price price,
-                                       Quantity quantity, TimeInForce tif);
-    std::vector<EngineEvent> new_market(SymbolId symbol, OrderId id, Side side, Quantity quantity);
-    std::vector<EngineEvent> cancel(SymbolId symbol, OrderId id);
-    std::vector<EngineEvent> modify(SymbolId symbol, OrderId id, Price new_price,
-                                    Quantity new_quantity);
+    // Mutators return a reference to a per-engine scratch buffer that is reused (and cleared) on
+    // every mutating call, so the hot path issues no per-operation heap allocation. The reference
+    // is valid only until the next mutating call on this engine; consumers that must retain events
+    // (the gateway result, replay accumulation) copy out, which they already do by owning a vector.
+    const std::vector<EngineEvent> &new_limit(SymbolId symbol, OrderId id, Side side, Price price,
+                                              Quantity quantity, TimeInForce tif);
+    const std::vector<EngineEvent> &new_market(SymbolId symbol, OrderId id, Side side,
+                                               Quantity quantity);
+    const std::vector<EngineEvent> &cancel(SymbolId symbol, OrderId id);
+    const std::vector<EngineEvent> &modify(SymbolId symbol, OrderId id, Price new_price,
+                                           Quantity new_quantity);
 
     [[nodiscard]] SeqNo last_seq() const noexcept { return seq_; }
     [[nodiscard]] EngineSnapshot snapshot() const;
@@ -91,10 +96,15 @@ class MatchingEngine {
     OrderBook *find_book(SymbolId symbol) noexcept;
     SeqNo next_seq() noexcept { return ++seq_; }
 
+    // Reused across mutating calls so the event stream needs no per-operation allocation; cleared
+    // (capacity retained) at the start of each mutator. Returned by const reference (see mutators).
+    std::vector<EngineEvent> &reset_events();
+
     SymbolRegistry registry_;
     std::map<SymbolId, OrderBook> books_; // ordered -> deterministic snapshot
     SeqNo seq_{0};
     OrderBook::Storage book_storage_{OrderBook::Storage::Baseline};
+    std::vector<EngineEvent> events_; // mutator scratch buffer (reused; see mutators)
 };
 
 } // namespace qsl::engine
