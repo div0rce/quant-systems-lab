@@ -73,55 +73,87 @@ std::vector<std::byte> encode_command(const Command &command) {
     return out;
 }
 
+namespace {
+
+// Per-tag decoders. Each validates length first, then any enum domains. Out-of-domain enum bytes
+// are refused (return nullopt): the replay path applies decoded commands straight to the engine (no
+// gateway risk check), so a corrupt Side/TIF would otherwise diverge replayed state instead of
+// being rejected like a malformed frame.
+std::optional<Command> decode_register_symbol(std::span<const std::byte> bytes) {
+    std::string name;
+    for (std::size_t i = 1; i < bytes.size(); ++i) {
+        name.push_back(static_cast<char>(std::to_integer<unsigned char>(bytes[i])));
+    }
+    return RegisterSymbol{std::move(name)};
+}
+
+std::optional<Command> decode_new_limit(std::span<const std::byte> bytes) {
+    if (bytes.size() < kNewLimitSize) {
+        return std::nullopt;
+    }
+    const std::byte *p = bytes.data();
+    const auto side = static_cast<Side>(std::to_integer<std::uint8_t>(p[25]));
+    const auto tif = static_cast<TimeInForce>(std::to_integer<std::uint8_t>(p[26]));
+    if (!core::is_valid(side) || !core::is_valid(tif)) {
+        return std::nullopt;
+    }
+    return NewLimit{protocol::load_be<std::uint32_t>(p + 1),
+                    protocol::load_be<std::uint64_t>(p + 5),
+                    side,
+                    static_cast<Price>(protocol::load_be<std::uint64_t>(p + 13)),
+                    protocol::load_be<std::uint32_t>(p + 21),
+                    tif};
+}
+
+std::optional<Command> decode_new_market(std::span<const std::byte> bytes) {
+    if (bytes.size() < kNewMarketSize) {
+        return std::nullopt;
+    }
+    const std::byte *p = bytes.data();
+    const auto side = static_cast<Side>(std::to_integer<std::uint8_t>(p[13]));
+    if (!core::is_valid(side)) {
+        return std::nullopt;
+    }
+    return NewMarket{protocol::load_be<std::uint32_t>(p + 1),
+                     protocol::load_be<std::uint64_t>(p + 5), side,
+                     protocol::load_be<std::uint32_t>(p + 14)};
+}
+
+std::optional<Command> decode_cancel(std::span<const std::byte> bytes) {
+    if (bytes.size() < kCancelSize) {
+        return std::nullopt;
+    }
+    const std::byte *p = bytes.data();
+    return Cancel{protocol::load_be<std::uint32_t>(p + 1), protocol::load_be<std::uint64_t>(p + 5)};
+}
+
+std::optional<Command> decode_modify(std::span<const std::byte> bytes) {
+    if (bytes.size() < kModifySize) {
+        return std::nullopt;
+    }
+    const std::byte *p = bytes.data();
+    return Modify{protocol::load_be<std::uint32_t>(p + 1), protocol::load_be<std::uint64_t>(p + 5),
+                  static_cast<Price>(protocol::load_be<std::uint64_t>(p + 13)),
+                  protocol::load_be<std::uint32_t>(p + 21)};
+}
+
+} // namespace
+
 std::optional<Command> decode_command(std::span<const std::byte> bytes) {
     if (bytes.empty()) {
         return std::nullopt;
     }
-    const std::byte *p = bytes.data();
-    switch (static_cast<Tag>(std::to_integer<std::uint8_t>(p[0]))) {
-    case Tag::RegisterSymbol: {
-        std::string name;
-        for (std::size_t i = 1; i < bytes.size(); ++i) {
-            name.push_back(static_cast<char>(std::to_integer<unsigned char>(p[i])));
-        }
-        return RegisterSymbol{std::move(name)};
-    }
-    case Tag::NewLimit: {
-        if (bytes.size() < kNewLimitSize) {
-            return std::nullopt;
-        }
-        return NewLimit{protocol::load_be<std::uint32_t>(p + 1),
-                        protocol::load_be<std::uint64_t>(p + 5),
-                        static_cast<Side>(std::to_integer<std::uint8_t>(p[25])),
-                        static_cast<Price>(protocol::load_be<std::uint64_t>(p + 13)),
-                        protocol::load_be<std::uint32_t>(p + 21),
-                        static_cast<TimeInForce>(std::to_integer<std::uint8_t>(p[26]))};
-    }
-    case Tag::NewMarket: {
-        if (bytes.size() < kNewMarketSize) {
-            return std::nullopt;
-        }
-        return NewMarket{protocol::load_be<std::uint32_t>(p + 1),
-                         protocol::load_be<std::uint64_t>(p + 5),
-                         static_cast<Side>(std::to_integer<std::uint8_t>(p[13])),
-                         protocol::load_be<std::uint32_t>(p + 14)};
-    }
-    case Tag::Cancel: {
-        if (bytes.size() < kCancelSize) {
-            return std::nullopt;
-        }
-        return Cancel{protocol::load_be<std::uint32_t>(p + 1),
-                      protocol::load_be<std::uint64_t>(p + 5)};
-    }
-    case Tag::Modify: {
-        if (bytes.size() < kModifySize) {
-            return std::nullopt;
-        }
-        return Modify{protocol::load_be<std::uint32_t>(p + 1),
-                      protocol::load_be<std::uint64_t>(p + 5),
-                      static_cast<Price>(protocol::load_be<std::uint64_t>(p + 13)),
-                      protocol::load_be<std::uint32_t>(p + 21)};
-    }
+    switch (static_cast<Tag>(std::to_integer<std::uint8_t>(bytes[0]))) {
+    case Tag::RegisterSymbol:
+        return decode_register_symbol(bytes);
+    case Tag::NewLimit:
+        return decode_new_limit(bytes);
+    case Tag::NewMarket:
+        return decode_new_market(bytes);
+    case Tag::Cancel:
+        return decode_cancel(bytes);
+    case Tag::Modify:
+        return decode_modify(bytes);
     }
     return std::nullopt;
 }

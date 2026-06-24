@@ -186,6 +186,23 @@ TEST_CASE("decode_command rejects malformed payloads", "[replay]") {
     auto truncated = encode_command(Command{NewLimit{1, 2, Side::Buy, 100, 5, TimeInForce::GTC}});
     truncated.pop_back();
     REQUIRE_FALSE(decode_command(truncated).has_value());
+
+    // Out-of-domain enum bytes must be refused, not silently applied: the replay path feeds decoded
+    // commands straight to the engine (no gateway risk check), so a corrupt Side/TIF byte would
+    // otherwise diverge replayed state. Side is {0,1}, TimeInForce is {0,1}.
+    auto bad_limit_side =
+        encode_command(Command{NewLimit{1, 2, Side::Buy, 100, 5, TimeInForce::GTC}});
+    bad_limit_side[25] = static_cast<std::byte>(0x02);
+    REQUIRE_FALSE(decode_command(bad_limit_side).has_value());
+
+    auto bad_limit_tif =
+        encode_command(Command{NewLimit{1, 2, Side::Buy, 100, 5, TimeInForce::GTC}});
+    bad_limit_tif[26] = static_cast<std::byte>(0x07);
+    REQUIRE_FALSE(decode_command(bad_limit_tif).has_value());
+
+    auto bad_market_side = encode_command(Command{NewMarket{1, 3, Side::Sell, 7}});
+    bad_market_side[13] = static_cast<std::byte>(0xAA);
+    REQUIRE_FALSE(decode_command(bad_market_side).has_value());
 }
 
 TEST_CASE("snapshot reports aggregate per-level quantities", "[replay]") {
