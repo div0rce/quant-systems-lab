@@ -38,7 +38,11 @@ void UdpPublisher::on_market_data(const MarketDataMessage &msg) {
     dest.sin_port = dest_port_;
     dest.sin_addr.s_addr = dest_addr_;
     const auto *generic = reinterpret_cast<const sockaddr *>(&dest); // NOLINT: POSIX socket API
-    ::sendto(fd_, bytes.data(), bytes.size(), 0, generic, static_cast<socklen_t>(sizeof(dest)));
+    const ssize_t sent =
+        ::sendto(fd_, bytes.data(), bytes.size(), 0, generic, static_cast<socklen_t>(sizeof(dest)));
+    if (sent < 0 || static_cast<std::size_t>(sent) != bytes.size()) {
+        ++send_failures_; // best-effort feed: record the loss rather than discard it silently
+    }
 }
 
 UdpFeedClient::UdpFeedClient(std::uint16_t port, int recv_buffer_bytes) {

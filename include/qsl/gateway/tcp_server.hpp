@@ -19,6 +19,11 @@ struct TcpServerOptions {
     // Test/embedding hook: 0 means serve indefinitely; otherwise return after accepting this many
     // connections, once their worker threads have drained and joined.
     std::size_t max_accepts = 0;
+    // Admission control: cap on concurrently-served connections (worker threads). 0 disables the
+    // cap. With one worker thread per connection, an unbounded count lets many slow/idle clients
+    // exhaust threads/fds/memory; at the cap, a freshly accepted connection is closed immediately
+    // (load-shed) rather than spawning another worker.
+    std::size_t max_active_connections = 0;
 };
 
 /// Minimal threaded TCP front end for the order gateway. It binds to a host/port (intended for
