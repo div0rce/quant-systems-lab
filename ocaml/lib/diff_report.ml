@@ -1,6 +1,6 @@
 (* Differential failure artifact bundle (issue #40). On a C++/OCaml snapshot divergence for a
-   fixture, write a small reviewable bundle — the original fixture, the OCaml-computed snapshot,
-   the C++ expected snapshot, and a unified line diff — so CI can upload it for debugging. *)
+   fixture, write a small reviewable bundle, the original fixture, the OCaml-computed snapshot,
+   the C++ expected snapshot, and a unified line diff, so CI can upload it for debugging. *)
 
 open Replay_engine
 

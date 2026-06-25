@@ -141,7 +141,7 @@ void require_replayed_state(const MatchingEngine &replayed, const PipelineResult
 }
 
 // Collects the downstream event stream in order. Touched only by the publisher/log thread during
-// the run, then by the test after join() — no synchronization needed.
+// the run, then by the test after join(), no synchronization needed.
 struct CollectingSink final : OutputSink {
     std::vector<EngineEvent> events;
     std::uint64_t processed = 0;

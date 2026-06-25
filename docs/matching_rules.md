@@ -50,9 +50,9 @@ structured `DuplicateOrderId` rejection before the command reaches the engine.
 
 | Change                              | Effect                                              |
 |-------------------------------------|-----------------------------------------------------|
-| Same price, **smaller** quantity    | Reduced in place — **time priority preserved**      |
-| Price change (any)                  | Re-queued at the new level tail — **priority lost**; may cross and trade immediately |
-| Quantity **increase**               | Re-queued at the tail — **priority lost**           |
+| Same price, **smaller** quantity    | Reduced in place, **time priority preserved**      |
+| Price change (any)                  | Re-queued at the new level tail, **priority lost**; may cross and trade immediately |
+| Quantity **increase**               | Re-queued at the tail, **priority lost**           |
 | `new_quantity == 0`                 | Treated as a cancel                                 |
 
 Priority loss is implemented as cancel + re-add, so a repriced order that now crosses the

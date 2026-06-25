@@ -52,7 +52,7 @@ Classification rules:
   a full header has declared a payload size, a truncated frame is `Corrupt`: that size is
   untrusted and could span later valid records, so automated repair must not truncate it.
 - A `BadChecksum` record is a torn tail only when its frame ends exactly at the end of the
-  file — consistent with an interrupted final append (for example, out-of-order page
+  file, consistent with an interrupted final append (for example, out-of-order page
   writeback inside the last record). A checksum failure *followed by more bytes* means valid
   acknowledged records may sit beyond the damage, so it is `Corrupt`.
 - A `PayloadTooLarge` header is never trusted: its declared size is garbage, so the extent
@@ -67,7 +67,7 @@ a human, not automation.
 The resulting contract, per mode:
 
 - **`FsyncOnAppend`:** an append acknowledged as successful is in the valid prefix and is
-  never removed by tail repair — unless the storage stack lied about flushing, which the
+  never removed by tail repair, unless the storage stack lied about flushing, which the
   simulator cannot detect or fix.
 - **`FlushOnAppend`:** an acknowledged append survives any process crash, and tail repair
   preserves it; an OS crash or power loss may lose it from the page cache.
@@ -96,7 +96,7 @@ recovery. The honest differences:
 | Recovery objective          | bounded restart time (snapshot + log tail)       | unbounded (proportional to log length); measured by `make bench-recovery` (`results/recovery_benchmarks.txt`) |
 
 The deepest gap is the first two rows. Because the gateway acknowledges orders before
-anything is persisted, a crash can lose commands the client believes were accepted — the
+anything is persisted, a crash can lose commands the client believes were accepted, the
 simulator's recovery guarantee is "replay reproduces whatever reached the log," not "replay
 reproduces everything that was acknowledged." Closing that gap would mean routing the
 pipeline through a log-then-apply-then-ack sequence and was deliberately left out of M45:
@@ -106,7 +106,7 @@ recovery semantics explicit there.
 
 Segmentation, rotation, and snapshot-bounded recovery are likewise documented as gaps, not
 built; M46 (recovery benchmarking, `make bench-recovery`) measures the cost of the current
-full-replay design before any of that is added — see the recovery-cost section of
+full-replay design before any of that is added, see the recovery-cost section of
 [replay_and_recovery.md](replay_and_recovery.md).
 
 ## Validation
@@ -129,7 +129,7 @@ Two layers of automated evidence, each labeled with what it does and does not pr
 What this validation **cannot** show: SIGKILL leaves the kernel page cache intact, so the
 harness validates crash-mid-append recovery and process-death retention only. Power-loss
 and OS-crash durability would require fault injection below the filesystem (or pulling
-plugs), neither of which this repo performs — so the `FsyncOnAppend` stable-storage
+plugs), neither of which this repo performs, so the `FsyncOnAppend` stable-storage
 guarantee is exercised but not falsified here, and no such durability is claimed.
 
 ## Limits

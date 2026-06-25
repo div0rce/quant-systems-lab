@@ -31,7 +31,7 @@ single-writer property is what makes "load my own cursor relaxed" sound.
 
 Each side performs a fixed sequence of accesses. There are no loops and no compare-and-swap.
 
-### Producer — `try_push` / `emplace`
+### Producer, `try_push` / `emplace`
 
 | Step | Access                       | Order     | Justification                                                          |
 | ---- | ---------------------------- | --------- | ---------------------------------------------------------------------- |
@@ -40,7 +40,7 @@ Each side performs a fixed sequence of accesses. There are no loops and no compa
 | 3    | write `buffer_[tail]`        | plain     | the slot is producer-owned until step 4 publishes it                   |
 | 4    | store `tail_ = next(tail)`   | `release` | publishes step 3's write to the consumer                               |
 
-### Consumer — `try_pop`
+### Consumer, `try_pop`
 
 | Step | Access                       | Order     | Justification                                                          |
 | ---- | ---------------------------- | --------- | ---------------------------------------------------------------------- |
@@ -90,18 +90,18 @@ producer:  load head_ (acquire)  ─sequenced-before→  write buffer_[h] (a lat
 When the producer's full check (step 2) observes that `head_` has advanced past the slot it is
 about to reuse, the consumer's read of that slot (C3) *happens-before* the producer's overwrite
 (step 3 of a later push). Without the `acquire` here, the producer could overwrite a slot the
-consumer has not finished reading — a data race even though the index arithmetic looks fine. This
+consumer has not finished reading, a data race even though the index arithmetic looks fine. This
 is why step 2 is `acquire` and not `relaxed`.
 
 The one spare slot (`kSlots = Capacity + 1`) guarantees the producer can only catch up to, never
 pass, the consumer, so "the slot I am about to reuse" is always the slot the consumer most
-recently freed — exactly the slot direction 2 protects.
+recently freed, exactly the slot direction 2 protects.
 
 ## Why `relaxed` is enough for the own-cursor loads
 
 `tail_` has a single writer (the producer) and `head_` has a single writer (the consumer). A
 thread loading its own cursor is reading a value only it could have changed, in program order, so
-no inter-thread ordering is required — `relaxed` suffices and avoids a needless fence. The
+no inter-thread ordering is required, `relaxed` suffices and avoids a needless fence. The
 cross-thread edges are carried entirely by the four `acquire`/`release` accesses above.
 
 ## Why not `seq_cst`
@@ -119,8 +119,8 @@ The header describes `try_push`/`try_pop` as **wait-free per operation** for pay
 copy/move assignment is itself bounded and non-blocking. The justification is structural, not
 benchmarked:
 
-- Each operation executes a *fixed, bounded* number of steps in the queue protocol itself — two
-  atomic loads, one branch, one plain memory access, one atomic store — regardless of what the
+- Each operation executes a *fixed, bounded* number of steps in the queue protocol itself, two
+  atomic loads, one branch, one plain memory access, one atomic store, regardless of what the
   other thread is doing.
 - There is **no loop** and **no CAS retry** inside either operation, so there is no execution in
   which a thread is starved or must retry because of contention.

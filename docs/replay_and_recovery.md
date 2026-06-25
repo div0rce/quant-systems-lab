@@ -14,7 +14,7 @@ flowchart LR
 
 Accepted commands and emitted engine events are persisted as framed records in an
 append-only log (`include/qsl/replay/event_log.hpp`, `src/replay/event_log.cpp`). The
-writer opens the file in binary append mode and only ever appends — it never seeks back or
+writer opens the file in binary append mode and only ever appends, it never seeks back or
 rewrites existing records.
 
 ### Record format
@@ -72,7 +72,7 @@ cleanly as zero records.
 ## Deterministic replay and recovery (M8)
 
 The log is a stream of `Command` records (`include/qsl/replay/command.hpp`). The recordable
-command set is `RegisterSymbol`, `NewLimit`, `NewMarket`, `Cancel`, `Modify` — a
+command set is `RegisterSymbol`, `NewLimit`, `NewMarket`, `Cancel`, `Modify`, a
 `std::variant` serialized with a 1-byte tag plus fixed-width fields (`RegisterSymbol`
 carries a variable-length name). Including `RegisterSymbol` makes a log **self-contained**:
 registering the same names in the same order reproduces identical `SymbolId`s, so the
@@ -126,7 +126,7 @@ re-applies every command, so restart time grows with history length, not with li
 `make bench-recovery` (`qsl-bench recovery`, artifact
 `results/recovery_benchmarks.txt`) measures that cost on the generating host.
 
-**Recovery objective measured.** Restart cost — the wall time from a clean log file to a
+**Recovery objective measured.** Restart cost, the wall time from a clean log file to a
 rebuilt engine (RTO-style), split into its two phases:
 
 1. `recover_log_file`: read the file and verify/classify every frame (the M45 crash-safe
@@ -141,7 +141,7 @@ M45 durability modes and is exercised by `make crash-recovery`, not by this benc
 the benchmark also measures rebuilding the book directly from captured live state:
 `MatchingEngine::resting_orders` enumerates every resting order in priority order (bids
 best-first, then asks, FIFO within a level), and re-adding that sequence into a fresh
-engine reproduces levels and intra-level time priority exactly — verified against the
+engine reproduces levels and intra-level time priority exactly, verified against the
 reference snapshot on every run, including a synthetic-depth sweep because the realistic
 flow leaves only a few dozen resting orders (per-order timings on such small books are
 noisy; the controlled-depth section is the reliable scaling signal). This prototype is
@@ -154,7 +154,7 @@ design would also have to persist sequencing state.
 in log length while book rebuild cost is linear in resting-order count; for the measured
 synthetic flows the live state is orders of magnitude smaller than the history that
 produced it. That is the case for snapshot-bounded recovery *if* restart time ever
-matters — and no more: the numbers are single-machine, warm-cache, synthetic-flow
+matters, and no more: the numbers are single-machine, warm-cache, synthetic-flow
 measurements, not a production recovery-time claim.
 
 ### Limitations

@@ -19,7 +19,7 @@ if(QSL_ENABLE_ASAN)
 endif()
 
 # ThreadSanitizer (M27): data-race detection for the concurrent pipeline. It is a correctness
-# gate, not a performance tool — never collect benchmark numbers under TSan.
+# gate, not a performance tool, never collect benchmark numbers under TSan.
 if(QSL_ENABLE_TSAN)
   add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
   add_link_options(-fsanitize=thread)

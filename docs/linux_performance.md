@@ -7,7 +7,7 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
 
 - Benchmark only the **bench** preset, which inherits the Release configuration
   (`-O2`/`-O3`, `NDEBUG`) and disables tests. Debug numbers are meaningless for latency.
-- Sanitizer builds (ASan/UBSan, see `make asan`) are for correctness, not timing — they add
+- Sanitizer builds (ASan/UBSan, see `make asan`) are for correctness, not timing, they add
   large, uneven overhead.
 
 ## Why numbers are hardware- and environment-dependent
@@ -46,12 +46,12 @@ numbers (`results/`) are a reproducible baseline, not a production-latency claim
 - See `docs/perf_analysis.md` for the M29 profiling workflow, artifacts, and caveats.
 
 The current perf artifacts are **partial hardware PMU evidence** from a bare-metal Apple MacBook Air
-(M2, aarch64) running Fedora Asahi Remix — not the earlier Docker Desktop runs. `perf stat` reads
+(M2, aarch64) running Fedora Asahi Remix, not the earlier Docker Desktop runs. `perf stat` reads
 real `cycles`/`instructions`/`branches`/`branch-misses` off the Apple Avalanche/Blizzard PMUs; only
 `cache-references`/`cache-misses` come back `<not supported>` because the Apple Silicon PMU driver
 does not expose them. Issue #90's remaining ask is therefore the cache-counter set specifically,
 which needs a PMU microarchitecture that exposes those events (x86_64 Intel/AMD, or an ARM server
-core) — being bare metal is necessary but not sufficient.
+core), being bare metal is necessary but not sufficient.
 
 ## CPU affinity and locality studies
 
@@ -68,12 +68,12 @@ when available.
 
 The artifact self-classifies its evidence:
 
-- `full-linux-numa` — NUMA-capable Linux host with `taskset`, `numactl` topology, successful
+- `full-linux-numa`. NUMA-capable Linux host with `taskset`, `numactl` topology, successful
   node-local and remote-memory binding attempts, and captured unpinned and pinned scheduler
   counters.
-- `linux-constrained` — Linux host where at least one required topology or scheduler signal is
+- `linux-constrained`. Linux host where at least one required topology or scheduler signal is
   unavailable. Commit only when intentionally documenting the constraint.
-- `unsupported-host` — non-Linux host; no CPU-affinity, scheduler-migration, or NUMA evidence.
+- `unsupported-host`, non-Linux host; no CPU-affinity, scheduler-migration, or NUMA evidence.
 
 Use `QSL_NUMA_ALLOW_CONSTRAINED=1` only when the committed result is intentionally constrained.
 Use `QSL_NUMA_CPU=<cpu>` to pin a specific CPU; otherwise the script picks the first CPU allowed by
@@ -83,7 +83,7 @@ Unsupported or constrained hosts are valid outcomes. macOS, Docker Desktop, rest
 single-NUMA-node Linux machines, and hosts that can pin a CPU but cannot bind local/remote NUMA
 memory should be labeled as constrained rather than used to imply full NUMA or production-latency
 evidence. The committed `numa_affinity_study.txt` is now from the bare-metal Apple M2 host, which is
-a single-NUMA-node machine — so it is `linux-constrained` for NUMA purposes (real CPU pinning, but
+a single-NUMA-node machine, so it is `linux-constrained` for NUMA purposes (real CPU pinning, but
 no cross-node local/remote binding to measure), not because of virtualization.
 
 ## False-sharing studies
@@ -132,4 +132,4 @@ timestamp source, queue/IRQ placement, packet shape, drops/backpressure, and sou
 
 These are in-process microbenchmarks on a commodity machine with the standard library and a
 general-purpose allocator. They are useful for regression detection and honest, order-of-
-magnitude framing — not evidence of production trading-system latency.
+magnitude framing, not evidence of production trading-system latency.

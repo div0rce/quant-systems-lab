@@ -1,7 +1,7 @@
 # Recruiting Notes
 
 > Internal notes on how to position this project. Conservative and technically defensible by
-> design — every claim maps to code or a measured result. No fake metrics, no overclaiming.
+> design, every claim maps to code or a measured result. No fake metrics, no overclaiming.
 
 ## What this project demonstrates
 
@@ -20,7 +20,7 @@
 - Not a production exchange, trading bot, or connected to real markets
 - Not making profitability, "production-grade", or "battle-tested" claims
 
-## Résumé bullets — Software Engineering (conservative)
+## Résumé bullets. Software Engineering (conservative)
 
 - Built a deterministic C++20 multi-symbol matching engine (price-time priority, partial
   fills, cancel/modify) emitting a strictly-increasing event stream with integer-tick prices.
@@ -33,7 +33,7 @@
 - Set up the full toolchain: CMake/Ninja, clang-format/clang-tidy, GitHub Actions with a
   sanitizer job, and a reproducible benchmark harness committing results with metadata.
 - Wrote an independent replay-invariant verifier in OCaml (typed, immutable) that re-checks
-  exported C++ event-log fixtures against replay invariants — a cross-language check, not a
+  exported C++ event-log fixtures against replay invariants, a cross-language check, not a
   re-implementation of the engine.
 - Built a cross-language differential testing system: an independent OCaml engine replays
   seeded, property-generated command streams and its final snapshot is asserted equal to the
@@ -42,7 +42,7 @@
   counterexample, plus golden-regenerated fixtures so the comparison cannot drift from current
   C++ output.
 
-## Résumé bullets — Linux Engineering (conservative)
+## Résumé bullets. Linux Engineering (conservative)
 
 - Implemented TCP order-gateway transports and a UDP market-data feed on POSIX sockets
   (loopback), with bounded receive timeouts, sequence-gap detection, UDP send-error counting,
@@ -54,11 +54,11 @@
 - Hardened with ASan/UBSan, fixed RNG seeds for reproducibility, and a benchmark harness that
   records hardware/OS/compiler/build/commit metadata alongside results.
 
-## Benchmark bullets (measured — cite with the caveat)
+## Benchmark bullets (measured, cite with the caveat)
 
 Single-machine synthetic, in-process microbenchmark (aarch64 Fedora Asahi Linux, GCC 16.1.1,
 Release, seed 42; from `results/latest.txt`). **Excludes** network I/O, disk fsync, the
-kernel/socket path, and allocator tuning — not production throughput or end-to-end latency:
+kernel/socket path, and allocator tuning, not production throughput or end-to-end latency:
 
 - matching-engine flow ~98 ns/command (~10.2M commands/sec)
 - order-book add/modify/cancel ~87 ns/op
@@ -88,14 +88,14 @@ kernel/socket path, and allocator tuning — not production throughput or end-to
   server core). See the README Limitations section.
 - **What would you do next?** The CPU-affinity/scheduler-migration study, ingress false-sharing
   validation, contiguous order-book storage/cache-locality study, and persistence/recovery
-  benchmarking are already done (M43–M47). The genuinely-remaining moves are *not more features*:
+  benchmarking are already done (M43-M47). The genuinely-remaining moves are *not more features*:
   independent external review (issue #94) and full cache-counter PMU evidence on a host whose PMU
-  exposes it (issue #90). DPDK/NIC work stays research-only — the stronger signal is tightening what
+  exposes it (issue #90). DPDK/NIC work stays research-only, the stronger signal is tightening what
   the simulator already proves, not adding surface area.
 - **Why OCaml, and what does it actually prove?** It's an independent cross-check: a small
   typed/immutable OCaml engine (`ocaml/lib/replay_engine.ml`) re-derives the final book state from
   the exported *command stream* using its own price-time matching (GTC/IOC/market/cancel/modify plus
-  gateway risk) — it does **not** consume the C++ event stream while replaying — then asserts
+  gateway risk), it does **not** consume the C++ event stream while replaying, then asserts
   snapshot equality (best bid/ask, level aggregates, order counts, `last_seq`, trade count) against
   the C++ engine across 50+ committed property fixtures and a CI seed sweep. So it is a genuinely
   independent matching model, not just a log re-reader; it is empirical differential testing, not

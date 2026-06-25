@@ -1,7 +1,7 @@
 # External review request
 
 This is an **open request for technical criticism** of Quant Systems Lab. As of this writing
-**no external review has taken place** — every claim in this repository is **self-certified** by
+**no external review has taken place**, every claim in this repository is **self-certified** by
 the maintainer (see [Review status](#review-status)). This document exists to make the project
 easy to review well, and to invite reviewers to attack the parts most likely to be wrong.
 
@@ -38,7 +38,7 @@ to confirm what looks right.
 
 ### 2. Backpressure semantics
 
-- **Claim:** bounded-queue backpressure is **lossless** — under a full queue the producer spins/
+- **Claim:** bounded-queue backpressure is **lossless**, under a full queue the producer spins/
   yields rather than dropping, and capacity changes affect only timing, never the result.
 - **Where:** [`concurrency_model.md`](concurrency_model.md),
   `tests/concurrency/test_backpressure.cpp`, the gated-consumer/probe test in the pipeline suite.
@@ -155,5 +155,5 @@ Process and security context: [`CONTRIBUTING.md`](../CONTRIBUTING.md),
   until a real review is recorded in [`review_feedback.md`](review_feedback.md).
 
 Dynamic analysis (sanitizers, TSan, stress, differential testing) is **empirical evidence over
-executed cases**, not a proof of correctness over all inputs or thread interleavings — a point a
+executed cases**, not a proof of correctness over all inputs or thread interleavings, a point a
 reviewer is explicitly invited to push on.

@@ -1,4 +1,4 @@
-// qsl-perfeval — a dedicated performance-evidence harness for the matching-engine hot path
+// qsl-perfeval, a dedicated performance-evidence harness for the matching-engine hot path
 // (order-book insertion + matching). It drives a steady-state deep-book order flow and reports
 // orders/sec, per-order latency distribution (mean/p50/p99), and allocations/order. Run it under
 // `perf stat` / `perf record` to attribute cycles/instructions/branch-misses and render

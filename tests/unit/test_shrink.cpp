@@ -87,7 +87,7 @@ TEST_CASE("shrinker renumbers symbols, dropping unreferenced registrations", "[s
 TEST_CASE("renumber leaves idempotent duplicate registrations unchanged", "[shrink]") {
     // `reg X; reg X` allocates only symbol id 0 (registration is idempotent), so id 1 is never
     // registered and `limit 1 ...` is an UnknownSymbol reject. renumber must not assume the second
-    // registration owns id 1 and "fix up" that order into an accepted one — it must bail.
+    // registration owns id 1 and "fix up" that order into an accepted one, it must bail.
     using namespace replay;
     const std::vector<Command> flow = {
         RegisterSymbol{"X"},

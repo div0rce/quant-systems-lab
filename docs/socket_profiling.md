@@ -1,7 +1,7 @@
 # Socket / kernel-path profiling
 
 This documents how the gateway and market-data feed are profiled at the socket / kernel
-boundary, what the committed artifacts mean, and — just as important — what they do **not**
+boundary, what the committed artifacts mean, and, just as important, what they do **not**
 prove. It complements [`socket_gateway.md`](socket_gateway.md) (the design),
 [`socket_hardening.md`](socket_hardening.md) (the defensive posture), and
 [`linux_performance.md`](linux_performance.md) / [`perf_analysis.md`](perf_analysis.md) (the
@@ -31,21 +31,21 @@ records which OS produced the artifact.
 
 Artifact: [`results/socket_profile_loopback.txt`](../results/socket_profile_loopback.txt).
 
-The script drives a fixed load — `CONNECTIONS` sequential `qsl-client` round trips, each a
-`connect` → `NewOrder` + `Heartbeat` → read replies → `close` — against `qsl-gateway`, in two
+The script drives a fixed load, `CONNECTIONS` sequential `qsl-client` round trips, each a
+`connect` → `NewOrder` + `Heartbeat` → read replies → `close`, against `qsl-gateway`, in two
 passes over the same workload:
 
-1. **rusage pass** — reads the gateway's `/proc/<pid>/{stat,status}`: user (engine-side) vs
+1. **rusage pass**, reads the gateway's `/proc/<pid>/{stat,status}`: user (engine-side) vs
    system (kernel/socket) CPU time, voluntary/involuntary context switches, minor/major page
    faults, and peak RSS (`VmHWM`). This is the pass that **distinguishes user-space matching cost
    from kernel/socket overhead**. No tracer is attached, so perturbation is minimal.
-2. **`strace -f -c` pass** — per-syscall call counts and time-in-kernel, i.e. *which* syscalls
+2. **`strace -f -c` pass**, per-syscall call counts and time-in-kernel, i.e. *which* syscalls
    the socket path spends its time in (expected: `accept`, `read`/`recvfrom`, `write`/`sendto`,
    `close`, plus connection setup). `strace` multiplies syscall cost dramatically, so this pass
    is read for the **syscall mix**, never for wall-clock seconds.
 
 Pass 1 starts the gateway **directly** (the script owns its PID) and reads its procfs rusage;
-pass 2 runs the gateway **under** `strace -f -c` so the gateway is strace's *descendant* — that
+pass 2 runs the gateway **under** `strace -f -c` so the gateway is strace's *descendant*, that
 relationship is what lets tracing work under the common Yama `ptrace_scope=1` default, where a
 tracer may only trace its own descendants (attaching to a sibling would need `CAP_SYS_PTRACE`).
 Each pass waits for the gateway to accept a loopback connection, drives the load, then stops the
@@ -62,9 +62,8 @@ gateway; the two passes use adjacent ports to avoid `TIME_WAIT` reuse stalls.
   and that there is no surprising syscall (e.g. unexpected `fcntl`/`poll` churn).
 
 On a representative loopback run (500 round trips, bare-metal Apple M2 Fedora Asahi Linux), the
-gateway's *measurable* CPU was effectively all in the kernel/socket path — user-space matching fell
-below the clock-tick (10 ms) granularity, with roughly one voluntary context switch per connection —
-and the syscall mix was dominated by the per-request `accept` / `read` / `sendto` / `close`
+gateway's *measurable* CPU was effectively all in the kernel/socket path, user-space matching fell
+below the clock-tick (10 ms) granularity, with roughly one voluntary context switch per connection, and the syscall mix was dominated by the per-request `accept` / `read` / `sendto` / `close`
 (alongside one-time process and socket setup such as `execve` / `socket` / `bind` / `listen`).
 The honest takeaway: for this trivial-per-order loopback workload the socket servicing dominates,
 not the matching. The
@@ -89,11 +88,10 @@ clamp the request to a system maximum, so the **effective** granted size is read
 A too-small receive buffer overflows during the burst and the kernel **silently drops**
 datagrams. Read `published − received` (the `lost/trial` column) as the true loss: a datagram
 dropped at the very end of the burst leaves no later sequence number to reveal it, so the
-interior `seq-gaps` count can read 0 even when datagrams were lost — which is exactly why the
+interior `seq-gaps` count can read 0 even when datagrams were lost, which is exactly why the
 artifact reports loss as `published − received` and treats the sequence-gap count as a secondary,
 interior-only signal. The OS default and larger buffers absorb the same burst with little or no
-loss. Because UDP loss is timing/OS/load dependent, per-trial counts vary between trials and runs
-— a small buffer does **not** lose on every trial — so the mechanism (`SO_RCVBUF` bounds
+loss. Because UDP loss is timing/OS/load dependent, per-trial counts vary between trials and runs, a small buffer does **not** lose on every trial, so the mechanism (`SO_RCVBUF` bounds
 in-kernel queueing) is the point, not any specific number. A representative loopback run on the
 development machine showed loss only at the smallest buffer (from a handful to ~a thousand
 datagrams across trials) and none at the default and large buffers; the committed artifact
@@ -105,15 +103,15 @@ This directly motivates the receive-buffer tuning knob documented in
 ## Reproduce
 
 ```bash
-# Linux only — syscall/rusage profile of the gateway path:
+# Linux only, syscall/rusage profile of the gateway path:
 make profile-io
 #   tunables: QSL_PROFILE_CONNECTIONS (default 500), QSL_PROFILE_PORT
 
-# Linux or macOS — UDP buffer/loss experiment:
+# Linux or macOS. UDP buffer/loss experiment:
 make socket-stress
 #   tunables: QSL_STRESS_ORDERS, QSL_STRESS_TRIALS, QSL_STRESS_SMALL_BUF, QSL_STRESS_LARGE_BUF
 
-# Linux only — multi-client threaded-vs-epoll connection-scaling load:
+# Linux only, multi-client threaded-vs-epoll connection-scaling load:
 make socket-load
 #   tunables: QSL_LOAD_COUNTS, QSL_LOAD_TRIALS, QSL_LOAD_PORT, QSL_LOAD_ALLOW_PARTIAL
 ```
@@ -121,7 +119,7 @@ make socket-load
 The committed gateway artifact is now generated on a **bare-metal** Apple M2 (aarch64) Fedora Asahi
 Linux host (which has `strace` and procfs natively); the earlier macOS development host had no
 `strace`, so prior versions were produced in containerized Linux. It remains **loopback-only**
-evidence — real NIC/driver/routing behaviour is still not exercised — and its metadata records the
+evidence, real NIC/driver/routing behaviour is still not exercised, and its metadata records the
 OS, kernel, compiler, source digest, and working-tree state it was produced from.
 
 ## Limitations
@@ -144,7 +142,7 @@ Artifact: [`results/socket_load_summary.txt`](../results/socket_load_summary.txt
 
 `scripts/socket_load.sh` (Linux-only) drives **N concurrent** short-lived clients (`qsl-client`:
 connect → `NewOrder` + `Heartbeat` → read replies → close) against `qsl-gateway` in **both**
-transport modes — the portable threaded TCP server and the epoll event loop (M34) — across a
+transport modes, the portable threaded TCP server and the epoll event loop (M34), across a
 sweep of client counts, reporting the best (minimum) wall time and an approximate
 connections/second per cell.
 

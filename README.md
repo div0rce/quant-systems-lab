@@ -8,7 +8,7 @@ Binary order gateway. Price-time-priority matching engine. Market-data feed. App
 
 [![build](https://img.shields.io/github/actions/workflow/status/div0rce/quant-systems-lab/ci.yml?branch=main&label=CI&logo=github)](https://github.com/div0rce/quant-systems-lab/actions/workflows/ci.yml)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus)](CMakeLists.txt)
-[![tests](https://img.shields.io/badge/tests-271%20passing-2ea44f)](tests/)
+[![tests](https://img.shields.io/badge/tests-272%20passing-2ea44f)](tests/)
 [![sanitizers](https://img.shields.io/badge/ASan%20%C2%B7%20UBSan%20%C2%B7%20TSan-clean-2ea44f)](cmake/Sanitizers.cmake)
 [![determinism](https://img.shields.io/badge/replay-byte--identical-8957e5)](docs/invariants.md)
 [![license](https://img.shields.io/badge/license-MIT-3da639)](LICENSE)
@@ -39,21 +39,21 @@ verified by back-to-back A/B. Full evidence and the honest mechanism in **[PERFO
 
 | Hot path (deep book) | Before | After |
 |---|--:|--:|
-| **Throughput** | 8.89M/s | **11.13M/s** |
-| **p99 latency** | 250 ns | **208 ns** |
-| **Cycles / order** | 348 | **288** |
-| Instructions / order | 1239 | 1143 |
-| Branch-miss rate | 2.02% | **1.81%** |
-| Allocations / order | 1.106 | 1.106 |
+| **Throughput** | 9.25M/s | **10.76M/s** |
+| **Cycles / order** | 345.7 | **297.3** |
+| Instructions / order | 1246 | 1144 |
+| IPC | 3.60 | **3.85** |
+| Branch-miss rate | 1.86% | **1.69%** |
+| Allocations / order | 1.108 | 1.108 |
 
-`+25%` orders/sec, `-17%` cycles/order, determinism preserved.
+`+16%` orders/sec, `-14%` cycles/order, determinism preserved.
 
 </td>
 <td width="50%">
 
 | Quality bar | |
 |---|---|
-| Tests | **271** passing |
+| Tests | **272** passing |
 | Coverage | unit, integration, property, concurrency, shell |
 | Sanitizers | ASan + UBSan (aborting) + TSan, clean |
 | Determinism | snapshots byte-identical across GCC and Clang |

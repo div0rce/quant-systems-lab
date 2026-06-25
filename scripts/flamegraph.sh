@@ -125,7 +125,7 @@ if grep -Eiq 'zero-sized data|No samples|failed to open|Permission denied|Operat
 fi
 
 # perf record prints its sample summary as "(N samples)" or, on some versions,
-# "(~N samples)" — and that count is only its own estimate. Accept the optional
+# "(~N samples)", and that count is only its own estimate. Accept the optional
 # `~` so the token is not dropped, but keep this value informational; the sample
 # gate below uses the authoritative folded total, not this estimate.
 SAMPLE_TOKEN="$(sed -nE 's/.*\(~?([0-9][0-9.,]*[KkMm]?) samples\).*/\1/p' "$RECORD_ERR" | head -1)"
@@ -134,7 +134,7 @@ PERF_EST_SAMPLES="$(parse_sample_count_token "$SAMPLE_TOKEN")"
 
 # Fold to collapsed stacks for the text summary and as an SVG precondition. A
 # nonzero COLLAPSE_STATUS means the renderer/parser itself failed (a generator
-# regression), which is handled as an unexpected failure below — never masked as
+# regression), which is handled as an unexpected failure below, never masked as
 # a perf sampling limitation. FOLDED_SAMPLES is the real sample total carried by
 # the folded stacks (sum of trailing counts), the authoritative gate input.
 STACK_COUNT=0
@@ -201,7 +201,7 @@ if [[ "$STACK_COUNT" -gt 0 ]]; then
 else
     # No clean folded stacks. Remove any prior SVG so a constrained rerun cannot
     # leave a previous host's flamegraph beside a .txt that says there is no
-    # sample report — which could be committed as if the two still matched.
+    # sample report, which could be committed as if the two still matched.
     rm -f "$OUT_SVG"
 fi
 
@@ -268,7 +268,7 @@ echo "wrote $OUT_TXT"
 [[ "$STACK_COUNT" -gt 0 ]] && echo "wrote $OUT_SVG"
 
 # A renderer/parser failure (perf script succeeded but flamegraph.py errored) is
-# a generator bug, not a perf sampling limitation — fail hard so partial mode
+# a generator bug, not a perf sampling limitation, fail hard so partial mode
 # cannot publish a Python/parser regression as a constrained-environment artifact.
 if [[ "$SCRIPT_STATUS" -eq 0 && "$COLLAPSE_STATUS" -ne 0 ]]; then
     echo "error: flamegraph.py --collapse-only failed (status $COLLAPSE_STATUS); this is a renderer/parser failure, not a perf limitation, and partial mode cannot mask it." >&2

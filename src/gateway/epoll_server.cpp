@@ -199,7 +199,7 @@ struct EventLoop {
 
 // Arm/disarm the listener's EPOLLIN. On fd exhaustion we cannot accept (or even close) a new
 // connection, and the listener is level-triggered, so leaving it armed would busy-spin epoll_wait.
-// Disarming (MOD to 0 events) stops it being reported until a client fd frees and we re-arm — the
+// Disarming (MOD to 0 events) stops it being reported until a client fd frees and we re-arm, the
 // server keeps serving existing clients instead of tearing down (Fatal) or spinning (Retry).
 void set_listener_armed(EventLoop &loop, bool armed) {
     if (loop.listener_armed == armed) {

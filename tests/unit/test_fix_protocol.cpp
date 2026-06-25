@@ -133,7 +133,7 @@ TEST_CASE("FIX side/ord-type/tif codes map both directions", "[fix]") {
 TEST_CASE("FIX deterministic fixture pins the wire format", "[fix]") {
     const std::string msg = fix::encode(sample_new_order(), /*seq=*/7);
     // Built with explicit SOH so the byte sequence (and the pinned BodyLength 50
-    // and CheckSum 164) are unambiguous — a "\x01..." literal would greedily
+    // and CheckSum 164) are unambiguous, a "\x01..." literal would greedily
     // swallow the following digits into one hex escape.
     const std::string S(1, SOH);
     const std::string expected = "8=FIX.4.2" + S + "9=50" + S + "35=D" + S + "34=7" + S + "11=1" +
@@ -157,7 +157,7 @@ TEST_CASE("FIX malformed framing rejects deterministically", "[fix]") {
 }
 
 TEST_CASE("FIX MsgType must be the first body field", "[fix]") {
-    // 8/9/34/35/.../10 — every required NewOrder field is present, but MsgType
+    // 8/9/34/35/.../10, every required NewOrder field is present, but MsgType
     // (35) does not immediately follow BodyLength. A first-match scan would still
     // decode this; the standard envelope requires 35 first, so it is malformed.
     std::string body = field(34, "1") + field(35, "D") + field(11, "1") + field(55, "2") +

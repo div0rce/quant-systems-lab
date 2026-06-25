@@ -30,7 +30,7 @@ kept in a regression archive (`regressions/`); on a CI divergence a failure arti
 
 ## Alternatives considered
 
-- **A property-testing library (e.g. QuickCheck-style dependency)** — rejected: the project keeps
+- **A property-testing library (e.g. QuickCheck-style dependency)**, rejected: the project keeps
   dependencies minimal, and a bespoke shrinker over the command ADT is small and transparent.
-- **Random/ddmin without field simplification** — rejected: leaves large prices/ids and extra
+- **Random/ddmin without field simplification**, rejected: leaves large prices/ids and extra
   registrations, producing less readable counterexamples.

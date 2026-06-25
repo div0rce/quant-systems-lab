@@ -59,7 +59,7 @@ The [`make socket-stress`](socket_profiling.md#udp-socket-buffer--burst-loss-exp
 experiment measures the effect: an undersized buffer drops datagrams under burst (measured as
 `published − received`, which also captures end-of-burst tail drops the sequence-gap counter
 misses), while the default and larger buffers absorb the same burst. This is the honest,
-measured justification for the knob — not a guess.
+measured justification for the knob, not a guess.
 
 ### Loss model: detected, not recovered
 

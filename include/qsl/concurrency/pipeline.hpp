@@ -81,7 +81,7 @@ struct PipelineResult {
 
 /// Optional live observation hook. The pipeline increments these counters *as backpressure happens*
 /// (not only at the end), so a test can deterministically wait until backpressure has provably
-/// occurred — e.g. before releasing a gated consumer — instead of asserting on a timing-dependent
+/// occurred, e.g. before releasing a gated consumer, instead of asserting on a timing-dependent
 /// final spin count. Production callers pass `nullptr`.
 struct PipelineProbe {
     std::atomic<std::uint64_t> inbound_spins{0};
@@ -304,7 +304,7 @@ class ThreadedPipeline {
   public:
     /// Run `commands` through the pipeline to completion and return the engine's final snapshot
     /// plus stats. Blocks until all three threads are joined (so the queues, which live on this
-    /// stack frame, outlive both the producer and the consumer of each — the lifetime bracket the
+    /// stack frame, outlive both the producer and the consumer of each, the lifetime bracket the
     /// SPSC contract requires). Deterministic given `commands` and `risk`.
     static PipelineResult run(const std::vector<replay::Command> &commands, engine::RiskConfig risk,
                               OutputSink &sink, PipelineRunOptions options = {}) {

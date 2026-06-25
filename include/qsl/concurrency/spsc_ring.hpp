@@ -11,7 +11,7 @@ namespace qsl::concurrency {
 //
 // Exactly one thread may call the producer side (`try_push`) and exactly one *different* thread
 // may call the consumer side (`try_pop`). Concurrent producers, or concurrent consumers, are
-// undefined behavior — this is intentionally **not** an MPMC queue (see
+// undefined behavior, this is intentionally **not** an MPMC queue (see
 // docs/concurrency_model.md for why SPSC is sufficient here). Capacity is fixed at compile time
 // and storage is inline, so `try_push`/`try_pop` never allocate.
 //

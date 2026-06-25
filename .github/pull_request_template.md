@@ -1,10 +1,10 @@
 ## Milestone
 
-M__ — <name>
+M__, <name>
 
 ## Summary
 
-<2–5 sentences>
+<2-5 sentences>
 
 ## Definition of Done
 

@@ -29,7 +29,7 @@ struct TcpServerOptions {
 /// Minimal threaded TCP front end for the order gateway. It binds to a host/port (intended for
 /// localhost), accepts connections in one thread, and serves each connection on a worker thread.
 /// Gateway mutation is serialized internally so the deterministic matching engine remains
-/// single-owner. There is no authentication — this is a local simulator, not a venue.
+/// single-owner. There is no authentication, this is a local simulator, not a venue.
 class TcpServer {
   public:
     explicit TcpServer(OrderGateway &gateway, TcpServerOptions options = {})

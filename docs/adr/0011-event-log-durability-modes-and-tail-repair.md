@@ -14,7 +14,7 @@ production durability.
 
 Two design questions had real alternatives:
 
-1. Where should durability be enforced — per append, per batch, or never — and who decides?
+1. Where should durability be enforced, per append, per batch, or never, and who decides?
 2. What damage may automation repair without a human?
 
 ## Decision
@@ -35,7 +35,7 @@ Two design questions had real alternatives:
    at end of file. `PayloadTooLarge` headers are never trusted. `repair_log_file`
    truncates torn tails to the last valid record boundary (and fsyncs the truncation); it
    refuses `Corrupt` logs, because truncating mid-file damage would silently discard
-   acknowledged records beyond it — a human decision.
+   acknowledged records beyond it, a human decision.
 3. **The claim is scoped to the log layer.** The gateway/pipeline still acknowledges
    before persisting (log-behind, not write-ahead). Re-architecting acks-after-durability
    was deliberately rejected for M45; the gap is documented in `docs/persistence.md`

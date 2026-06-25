@@ -13,14 +13,14 @@ The demo network components are intentionally minimal:
   networks**, and do not run them on a shared or public interface.
 - There is no TLS, access control, or rate limiting. The acceptors do have bounded resilience: an
   optional connection cap, survival of transient `accept()` errors and fd exhaustion, and `EINTR`
-  retry on read/write — but this is robustness hardening, not DoS protection. Malformed input is
+  retry on read/write, but this is robustness hardening, not DoS protection. Malformed input is
   handled by disconnecting the peer, not by recovering the stream.
 
 ## Reporting
 
 If you find a memory-safety or correctness issue (e.g. something ASan/UBSan or the differential
 tests would have caught), please open a GitHub issue, or contact the maintainer if you consider
-it sensitive. Include a minimal reproducer where possible — the repo has tooling
+it sensitive. Include a minimal reproducer where possible, the repo has tooling
 (`qsl-export-stream`, the shrinker) for producing small deterministic fixtures.
 
 ## Honest scope

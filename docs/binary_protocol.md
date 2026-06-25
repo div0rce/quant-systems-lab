@@ -7,7 +7,7 @@ in `include/qsl/protocol/` and `src/protocol/codec.cpp`.
 
 - Fixed-width messages for predictable parsing.
 - **Big-endian (network byte order)** at the protocol boundary.
-- **Explicit serialization** via byte shifts (`endian.hpp`) — no `reinterpret_cast`,
+- **Explicit serialization** via byte shifts (`endian.hpp`), no `reinterpret_cast`,
   no `memcpy`, no struct overlay, so there is no undefined behavior from layout/aliasing.
 - A version field for forward compatibility.
 - Deterministic rejection of malformed frames.
@@ -86,5 +86,5 @@ accidental change to field order or byte order fails the build.
 ## Text alternative
 
 A human-readable, FIX-like `tag=value` adapter over the same internal message structs lives
-alongside this binary codec — see [fix_protocol.md](fix_protocol.md). Both decode the same order to
+alongside this binary codec, see [fix_protocol.md](fix_protocol.md). Both decode the same order to
 identical structs, which the tests assert directly.

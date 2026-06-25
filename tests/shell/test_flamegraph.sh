@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unit tests for scripts/flamegraph.py — the dependency-free stackcollapse + SVG
+# Unit tests for scripts/flamegraph.py, the dependency-free stackcollapse + SVG
 # renderer behind `make flamegraph` (issue #32).
 #
 # The shell driver (scripts/flamegraph.sh) needs Linux `perf`, which CI does not

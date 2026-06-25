@@ -59,7 +59,7 @@ original/minimized length, reduction %, shrink iterations, failure reason); see 
 - Both engines are wall-clock independent, so replay and comparison are reproducible.
 - An explicit cross-compiler determinism check (`make determinism`, in the `determinism` CI job)
   builds the exporter with both gcc and clang and asserts every generated fixture is byte-identical
-  between them and to the committed copies — covering compiler and platform reproducibility, not
+  between them and to the committed copies, covering compiler and platform reproducibility, not
   just same-toolchain regeneration. Because generation is integer-only and wall-clock independent,
   the committed bytes are identical regardless of which host produced them (the fixtures were
   byte-stable across the project's macOS→Linux host move).

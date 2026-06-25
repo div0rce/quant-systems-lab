@@ -110,7 +110,7 @@ level <sym> <B|A> <price> <qty>
 - Independent OCaml replay (M16) and C++-vs-OCaml snapshot equality (M17) build on this schema.
 
 
-## M17 — differential replay (C++ vs OCaml)
+## M17, differential replay (C++ vs OCaml)
 
 `ocaml/test/test_differential.ml` closes the loop: for each fixture it independently replays the
 command stream in OCaml (`Replay_engine`), then compares the OCaml-computed snapshot against the
@@ -120,13 +120,13 @@ level aggregates, resting order counts, `last_seq`, and trade count (compared vi
 
 Fixtures under test:
 
-- `stream_seed7.txt` — the market-like synthetic flow (GTC/IOC limits, market, cancel, modify,
+- `stream_seed7.txt`, the market-like synthetic flow (GTC/IOC limits, market, cancel, modify,
   rejects, 4 symbols);
-- `stream_ioc.txt` — a hand-built scenario from `qsl-export-stream ioc` covering IOC discard
+- `stream_ioc.txt`, a hand-built scenario from `qsl-export-stream ioc` covering IOC discard
   (partial and no-cross), market, and partial-maker fills;
-- `stream_bad_snapshot.txt` — a valid command stream with a deliberately corrupted snapshot
+- `stream_bad_snapshot.txt`, a valid command stream with a deliberately corrupted snapshot
   section; the test asserts the mismatch **is** detected.
-- `bad_snapshot_level_symbol.txt` — a deliberately malformed snapshot where a `level` record
+- `bad_snapshot_level_symbol.txt`, a deliberately malformed snapshot where a `level` record
   claims a different symbol than the surrounding `sym` block; the parser rejects it before
   comparison, so malformed per-symbol ownership cannot be normalized into equality.
 
@@ -134,7 +134,7 @@ The check runs under the existing `ocaml-verifier` CI job via `dune runtest` (no
 It is differential testing against the C++ system under test, not formal verification.
 
 
-## M18 — property-based command generator
+## M18, property-based command generator
 
 `generate_property_flow(seed)` (C++) produces an enriched, seed-deterministic command stream
 that deliberately exercises the full command space: valid limit/market orders, IOC, invalid
@@ -143,15 +143,14 @@ modifies of active and inactive orders, and multi-symbol interleavings. `qsl-exp
 <seed>` exports one fixture per seed; `prop_seed1..50.txt` are committed.
 
 The committed fifty (`prop_seed1..50`) are the regression floor; the `differential-sweep` CI job
-widens coverage per run by generating seeds `1..64` on the fly (`scripts/seed_sweep.sh`) —
-exporting each with the C++ exporter and checking it against the independent OCaml replay via
+widens coverage per run by generating seeds `1..64` on the fly (`scripts/seed_sweep.sh`), exporting each with the C++ exporter and checking it against the independent OCaml replay via
 `diff_report`. New seeds need no committed fixtures, and any divergence uploads the same failure
 bundle.
 
 `test_differential.ml` discovers every `prop_*.txt` fixture (via `Sys.readdir`) and runs the
 same C++-vs-OCaml snapshot equality plus a no-crossed-book invariant on each, reporting the
 failing fixture/seed on divergence. The two engines agree exactly across all committed seeds
-(`prop_seed1..50`); seeds 1–8 alone already exercise every gateway/risk reject reason produced by
+(`prop_seed1..50`); seeds 1-8 alone already exercise every gateway/risk reject reason produced by
 the property generator (UnknownSymbol, UnknownOrder, InvalidPrice, InvalidQuantity,
 MaxQuantityExceeded, MaxNotionalExceeded, DuplicateOrderId) and real trades. `StorageExhausted`
 belongs to the opt-in intrusive storage experiment, so it is not part of the baseline property
@@ -167,7 +166,7 @@ the generator produces and fails CI if any reachable reason stops occurring).
 - **Mutation testing:** `test_mutation.ml` takes one representative snapshot and applies a
   single-field mutation for every field (last_seq, trade count, symbol id, best bid/ask, order
   count, bid
-  and ask levels), asserting each changes `snapshot_to_lines` — so no field can silently drop
+  and ask levels), asserting each changes `snapshot_to_lines`, so no field can silently drop
   out of the comparison. This covers every field programmatically, complementing the
   hand-authored negative fixtures above.
 - **Golden regeneration:** `make check-fixtures` (`scripts/check_fixtures.sh`, run in the
@@ -182,11 +181,11 @@ the generator produces and fails CI if any reachable reason stops occurring).
   bumping it on a semantic generator change is a documented maintainer convention (the check
   cannot infer intent from bytes), not an automatically enforced invariant.
 
-This is property-based differential testing against the C++ system under test — not formal
+This is property-based differential testing against the C++ system under test, not formal
 verification or a proof of correctness.
 
 
-## M19 — shrinker + minimal failing fixtures
+## M19, shrinker + minimal failing fixtures
 
 `replay::shrink(commands, predicate)` (C++) reduces a failing command stream to a small,
 reviewable counterexample while preserving a failure predicate. It is greedy and deterministic,
@@ -220,7 +219,7 @@ test replays it independently.
 ## Minimized failing fixture (example)
 
 `shrunk_seed1.txt` is a shrinker output (artificial "produces a trade" predicate) reduced from
-a 123-command flow to 3 commands — the minimal stream that still trades:
+a 123-command flow to 3 commands, the minimal stream that still trades:
 
 ```text
 # shrink report
@@ -241,7 +240,7 @@ and the order ids to 0/1.)
 ## Divergence demonstration (issue #37)
 
 The shrinker above is exercised against the artificial "produces a trade" predicate because the
-C++ engine and the OCaml oracle agree on every tested stream — there is no real divergence to
+C++ engine and the OCaml oracle agree on every tested stream, there is no real divergence to
 reduce. To show the machinery on a genuine cross-language failure, we inject one: the OCaml
 oracle gains a deliberately buggy mode, `replay_snapshot --drop-cancels`, that ignores cancels.
 
@@ -261,7 +260,7 @@ sym 0 bid - ask - orders 0
 ```
 
 So a 123-command flow shrinks to a 3-command counterexample that reproduces a real C++-vs-OCaml
-snapshot mismatch — the shrinker working on an actual differential failure, not just the
+snapshot mismatch, the shrinker working on an actual differential failure, not just the
 artificial predicate. The bug is confined to the opt-in `--drop-cancels` flag; the normal
 differential tests are unaffected.
 
@@ -289,13 +288,13 @@ negative fixture, are driven by the generator, and are reduced by the shrinker.
 
 Legend: ✓ covered · ◻ not specifically exercised.
 
-- **Positive** — `expect_match` on `stream_seed7`, `stream_ioc`, `shrunk_seed1`, `prop_seed1..50`;
+- **Positive**, `expect_match` on `stream_seed7`, `stream_ioc`, `shrunk_seed1`, `prop_seed1..50`;
   snapshot-line equality compares all fields, so every field is positively covered.
-- **Negative** — a hand-corrupted fixture that perturbs exactly one field; the test asserts the
+- **Negative**, a hand-corrupted fixture that perturbs exactly one field; the test asserts the
   divergence is detected (`expect_mismatch`), proving the comparison is not blind to that field.
-- **Property + sweep** — the generator (`generate_property_flow`) and the `differential-sweep`
+- **Property + sweep**, the generator (`generate_property_flow`) and the `differential-sweep`
   CI job (seeds 1..64) populate all fields across randomized flows.
-- **Shrink** — the shrinker is field-agnostic (it reduces any failing command stream); ✓ marks
+- **Shrink**, the shrinker is field-agnostic (it reduces any failing command stream); ✓ marks
   the fields that actually diverge in the demonstrated minimal counterexample from the oracle
   self-test (#34). That case shrinks to a registered symbol, a resting **bid** limit, and a
   cancel of it, so the cancel-dropping mutant differs only on `last_seq`, `best_bid`,
@@ -307,8 +306,8 @@ Legend: ✓ covered · ◻ not specifically exercised.
 
 **Proves:**
 
-- The independent OCaml replay computes the same final snapshot as the C++ engine — best
-  bid/ask, per-price level aggregates, resting order counts, `last_seq`, and trade count — over
+- The independent OCaml replay computes the same final snapshot as the C++ engine, best
+  bid/ask, per-price level aggregates, resting order counts, `last_seq`, and trade count, over
   the synthetic seed, the IOC scenario, and the seeded property streams (every reject reason and
   real trades exercised), so the two implementations agree across the tested command space.
 - The comparison genuinely detects divergence (negative fixtures corrupting an ask level,
@@ -331,7 +330,7 @@ Legend: ✓ covered · ◻ not specifically exercised.
 When the differential check fails in CI, the `ocaml-verifier` job runs `diff_report` over the
 positive fixtures and uploads a `differential-failure-bundle` artifact. For each diverging
 fixture it contains `<base>.original` (the fixture), `<base>.computed` (OCaml snapshot),
-`<base>.expected` (C++ snapshot), and `<base>.diff` (a line diff) — so a divergence can be
+`<base>.expected` (C++ snapshot), and `<base>.diff` (a line diff), so a divergence can be
 debugged from the CI run without reproducing locally. `diff_report` guards each fixture
 independently: a malformed or unreadable fixture is reported as a comparison failure (non-zero
 exit), not allowed to abort the batch and lose the remaining fixtures' bundles (#144). The
