@@ -12,7 +12,7 @@ _Nothing yet._
 A security/robustness **hardening** wave plus two measured order-book **performance** wins, driven by
 a multi-round adversarial bug hunt (converged 5→2→1→0 confirmed bugs) and flamegraph-guided
 optimization. Same honesty bar: a deterministic C++20 exchange simulator and cross-language
-differential-testing harness — **not** a production exchange, no real-market connectivity, no latency
+differential-testing harness, **not** a production exchange, no real-market connectivity, no latency
 or profitability claims, not formal verification. Determinism preserved throughout (fixtures
 byte-identical across g++/clang++ and vs the committed copies; the OCaml differential passes).
 `make check`/`make asan` 270/270.
@@ -50,25 +50,25 @@ byte-identical across g++/clang++ and vs the committed copies; the OCaml differe
   `try_emplace` avoids that on the steady-state common path. Measured back-to-back A/B on the
   `qsl-bench profile` workload: **~+5%**.
 - **Order-index hash load-factor cap (#145).** The `OrderId → Locator` index is the busiest structure
-  on the engine hot path (1–4 point lookups per op). Capping its `max_load_factor` at 0.25 shortens
-  probe chains. Measured A/B: **~+18.6%**. Determinism is unaffected — the index is never iterated
+  on the engine hot path (1-4 point lookups per op). Capping its `max_load_factor` at 0.25 shortens
+  probe chains. Measured A/B: **~+18.6%**. Determinism is unaffected, the index is never iterated
   for output.
 - **Flamegraph regenerated (#135, #139, #146)** against the new code, now a dense (~20k-sample),
   fully-symbolized frame-pointer profile with zero `[unknown]` frames.
 
 ## [0.2.1] - 2026-06-21
 
-Two backlog items — reprioritized by the maintainer and delivered — plus a resume-anchor and
+Two backlog items, reprioritized by the maintainer and delivered, plus a resume-anchor and
 perf-evidence consistency sweep. Same honesty bar as prior releases: a deterministic C++20 exchange
-simulator and cross-language differential-testing harness — **not** a production exchange, no
+simulator and cross-language differential-testing harness, **not** a production exchange, no
 real-market connectivity, no latency or profitability claims, and not formal verification.
 
 ### Added
 
 - **FIX-like text protocol adapter (#29).** A human-readable `tag=value` (SOH-framed) codec
   (`include/qsl/protocol/fix.hpp`, `src/protocol/fix.cpp`) over the **same internal message structs**
-  as the binary codec, with genuine FIX framing — BeginString (8) / BodyLength (9) / MsgType (35) /
-  … / mod-256 CheckSum (10) — for the client→gateway order path: NewOrderSingle (`35=D`) → `NewOrder`
+  as the binary codec, with genuine FIX framing. BeginString (8) / BodyLength (9) / MsgType (35) /
+  … / mod-256 CheckSum (10), for the client→gateway order path: NewOrderSingle (`35=D`) → `NewOrder`
   and OrderCancelRequest (`35=F`) → `CancelOrder`. Decoding is total, deterministic, and `noexcept`
   (fixed field table, `std::from_chars`, `std::string_view`; no heap on the decode path) and reports
   every malformed input through a `FixError` taxonomy mirroring the binary codec's `DecodeError`.
@@ -78,26 +78,26 @@ real-market connectivity, no latency or profitability claims, and not formal ver
   (documented simplifications, never floating-point price).
 - **`make flamegraph` (#32).** Renders a Linux `perf` call-graph flamegraph
   (`results/flamegraph.svg` + a provenance/classification `results/flamegraph.txt`) from the
-  benchmark harness via `scripts/flamegraph.py` — a dependency-free (stdlib-only) stackcollapse + SVG
+  benchmark harness via `scripts/flamegraph.py`, a dependency-free (stdlib-only) stackcollapse + SVG
   renderer (deterministic; unit-tested in `tests/shell/test_flamegraph.sh`), so the artifact is
   reproducible from the repo without vendoring the Perl FlameGraph toolkit. The committed artifact is
-  a software cpu-clock sampling **hot-symbol profile** from the bare-metal Fedora Asahi host — not a
+  a software cpu-clock sampling **hot-symbol profile** from the bare-metal Fedora Asahi host, not a
   latency/throughput claim; full hardware cache-PMU evidence stays in issue #90.
 
 ### Changed
 
 - Synced the `/resume` anchors and perf-evidence wording to the released `v0.2.0` state and narrowed
-  an overstated Apple **Blizzard** (E-core) PMU claim — those rows read `<not counted>` because the
+  an overstated Apple **Blizzard** (E-core) PMU claim, those rows read `<not counted>` because the
   single-threaded benchmark stays on the Avalanche P-cores (Codex follow-up to PRs #127/#128):
   `PROGRESS.md`, `AGENTS.md`/`CLAUDE.md` agreement, and `docs/perf_analysis.md`.
 
 ## [0.2.0] - 2026-06-21
 
-Quant Systems Lab v0.2.0 — the Phase III/IV systems arc (M24–M49: a bounded SPSC queue and threaded
+Quant Systems Lab v0.2.0, the Phase III/IV systems arc (M24-M49: a bounded SPSC queue and threaded
 pipeline, ThreadSanitizer coverage, allocator and order-book storage experiments, Linux
 perf/socket/NUMA studies, an epoll gateway prototype, event-log persistence/recovery, and DPDK/NIC
 research) plus a **bare-metal Linux evidence refresh**. Same honesty bar as v0.1.0: a deterministic
-C++20 exchange simulator and cross-language differential-testing harness — **not** a production
+C++20 exchange simulator and cross-language differential-testing harness, **not** a production
 exchange, no real-market connectivity, no latency or profitability claims, and not formal
 verification.
 
@@ -105,8 +105,8 @@ verification.
 
 - v0.2.0 evidence refresh: regenerated every `results/*.txt` on a **bare-metal** Apple M2 (aarch64)
   Fedora Asahi Linux host (`systemd-detect-virt: none`). `scripts/perf_stat.sh` now classifies three
-  ways — full `hardware PMU evidence`, `partial hardware PMU evidence` (real counters, incomplete
-  set), or `constrained-environment validation (no hardware PMU access)` — so the perf artifact is
+  ways, full `hardware PMU evidence`, `partial hardware PMU evidence` (real counters, incomplete
+  set), or `constrained-environment validation (no hardware PMU access)`, so the perf artifact is
   honestly labeled **partial hardware PMU evidence**: real `cycles`/`instructions`/`branches`/
   `branch-misses` off the Apple Avalanche/Blizzard PMUs, with `cache-references`/`cache-misses`
   unsupported by the Apple Silicon PMU. Issue #90 is narrowed to the cache-counter set (needs a PMU
@@ -136,13 +136,13 @@ verification.
 - Added portable threaded `TcpServer` serving: accepted connections run in per-connection workers
   while gateway mutation remains serialized. `TcpServerOptions` now exposes `listen_backlog` and a
   `max_accepts` test/embedding hook.
-- M35: `scripts/socket_load.sh` (`make socket-load`, Linux-only) — multi-client TCP
+- M35: `scripts/socket_load.sh` (`make socket-load`, Linux-only), multi-client TCP
   connection-scaling load coverage comparing the portable threaded TCP gateway and the epoll gateway under
   bounded loopback pressure, with constrained metadata in `results/socket_load_summary.txt`.
-- M43: `scripts/numa_affinity_study.sh` (`make numa-study`, Linux-only) — CPU-affinity /
+- M43: `scripts/numa_affinity_study.sh` (`make numa-study`, Linux-only). CPU-affinity /
   scheduler-migration / NUMA-locality study tooling with explicit `full-linux-numa`,
   `linux-constrained`, or `unsupported-host` evidence classification.
-- M44: `scripts/run_false_sharing_study.sh` (`make false-sharing-study`) — benchmark-only
+- M44: `scripts/run_false_sharing_study.sh` (`make false-sharing-study`), benchmark-only
   packed-vs-padded SPSC queue-cursor contention study with metadata in
   `results/false_sharing_study.txt`.
 - M47: `OrderBook::Storage::Contiguous`, an opt-in fixed-band direct price-indexed storage mode
@@ -173,10 +173,10 @@ verification.
 - M30: optional UDP receive-buffer (`SO_RCVBUF`) sizing on the market-data client, with the
   granted size read back via `getsockopt`. `qsl-mdfeed subscribe` gains a `[rcvbuf_bytes]`
   argument and `qsl-mdfeed publish` an `[orders]` burst-size argument.
-- M30: `scripts/profile_gateway_io.sh` (`make profile-io`, Linux-only) — profiles the gateway
+- M30: `scripts/profile_gateway_io.sh` (`make profile-io`, Linux-only), profiles the gateway
   syscall / kernel-socket path with `strace -f -c` plus procfs rusage (`/proc/<pid>/{stat,status}`),
   distinguishing user-space matching cost from kernel/socket overhead.
-- M30: `scripts/socket_stress.sh` (`make socket-stress`, portable) — UDP burst/gap and
+- M30: `scripts/socket_stress.sh` (`make socket-stress`, portable). UDP burst/gap and
   receive-socket-buffer experiment over loopback, run over multiple trials.
 
 ### Changed
@@ -207,7 +207,7 @@ verification.
   `docs/linux_performance.md`, ADR 0007, `CLAUDE.md`, `results/README.md`, `docs/recruiting_notes.md`,
   and the README Limitations section; corrected stale Docker/containerized framing in
   `docs/socket_profiling.md` and `docs/pool_backed_storage.md` (artifacts are now bare-metal Apple
-  M2 runs); rewrote `docs/release_readiness.md` for the M0–M49 + v0.2.0 state (241 tests, six CI
+  M2 runs); rewrote `docs/release_readiness.md` for the M0-M49 + v0.2.0 state (241 tests, six CI
   jobs); added storage/epoll/durability components to `docs/architecture.md`; and clarified that the
   independent OCaml replay engine (M16) re-implements matching while the M14 log verifier does not.
 - Synchronized project-memory files before repository-health planning (PR #101, PR #102): M35 is
@@ -215,10 +215,10 @@ verification.
   completed (see the inserted refactor phase below).
 - Inserted a repository-health refactor phase after M35, derived from a CodeScene Code Health
   analysis (5 production + 6 test files below 9.0) plus one manually-identified shell-maintainability
-  milestone: seven refactor milestones M36–M42 (epoll decomposition; threaded-pipeline stage helpers;
+  milestone: seven refactor milestones M36-M42 (epoll decomposition; threaded-pipeline stage helpers;
   shrinker passes; order-book matching parameters; engine test-suite consolidation; session frame
   dispatch; shared shell-script helpers). The original networking/persistence roadmap was shifted
-  after those refactors; the later systems-roadmap audit extends future scope to M43–M49.
+  after those refactors; the later systems-roadmap audit extends future scope to M43-M49.
 - Updated the future systems-engineering roadmap after PR #112: M43 now covers NUMA plus CPU
   affinity, scheduler migration, and locality caveats; M44 is expanded in place for ingress
   memory-ordering and false-sharing evidence; M47 is inserted for contiguous order-book
@@ -236,10 +236,10 @@ verification.
 - M47: expanded `docs/pool_backed_storage.md` and `results/README.md` to describe the contiguous
   direct-price-indexed storage mode, its fixed price-domain assumption, affected allocations, and
   interpretation limits.
-- M31: added an external-review package — `docs/review_request.md` (an adversarial review
+- M31: added an external-review package, `docs/review_request.md` (an adversarial review
   checklist over SPSC memory ordering, backpressure, threaded ownership, event-log integrity under
   concurrency, and benchmark/profiling + Linux/socket methodology), `docs/review_feedback.md` (an
-  honest, auditable feedback record stating no external review has occurred yet — no fabricated
+  honest, auditable feedback record stating no external review has occurred yet, no fabricated
   endorsements), and a `.github/ISSUE_TEMPLATE/review_request.md`. README now states claims are
   self-certified and links the request. Distinguishes self-certified vs externally-reviewed claims.
 - M30: added `docs/socket_profiling.md` (syscall/rusage + UDP-loss methodology and how to read
@@ -260,14 +260,14 @@ verification.
 
 ## [0.1.0] - 2026-05-31
 
-Quant Systems Lab v0.1.0 — a deterministic C++20 exchange simulator and cross-language
+Quant Systems Lab v0.1.0, a deterministic C++20 exchange simulator and cross-language
 differential-testing harness, built as a systems-engineering portfolio project. It is **not** a
 production exchange, is not connected to real markets, and makes no latency or profitability
 claims; the cross-language differential layer is property-based testing, **not** formal
 verification. Benchmarks are synthetic microbenchmarks recorded in `results/` and are
 hardware/compiler/build-dependent.
 
-### Post-M22 backlog hardening (GitHub issues #34–#51)
+### Post-M22 backlog hardening (GitHub issues #34, #51)
 
 Differential/property-testing follow-ups, each merged as an individual Codex-reviewed PR:
 
@@ -285,7 +285,7 @@ Differential/property-testing follow-ups, each merged as an individual Codex-rev
 - Differential regression archive (#50).
 - Differential-harness performance benchmarks, `results/differential.txt` (#51).
 
-### Phase II — cross-language differential testing (M15–M20)
+### Phase II, cross-language differential testing (M15-M20)
 
 - Normalized command-stream + final-snapshot fixture export (M15).
 - Independent OCaml replay engine that recomputes the final snapshot from the command stream
@@ -298,16 +298,16 @@ Differential/property-testing follow-ups, each merged as an individual Codex-rev
   minimal-fixture exporter (M19).
 - Differential-testing and property-testing architecture documentation (M20).
 
-### Core simulator and tooling (M3–M14)
+### Core simulator and tooling (M3-M14)
 
 - OCaml replay verifier checking exported event logs against replay invariants (M14).
 - Final architecture/demo/recruiting documentation and `make demo` (M13).
 - Hardening: ASan/UBSan, randomized invariant tests, and structure-aware protocol fuzzing in CI
   (M12).
 - Reproducible benchmark harness writing `results/latest.txt` with full metadata (M11).
-- Append-only event log and deterministic replay/recovery (M7–M8).
+- Append-only event log and deterministic replay/recovery (M7-M8).
 - Price-time-priority matching engine, deterministic risk checks, and a market-data publisher
-  (M3–M6).
+  (M3-M6).
 
-(Networking: a loopback TCP order gateway (M9) and UDP market-data feed (M10) — local,
+(Networking: a loopback TCP order gateway (M9) and UDP market-data feed (M10), local,
 unauthenticated; see `SECURITY.md`.)

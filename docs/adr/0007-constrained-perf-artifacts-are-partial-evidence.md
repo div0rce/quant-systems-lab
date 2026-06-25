@@ -37,15 +37,15 @@ counters** off the Apple Avalanche/Blizzard PMUs (`cycles`, `instructions`, `bra
 
 `scripts/perf_stat.sh` now classifies three ways instead of two:
 
-- `hardware PMU evidence` — every requested counter, including cache events, captured (full).
-- `partial hardware PMU evidence` — at least one real hardware counter captured, but the requested
+- `hardware PMU evidence`, every requested counter, including cache events, captured (full).
+- `partial hardware PMU evidence`, at least one real hardware counter captured, but the requested
   set is incomplete. **This is the current Apple Silicon state**: `cache-references`/`cache-misses`
   are `<not supported>` because the Asahi PMU driver does not expose them.
-- `constrained-environment validation (no hardware PMU access)` — no hardware counter produced a
+- `constrained-environment validation (no hardware PMU access)`, no hardware counter produced a
   value (the prior Docker case).
 
 The original decision stands: a partial artifact is partial evidence and must not be called *full*.
 What changed is that the honest label is now `partial hardware PMU evidence` (real counters present),
 not `constrained validation`. Issue #90's residual is narrowed to the cache-counter set, which needs
-a PMU microarchitecture that exposes those events (x86_64, or an ARM server core) — being bare metal
+a PMU microarchitecture that exposes those events (x86_64, or an ARM server core), being bare metal
 is necessary but not sufficient.

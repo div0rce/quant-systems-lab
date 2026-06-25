@@ -31,13 +31,13 @@ machine and toolchain it came from, and a different machine will produce differe
 
 `apps/qsl-bench/main.cpp` is a small custom harness (no external benchmark dependency):
 
-- `latency(name, iters, op)` — runs `op` `iters` times after a warmup and reports ns/op and
+- `latency(name, iters, op)`, runs `op` `iters` times after a warmup and reports ns/op and
   ops/sec.
-- `throughput(name, items, reps, run)` — runs `run` (which processes `items` items) `reps`
+- `throughput(name, items, reps, run)`, runs `run` (which processes `items` items) `reps`
   times after a warmup and reports ns/item and items/sec.
 
 A `volatile` sink consumes each operation's result so the optimizer cannot elide the work.
-Timing uses `std::chrono::steady_clock` — wall-clock at the **benchmark layer only**; the
+Timing uses `std::chrono::steady_clock`, wall-clock at the **benchmark layer only**; the
 deterministic engine never reads a clock.
 
 `make bench` uses a benchmark-specific CMake preset (`bench`) with
@@ -58,7 +58,7 @@ benchmark-only builds.
 ## Deterministic seeds
 
 The matching and replay scenarios use `replay::generate_flow(seed = 42, symbols = 4,
-orders = 5000)` — a fixed `mt19937_64` seed, so the workload is identical run to run and on
+orders = 5000)`, a fixed `mt19937_64` seed, so the workload is identical run to run and on
 any machine. The generator is still synthetic, but it is stateful: per-symbol mid-prices drift,
 orders mostly rest near the book, cancels/modifies preferentially target active orders, and
 occasional market/crossing flow creates trades. Changing the seed, sizes, or generator version

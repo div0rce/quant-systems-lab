@@ -1,14 +1,14 @@
 # Release Readiness Audit
 
 A pre-release pass verifying the repo builds, demos, reproduces, and reads honestly. This audit
-covers **M0–M49, the v0.2.0 evidence refresh** (bare-metal Linux artifact regeneration and the
+covers **M0-M49, the v0.2.0 evidence refresh** (bare-metal Linux artifact regeneration and the
 documentation/staleness sweep), **the v0.2.1 content** (the FIX-like text protocol adapter #29, the
 perf call-graph flamegraph + `make flamegraph` #32, and a Codex resume-anchor/PMU consistency sweep),
-**and the post-v0.2.1 hardening + perf wave being cut as v0.2.2** (#135–#146): out-of-domain enum
-rejection in the decoders (#136), network-path hardening — EINTR retry, accept fairness, connection
+**and the post-v0.2.1 hardening + perf wave being cut as v0.2.2** (#135, #146): out-of-domain enum
+rejection in the decoders (#136), network-path hardening. EINTR retry, accept fairness, connection
 cap, UDP send-error tracking, transient-accept survival, and fd-exhaustion handling (#137/#140/#143),
 CLI argument validation (#141), a real UBSan abort gate (#142), OCaml `diff_report` robustness (#144),
-and two measured order-book perf wins — `try_emplace` (~+5%, #138) and an index load-factor cap
+and two measured order-book perf wins, `try_emplace` (~+5%, #138) and an index load-factor cap
 (~+18.6%, #145). It supersedes the v0.1.0-era audit; the actual GitHub release is cut by a human
 after squash-merge.
 
@@ -40,17 +40,17 @@ The committed `results/*.txt` artifacts are now generated on a **bare-metal** Ap
 (M2, aarch64) running Fedora Asahi Remix, not the earlier Docker Desktop Linux. What that does and
 does not buy:
 
-- **Perf** — `results/perf_stat_linux.txt` is **partial hardware PMU evidence**: real `cycles` /
+- **Perf**, `results/perf_stat_linux.txt` is **partial hardware PMU evidence**: real `cycles` /
   `instructions` / `branches` / `branch-misses` off the Apple Avalanche/Blizzard PMUs, with
   `cache-references` / `cache-misses` reported `<not supported>` (Apple Silicon PMU limitation).
   Not full PMU evidence; issue #90 tracks the cache-counter set, which needs a different PMU.
   `results/flamegraph.svg`/`.txt` (v0.2.1) is a **software cpu-clock sampling** hot-symbol profile
-  from the same host — a hot-symbol investigation aid, not a latency or throughput claim.
-- **Sockets** — `socket_profile_loopback.txt`, `socket_stress_summary.txt`, and
+  from the same host, a hot-symbol investigation aid, not a latency or throughput claim.
+- **Sockets**, `socket_profile_loopback.txt`, `socket_stress_summary.txt`, and
   `socket_load_summary.txt` are bare-metal but **loopback-only**: no NIC/driver/routing.
-- **NUMA** — `numa_affinity_study.txt` is bare-metal but the M2 is a **single-NUMA-node** machine,
+- **NUMA**, `numa_affinity_study.txt` is bare-metal but the M2 is a **single-NUMA-node** machine,
   so it is `linux-constrained` for NUMA (real CPU pinning, no cross-node binding to measure).
-- **Benchmarks** — `latest.txt`, `pool_backed_storage.txt`, `recovery_benchmarks.txt`,
+- **Benchmarks**, `latest.txt`, `pool_backed_storage.txt`, `recovery_benchmarks.txt`,
   `allocator_experiment.txt`, `false_sharing_study.txt`, `differential.txt` are bare-metal but
   **synthetic, single-process microbenchmarks**.
 
@@ -65,7 +65,7 @@ artifact leaks host identifiers (a publish-time MAC sanitizer redacts every non-
   `docs/benchmarking.md`).
 - **No overclaiming.** A scan for forbidden phrases (production-grade, formal verification, HFT
   platform, low-latency trading, real exchange, trading bot, production exchange) finds only
-  negations and the project's own avoid-lists/specs — no positive claims.
+  negations and the project's own avoid-lists/specs, no positive claims.
 - **Benchmark language** remains measured, synthetic, hardware-dependent, and reproducible from the
   committed harness; core numbers are cited from `results/latest.txt` and the differential-harness
   numbers from `results/differential.txt` only.
@@ -74,12 +74,12 @@ artifact leaks host identifiers (a publish-time MAC sanitizer redacts every non-
   separation, constrained/partial perf artifacts, loopback socket evidence, PMR node allocation,
   epoll prototype, durability modes and tail repair).
 - **No stale milestone references**: PROGRESS, HANDOFF, and the milestone tables reflect the merged
-  M0–M49 state, the v0.2.0 artifact refresh, and the v0.2.1 content (#29/#32 closed; resume anchors
+  M0-M49 state, the v0.2.0 artifact refresh, and the v0.2.1 content (#29/#32 closed; resume anchors
   consistent across PROGRESS/HANDOFF/AGENTS/CLAUDE).
 
 ## Scope and honesty
 
-This is a deterministic exchange-systems lab / research portfolio project — not a production
+This is a deterministic exchange-systems lab / research portfolio project, not a production
 exchange, not connected to real markets, and making no latency or profitability claims. The demo
 network services are unauthenticated and loopback-only (`SECURITY.md`). The cross-language
 differential layer is property-based testing against the C++ system under test, **not** formal
@@ -87,15 +87,15 @@ verification.
 
 ## Standing credibility gaps (open, not blockers)
 
-- **Issue #94** — no independent external technical review yet. The repo is self-certified.
-- **Issue #90** — full cache-counter PMU evidence still absent; the bare-metal Apple PMU provides a
+- **Issue #94**, no independent external technical review yet. The repo is self-certified.
+- **Issue #90**, full cache-counter PMU evidence still absent; the bare-metal Apple PMU provides a
   partial counter set only.
 
 ## Outcome
 
 Release-ready as a portfolio artifact. `v0.2.1` is already tagged (FIX adapter #29, perf flamegraph
-#32, anchor sweep) on top of `v0.2.0` (Phase III/IV systems work — M24–M49 — plus the bare-metal
+issue #32, anchor sweep) on top of `v0.2.0` (Phase III/IV systems work, M24-M49, plus the bare-metal
 evidence refresh). The next GitHub-only release is **`v0.2.2`**, bundling the post-v0.2.1
-hardening + perf wave merged to `main` (#135–#146): decoder enum rejection, network/CLI hardening, a
+hardening + perf wave merged to `main` (#135, #146): decoder enum rejection, network/CLI hardening, a
 real UBSan abort gate, OCaml diff_report robustness, and the two measured order-book perf wins. It
 requires explicit human approval and a squash-merge before tagging.

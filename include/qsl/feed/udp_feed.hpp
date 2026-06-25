@@ -11,7 +11,7 @@
 namespace qsl::feed {
 
 /// Sends each market-data message as one UDP datagram (encoded with the binary protocol).
-/// Plugs into MarketDataPublisher as a subscriber. UDP is connectionless and lossy — there
+/// Plugs into MarketDataPublisher as a subscriber. UDP is connectionless and lossy, there
 /// is no retransmit; receivers detect loss via the message sequence number.
 class UdpPublisher : public MarketDataSubscriber {
   public:

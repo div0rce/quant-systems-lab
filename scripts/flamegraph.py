@@ -89,10 +89,21 @@ class _Folder:
         if self._stack:
             frames = list(reversed(self._stack))  # perf prints leaf-first
             if self._drop_unknown:
-                # Frame-pointer unwinding emits a single unresolvable "[unknown]" frame at the
-                # glibc allocator boundary (Fedora's libc is built without frame pointers). Fold it
-                # into its caller: the sample is preserved and the real neighbours (the app frame and
-                # the named libc symbol such as cfree/operator new) stay in the stack.
+                # Every "[unknown]" frame on this aarch64 host has been IDENTIFIED (it is not a
+                # mystery) and is a fp-unwinding artifact whose samples belong to its nearest resolved
+                # frame, so each is folded into that caller. Two kinds occur:
+                #   1. Allocator boundary: fp inserts one spurious frame (a corrupted address such as
+                #      0x62ffff027c1a63) between two RESOLVED frames at the glibc malloc edge, e.g.
+                #      operator new(...) ; [unknown] ; _mid_memalign / _int_malloc / _int_free / cfree
+                #      glibc 2.43's malloc fast paths do not preserve x29, so walking out of them
+                #      reads a data register as a return address. Removing it reveals the true
+                #      operator-new -> malloc chain (both real frames are already present).
+                #   2. vDSO leaf: a sample taken inside [vdso] clock_gettime (steady_clock::now())
+                #      that perf cannot symbolize; it folds into the resolved clock_gettime caller.
+                # DWARF unwinding resolves (1) but mangles the _start asm entry into ~3 unknown frames
+                # per stack instead, so fp + this fold is the cleanest fully-symbolized result here.
+                # --keep-unknown disables the fold. Each unknown is attributed to its caller, never
+                # merging two distinct resolved regions.
                 kept = [f for f in frames if f != "[unknown]"]
                 self.dropped_unknown += len(frames) - len(kept)
                 frames = kept

@@ -28,8 +28,8 @@ model from the C++ intrusive book.
 
 ## Alternatives considered
 
-- **C++-only property tests** — rejected: they share the engine's assumptions.
-- **A second C++ engine** — rejected: a same-language reimplementation shares more failure modes
+- **C++-only property tests**, rejected: they share the engine's assumptions.
+- **A second C++ engine**, rejected: a same-language reimplementation shares more failure modes
   and gives no language-diversity signal.
-- **Consuming the C++ event log** instead of replaying commands — rejected: that would trust the
+- **Consuming the C++ event log** instead of replaying commands, rejected: that would trust the
   system under test rather than independently deriving state.

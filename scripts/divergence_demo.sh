@@ -30,7 +30,7 @@ grep -vE '^evt ' "$TMP"
 
 echo "=== honest OCaml replay vs C++ snapshot ==="
 if diff -q "$TMP.emb" "$TMP.real" >/dev/null; then
-    echo "AGREE — no real divergence between C++ and OCaml"
+    echo "AGREE, no real divergence between C++ and OCaml"
 else
     echo "UNEXPECTED: honest OCaml replay disagrees with C++" >&2
     exit 1
@@ -41,7 +41,7 @@ if diff -q "$TMP.emb" "$TMP.mut" >/dev/null; then
     echo "UNEXPECTED: injected bug produced no divergence" >&2
     exit 1
 fi
-echo "DIVERGE — shrinker reproduced the injected C++/OCaml mismatch at minimal size:"
+echo "DIVERGE, shrinker reproduced the injected C++/OCaml mismatch at minimal size:"
 diff "$TMP.emb" "$TMP.mut" || true
 
 echo "divergence demo OK"

@@ -4,15 +4,15 @@
 //
 // A human-readable `tag=value` wire format alongside the binary codec
 // (qsl/protocol/codec.hpp), mapping the same internal message structs. It is
-// "FIX-like": it uses genuine FIX framing — SOH-delimited tag=value fields, the
-// 8/9/35/.../10 envelope, a BodyLength (tag 9) and a mod-256 CheckSum (tag 10) —
-// for the client->gateway order path: NewOrderSingle (35=D) -> NewOrder and
-// OrderCancelRequest (35=F) -> CancelOrder.
+// "FIX-like": it uses genuine FIX framing. SOH-delimited tag=value fields, the
+// 8/9/35/.../10 envelope, a BodyLength (tag 9) and a mod-256 CheckSum (tag 10), // for the
+// client->gateway order path: NewOrderSingle (35=D) -> NewOrder and OrderCancelRequest (35=F) ->
+// CancelOrder.
 //
 // Deliberate, documented simplifications for a deterministic simulator (see
 // docs/fix_protocol.md):
 //   * Symbol (tag 55) carries the numeric SymbolId in decimal, not a ticker
-//     string — the internal model keys on SymbolId.
+//     string, the internal model keys on SymbolId.
 //   * Price (tag 44) carries integer ticks, never a decimal/float, and is always
 //     present (including market orders). This keeps NewOrder<->FIX a lossless
 //     bijection over the internal struct, exactly like the binary codec, so a
@@ -21,7 +21,7 @@
 //
 // Decoding is total and deterministic: it never throws, allocates only the
 // returned string on encode, and reports every malformed input through FixError
-// rather than undefined behavior — mirroring the binary codec's DecodeError
+// rather than undefined behavior, mirroring the binary codec's DecodeError
 // discipline.
 
 #include "qsl/protocol/messages.hpp"

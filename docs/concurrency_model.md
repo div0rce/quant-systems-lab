@@ -1,12 +1,12 @@
 # Concurrency model
 
-> Phase III, M24–M25. This documents the first concurrency primitive, the bounded SPSC ring buffer
+> Phase III, M24-M25. This documents the first concurrency primitive, the bounded SPSC ring buffer
 > (`include/qsl/concurrency/spsc_ring.hpp`): why it is single-producer/single-consumer, who owns
 > what, how producer and consumer observe each other, the backpressure and shutdown contract the
 > later pipeline depends on, and the honest limits. The C++ memory-model details (per-step
 > acquire/release reasoning and the happens-before proof) live in
 > [`memory_ordering.md`](memory_ordering.md). The threaded pipeline that consumes this queue is
-> realized in M26 — see [Realized pipeline (M26)](#realized-pipeline-m26).
+> realized in M26, see [Realized pipeline (M26)](#realized-pipeline-m26).
 >
 > The behavioral claims here are exercised by
 > [`tests/concurrency/test_spsc_stress.cpp`](../tests/concurrency/test_spsc_stress.cpp) and
@@ -21,6 +21,13 @@ single-threaded stages connected by hand-off queues:
 
 ```text
 input thread  --[inbound queue]-->  engine thread  --[outbound queue]-->  publisher/log thread
+```
+
+```mermaid
+flowchart LR
+    it["Input thread"] -->|"inbound SPSC queue"| et["Engine thread"]
+    et -->|"outbound SPSC queue"| pt["Publisher / log thread"]
+    et -.->|"queue full: try_push fails, backpressure"| it
 ```
 
 Each queue has **exactly one producer and one consumer**. That is the defining condition for a
@@ -76,8 +83,8 @@ publication visible are tabulated in `memory_ordering.md`.
   is no free slot *right now*; the consumer may free one the next instant.
 - Observed from the *other* side, both can be momentarily stale: a producer calling `empty()` or a
   consumer calling `full()` may read a value that is already out of date. That staleness is always
-  *conservative* — it can only report "more full" / "more empty" than reality, never invent
-  capacity or data — so it is safe for diagnostics but must not be used as a cross-thread
+  *conservative*, it can only report "more full" / "more empty" than reality, never invent
+  capacity or data, so it is safe for diagnostics but must not be used as a cross-thread
   handshake. Cross-thread coordination goes through `try_push`/`try_pop` return values, never
   through `empty()`/`full()`.
 
@@ -89,7 +96,7 @@ view.
 
 The queue is **bounded** and **never blocks**. `try_push` returns `false` (leaving the queue
 unchanged) when the ring is full, and `try_pop` returns `false` when it is empty. The queue makes
-no policy decision about what to do next — the *caller* owns the backpressure policy. The three
+no policy decision about what to do next, the *caller* owns the backpressure policy. The three
 sane policies for a producer that hits a full queue are:
 
 | Policy            | Producer does                              | When it is appropriate                                  |
@@ -115,8 +122,7 @@ it, and the M26 pipeline must honor these assumptions:
 
 1. **Lifetime brackets both threads.** The `SpscRing` must outlive both the producer and the
    consumer. Construction happens-before either thread starts; destruction happens-after both have
-   been `join()`ed. Destroying the ring while either side may still touch it is undefined behavior
-   — the queue does not, and is not meant to, guard its own teardown.
+   been `join()`ed. Destroying the ring while either side may still touch it is undefined behavior, the queue does not, and is not meant to, guard its own teardown.
 2. **Drain-then-stop.** Shutdown is signalled out-of-band (e.g. an `atomic<bool> stop` flag or a
    sentinel/poison value pushed as the last item), never by destroying the queue under a running
    thread. The consumer's loop is "while not stopped *or* not empty: try to pop", so it drains
@@ -152,8 +158,8 @@ host-dependent cache-line evidence, not a production throughput claim.
 - **SPSC only.** One producer thread, one consumer thread. Not MPMC, not a general container.
   Concurrent producers or concurrent consumers are undefined behavior by contract.
 - **Bounded, fixed capacity.** No growth; `try_push` returns false when full and the caller decides
-  the backpressure policy (spin, drop, or block — see *Backpressure*).
-- **Wait-free per operation — and qualified.** Each `try_push`/`try_pop` has a bounded atomic
+  the backpressure policy (spin, drop, or block, see *Backpressure*).
+- **Wait-free per operation, and qualified.** Each `try_push`/`try_pop` has a bounded atomic
   protocol with no lock and no CAS retry loop; for payload types with bounded, non-blocking
   copy/move assignment, the operation is wait-free end-to-end. The structural argument is in
   `memory_ordering.md` → *Wait-freedom, by construction*. A caller that *spins* on `full()`/
@@ -164,7 +170,7 @@ host-dependent cache-line evidence, not a production throughput claim.
 - **Statically reasoned, dynamically checked.** Correctness is argued against the C++ memory
   model and exercised by sustained stress/backpressure tests under `make check` and `make asan`.
   ASan/UBSan do not detect data races, so the concurrent tests are also run under ThreadSanitizer
-  (`make tsan`, M27 — see *ThreadSanitizer* below).
+  (`make tsan`, M27, see *ThreadSanitizer* below).
 - This is a correctness-first primitive; **no latency/throughput numbers are claimed here.** Any
   such numbers will come only from the committed benchmark harness with full metadata. The M44
   false-sharing study is benchmark-only and must not be generalized beyond its recorded host.
@@ -184,19 +190,19 @@ input thread --[inbound SpscRing<Command>]--> engine thread --[outbound SpscRing
 
 | Stage         | Thread owns exclusively              | Consumes                     | Produces                              |
 | ------------- | ------------------------------------ | ---------------------------- | ------------------------------------- |
-| Input         | the command source (`vector<Command>`) | —                            | pushes `Command`s onto inbound        |
+| Input         | the command source (`vector<Command>`) | nothing                      | pushes `Command`s onto inbound        |
 | Engine        | the `MatchingEngine` + `OrderGateway`  | pops `Command`s from inbound | pushes `ProcessedCommand`s onto outbound |
 | Publisher/log | the downstream `OutputSink`            | pops from outbound           | side effects (log append, feed, counters) |
 
 Ownership transfers *with the value*: once the engine thread pushes a `ProcessedCommand` it never
 touches it again, and the publisher/log thread owns it until the next pop. Crucially, the **engine
 thread is the only thread that ever touches the engine**, so the deterministic single-threaded
-matching semantics are unchanged — the boundary is a value hand-off, never shared mutable state.
+matching semantics are unchanged, the boundary is a value hand-off, never shared mutable state.
 
 ### Why the downstream stage is engine-independent
 
 The M6 `MarketDataPublisher` derives top-of-book by *reading the engine*. Running it on the
-publisher/log thread would read the engine concurrently with the engine thread mutating it — a data
+publisher/log thread would read the engine concurrently with the engine thread mutating it, a data
 race. The prototype therefore has the downstream `OutputSink` consume only self-contained
 `ProcessedCommand` records (the command, its accept/reject outcome, and the events it produced) and
 never touch the engine. A downstream consumer that genuinely needs top-of-book would read it from
@@ -234,8 +240,8 @@ interleavings without relying on sleeps or timing-sensitive assertions.
 This is a **correctness-first prototype of a concurrency boundary**, not a latency exercise: no
 matching-latency or throughput number is claimed (none is measured here). It is SPSC point-to-point,
 not MPMC and not a fan-out/fan-in topology. `make check` and `make asan` exercise the threaded paths,
-but ASan/UBSan do not detect data races — dynamic race detection runs under ThreadSanitizer
-(`make tsan`, M27 — see below).
+but ASan/UBSan do not detect data races, dynamic race detection runs under ThreadSanitizer
+(`make tsan`, M27, see below).
 
 ## Advanced validation (M33)
 
@@ -267,7 +273,7 @@ evidence over executed schedules.
 
 ThreadSanitizer (TSan) is the dynamic complement to the static memory-ordering argument and the
 ASan/UBSan build: it instruments memory accesses and synchronization at run time and reports any
-**data race** — two threads touching the same location with no happens-before edge between them and
+**data race**, two threads touching the same location with no happens-before edge between them and
 at least one write. ASan/UBSan cannot see races, so TSan is the tool that actually exercises the
 acquire/release reasoning in [`memory_ordering.md`](memory_ordering.md) on real schedules.
 
@@ -277,14 +283,14 @@ Run it with:
 make tsan            # equivalently: ctest --preset tsan -L concurrency
 ```
 
-The `tsan` preset builds with `-fsanitize=thread` — a *separate* build from `asan`, because the two
+The `tsan` preset builds with `-fsanitize=thread`, a *separate* build from `asan`, because the two
 sanitizers instrument memory incompatibly and cannot be combined (`cmake/Sanitizers.cmake` errors if
 both are enabled). It runs the `concurrency`-labelled tests: the SPSC stress and backpressure suites
 and the threaded-pipeline suite. Those are the only genuinely multithreaded tests; running TSan over
 single-threaded tests would add nothing.
 
 **TSan is a correctness gate, not a performance tool.** It imposes large time/memory overhead and
-perturbs scheduling, so **no benchmark or latency number is ever collected under TSan** — measured
+perturbs scheduling, so **no benchmark or latency number is ever collected under TSan**, measured
 numbers come only from the committed benchmark harness. A green TSan run means "no data race was
 observed on the schedules that executed": it is dynamic evidence that *strengthens* the static
 happens-before proof, not an exhaustive proof over all possible interleavings.

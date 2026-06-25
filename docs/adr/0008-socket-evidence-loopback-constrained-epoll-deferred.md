@@ -21,7 +21,7 @@ bars.
 
 ## Decision
 
-- Socket profiling artifacts are loopback-only, constrained-environment evidence — the same
+- Socket profiling artifacts are loopback-only, constrained-environment evidence, the same
   policy ADR 0007 applies to `perf`. They are labeled as such, carry OS/kernel/compiler/commit/
   dirty-tree metadata, and never claim NIC/driver/real-network behavior or production capacity.
 - M30 profiles and hardens the **existing** one-connection-at-a-time gateway rather than rewriting

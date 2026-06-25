@@ -9,14 +9,14 @@ The Linux `perf` workflow provides Linux-only tooling, metadata-rich artifacts, 
 handling, PMU preflight/validation, a three-way evidence classification (full / partial / none),
 CI validation, and a reproducible command path.
 
-The committed artifacts are now generated on a **bare-metal Linux host** — an Apple MacBook Air
+The committed artifacts are now generated on a **bare-metal Linux host**, an Apple MacBook Air
 (M2, aarch64) running Fedora Asahi Remix, directly on the hardware (`systemd-detect-virt` reports
 `none`, no `hypervisor` CPU flag). On this heterogeneous SoC `perf` opens each event against both
-PMU instances — the Apple Avalanche (P-core) and Blizzard (E-core) PMUs — but the single-threaded
+PMU instances, the Apple Avalanche (P-core) and Blizzard (E-core) PMUs, but the single-threaded
 benchmark is scheduled on the performance cores, so **the Avalanche counters carry the real
 counts**: `cycles`, `instructions`, `branches`, and `branch-misses` are live there. The
 corresponding `apple_blizzard_pmu/...` rows read `<not counted>` in `results/perf_stat_linux.txt`
-because the workload never ran on the E-cores — that is expected scheduling behavior, not a missing
+because the workload never ran on the E-cores, that is expected scheduling behavior, not a missing
 counter. The artifact is therefore classified **partial hardware PMU evidence**, not
 constrained-environment validation: the counters that are present are real, not emulated.
 
@@ -24,9 +24,9 @@ The residual gap is specific and is what issue #90 now tracks: the Apple Silicon
 by the current Asahi kernel driver, does **not** implement the generic `cache-references` /
 `cache-misses` events (it whitelists only `cycles`/`instructions`/branch events; the
 `/sys/bus/event_source/devices/apple_avalanche_pmu/events/` directory lists only `cycles` and
-`instructions`). So a *full* counter set — including cache events — is unavailable here. Closing
+`instructions`). So a *full* counter set, including cache events, is unavailable here. Closing
 #90 needs a PMU **microarchitecture** that exposes cache counters to Linux (e.g. an x86_64
-Intel/AMD host, or an ARM server core such as Graviton/Ampere) — not "more bare metal."
+Intel/AMD host, or an ARM server core such as Graviton/Ampere), not "more bare metal."
 
 ## Commands
 
@@ -69,28 +69,28 @@ folds the samples and renders an SVG to `results/flamegraph.svg` plus a text com
 `results/flamegraph.txt` (provenance, classification, and the top folded stacks). Frame-pointer
 unwinding is used because it produces clean, fully-symbolized stacks: the earlier DWARF default left
 `[unknown]` gaps (the Release build omits frame pointers and DWARF unwinding truncated deep stacks).
-The dedicated build keeps the latency `bench` numbers in `results/latest.txt` untouched — they come
+The dedicated build keeps the latency `bench` numbers in `results/latest.txt` untouched, they come
 from the unmodified Release `bench` preset.
 
 Two design points address common flamegraph problems:
 
-- **Sample density and duration.** The artifact profiles `qsl-bench profile [seconds]` — a warm,
+- **Sample density and duration.** The artifact profiles `qsl-bench profile [seconds]`, a warm,
   bounded, deterministic steady-state order flow (add / cross / cancel / modify, book held ~512
-  deep) — for 5s by default, so the capture carries tens of thousands of samples instead of the
+  deep), for 5s by default, so the capture carries tens of thousands of samples instead of the
   ~80ms (~329-sample) one-shot benchmark suite. `QSL_FLAMEGRAPH_SECONDS` tunes the duration and
   `QSL_BENCH_STORAGE={baseline,pooled,intrusive,contiguous}` selects the order-book storage mode.
 - **No `[unknown]` frames.** Frame-pointer unwinding resolves the whole application and C-runtime
   startup chain. The one residual unresolvable frame is the glibc allocator boundary (Fedora's libc
   is built without frame pointers), so `flamegraph.py` folds a lone `[unknown]` frame into its
-  caller by default — the sample is preserved and the real neighbours (the app frame and the named
+  caller by default, the sample is preserved and the real neighbours (the app frame and the named
   libc symbol such as `cfree` / `operator new`) stay in the stack. Pass `--keep-unknown` to disable
   the fold.
 
 The folding and SVG rendering live in `scripts/flamegraph.py`, a dependency-free Python script
 (standard library only) that reimplements the `stackcollapse` + flamegraph data model rather than
 vendoring Brendan Gregg's Perl toolkit, so the artifact is reproducible from this repository alone.
-The renderer is deterministic — frames are sorted by name and colors are a pure function of the
-frame name (no RNG, no timestamps in the drawn body) — and is unit-tested in
+The renderer is deterministic, frames are sorted by name and colors are a pure function of the
+frame name (no RNG, no timestamps in the drawn body), and is unit-tested in
 `tests/shell/test_flamegraph.sh` (registered with CTest, runs under `make check`). Frame width is
 proportional to on-CPU samples; this is a software cpu-clock sampling profile for **hot-symbol
 investigation**, not a latency or throughput measurement. Set `QSL_FLAMEGRAPH_EVENT=cycles` to
@@ -108,8 +108,8 @@ unless the kernel and permissions expose the requested PMU events. On many syste
   this Apple Silicon host is bare metal yet its PMU driver still does not expose cache events.
 
 Full hardware-counter evidence requires a host whose PMU exposes the **whole** requested event set
-(including `cache-references`/`cache-misses`) through `perf_event` — e.g. an x86_64 Intel/AMD box or
-an ARM server core — not merely any bare-metal Linux machine. Before trusting a `perf stat` artifact
+(including `cache-references`/`cache-misses`) through `perf_event`, e.g. an x86_64 Intel/AMD box or
+an ARM server core, not merely any bare-metal Linux machine. Before trusting a `perf stat` artifact
 as full evidence,
 verify:
 
@@ -123,20 +123,20 @@ perf stat -e cycles,instructions,branches,branch-misses,cache-references,cache-m
 The script classifies the artifact three ways via its `Artifact:` and `Hardware counters
 supported:` fields:
 
-- **`hardware PMU evidence`** (`Hardware counters supported: yes`) — every requested counter,
+- **`hardware PMU evidence`** (`Hardware counters supported: yes`), every requested counter,
   including cache events, was captured. This is *full* evidence.
-- **`partial hardware PMU evidence`** (`Hardware counters supported: partial`) — at least one real
+- **`partial hardware PMU evidence`** (`Hardware counters supported: partial`), at least one real
   hardware counter was captured but the requested set is incomplete. This is the **current state on
   the Apple Silicon host**: real `cycles`/`instructions`/`branches`/`branch-misses`, with
   `cache-references`/`cache-misses` reported `<not supported>`.
 - **`constrained-environment validation (no hardware PMU access)`** (`Hardware counters supported:
-  no`) — no hardware counter produced a value at all (a VM/container with no PMU, or a
+  no`), no hardware counter produced a value at all (a VM/container with no PMU, or a
   permission-denied host). This was the state of the earlier Docker Desktop artifacts.
 
 A *full* artifact is acceptable only when it reports `Artifact: hardware PMU evidence`,
 `Unsupported counters detected: no`, `Hardware counters supported: yes`, and `Dirty inputs: no`.
 On Apple Silicon that bar cannot be met for the cache events, so the honest current label is
-**partial**, not full — and that is recorded in the artifact rather than papered over.
+**partial**, not full, and that is recorded in the artifact rather than papered over.
 
 If the host reports counters as unsupported or permission-denied, do not substitute other numbers.
 The scripts only write a partial/constrained artifact with `QSL_PERF_ALLOW_PARTIAL=1`, and the
@@ -174,7 +174,7 @@ itself, so a two-artifact run can remain honest while still detecting real sourc
 The committed artifacts are now bare-metal Apple Silicon Linux runs labeled **partial hardware PMU
 evidence**: real `cycles`/`instructions`/`branches`/`branch-misses` plus `<not supported>` cache
 events. Do not describe them as *full* hardware-counter evidence (the cache events are missing), and
-do not relabel them back to "constrained validation" either — the counters that are present are
+do not relabel them back to "constrained validation" either, the counters that are present are
 genuine bare-metal hardware counters.
 
 ## What To Look For

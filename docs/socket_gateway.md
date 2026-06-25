@@ -3,17 +3,32 @@
 The TCP order gateway exposes the in-process `OrderGateway` (M5) over a stream socket using
 the M2 binary protocol. It is split into two pieces:
 
-- **`Session`** (`include/qsl/gateway/session.hpp`) — a *pure* byte processor with no socket
+- **`Session`** (`include/qsl/gateway/session.hpp`), a *pure* byte processor with no socket
   calls. It buffers inbound bytes, frames whole messages, drives the `OrderGateway`, and
   returns response bytes. This is where all protocol logic lives, so it is fully unit-tested
   deterministically.
-- **`TcpServer`** (`include/qsl/gateway/tcp_server.hpp`) — a thin POSIX-socket transport:
+- **`TcpServer`** (`include/qsl/gateway/tcp_server.hpp`), a thin POSIX-socket transport:
   `serve_connection(fd)` runs a `Session` over one connected socket; `run(host, port)` binds,
   listens, accepts connections, and serves each accepted connection on a worker thread while
   serializing gateway mutation.
-- **`EpollServer`** (`include/qsl/gateway/epoll_server.hpp`) — a Linux-only event-driven
+- **`EpollServer`** (`include/qsl/gateway/epoll_server.hpp`), a Linux-only event-driven
   transport prototype: one `epoll` loop accepts multiple clients and drives one `Session` per
   connection with nonblocking reads and writes.
+
+The threaded `TcpServer` accept loop tolerates transient and resource-exhaustion errors instead of
+tearing the listener down, and sheds load at the connection cap:
+
+```mermaid
+flowchart TD
+    run["run(host, port)"] --> bind["socket, bind, listen"]
+    bind --> acc["accept_retry"]
+    acc -->|"transient errno (EINTR, ECONNABORTED, ...)"| acc
+    acc -->|"fd exhausted (EMFILE, ENFILE, ...)"| backoff["back off 10ms"] --> acc
+    acc -->|"fatal (EBADF, EINVAL)"| stop["Stop listener"]
+    acc -->|"connected fd"| cap{"At connection cap?"}
+    cap -->|Yes| shed["close fd, shed load"] --> acc
+    cap -->|No| worker["Spawn worker thread: Session over fd"] --> acc
+```
 
 ## Message flow
 
@@ -39,7 +54,7 @@ The Linux `EpollServer` keeps a per-client outbound buffer and leaves the connec
 for `EPOLLOUT` until all pending response bytes are accepted by the kernel. Both write paths use
 `send(..., MSG_NOSIGNAL)` where available, and the platform socket option where available, so a
 client that drops before reading a response cannot terminate the gateway through `SIGPIPE`. Both the
-read and write paths retry on `EINTR` — a signal interruption is treated as retryable, not a
+read and write paths retry on `EINTR`, a signal interruption is treated as retryable, not a
 disconnect.
 
 The epoll path treats `EAGAIN` / `EWOULDBLOCK` as normal nonblocking backpressure:
@@ -65,7 +80,7 @@ up in the kernel receive buffer and TCP flow control pushes back on the sender. 
 the backlog drains below the mark.
 
 That soft mark bounds how many *further* requests a non-reading peer induces, but a single
-request's response can fan out — a market order sweeping a deep book returns one fill per resting
+request's response can fan out, a market order sweeping a deep book returns one fill per resting
 maker. So a **hard cap** (`EpollServerOptions::max_outbuf_hard_bytes`, default 8 MiB) is the
 absolute ceiling. The epoll path asks `Session` to append responses directly into the per-client
 buffer under that byte budget; before a `NewOrder` reaches the gateway, the session previews the
@@ -96,7 +111,7 @@ induces an over-cap response is disconnected.
 The default demo uses `TcpServer` because it is portable and easiest to inspect. The accept loop
 spawns one worker per accepted connection, so a slow or still-open client no longer prevents the
 server from accepting a later client. A connection cap (`TcpServerOptions::max_active_connections`,
-default `0` = unbounded) load-sheds — a freshly accepted connection at the cap is closed immediately
+default `0` = unbounded) load-sheds, a freshly accepted connection at the cap is closed immediately
 rather than spawning another worker. The accept loop also survives transient `accept()` errors
 (`EINTR`/`ECONNABORTED`, retried) and file-descriptor exhaustion (`EMFILE`/`ENFILE`, a brief back-off
 retry) instead of tearing the listener down; the `EpollServer` handles the same conditions by
@@ -134,7 +149,7 @@ and no real venue connectivity.
 There is **no authentication or authorization**. The server binds to **`127.0.0.1` only**, so
 it is reachable only from the local machine in the default demo. M9 accepts numeric IPv4 bind
 hosts only; invalid hosts such as `"localhost"` or typos fail startup and must not fall back
-to `0.0.0.0`. Do not expose it on a routable interface or an untrusted network — it accepts
+to `0.0.0.0`. Do not expose it on a routable interface or an untrusted network, it accepts
 and acts on any order from any local connection. This is a local simulator, not a real venue.
 
 ## Local demo

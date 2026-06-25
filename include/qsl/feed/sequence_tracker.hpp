@@ -9,7 +9,7 @@ namespace qsl::feed {
 using core::SeqNo;
 
 /// Detects forward gaps in a market-data sequence (e.g. UDP datagram loss). It does not
-/// recover lost messages — it only reports how many were missed. Duplicates and reordered
+/// recover lost messages, it only reports how many were missed. Duplicates and reordered
 /// (lower) sequence numbers are ignored rather than reported as gaps.
 class SequenceTracker {
   public:

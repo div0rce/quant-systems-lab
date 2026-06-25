@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cross-compiler / platform determinism (issue #45): build the fixture exporter with two
 # compilers and assert every generated differential fixture is byte-identical between them, and
-# byte-identical to the committed copies (which were produced on macOS/AppleClang — so this also
+# byte-identical to the committed copies (which were produced on macOS/AppleClang, so this also
 # exercises cross-platform reproducibility). Generation is integer-only and uses a standard
 # mt19937_64, so the bytes must not depend on the toolchain.
 #

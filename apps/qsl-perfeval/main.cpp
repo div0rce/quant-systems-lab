@@ -1,4 +1,4 @@
-// qsl-perfeval — a dedicated performance-evidence harness for the matching-engine hot path
+// qsl-perfeval, a dedicated performance-evidence harness for the matching-engine hot path
 // (order-book insertion + matching). It drives a steady-state deep-book order flow and reports
 // orders/sec, per-order latency distribution (mean/p50/p99), and allocations/order. Run it under
 // `perf stat` / `perf record` to attribute cycles/instructions/branch-misses and render
@@ -15,20 +15,42 @@
 
 #include <algorithm>
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <new>
-#include <string>
+#include <optional>
+#include <string_view>
 #include <vector>
 
+// Allocation counting replaces every global operator new variant so it can count ALL allocations
+// (plain AND over-aligned, the latter used by the order book's alignas types). Counting and the
+// pure-performance run are mutually exclusive on purpose: intercepting the aligned operators adds a
+// little work per aligned allocation, which would perturb the cycle/throughput numbers for an
+// allocation-heavy build. So counting is compile-time opt-in (QSL_PERFEVAL_COUNT_ALLOCS); the
+// default build leaves the system allocator untouched and reports allocs/order as "n/a". Measure
+// allocations and performance in separate builds (see PERFORMANCE.md methodology).
+#ifdef QSL_PERFEVAL_COUNT_ALLOCS
 namespace {
-// Allocations during the timed region only (the counter is sampled before and after the loop). The
-// override below counts the primary std::operator new path used by the baseline pmr new_delete
-// resource for order-book list/map nodes.
 std::atomic<std::uint64_t> g_allocs{0};
+constexpr bool kCountingAllocs = true;
+std::uint64_t allocs_now() {
+    return g_allocs.load(std::memory_order_relaxed);
+}
+void *aligned_new(std::size_t n, std::align_val_t a) {
+    g_allocs.fetch_add(1, std::memory_order_relaxed);
+    // aligned_alloc (what libstdc++'s default aligned new uses) requires size to be a multiple of
+    // the alignment.
+    const std::size_t align = std::max(sizeof(void *), static_cast<std::size_t>(a));
+    const std::size_t size = (n + align - 1) & ~(align - 1);
+    if (void *p = std::aligned_alloc(align, size)) {
+        return p;
+    }
+    throw std::bad_alloc();
+}
 } // namespace
 
 void *operator new(std::size_t n) {
@@ -38,12 +60,6 @@ void *operator new(std::size_t n) {
     }
     throw std::bad_alloc();
 }
-void operator delete(void *p) noexcept {
-    std::free(p);
-}
-void operator delete(void *p, std::size_t) noexcept {
-    std::free(p);
-}
 void *operator new[](std::size_t n) {
     g_allocs.fetch_add(1, std::memory_order_relaxed);
     if (void *p = std::malloc(n)) {
@@ -51,12 +67,44 @@ void *operator new[](std::size_t n) {
     }
     throw std::bad_alloc();
 }
+void *operator new(std::size_t n, std::align_val_t a) {
+    return aligned_new(n, a);
+}
+void *operator new[](std::size_t n, std::align_val_t a) {
+    return aligned_new(n, a);
+}
+void operator delete(void *p) noexcept {
+    std::free(p);
+}
+void operator delete(void *p, std::size_t) noexcept {
+    std::free(p);
+}
 void operator delete[](void *p) noexcept {
     std::free(p);
 }
 void operator delete[](void *p, std::size_t) noexcept {
     std::free(p);
 }
+void operator delete(void *p, std::align_val_t) noexcept {
+    std::free(p);
+}
+void operator delete(void *p, std::size_t, std::align_val_t) noexcept {
+    std::free(p);
+}
+void operator delete[](void *p, std::align_val_t) noexcept {
+    std::free(p);
+}
+void operator delete[](void *p, std::size_t, std::align_val_t) noexcept {
+    std::free(p);
+}
+#else
+namespace {
+constexpr bool kCountingAllocs = false;
+std::uint64_t allocs_now() {
+    return 0;
+}
+} // namespace
+#endif
 
 namespace {
 using clk = std::chrono::steady_clock;
@@ -103,7 +151,8 @@ struct PerfFlow {
 
     PerfFlow() { ring.reserve(kRing); }
 
-    // Submit one limit order; returns its id so the caller can park it in the ring.
+    // Submit one limit order; returns its id. It may match resting liquidity and rest its
+    // remainder, or fully fill (marketable) and never rest.
     core::OrderId submit() {
         const std::uint64_t r = splitmix64(state);
         const auto side = ((r & 1U) != 0U) ? core::Side::Buy : core::Side::Sell;
@@ -114,9 +163,18 @@ struct PerfFlow {
         return oid;
     }
 
-    // Cancel the oldest resting order and park the new id in its slot, holding the book ~kRing
-    // deep.
-    void retire_oldest(core::OrderId oid) {
+    // Track only orders that actually rested, holding the book ~kRing deep: a fully-filled order is
+    // ignored, a resting order is parked, and once the ring is full the oldest resting order is
+    // cancelled. Checking eng.contains keeps depth steady instead of drifting with the match rate
+    // (and never cancels an id that never rested).
+    void track(core::OrderId oid) {
+        if (!eng.contains(sym, oid)) {
+            return;
+        }
+        if (ring.size() < kRing) {
+            ring.push_back(oid);
+            return;
+        }
         sink += eng.cancel(sym, ring[head]).size();
         ring[head] = oid;
         head = (head + 1) % kRing;
@@ -124,7 +182,7 @@ struct PerfFlow {
 
     void warmup() {
         while (ring.size() < kRing) {
-            ring.push_back(submit());
+            track(submit());
         }
     }
 };
@@ -147,8 +205,8 @@ void fill_latency_stats(std::vector<std::uint32_t> &lat, Result &res) {
         sum += v;
     }
     res.mean_ns = static_cast<std::uint32_t>(sum / lat.size());
-    res.p50_ns = lat[lat.size() / 2];
-    res.p99_ns = lat[(lat.size() * 99) / 100];
+    res.p50_ns = lat[(lat.size() - 1) / 2];
+    res.p99_ns = lat[((lat.size() - 1) * 99) / 100];
     res.overhead_ns = timer_overhead_ns();
 }
 
@@ -157,17 +215,16 @@ void fill_latency_stats(std::vector<std::uint32_t> &lat, Result &res) {
 Result run_throughput(std::uint64_t orders) {
     PerfFlow flow;
     flow.warmup();
-    const std::uint64_t a0 = g_allocs.load(std::memory_order_relaxed);
+    const std::uint64_t a0 = allocs_now();
     const auto t0 = clk::now();
     for (std::uint64_t i = 0; i < orders; ++i) {
-        flow.retire_oldest(flow.submit());
+        flow.track(flow.submit());
     }
     const auto t1 = clk::now();
     Result res;
     res.orders = orders;
     res.seconds = std::chrono::duration<double>(t1 - t0).count();
-    res.allocs_per_order = static_cast<double>(g_allocs.load(std::memory_order_relaxed) - a0) /
-                           static_cast<double>(orders);
+    res.allocs_per_order = static_cast<double>(allocs_now() - a0) / static_cast<double>(orders);
     return res;
 }
 
@@ -178,7 +235,7 @@ Result run_latency(std::uint64_t orders) {
     flow.warmup();
     std::vector<std::uint32_t> lat;
     lat.reserve(orders);
-    const std::uint64_t a0 = g_allocs.load(std::memory_order_relaxed);
+    const std::uint64_t a0 = allocs_now();
     const auto t0 = clk::now();
     for (std::uint64_t i = 0; i < orders; ++i) {
         const std::uint64_t r = splitmix64(flow.state);
@@ -191,49 +248,81 @@ Result run_latency(std::uint64_t orders) {
             flow.eng.new_limit(flow.sym, oid, side, price, qty, core::TimeInForce::GTC).size();
         const auto b = clk::now();
         lat.push_back(ns_between(a, b));
-        flow.retire_oldest(oid);
+        flow.track(oid);
     }
     const auto t1 = clk::now();
     Result res;
     res.orders = orders;
     res.seconds = std::chrono::duration<double>(t1 - t0).count();
-    res.allocs_per_order = static_cast<double>(g_allocs.load(std::memory_order_relaxed) - a0) /
-                           static_cast<double>(orders);
+    res.allocs_per_order = static_cast<double>(allocs_now() - a0) / static_cast<double>(orders);
     res.has_latency = true;
     fill_latency_stats(lat, res);
     return res;
 }
 
-std::uint64_t parse_orders(int argc, char **argv, bool latency) {
-    for (int i = 1; i < argc; ++i) {
-        const std::string a = argv[i];
-        if (a != "--latency") {
-            const std::uint64_t n = std::strtoull(a.c_str(), nullptr, 10);
-            if (n > 0) {
-                return n;
-            }
-        }
+// Parse a whole token as a positive order count. Rejects partial parses ("123abc"), trailing junk,
+// and negative-looking input ("-1") that std::strtoull would wrap to a huge value and feed straight
+// into reserve()/the loop bound.
+std::optional<std::uint64_t> parse_orders_arg(std::string_view s) {
+    std::uint64_t v = 0;
+    const char *begin = s.data();
+    const char *end = begin + s.size();
+    const auto [ptr, ec] = std::from_chars(begin, end, v);
+    if (ec != std::errc{} || ptr != end || v == 0) {
+        return std::nullopt;
     }
-    return latency ? 5'000'000ULL : 60'000'000ULL;
+    return v;
+}
+
+struct Args {
+    bool ok = true;
+    bool latency = false;
+    std::uint64_t count = 0;
+};
+
+// Parse argv: an optional "--latency" flag and at most one positive order count. A malformed token
+// or a second count is rejected (ambiguous sample size). Defaults to 5M (latency) / 60M orders.
+Args parse_args(int argc, char **argv) {
+    Args out;
+    std::optional<std::uint64_t> orders;
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view a = argv[i];
+        if (a == "--latency") {
+            out.latency = true;
+            continue;
+        }
+        const auto parsed = parse_orders_arg(a);
+        if (!parsed || orders) {
+            out.ok = false;
+            return out;
+        }
+        orders = *parsed;
+    }
+    out.count = orders.value_or(out.latency ? 5'000'000ULL : 60'000'000ULL);
+    return out;
 }
 } // namespace
 
-// qsl-perfeval [orders] [--latency]
+// qsl-perfeval [orders>0] [--latency]
 //   default: untimed throughput + allocations/order (run under perf stat / perf record)
 //   --latency: also record per-order latency mean/p50/p99
 int main(int argc, char **argv) {
-    bool latency = false;
-    for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "--latency") {
-            latency = true;
-        }
+    const Args args = parse_args(argc, argv);
+    if (!args.ok) {
+        std::fprintf(stderr, "usage: qsl-perfeval [orders>0] [--latency]\n");
+        return 2;
     }
-    const std::uint64_t orders = parse_orders(argc, argv, latency);
-    const Result r = latency ? run_latency(orders) : run_throughput(orders);
+    const Result r = args.latency ? run_latency(args.count) : run_throughput(args.count);
+    char allocs_buf[24];
+    if constexpr (kCountingAllocs) {
+        std::snprintf(allocs_buf, sizeof(allocs_buf), "%.4f", r.allocs_per_order);
+    } else {
+        std::snprintf(allocs_buf, sizeof(allocs_buf), "n/a");
+    }
     std::printf("perfeval: storage=baseline orders=%llu elapsed=%.3fs orders_per_sec=%.0f "
-                "allocs_per_order=%.4f\n",
+                "allocs_per_order=%s\n",
                 static_cast<unsigned long long>(r.orders), r.seconds,
-                static_cast<double>(r.orders) / r.seconds, r.allocs_per_order);
+                static_cast<double>(r.orders) / r.seconds, allocs_buf);
     if (r.has_latency) {
         std::printf("perfeval: latency_ns mean=%u p50=%u p99=%u (each incl ~%uns timer overhead)\n",
                     r.mean_ns, r.p50_ns, r.p99_ns, r.overhead_ns);

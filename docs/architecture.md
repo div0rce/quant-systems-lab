@@ -46,27 +46,27 @@ flowchart LR
 
 ## Components
 
-- **Core types** — integer ticks, order IDs, sequence numbers
-- **Binary protocol** — fixed-width encode/decode (M2)
-- **Order book** — price-time priority (M3)
-- **Matching engine** — multi-symbol sequencing (M4)
-- **Risk** — deterministic pre-trade checks (M5)
-- **Market data** — trade/top-of-book publisher (M6)
-- **Event log** — append-only replayable log (M7)
-- **Replay/recovery** — rebuild state from log (M8)
-- **TCP gateway** — binary order gateway (M9)
-- **Benchmarks** — reproducible performance measurement (M11)
-- **OCaml replay verifier + oracle** — independent typed-functional replay (M14, M16)
-- **Differential + property testing** — command-stream export, C++≡OCaml snapshot equality,
-  seeded property generator, and a shrinker that minimizes any divergence (M15–M19)
-- **Concurrency primitive + threaded pipeline** — a bounded SPSC ring buffer and an optional
-  three-thread gateway→engine→publisher/log pipeline prototype (M24–M26)
-- **Order-book storage modes** — baseline, PMR-pooled (M32), intrusive `OrderPool` (PR #112),
+- **Core types**, integer ticks, order IDs, sequence numbers
+- **Binary protocol**, fixed-width encode/decode (M2)
+- **Order book**, price-time priority (M3)
+- **Matching engine**, multi-symbol sequencing (M4)
+- **Risk**, deterministic pre-trade checks (M5)
+- **Market data**, trade/top-of-book publisher (M6)
+- **Event log**, append-only replayable log (M7)
+- **Replay/recovery**, rebuild state from log (M8)
+- **TCP gateway**, binary order gateway (M9)
+- **Benchmarks**, reproducible performance measurement (M11)
+- **OCaml replay verifier + oracle**, independent typed-functional replay (M14, M16)
+- **Differential + property testing**, command-stream export, C++≡OCaml snapshot equality,
+  seeded property generator, and a shrinker that minimizes any divergence (M15-M19)
+- **Concurrency primitive + threaded pipeline**, a bounded SPSC ring buffer and an optional
+  three-thread gateway→engine→publisher/log pipeline prototype (M24-M26)
+- **Order-book storage modes**, baseline, PMR-pooled (M32), intrusive `OrderPool` (PR #112),
   and a bounded-domain contiguous direct-price-index layout (M47); all produce identical
   deterministic event streams and snapshots
-- **epoll gateway prototype** — an optional Linux event-driven multi-client transport alongside
+- **epoll gateway prototype**, an optional Linux event-driven multi-client transport alongside
   the default portable threaded TCP server (M34)
-- **Event-log durability + recovery** — caller-chosen durability modes (buffered / flush / fsync)
+- **Event-log durability + recovery**, caller-chosen durability modes (buffered / flush / fsync)
   with torn-tail classification and provably-torn repair (M45)
 
 The first block is the runtime simulator; the last two are the cross-language verification
@@ -83,7 +83,7 @@ Defined in `include/qsl/core/`.
 
 Prices are integer ticks (`Price = std::int64_t`), never floating point. A tick
 scale maps display prices to integers: at `kTickScale = 100`, `$123.45` is stored
-as `12345`. This keeps arithmetic exact and matching deterministic — floating-point
+as `12345`. This keeps arithmetic exact and matching deterministic, floating-point
 rounding would make fills and price-time priority non-reproducible.
 
 Other domain aliases: `SymbolId` (u32), `Quantity` (u32), `OrderId` (u64),
@@ -108,24 +108,24 @@ only at the gateway boundary and benchmark layer, never inside matching.
 `MatchingEngine` (`include/qsl/engine/matching_engine.hpp`) wraps the single-symbol
 `OrderBook` into a multi-symbol engine.
 
-- **Symbol registry** — `SymbolRegistry` interns external symbol names to compact
+- **Symbol registry**, `SymbolRegistry` interns external symbol names to compact
   `SymbolId`s assigned in registration order. The engine holds one `OrderBook` per
   registered symbol in a `std::map<SymbolId, OrderBook>` (ordered, for deterministic
   snapshot iteration).
-- **Command application** — `new_limit` / `new_market` / `cancel` / `modify` route to the
+- **Command application**, `new_limit` / `new_market` / `cancel` / `modify` route to the
   symbol's book. A command for an unregistered symbol (or a cancel/modify of an unknown
   order) is a no-op here; structured rejection is the risk layer's job (M5).
-- **Active order IDs** — a resting `OrderId` is unique within each symbol book. Duplicate
+- **Active order IDs**, a resting `OrderId` is unique within each symbol book. Duplicate
   active IDs are ignored in M4 before any acceptance event or sequence number is emitted
   so the book's locator index cannot be corrupted. M5 turns this condition into a
   structured `DuplicateOrderId` rejection.
-- **Event stream** — commands emit `EngineEvent`, a `std::variant` of `OrderAccepted`,
+- **Event stream**, commands emit `EngineEvent`, a `std::variant` of `OrderAccepted`,
   `OrderCanceled`, `OrderModified`, and `TradeEvent` (`engine/events.hpp`). A new order
   emits `OrderAccepted` followed by a `TradeEvent` per fill. `OrderRejected` (M5) and
   `BookUpdate` (M6) are added later.
-- **Sequencing** — every emitted event carries a `SeqNo` from a single monotonic counter,
+- **Sequencing**, every emitted event carries a `SeqNo` from a single monotonic counter,
   so event sequence numbers are strictly increasing across all symbols and commands.
-- **Snapshot** — `snapshot()` returns a deterministic `EngineSnapshot` (last sequence
+- **Snapshot**, `snapshot()` returns a deterministic `EngineSnapshot` (last sequence
   number plus per-symbol best bid/ask and resting order count, ordered by `SymbolId`) for
   replay-equivalence comparison. M8 extends it with per-level aggregates and the trade
   sequence.
@@ -143,8 +143,7 @@ ClientCommand -> OrderGateway (risk) -> MatchingEngine -> EngineEvents
 
 - **Value checks** (`engine/risk.hpp`, `RiskConfig` + `check_limit`/`check_market`) are pure
   and deterministic: invalid side, invalid price tick (price must be positive), invalid
-  quantity, max order quantity, and max notional. The notional check is overflow-safe —
-  it compares `quantity > max_notional / price` rather than computing `price * quantity`.
+  quantity, max order quantity, and max notional. The notional check is overflow-safe, it compares `quantity > max_notional / price` rather than computing `price * quantity`.
   Side validation applies to `new_limit` and `new_market`; modify has no side parameter.
   Modify commands that leave a nonzero resting order are re-checked against the same
   limit-order value constraints before reaching the engine. Modify quantity `0` remains
@@ -156,12 +155,12 @@ ClientCommand -> OrderGateway (risk) -> MatchingEngine -> EngineEvents
   (`MatchingEngine::has_symbol` / `contains`), consistent with the engine's no-op on a
   duplicate active id. The M4 engine/book duplicate guards remain as invariant defense.
   Completed-order ids are not retained, so they may be reused.
-- **Structured result** — every submission returns a `GatewayResult{accepted, reason,
+- **Structured result**, every submission returns a `GatewayResult{accepted, reason,
   events}`. A rejection carries a `RejectReason` and no events and never reaches the engine
   (so the engine's sequence counter and state are untouched); an acceptance carries the
   engine's resulting event stream. Rejections are intentionally *not* part of the engine's
   sequenced event stream because they do not mutate engine state (which keeps replay clean).
-- **Opt-in storage guards** — when the explicit intrusive order-pool storage mode is selected,
+- **Opt-in storage guards**, when the explicit intrusive order-pool storage mode is selected,
   a GTC limit order that would need to rest but cannot acquire an order node is rejected with
   `StorageExhausted` before matching mutates state. The M47 contiguous storage mode similarly
   rejects a GTC remainder that would have to rest outside its fixed direct-price-index band,
@@ -183,22 +182,22 @@ and produces market-data messages for subscribers:
 EngineEvents -> MarketDataPublisher -> MarketDataSubscriber(s)
 ```
 
-- **Messages** (`feed/market_data.hpp`) — `MarketDataMessage` is a `std::variant` of
+- **Messages** (`feed/market_data.hpp`), `MarketDataMessage` is a `std::variant` of
   `MdTrade` (symbol, price, quantity) and `MdTopOfBook` (symbol, optional best bid/ask).
   Each carries a monotonic `md_seq`. `BookDelta`/`Snapshot` (full depth) are deferred to a
   later networked-feed milestone.
-- **Derivation** — `publish(engine, events)` is called once per applied command. Each
+- **Derivation**, `publish(engine, events)` is called once per applied command. Each
   `TradeEvent` yields an `MdTrade`; after the batch, each touched symbol whose top of book
   differs from the publisher's last observed top (read from the engine) yields an
   `MdTopOfBook`. First observation of an empty book initializes publisher state but emits
   no TOB, because no observable top changed. Transitions from non-empty to empty do emit
   TOB because the top changed. A resting order behind the best produces no message.
-- **Sequencing** — every emitted message gets the next `md_seq` from a single monotonic
+- **Sequencing**, every emitted message gets the next `md_seq` from a single monotonic
   counter, and messages are emitted in engine-event order, so the market-data sequence is
   monotonic and follows the engine sequence.
-- **Subscriber interface** — `MarketDataSubscriber::on_market_data` is the delivery hook;
+- **Subscriber interface**, `MarketDataSubscriber::on_market_data` is the delivery hook;
   the publisher fans out to all registered subscribers.
-- **Wire encoding** — `MdTrade`/`MdTopOfBook` encode via the M2 binary protocol framing
+- **Wire encoding**, `MdTrade`/`MdTopOfBook` encode via the M2 binary protocol framing
   (`MsgType::MdTrade`/`MdTopOfBook`), reusing the shared header writer and big-endian
   helpers; `md_seq` travels in the header's sequence field.
 
@@ -228,7 +227,7 @@ engine events -> MarketDataPublisher -> UdpPublisher --UDP--> UdpFeedClient -> S
   indefinitely waiting for fewer than `N` messages).
 - **Testing strategy**: gap detection is verified deterministically by **injecting
   out-of-sequence datagrams** (publishing `md_seq` 1 then 3 and asserting the client observes
-  a gap of one) through the real receive/decode/client path — never by relying on
+  a gap of one) through the real receive/decode/client path, never by relying on
   nondeterministic packet loss.
 
 ### Local demo
@@ -243,7 +242,7 @@ make build
 
 - **UDP is connectionless and lossy.** There is no retransmit, no flow control, and no
   ordering guarantee across datagrams. The feed *detects* loss via sequence gaps; it does not
-  recover it (a real venue would offer a snapshot/recovery channel — not implemented here).
+  recover it (a real venue would offer a snapshot/recovery channel, not implemented here).
 - **Unicast localhost only.** It binds/sends on `127.0.0.1`. There is no multicast, no
   authentication, and no encryption. Do not expose it on an untrusted network.
 - **No fragmentation handling.** Messages are small (well under the MTU), so each fits in one
@@ -251,7 +250,7 @@ make build
 - This is a credible systems demonstration of a sequenced UDP feed with gap detection, not a
   production market-data distribution system.
 
-## Concurrency: SPSC queues and the threaded pipeline (M24–M26)
+## Concurrency: SPSC queues and the threaded pipeline (M24-M26)
 
 Phase III adds a concurrency boundary on top of the deterministic core without changing its
 semantics. `SpscRing<T, Capacity>` (`include/qsl/concurrency/spsc_ring.hpp`) is a bounded

@@ -1,14 +1,14 @@
-# HANDOFF.md — How to build Quant Systems Lab with Claude Code
+# HANDOFF.md. How to build Quant Systems Lab with Claude Code
 
 This is the operator manual. It tells Claude Code and the human how to build the repo in a resumable, sequential, AI-first workflow.
 
 Project memory files:
 
-1. `CLAUDE.md` — canonical Claude Code project memory.
-2. `AGENTS.md` — Codex-facing mirror/adapter. Keep synchronized with `CLAUDE.md`.
-3. `MILESTONES.md` — ordered roadmap and milestone definitions.
-4. `PROGRESS.md` — live state and resume anchor.
-5. `HANDOFF.md` — operator manual tying the files together.
+1. `CLAUDE.md`, canonical Claude Code project memory.
+2. `AGENTS.md`. Codex-facing mirror/adapter. Keep synchronized with `CLAUDE.md`.
+3. `MILESTONES.md`, ordered roadmap and milestone definitions.
+4. `PROGRESS.md`, live state and resume anchor.
+5. `HANDOFF.md`, operator manual tying the files together.
 
 Keep all five in the repo root. `AGENTS.md` and `CLAUDE.md` must agree on workflow rules,
 command lists, roadmap state, non-overclaiming rules, and benchmark rules.
@@ -17,37 +17,36 @@ command lists, roadmap state, non-overclaiming rules, and benchmark rules.
 ## Current handoff
 
 The repo's current release is `v0.2.1` (tagged on the release-PR merge commit, marked Latest), after
-`v0.2.0` (ded6e80) and `v0.1.0`. M0–M49 are
+`v0.2.0` (ded6e80) and `v0.1.0`. M0-M49 are
 merged. PR #101 (40f9249) and PR #102 (7092423)
 synchronized project-memory files after M35. PR #103 (0f2ceb7) inserted the repository-health
-refactor phase **M36–M42** and shifted the original networking/persistence roadmap after those
-refactors. PR #113 extended the future roadmap to **M43–M49**. M36–M42 landed as PR #104
+refactor phase **M36-M42** and shifted the original networking/persistence roadmap after those
+refactors. PR #113 extended the future roadmap to **M43-M49**. M36-M42 landed as PR #104
 (0d2b97a), PR #105 (a8c0485), PR #106 (9ccf157), PR #107 (880fbc7), PR #108 (b939730), PR #109
 (68061e6), and PR #111 (003504f). PR #112 (2369f84) closed issues #95, #28, and #26. PR #113
-(f3cc4dd) updated the future systems-engineering roadmap and agent guidance. M43–M49 landed as PR
+(f3cc4dd) updated the future systems-engineering roadmap and agent guidance. M43-M49 landed as PR
 #114 (29ed491), PR #115 (cd05b37), PR #117 (d10bfb0), PR #118 (aeba72c), PR #119 (93d5062),
 PR #123 (c643b62), and PR #124 (d8c16b2), with M45B provenance migration in PR #116 (b9ea27a) and
 the M47 storage diagnosis follow-up in PR #122 (548cb68). The Linux host artifact refresh landed as
-PR #125 (d9094df), and the **v0.2.0 release** — a bare-metal Linux evidence refresh, the
-partial-PMU reframe, and a full documentation staleness sweep — landed as PR #127 (ded6e80). The
+PR #125 (d9094df), and the **v0.2.0 release**, a bare-metal Linux evidence refresh, the
+partial-PMU reframe, and a full documentation staleness sweep, landed as PR #127 (ded6e80). The
 **v0.2.1 release** then adds two reprioritized backlog items and a consistency sweep: a Codex
 resume-anchor/PMU sweep (PR #129), a perf call-graph flamegraph + `make flamegraph` (PR #130,
 issue #32), the FIX-like text protocol adapter (PR #131, issue #29), and the version-bump release
-PR — merged in that order, with `v0.2.1` tagged on the release merge commit.
+PR, merged in that order, with `v0.2.1` tagged on the release merge commit.
 
-Since `v0.2.1`, a **post-v0.2.1 hardening + perf wave (#135–#146) is merged to `main` and
+Since `v0.2.1`, a **post-v0.2.1 hardening + perf wave (#135, #146) is merged to `main` and
 unreleased**, being cut as **`v0.2.2`**. It came out of a 4-round adversarial bug hunt (converged
 5→2→1→0 confirmed bugs) plus flamegraph-guided optimization. Security/robustness: out-of-domain enum
-rejection in the replay/protocol decoders (#136); network hardening — EINTR retry, accept fairness,
+rejection in the replay/protocol decoders (#136); network hardening. EINTR retry, accept fairness,
 connection cap, UDP send-error tracking, transient-accept survival, and threaded/epoll fd-exhaustion
-handling (#137, #140, #143); CLI arg validation (#141); a **real UBSan abort gate** —
-`-fno-sanitize-recover=undefined`, since UBSan previously ran in recover mode and exited 0 (#142);
+handling (#137, #140, #143); CLI arg validation (#141); a **real UBSan abort gate**, `-fno-sanitize-recover=undefined`, since UBSan previously ran in recover mode and exited 0 (#142);
 OCaml `diff_report` robustness (#144). Perf (measured A/B): `try_emplace` for baseline price levels
 (~+5%, #138) and an order-index hash load-factor cap (~+18.6%, #145), with the flamegraph regenerated
 (#135/#139/#146). `make check`/`make asan` 270/270 (the latter now under the real UBSan gate). The
 next action is to finish this `v0.2.2` doc/artifact overhaul and cut the tag.
 
-Background — Linux perf evidence (merged, now bare-metal partial PMU):
+Background. Linux perf evidence (merged, now bare-metal partial PMU):
 
 - Linux-only `make perf-stat` / `make perf-record` tooling exists with metadata-rich artifacts,
   dirty-tree/source-digest provenance, a three-way PMU classifier, and CI validation.
@@ -57,7 +56,7 @@ Background — Linux perf evidence (merged, now bare-metal partial PMU):
   evidence**, not "constrained Docker validation."
 - `cache-references`/`cache-misses` are `<not supported>` by the Apple Silicon PMU, so it is not
   *full* evidence. Issue #90 now tracks that cache-counter set specifically, which needs a PMU
-  microarchitecture that exposes it (x86_64, or an ARM server core) — bare metal alone is not enough.
+  microarchitecture that exposes it (x86_64, or an ARM server core), bare metal alone is not enough.
 
 To resume:
 
@@ -89,29 +88,29 @@ Current state:
 - latest synced main baseline: `ded6e80` (PR #127, v0.2.0); the `v0.2.1` baseline is the release-PR
   merge commit, after PRs #129/#130/#131
 - current active branch, if active: `docs/post-v0.2.1-overhaul` (v0.2.2 prep + doc/artifact sweep)
-- current active status: `v0.2.1` is the latest tag; a post-v0.2.1 hardening + perf wave (#135–#146)
+- current active status: `v0.2.1` is the latest tag; a post-v0.2.1 hardening + perf wave (#135, #146)
   is merged to `main` and unreleased, being cut as `v0.2.2` (decoder enum rejection, network/CLI
   hardening, a real UBSan abort gate, OCaml diff_report robustness, and two measured order-book perf
-  wins — `try_emplace` ~+5% and an index load-factor cap ~+18.6%). `make check` 270/270 and
+  wins, `try_emplace` ~+5% and an index load-factor cap ~+18.6%). `make check` 270/270 and
   `make asan` 270/270 (the latter now under the real UBSan gate) on the bare-metal Apple M2 Fedora
   Asahi host; every touched file passes the CI CodeScene Code Health gate
 - release tag: `v0.2.1` (Latest, tagged on the release-PR merge commit), after `v0.2.0` and `v0.1.0`;
   `v0.2.2` prepared on this branch, not yet tagged
-- open follow-up issue: #90 — narrowed to the full cache-counter PMU set; the bare-metal Apple host
+- open follow-up issue: #90, narrowed to the full cache-counter PMU set; the bare-metal Apple host
   provides real cycles/instructions/branches/branch-misses but no cache-reference/cache-miss support
 - issues #95, #28, and #26 were closed by PR #112; issues #32 and #29 were closed by PR #134 and
   PR #131 (now part of `v0.2.1`)
 - open review request issue: #94
-- legacy backlog: clear — #32 (flamegraph) and #29 (FIX adapter) shipped in `v0.2.1` (PR #134,
+- legacy backlog: clear, #32 (flamegraph) and #29 (FIX adapter) shipped in `v0.2.1` (PR #134,
   PR #131)
 
 ### Next milestone
 
-There is no active milestone. M0–M49 are merged, as are the v0.2.0/v0.2.1 releases and the
-post-v0.2.1 hardening + perf wave (#135–#146, being released as `v0.2.2`). The immediate next action
+There is no active milestone. M0-M49 are merged, as are the v0.2.0/v0.2.1 releases and the
+post-v0.2.1 hardening + perf wave (#135, #146, being released as `v0.2.2`). The immediate next action
 is to finish the `v0.2.2` doc/artifact overhaul (this branch) and cut the tag. After that the
 highest-value remaining work is non-code and externally gated: issue #94 (independent external
-review — needs a human reviewer) and issue #90 (full cache-counter PMU evidence — needs a PMU
+review, needs a human reviewer) and issue #90 (full cache-counter PMU evidence, needs a PMU
 microarchitecture that exposes cache events). Do not invent a new milestone without an explicit
 human request.
 
@@ -125,9 +124,9 @@ evidence, persistence/recovery benchmarking, and late-stage low-latency networki
 
 Current priority order (post-v0.2.1):
 
-1. Issue #94 — independent external technical review remains the single highest credibility gap
+1. Issue #94, independent external technical review remains the single highest credibility gap
    (human-gated; cannot be self-certified).
-2. Issue #90 — full cache-counter PMU evidence. The bare-metal Apple host gives real
+2. Issue #90, full cache-counter PMU evidence. The bare-metal Apple host gives real
    cycles/instructions/branches/branch-misses but no cache-reference/cache-miss counters, so this
    needs a PMU microarchitecture that exposes cache events (x86_64, or an ARM server core).
 3. No low-signal backlog remains: #32 (flamegraph) and #29 (FIX adapter) shipped in `v0.2.1`.
@@ -627,11 +626,11 @@ M0 should create `.github/pull_request_template.md`:
 ```markdown
 ## Milestone
 
-M__ — <name>
+M__, <name>
 
 ## Summary
 
-<2–5 sentences>
+<2-5 sentences>
 
 ## Definition of Done
 
@@ -778,20 +777,20 @@ rather than relying on memory.
 
 Local MCP/tooling model:
 
-- `codescene` — use for repository-health analysis, file Code Health review, branch/change-set
+- `codescene`, use for repository-health analysis, file Code Health review, branch/change-set
   review, and pre-commit Code Health safeguards.
-- `playwright` — use for browser automation and rendered web-flow verification when a task needs a
+- `playwright`, use for browser automation and rendered web-flow verification when a task needs a
   real browser-level check.
-- `filesystem` — available for MCP filesystem access scoped to this repository; normal shell/git
+- `filesystem`, available for MCP filesystem access scoped to this repository; normal shell/git
   file operations remain acceptable for ordinary repo edits.
-- `sequential_thinking` — use for complex multi-step planning, especially when refactor sequencing
+- `sequential_thinking`, use for complex multi-step planning, especially when refactor sequencing
   or risk tradeoffs need explicit structure.
-- `memory` — use only for durable project-memory facts that should survive sessions; do not store
+- `memory`, use only for durable project-memory facts that should survive sessions; do not store
   secrets or speculative notes.
-- `docker` — use for Docker/container lifecycle checks and Linux-container verification when a
+- `docker`, use for Docker/container lifecycle checks and Linux-container verification when a
   milestone calls for containerized validation.
-- `context7` — use for current library/tool documentation when exact external API behavior matters.
-- `node_repl` — use when JavaScript/browser-plugin workflows require the persistent Node-backed
+- `context7`, use for current library/tool documentation when exact external API behavior matters.
+- `node_repl`, use when JavaScript/browser-plugin workflows require the persistent Node-backed
   kernel.
 
 Postgres and Perplexity MCP servers are intentionally not configured. Do not assume database or
@@ -826,14 +825,14 @@ It fails if it becomes:
 
 # Jane Street Internship Targeting Addendum
 
-This section is additive. Preserve all earlier Quant Systems Lab handoff content. The project remains the same: a deterministic C++20 exchange-systems repo. This addendum adds Jane Street Hong Kong December–February internship targeting context and additional execution requirements.
+This section is additive. Preserve all earlier Quant Systems Lab handoff content. The project remains the same: a deterministic C++20 exchange-systems repo. This addendum adds Jane Street Hong Kong December-February internship targeting context and additional execution requirements.
 
 ## Role ranking for this user
 
 Use this project primarily for:
 
-1. **Jane Street Software Engineer Internship — Hong Kong — December–February**
-2. **Jane Street Linux Engineer Internship — Hong Kong — December–February**
+1. **Jane Street Software Engineer Internship. Hong Kong. December-February**
+2. **Jane Street Linux Engineer Internship. Hong Kong. December-February**
 
 Optional but lower priority:
 
@@ -881,7 +880,7 @@ Quant Systems Lab should therefore include:
 
 ## Additive milestone requirement
 
-Add **M14 — OCaml replay verifier** after final docs/hardening or as a late-stage dedicated milestone. Do not pull it into early C++ milestones.
+Add **M14. OCaml replay verifier** after final docs/hardening or as a late-stage dedicated milestone. Do not pull it into early C++ milestones.
 
 M14 exists to produce a targeted Jane Street SWE signal without corrupting the main C++ project.
 
@@ -892,7 +891,7 @@ M14 exists to produce a targeted Jane Street SWE signal without corrupting the m
 Use title:
 
 ```text
-Quant Systems Lab — C++20 Exchange Simulator + OCaml Replay Verifier
+Quant Systems Lab. C++20 Exchange Simulator + OCaml Replay Verifier
 ```
 
 Use bullets:
@@ -908,7 +907,7 @@ Use bullets:
 Use title:
 
 ```text
-Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
+Quant Systems Lab. Linux Systems + Exchange Infrastructure Simulator
 ```
 
 Use bullets:
@@ -979,23 +978,23 @@ Before every PR, check:
 8. Is OCaml isolated to the replay verifier, not mixed into the core engine prematurely?
 
 
-## Additive M15–M20 technical roadmap replacing old optional application polish
+## Additive M15-M20 technical roadmap replacing old optional application polish
 
-The prior optional `M15 — Jane Street application polish` milestone is removed. Do not implement recruiter-facing polish as the next milestone. The project should now continue with technical depth:
+The prior optional `M15. Jane Street application polish` milestone is removed. Do not implement recruiter-facing polish as the next milestone. The project should now continue with technical depth:
 
-1. **M15 — Export normalized command streams + final snapshots**
+1. **M15. Export normalized command streams + final snapshots**
    - Export complete command streams, engine events, rejections, symbol registration order, and final per-symbol snapshots.
    - This gives the OCaml side enough information to replay independently.
-2. **M16 — Independent OCaml replay engine**
+2. **M16. Independent OCaml replay engine**
    - OCaml replays the command stream immutably and computes its own final snapshot.
    - It must not merely inspect the C++ event log.
-3. **M17 — Differential replay tests: C++ vs OCaml snapshot equality**
+3. **M17. Differential replay tests: C++ vs OCaml snapshot equality**
    - CI compares C++ exported snapshots against OCaml-computed snapshots.
-4. **M18 — Property-based command generator**
+4. **M18. Property-based command generator**
    - Generate seeded randomized command streams covering valid, invalid, duplicate, reused, IOC, market, cancel, modify, and multi-symbol cases.
-5. **M19 — Shrinker + minimal failing fixture exporter**
+5. **M19. Shrinker + minimal failing fixture exporter**
    - Reduce failing generated streams to small, replayable counterexamples.
-6. **M20 — Final docs: differential testing architecture**
+6. **M20. Final docs: differential testing architecture**
    - Document the architecture, fixture schemas, property generator, shrinker, and exact limits.
 
 ### Strategic reason

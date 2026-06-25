@@ -6,7 +6,7 @@ reviewable.
 
 ## Workflow
 
-- **Never work on `main`.** All work happens on a scoped branch — milestone branches use the
+- **Never work on `main`.** All work happens on a scoped branch, milestone branches use the
   prefix that describes the work (`feat/mNN-slug`, `test/mNN-slug`, `docs/mNN-slug`,
   `perf/mNN-slug`, or `refactor/mNN-slug`), while backlog issue branches use names such as
   `feat/issue-NN-slug` or `fix/issue-NN-slug`. Use one scoped change per branch, merged via a
@@ -44,4 +44,4 @@ reproduced with the relevant opt-in targets, such as `make profile-io`, `make so
 ## Scope
 
 Keep changes within the project's scope (a deterministic exchange-systems lab). It is not a
-production exchange, a trading strategy, or connected to real markets — see `README.md`.
+production exchange, a trading strategy, or connected to real markets, see `README.md`.

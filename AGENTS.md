@@ -1,4 +1,4 @@
-# AGENTS.md — Quant Systems Lab
+# AGENTS.md. Quant Systems Lab
 
 > **Project memory for Codex. Auto-loaded every session. Keep it current.**
 > Starting or resuming work? Read this file → then `PROGRESS.md` → then `MILESTONES.md` → then `HANDOFF.md` → then run `/resume`.
@@ -29,7 +29,7 @@ The repo should look like disciplined human engineering, not a tutorial dump, no
 
 ---
 
-## Golden rules — non-negotiable
+## Golden rules, non-negotiable
 
 1. **Never commit or push to `main`.** All work happens on a feature branch.
 2. **One milestone = one feature branch = one squash-merge PR.**
@@ -68,7 +68,7 @@ The repo should look like disciplined human engineering, not a tutorial dump, no
 
 ---
 
-## Operating model — AI-first, human-in-the-loop
+## Operating model. AI-first, human-in-the-loop
 
 Codex does:
 
@@ -91,11 +91,11 @@ The human does:
 
 Resumability is anchored in:
 
-1. `CLAUDE.md` — canonical Claude Code project memory.
-2. `AGENTS.md` — Codex-facing mirror/adapter. Keep synchronized with `CLAUDE.md`.
-3. `MILESTONES.md` — ordered roadmap and milestone definitions.
-4. `PROGRESS.md` — live state and resume anchor.
-5. `HANDOFF.md` — operator manual tying the files together.
+1. `CLAUDE.md`, canonical Claude Code project memory.
+2. `AGENTS.md`. Codex-facing mirror/adapter. Keep synchronized with `CLAUDE.md`.
+3. `MILESTONES.md`, ordered roadmap and milestone definitions.
+4. `PROGRESS.md`, live state and resume anchor.
+5. `HANDOFF.md`, operator manual tying the files together.
 6. Git history and PR state.
 
 `AGENTS.md` and `CLAUDE.md` must agree on workflow rules, command lists, roadmap state,
@@ -163,7 +163,7 @@ Known constraints:
   from a bare-metal Apple M2 (aarch64) Fedora Asahi host: real
   `cycles`/`instructions`/`branches`/`branch-misses`, but `cache-references`/`cache-misses` are
   unsupported by the Apple Silicon PMU. Issue #90's residual is the cache-counter set specifically,
-  which needs a PMU microarchitecture that exposes it (x86_64, or an ARM server core) — bare metal
+  which needs a PMU microarchitecture that exposes it (x86_64, or an ARM server core), bare metal
   alone is not enough. Do not relabel it "full PMU evidence" or "constrained Docker validation". The
   `perf record` hot-symbol report (`results/perf_report_linux.txt`) is a **software cpu-clock
   sampling** profile, not PMU evidence.
@@ -177,14 +177,14 @@ optional add-on. For every substantive task, actively reach for the relevant ser
 falling back to ad-hoc shell:
 
 - `codescene` Code Health review on every file you touch, and `analyze_change_set` before opening
-  or updating any PR — a gate, not a nicety.
+  or updating any PR, a gate, not a nicety.
 - `git` / `github` for diffs, blame, history, and PR / issue / branch / commit / milestone review.
 - `qsl-results` (SQLite) to record and query benchmark history (storage / NUMA / false-sharing /
   perf / recovery) instead of re-parsing committed text artifacts.
 - `codex` for an independent second-opinion review of any non-trivial change before a milestone is
   finished.
 - `context7` for current docs of any library / framework / CLI / API before relying on its
-  behavior — do not answer from memory.
+  behavior, do not answer from memory.
 - `sequential_thinking` to structure multi-step refactor or risk planning.
 - `filesystem` for repository read / edit / search and the project docs (ADRs, MILESTONES.md,
   PROGRESS.md, HANDOFF.md, review docs).
@@ -196,28 +196,28 @@ rules). Never invent an MCP server or tool that is not configured.
 
 Local Codex client MCP servers currently configured:
 
-- `codescene` — use for repository-health analysis, file Code Health review, branch/change-set
+- `codescene`, use for repository-health analysis, file Code Health review, branch/change-set
   review, and pre-commit Code Health safeguards.
-- `playwright` — use for browser automation and rendered web-flow verification when a task needs a
+- `playwright`, use for browser automation and rendered web-flow verification when a task needs a
   real browser-level check.
-- `filesystem` — available for MCP filesystem access scoped to this repository; normal shell/git
+- `filesystem`, available for MCP filesystem access scoped to this repository; normal shell/git
   file operations remain acceptable for ordinary repo edits.
-- `sequential_thinking` — use for complex multi-step planning, especially when refactor sequencing
+- `sequential_thinking`, use for complex multi-step planning, especially when refactor sequencing
   or risk tradeoffs need explicit structure.
-- `memory` — use only for durable project-memory facts that should survive sessions; do not store
+- `memory`, use only for durable project-memory facts that should survive sessions; do not store
   secrets or speculative notes.
-- `docker` — use for Docker/container lifecycle checks and Linux-container verification when a
+- `docker`, use for Docker/container lifecycle checks and Linux-container verification when a
   milestone calls for containerized validation.
-- `context7` — use for current library/tool documentation when exact external API behavior matters.
-- `node_repl` — use when JavaScript/browser-plugin workflows require the persistent Node-backed
+- `context7`, use for current library/tool documentation when exact external API behavior matters.
+- `node_repl`, use when JavaScript/browser-plugin workflows require the persistent Node-backed
   kernel.
-- `codex` — Codex CLI exposed as an MCP server (`codex mcp-server`); use for an independent
+- `codex`. Codex CLI exposed as an MCP server (`codex mcp-server`); use for an independent
   second-opinion review of non-trivial changes before finishing a milestone.
-- `git` — structured git access (diffs, blame, log, branch) over this repo for artifact
+- `git`, structured git access (diffs, blame, log, branch) over this repo for artifact
   provenance, milestone audits, and release preparation.
-- `github` — official GitHub MCP server for PR review, issue/milestone tracking, branch and commit
+- `github`, official GitHub MCP server for PR review, issue/milestone tracking, branch and commit
   inspection, and release notes (needs a one-time OAuth via `/mcp`; the `gh` CLI is the fallback).
-- `qsl-results` — SQLite store of structured benchmark history (storage/NUMA/false-sharing/perf/
+- `qsl-results`. SQLite store of structured benchmark history (storage/NUMA/false-sharing/perf/
   recovery) so results are queryable instead of re-parsed from committed text artifacts.
 
 Postgres and Perplexity MCP servers are intentionally not configured. Do not assume database or
@@ -372,37 +372,37 @@ Avoid unnecessary dependencies. A small systems repo with clear primitives beats
 
 Keep this synchronized with the Makefile.
 
-- `make configure` — configure dev build
-- `make build` — build dev preset
-- `make test` — run CTest
-- `make check` — format check + build + tests
-- `make fmt` — apply clang-format
-- `make tidy` — clang-tidy target if available
-- `make bench` — run benchmark suite
-- `make bench-diff` — run differential harness benchmarks
-- `make bench-allocator` — run M28 allocator experiment
-- `make bench-storage` — run M32 storage experiment
-- `make bench-recovery` — run M46 recovery benchmarking (full-replay restart vs book rebuild)
-- `make perf-stat` — run Linux `perf stat` workflow where supported
-- `make perf-record` — run Linux `perf record/report` workflow where supported
-- `make flamegraph` — render a Linux `perf` call-graph flamegraph (SVG) where supported
-- `make numa-study` — run Linux CPU-affinity / scheduler-migration / NUMA-locality study where supported
-- `make false-sharing-study` — run benchmark-only packed-vs-padded SPSC cursor contention study
-- `make profile-io` — run Linux syscall/socket-path profiling where supported
-- `make socket-load` — Linux multi-client TCP connection-scaling load experiment
-- `make asan` — build/run sanitizer preset
-- `make tsan` — build/run ThreadSanitizer concurrency tests
-- `make concurrency-stress` — opt-in repeated concurrency validation loop
-- `make socket-stress` — UDP socket-buffer / burst-loss experiment
-- `make crash-recovery` — SIGKILL crash / torn-tail recovery validation for the event log
-- `make dpdk-check` — run the M48 non-mutating DPDK environment support check
-- `make nic-offload-check` — run the M49 non-mutating NIC offload/timestamping capability check
-- `make demo` — run local replay + TCP gateway demo
-- `make check-fixtures` — regenerate and verify differential fixtures
-- `make check-manifest` — verify fixture provenance manifest
-- `make determinism` — verify fixture determinism across compilers where supported
-- `make divergence-demo` — exercise the shrinker on an injected divergence
-- `make clean` — remove build artifacts
+- `make configure`, configure dev build
+- `make build`, build dev preset
+- `make test`, run CTest
+- `make check`, format check + build + tests
+- `make fmt`, apply clang-format
+- `make tidy`, clang-tidy target if available
+- `make bench`, run benchmark suite
+- `make bench-diff`, run differential harness benchmarks
+- `make bench-allocator`, run M28 allocator experiment
+- `make bench-storage`, run M32 storage experiment
+- `make bench-recovery`, run M46 recovery benchmarking (full-replay restart vs book rebuild)
+- `make perf-stat`, run Linux `perf stat` workflow where supported
+- `make perf-record`, run Linux `perf record/report` workflow where supported
+- `make flamegraph`, render a Linux `perf` call-graph flamegraph (SVG) where supported
+- `make numa-study`, run Linux CPU-affinity / scheduler-migration / NUMA-locality study where supported
+- `make false-sharing-study`, run benchmark-only packed-vs-padded SPSC cursor contention study
+- `make profile-io`, run Linux syscall/socket-path profiling where supported
+- `make socket-load`. Linux multi-client TCP connection-scaling load experiment
+- `make asan`, build/run sanitizer preset
+- `make tsan`, build/run ThreadSanitizer concurrency tests
+- `make concurrency-stress`, opt-in repeated concurrency validation loop
+- `make socket-stress`. UDP socket-buffer / burst-loss experiment
+- `make crash-recovery`. SIGKILL crash / torn-tail recovery validation for the event log
+- `make dpdk-check`, run the M48 non-mutating DPDK environment support check
+- `make nic-offload-check`, run the M49 non-mutating NIC offload/timestamping capability check
+- `make demo`, run local replay + TCP gateway demo
+- `make check-fixtures`, regenerate and verify differential fixtures
+- `make check-manifest`, verify fixture provenance manifest
+- `make determinism`, verify fixture determinism across compilers where supported
+- `make divergence-demo`, exercise the shrinker on an injected divergence
+- `make clean`, remove build artifacts
 
 Run `make check` before every PR.
 
@@ -890,7 +890,7 @@ The project fails if it becomes:
 
 ---
 
-# Jane Street Hong Kong December–February Internship Addendum
+# Jane Street Hong Kong December-February Internship Addendum
 
 This section is additive project context. Do not delete or weaken any earlier Quant Systems Lab instructions. The repo remains a C++20 exchange-systems project. This addendum sharpens the project for Jane Street Software Engineering and Linux Engineering internship applications.
 
@@ -898,16 +898,16 @@ This section is additive project context. Do not delete or weaken any earlier Qu
 
 Primary target:
 
-1. **Software Engineer Internship, December–February — Hong Kong**
+1. **Software Engineer Internship, December-February. Hong Kong**
 
 Secondary target:
 
-2. **Linux Engineer Internship, December–February — Hong Kong**
+2. **Linux Engineer Internship, December-February. Hong Kong**
 
 Lower-priority optional targets:
 
-3. **Strategy and Product Internship, December–February — Hong Kong**
-4. **IT Operations Engineer Internship, December–February — Hong Kong**
+3. **Strategy and Product Internship, December-February. Hong Kong**
+4. **IT Operations Engineer Internship, December-February. Hong Kong**
 
 Do not optimize the repo for IT Operations. IT Ops is a weaker signal for the user's stated goal. The repo should optimize for elite technical software/systems roles.
 
@@ -973,7 +973,7 @@ The same repo must support two résumé framings.
 Project title:
 
 ```text
-Quant Systems Lab — C++20 Exchange Simulator + OCaml Replay Verifier
+Quant Systems Lab. C++20 Exchange Simulator + OCaml Replay Verifier
 ```
 
 Resume bullets:
@@ -989,7 +989,7 @@ Resume bullets:
 Project title:
 
 ```text
-Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
+Quant Systems Lab. Linux Systems + Exchange Infrastructure Simulator
 ```
 
 Resume bullets:
@@ -1087,21 +1087,21 @@ Do not build a dashboard before the engine is real. Do not build trading strateg
 
 ## Additive M15-M20 technical roadmap replacing old optional application polish
 
-The prior optional `M15 — Jane Street application polish` milestone is removed. Do not implement recruiter-facing polish as the next milestone. The project should now continue with technical depth:
+The prior optional `M15. Jane Street application polish` milestone is removed. Do not implement recruiter-facing polish as the next milestone. The project should now continue with technical depth:
 
-1. **M15 — Export normalized command streams + final snapshots**
+1. **M15. Export normalized command streams + final snapshots**
    - Export complete command streams, engine events, rejections, symbol registration order, and final per-symbol snapshots.
    - This gives the OCaml side enough information to replay independently.
-2. **M16 — Independent OCaml replay engine**
+2. **M16. Independent OCaml replay engine**
    - OCaml replays the command stream immutably and computes its own final snapshot.
    - It must not merely inspect the C++ event log.
-3. **M17 — Differential replay tests: C++ vs OCaml snapshot equality**
+3. **M17. Differential replay tests: C++ vs OCaml snapshot equality**
    - CI compares C++ exported snapshots against OCaml-computed snapshots.
-4. **M18 — Property-based command generator**
+4. **M18. Property-based command generator**
    - Generate seeded randomized command streams covering valid, invalid, duplicate, reused, IOC, market, cancel, modify, and multi-symbol cases.
-5. **M19 — Shrinker + minimal failing fixture exporter**
+5. **M19. Shrinker + minimal failing fixture exporter**
    - Reduce failing generated streams to small, replayable counterexamples.
-6. **M20 — Final docs: differential testing architecture**
+6. **M20. Final docs: differential testing architecture**
    - Document the architecture, fixture schemas, property generator, shrinker, and exact limits.
 
 ### Strategic reason
@@ -1154,8 +1154,7 @@ The correct claim after this arc is:
 > "correctness-first deterministic exchange-systems lab with measured concurrency, allocator,
 > bare-metal partial-PMU Linux perf, and socket-profiling evidence."
 
-Real hardware PMU evidence now exists on a bare-metal Apple M2 (aarch64) Fedora Asahi host —
-`cycles`/`instructions`/`branches`/`branch-misses` are genuine counters. Do not claim *full* PMU
+Real hardware PMU evidence now exists on a bare-metal Apple M2 (aarch64) Fedora Asahi host, `cycles`/`instructions`/`branches`/`branch-misses` are genuine counters. Do not claim *full* PMU
 evidence (the Apple Silicon PMU does not expose `cache-references`/`cache-misses`), and do not call
 the current artifacts "constrained Docker validation" either: they are **partial hardware PMU
 evidence**. Issue #90's residual is the cache-counter set, which needs a PMU microarchitecture that
@@ -1204,12 +1203,12 @@ M29 currently means:
 M29 now means **partial hardware PMU evidence**: the committed artifacts were regenerated on a
 bare-metal Apple M2 (aarch64) Fedora Asahi host (`systemd-detect-virt` reports `none`), where
 `perf stat` reads genuine `cycles`/`instructions`/`branches`/`branch-misses` counters off the Apple
-Avalanche P-core PMU. They are no longer "constrained Docker validation" — but they are not *full*
+Avalanche P-core PMU. They are no longer "constrained Docker validation", but they are not *full*
 PMU evidence either, because the Apple Silicon PMU does not expose `cache-references`/`cache-misses`.
 
 Issue #90 now tracks only that residual: a *full* counter set (including cache events) requires a
 PMU microarchitecture that exposes those events to Linux (e.g. an x86_64 Intel/AMD host, or an ARM
-server core such as Graviton/Ampere) — not "more bare metal." Treat this as: problem identified ->
+server core such as Graviton/Ampere), not "more bare metal." Treat this as: problem identified ->
 limitation documented -> follow-up issue created -> acceptance criteria defined. This is intentional
 engineering transparency, not a repo deficiency.
 
@@ -1249,7 +1248,7 @@ realistic deterministic synthetic flow model, and portable threaded TCP serving.
 docs-only roadmap audit branch updates future systems-engineering scope; it does not rewrite
 completed milestone history.
 
-Original roadmap after M35 shifted +7 and this audit extends it to **M43–M49**: M43 NUMA/CPU
+Original roadmap after M35 shifted +7 and this audit extends it to **M43-M49**: M43 NUMA/CPU
 affinity and scheduler-migration study; M44 ingress queue memory-ordering and false-sharing study;
 M45 exchange-grade persistence prototype; M46 recovery benchmarking; M47 contiguous order-book
 storage and cache-locality study; M48 DPDK research/prototype; M49 NIC offload and low-latency
@@ -1265,12 +1264,12 @@ resume-anchor/PMU sweep (PR #129), a perf call-graph flamegraph + `make flamegra
 superseding the auto-closed #130, closing #32), and the FIX-like text protocol adapter (PR #131,
 closing #29), with the version bump on the release PR.
 
-Since `v0.2.1`, a post-v0.2.1 hardening + perf wave (PRs #135–#146) is merged to `main` and
+Since `v0.2.1`, a post-v0.2.1 hardening + perf wave (PRs #135, #146) is merged to `main` and
 unreleased, being cut as **`v0.2.2`**. It came out of a 4-round adversarial bug hunt (converged
 5→2→1→0 confirmed) plus flamegraph-guided optimization. Security/robustness: out-of-domain enum
-rejection in the replay/protocol decoders (#136); network hardening — EINTR retry, accept fairness,
+rejection in the replay/protocol decoders (#136); network hardening. EINTR retry, accept fairness,
 connection cap, UDP send-error tracking, transient-accept survival, and threaded/epoll fd-exhaustion
-handling (#137, #140, #143); CLI arg validation (#141); a **real UBSan abort gate** — the `asan`
+handling (#137, #140, #143); CLI arg validation (#141); a **real UBSan abort gate**, the `asan`
 preset now sets `-fno-sanitize-recover=undefined`, since UBSan previously ran in recover mode and
 exited 0, so pure-UBSan defects passed CI green (#142); OCaml `diff_report` per-fixture robustness
 (#144). Perf (measured back-to-back A/B): `try_emplace` for baseline price levels (~+5%, #138) and

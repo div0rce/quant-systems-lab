@@ -98,16 +98,20 @@ bool at_capacity(const std::vector<ConnectionWorker> &workers, std::size_t cap) 
 
 // accept() can fail transiently without the listener being broken: a signal (EINTR) or a peer that
 // RSTs between the kernel completing the handshake and accept() returning (ECONNABORTED, and
-// related per-connection errnos). These must not tear the server down — only a genuinely fatal
+// related per-connection errnos). These must not tear the server down, only a genuinely fatal
 // listener error (e.g. EBADF/EINVAL) should. Mirrors the epoll path's is_transient_accept_error().
 bool transient_accept_errno() noexcept {
-    static constexpr int kTransient[] = {EINTR,     ECONNABORTED, EPROTO,       ENETDOWN,
-                                         EHOSTDOWN, ENONET,       EHOSTUNREACH, ENETUNREACH};
+    // The full set of already-pending per-connection network errors Linux accept(2) can surface,
+    // matching the epoll path's is_transient_accept_error() (it previously omitted ENOPROTOOPT and
+    // EOPNOTSUPP, so those two were wrongly fatal in the threaded acceptor).
+    static constexpr int kTransient[] = {EINTR,       ECONNABORTED, EPROTO, ENETDOWN,
+                                         ENOPROTOOPT, EHOSTDOWN,    ENONET, EHOSTUNREACH,
+                                         EOPNOTSUPP,  ENETUNREACH};
     return std::find(std::begin(kTransient), std::end(kTransient), errno) != std::end(kTransient);
 }
 
 // Descriptor/resource exhaustion: out of fds (process or system-wide) or kernel buffers. Like the
-// epoll path, this must not tear the server down — the condition clears as clients disconnect and
+// epoll path, this must not tear the server down, the condition clears as clients disconnect and
 // their worker threads close their sockets. It cannot be added to transient_accept_errno() (an
 // immediate retry would just re-fail, since the pending connection stays in the backlog), so the
 // acceptor backs off briefly between retries instead of busy-spinning.

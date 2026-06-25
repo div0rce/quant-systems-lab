@@ -1,4 +1,4 @@
-# MILESTONES.md — Quant Systems Lab build plan
+# MILESTONES.md. Quant Systems Lab build plan
 
 Sequential, dependency-ordered. **Build them in order.** Each milestone is one feature branch and one squash-merge PR. Do not skip ahead; later milestones assume earlier ones exist.
 
@@ -17,7 +17,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M0 — Scaffold, tooling, CI
+## M0. Scaffold, tooling, CI
 
 - **Branch:** `feat/m00-scaffold`
 - **PR title:** `chore: scaffold C++ project, tooling, and CI`
@@ -54,7 +54,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M1 — Core exchange domain types and invariants
+## M1. Core exchange domain types and invariants
 
 - **Branch:** `feat/m01-core-domain`
 - **PR title:** `feat: core exchange domain types and invariants`
@@ -89,7 +89,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M2 — Binary protocol encoding and decoding
+## M2. Binary protocol encoding and decoding
 
 - **Branch:** `feat/m02-binary-protocol`
 - **PR title:** `feat: binary protocol encoding and decoding`
@@ -121,7 +121,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M3 — Price-time priority order book
+## M3. Price-time priority order book
 
 - **Branch:** `feat/m03-order-book`
 - **PR title:** `feat: price-time priority order book`
@@ -156,7 +156,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M4 — Multi-symbol matching engine
+## M4. Multi-symbol matching engine
 
 - **Branch:** `feat/m04-matching-engine`
 - **PR title:** `feat: multi-symbol matching engine`
@@ -185,7 +185,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M5 — Deterministic risk checks and in-process order gateway
+## M5. Deterministic risk checks and in-process order gateway
 
 - **Branch:** `feat/m05-risk-gateway`
 - **PR title:** `feat: deterministic risk checks and in-process order gateway`
@@ -218,7 +218,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M6 — Market data event publisher
+## M6. Market data event publisher
 
 - **Branch:** `feat/m06-market-data`
 - **PR title:** `feat: market data event publisher`
@@ -247,7 +247,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M7 — Append-only event log
+## M7. Append-only event log
 
 - **Branch:** `feat/m07-event-log`
 - **PR title:** `feat: append-only event log`
@@ -277,7 +277,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M8 — Deterministic replay and recovery
+## M8. Deterministic replay and recovery
 
 - **Branch:** `feat/m08-replay-recovery`
 - **PR title:** `feat: deterministic replay and recovery`
@@ -305,7 +305,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M9 — TCP binary order gateway
+## M9. TCP binary order gateway
 
 - **Branch:** `feat/m09-tcp-gateway`
 - **PR title:** `feat: TCP binary order gateway`
@@ -336,7 +336,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M10 — Network market data publisher
+## M10. Network market data publisher
 
 - **Branch:** `feat/m10-network-market-data`
 - **PR title:** `feat: network market data publisher`
@@ -364,7 +364,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M11 — Benchmarks and performance reporting
+## M11. Benchmarks and performance reporting
 
 - **Branch:** `feat/m11-benchmarks`
 - **PR title:** `perf: benchmark matching, protocol, gateway, and replay`
@@ -396,7 +396,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M12 — Hardening with sanitizers and invariant tests
+## M12. Hardening with sanitizers and invariant tests
 
 - **Branch:** `feat/m12-hardening`
 - **PR title:** `test: harden engine with sanitizers and invariant tests`
@@ -426,7 +426,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## M13 — Final architecture, demo, and recruiting polish
+## M13. Final architecture, demo, and recruiting polish
 
 - **Branch:** `feat/m13-docs-polish`
 - **PR title:** `docs: final architecture, demo, and recruiting polish`
@@ -458,10 +458,10 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 
 ---
 
-## Backlog — optional after M13 only
+## Backlog, optional after M13 only
 
-> **Execution status (historical).** This backlog was tracked as GitHub issues #24–#51. Items
-> **#34–#51 were completed and merged before v0.1.0** (differential follow-ups, shrinker
+> **Execution status (historical).** This backlog was tracked as GitHub issues #24, #51. Items
+> **#34, #51 were completed and merged before v0.1.0** (differential follow-ups, shrinker
 > improvements, oracle hardening, larger property corpus, regression archive, and
 > differential-harness benchmarks). Several remaining issues are **promoted into the Phase III/IV
 > roadmap** (issue → milestone): **#24 → M24** (ring buffer), **#26 → M26** (threaded pipeline),
@@ -472,7 +472,7 @@ Sequential, dependency-ordered. **Build them in order.** Each milestone is one f
 > accept) and **#28** (realistic synthetic order-flow model). The human later reprioritized two
 > backlog items, now **done**: **#32** (perf/flamegraph) and **#29** (FIX-like text protocol
 > adapter). The genuinely **deferred** product/API items remain **#30** (web dashboard), **#31**
-> (Docker packaging), and **#33** (Pages site) — do not start them before the Phase III/IV systems
+> (Docker packaging), and **#33** (Pages site), do not start them before the Phase III/IV systems
 > roadmap unless the human explicitly reprioritizes.
 
 Do not pull backlog items into earlier PRs.
@@ -482,21 +482,21 @@ Do not pull backlog items into earlier PRs.
 - Multithreaded gateway and market data pipeline, plus portable threaded TCP serving follow-up. (#26)
 - ThreadSanitizer coverage. (#27)
 - More realistic synthetic order-flow model. (#28)
-- FIX-like text protocol adapter. (#29) — **done**: `tag=value` SOH-framed adapter
+- FIX-like text protocol adapter. (#29), **done**: `tag=value` SOH-framed adapter
   (`include/qsl/protocol/fix.hpp`, `src/protocol/fix.cpp`) over the same internal structs as the
   binary codec, with genuine FIX BeginString/BodyLength/CheckSum framing for NewOrderSingle (35=D)
   and OrderCancelRequest (35=F). Cross-codec equivalence + malformed-input rejection tested in
   `tests/unit/test_fix_protocol.cpp`; docs in `docs/fix_protocol.md`.
 - Web dashboard for visualization. (#30)
 - Docker packaging. (#31)
-- Perf/flamegraph docs. (#32) — **done**: `make flamegraph` renders a perf call-graph flamegraph
+- Perf/flamegraph docs. (#32), **done**: `make flamegraph` renders a perf call-graph flamegraph
   via the dependency-free `scripts/flamegraph.py` (`results/flamegraph.svg` + `.txt`), unit-tested in
   `tests/shell/test_flamegraph.sh`. Full hardware cache-PMU evidence stays in #90.
 - GitHub Pages documentation site. (#33)
 
 ### Differential-testing follow-ups (prioritized)
 
-**Definitely track — differential oracle self-test.** Deliberately inject a known C++≠OCaml
+**Definitely track, differential oracle self-test.** Deliberately inject a known C++≠OCaml
 mismatch and assert end-to-end: (1) the differential test fails, (2) the failure is detected
 correctly, (3) the shrinker reduces the failing stream, (4) the resulting minimal fixture
 reproduces the mismatch. This tests the fire alarm, not just the building. (#34)
@@ -504,9 +504,9 @@ reproduces the mismatch. This tests the fire alarm, not just the building. (#34)
 High:
 
 - CI seed sweep: generate seeds 1..N dynamically in CI instead of relying on only the 8
-  committed property seeds — stronger differential coverage. (#35)
+  committed property seeds, stronger differential coverage. (#35)
 - Dedicated negative fixtures for `best_bid`, `best_ask`, `trades` (trade_count), and bid-side
-  `level` lines (today only ask-level qty, `last_seq`, and `order_count` are covered) — cheap,
+  `level` lines (today only ask-level qty, `last_seq`, and `order_count` are covered), cheap,
   improves oracle robustness. (#36)
 - Synthetic divergence demonstration: show the shrinker finding a real C++≠OCaml failure rather
   than only the artificial "produces a trade" predicate. (#37)
@@ -526,7 +526,7 @@ Medium:
   the Linux golden check against macOS-committed fixtures). (#45)
 - **Differential failure artifact bundle (highest-value addition):** on a CI divergence, save and
   upload as artifacts the original stream, the shrunk stream, the C++ output, the OCaml output,
-  and the unified diff — mirrors mature fuzzing/differential systems and makes debugging easy. (#40)
+  and the unified diff, mirrors mature fuzzing/differential systems and makes debugging easy. (#40)
 - Shrinker effectiveness metrics: report original/final command counts, reduction %, and shrink
   iterations during CI. (#46)
 - Seed reproducibility manifest: record generator version, seed, and fixture hash so future
@@ -535,11 +535,11 @@ Medium:
 Medium-Low:
 
 - Mutation testing for the oracle: intentionally corrupt snapshots, trade counts, best bid/ask,
-  and sequence numbers, and verify the differential layer detects each — validates the checker. (#48)
+  and sequence numbers, and verify the differential layer detects each, validates the checker. (#48)
 
 Low:
 
-- Larger committed corpus (e.g. prop_seed1..50) — more confidence, lower signal per maintenance. (#49)
+- Larger committed corpus (e.g. prop_seed1..50), more confidence, lower signal per maintenance. (#49)
 - Historical regression archive: keep a folder of important shrunk failures discovered over time
   (useful once real bugs are ever found). (#50)
 - Performance benchmarks for the differential harness. (#51)
@@ -573,9 +573,9 @@ docs/linux_performance.md
 docs/socket_gateway.md
 ```
 
-These docs should evolve gradually. They may start as placeholders in M0, but should become substantive by M9–M13.
+These docs should evolve gradually. They may start as placeholders in M0, but should become substantive by M9-M13.
 
-## M14 — OCaml replay verifier
+## M14. OCaml replay verifier
 
 - **Branch:** `feat/m14-ocaml-replay-verifier`
 - **PR title:** `feat: OCaml replay verifier for exchange event logs`
@@ -633,7 +633,7 @@ ocaml/bin/verify_replay.ml <event-log-fixture>
 - [ ] Root README references the OCaml verifier only after it exists.
 - [ ] `PROGRESS.md` updated.
 
-## M15 — Export normalized command streams + final snapshots
+## M15. Export normalized command streams + final snapshots
 
 - **Branch:** `feat/m15-export-command-streams-and-snapshots`
 - **PR title:** `feat: export normalized command streams and final snapshots`
@@ -678,7 +678,7 @@ Add or extend tooling so the C++ side can export deterministic fixtures containi
 - [ ] `dune runtest --root ocaml` passes.
 - [ ] `PROGRESS.md` updated.
 
-## M16 — Independent OCaml replay engine
+## M16. Independent OCaml replay engine
 
 - **Branch:** `feat/m16-independent-ocaml-replay-engine`
 - **PR title:** `feat: independently replay command streams in OCaml`
@@ -729,7 +729,7 @@ Implement OCaml modules for:
 - [ ] Docs state exact limitations.
 - [ ] `PROGRESS.md` updated.
 
-## M17 — Differential replay tests: C++ vs OCaml snapshot equality
+## M17. Differential replay tests: C++ vs OCaml snapshot equality
 
 - **Branch:** `feat/m17-differential-replay-tests`
 - **PR title:** `test: compare C++ and OCaml replay snapshots`
@@ -760,7 +760,7 @@ Add test harnesses that:
 - [ ] `dune runtest --root ocaml` passes.
 - [ ] `PROGRESS.md` updated.
 
-## M18 — Property-based command generator
+## M18. Property-based command generator
 
 - **Branch:** `feat/m18-property-command-generator`
 - **PR title:** `test: generate property-based market command streams`
@@ -803,7 +803,7 @@ Generated streams must be replayable by both C++ and OCaml. Seeds must be printe
 - [ ] `dune runtest --root ocaml` passes.
 - [ ] `PROGRESS.md` updated.
 
-## M19 — Shrinker + minimal failing fixture exporter
+## M19. Shrinker + minimal failing fixture exporter
 
 - **Branch:** `feat/m19-shrinker-minimal-failing-fixtures`
 - **PR title:** `test: shrink failing command streams to minimal fixtures`
@@ -839,7 +839,7 @@ Implement shrink strategy for failing command streams:
 - [ ] `dune runtest --root ocaml` passes.
 - [ ] `PROGRESS.md` updated.
 
-## M20 — Final docs: differential testing architecture
+## M20. Final docs: differential testing architecture
 
 - **Branch:** `feat/m20-differential-testing-docs`
 - **PR title:** `docs: document differential replay and property testing architecture`
@@ -885,7 +885,7 @@ Document:
 - [ ] `dune runtest --root ocaml` passes.
 - [ ] `PROGRESS.md` updated.
 
-## M21 — Repository license and maintainer docs
+## M21. Repository license and maintainer docs
 
 - **Branch:** `feat/m21-repo-license-maintainer-docs`
 - **PR title:** `chore: add repository license and maintainer docs`
@@ -918,11 +918,11 @@ corporate open-source governance theater.
   benchmark numbers must be reproducible from committed scripts.
 - `SECURITY.md` documents: no bug bounty; local/demo TCP/UDP services are unauthenticated and
   loopback-focused; do not expose `qsl-gateway` or `qsl-mdfeed` to untrusted networks; report
-  issues through GitHub issues or maintainer contact; honest language — this is a systems lab,
+  issues through GitHub issues or maintainer contact; honest language, this is a systems lab,
   not a hardened production service.
-- `CHANGELOG.md` starts with: Unreleased; M15–M20 Phase II differential-testing roadmap; M14
+- `CHANGELOG.md` starts with: Unreleased; M15-M20 Phase II differential-testing roadmap; M14
   OCaml replay verifier; M12 sanitizer/fuzz/invariant hardening; M11 measured benchmarks;
-  M7/M8 replay log and recovery; M3–M6 matching/risk/market-data core.
+  M7/M8 replay log and recovery; M3-M6 matching/risk/market-data core.
 
 ### Definition of Done
 
@@ -935,7 +935,7 @@ corporate open-source governance theater.
 - [ ] `dune runtest --root ocaml` passes.
 - [ ] PR opened and not merged.
 
-## M22 — Release readiness audit
+## M22. Release readiness audit
 
 - **Branch:** `feat/m22-release-readiness-audit`
 - **PR title:** `docs: audit release readiness`
@@ -976,11 +976,11 @@ substance, not marketing.
 - [ ] No fake production claims.
 - [ ] PR opened and not merged.
 
-## M23 — Optional v0.1.0 release
+## M23. Optional v0.1.0 release
 
 - **Branch:** `feat/m23-v0-1-0-release`
 - **PR title:** `chore: prepare v0.1.0 release notes`
-- **Suggested release title:** `v0.1.0 — deterministic exchange systems lab`
+- **Suggested release title:** `v0.1.0, deterministic exchange systems lab`
 
 ### Goal
 
@@ -989,7 +989,7 @@ audit are complete. This is optional and requires explicit human approval.
 
 ### Scope
 
-- Only start if M20–M22 are merged and the human explicitly approves a release.
+- Only start if M20-M22 are merged and the human explicitly approves a release.
 - Create release notes for `v0.1.0`.
 - Do not package the project.
 - Do not publish to Homebrew, vcpkg, Conan, opam, pip, npm, or Docker.
@@ -1029,11 +1029,11 @@ The project is strong enough when a reviewer can quickly infer:
 
 v0.1.0 proved a correctness-first deterministic exchange-systems lab. Phase III/IV is the next
 deliberate credibility arc: real concurrency, memory discipline, Linux profiling, socket
-hardening, and external review signal — not more product surface area.
+hardening, and external review signal, not more product surface area.
 
 ## Phase III / IV execution rule
 
-Do M24–M49 **in order**, except that issue #90 can be worked as an evidence follow-up as soon as a
+Do M24-M49 **in order**, except that issue #90 can be worked as an evidence follow-up as soon as a
 PMU-capable Linux host is available. Do not skip to Linux perf/socket work before the concurrency
 primitive and threaded pipeline exist. Do not start external review before there is enough evidence
 to review.
@@ -1069,11 +1069,11 @@ to review.
 
 After PR #89, prioritize:
 
-1. Issue #90 — generate full Linux hardware PMU perf artifacts on a PMU-capable Linux target.
-2. M30 — socket/kernel profiling.
-3. M31 — external review signal.
-4. M32 — pool-backed order-book integration.
-5. M33 — advanced concurrency validation.
+1. Issue #90, generate full Linux hardware PMU perf artifacts on a PMU-capable Linux target.
+2. M30, socket/kernel profiling.
+3. M31, external review signal.
+4. M32, pool-backed order-book integration.
+5. M33, advanced concurrency validation.
 
 These items produce more systems-engineering signal than more isolated microbenchmarks.
 Future CPU locality, false-sharing, contiguous-storage, and external-review evidence should remain
@@ -1081,7 +1081,7 @@ ahead of speculative DPDK/NIC exploration because they exercise the current code
 
 Forbidden throughout: production-grade/HFT/real-exchange/formally-verified/profitable/guaranteed-
 low-latency/production-networking claims; and dashboards, trading strategies, market-data APIs,
-FIX adapters, Docker packaging, or Pages sites (the deferred #29–#31 and #33) before this arc completes.
+FIX adapters, Docker packaging, or Pages sites (the deferred #29, #31 and #33) before this arc completes.
 
 ## Roadmap audit decisions after PR #112
 
@@ -1113,7 +1113,7 @@ Rejected additions:
 
 ---
 
-## M24 — Bounded SPSC ring buffer
+## M24. Bounded SPSC ring buffer
 
 - **Branch:** `feat/m24-spsc-ring-buffer`
 - **PR title:** `feat: add bounded SPSC ring buffer`
@@ -1143,7 +1143,7 @@ marketing language unless the implementation actually qualifies, no benchmark cl
 
 ---
 
-## M25 — Memory-ordering and concurrency evidence package
+## M25. Memory-ordering and concurrency evidence package
 
 - **Branch:** `feat/m25-memory-ordering-evidence`
 - **PR title:** `docs: document concurrency ownership and memory ordering`
@@ -1167,7 +1167,7 @@ marketing language unless the implementation actually qualifies, no benchmark cl
 
 ---
 
-## M26 — Multithreaded gateway-engine-feed pipeline prototype
+## M26. Multithreaded gateway-engine-feed pipeline prototype
 
 - **Branch:** `feat/m26-threaded-pipeline`
 - **PR title:** `feat: add threaded gateway-engine-feed pipeline prototype`
@@ -1191,7 +1191,7 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
 
 ---
 
-## M27 — ThreadSanitizer coverage
+## M27. ThreadSanitizer coverage
 
 - **Branch:** `feat/m27-thread-sanitizer`
 - **PR title:** `test: add ThreadSanitizer coverage for concurrent pipeline`
@@ -1214,7 +1214,7 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
 
 ---
 
-## M28 — Memory pool allocator experiment
+## M28. Memory pool allocator experiment
 
 - **Branch:** `feat/m28-memory-pool-allocator`
 - **PR title:** `perf: add memory pool allocator experiment`
@@ -1237,7 +1237,7 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
 
 ---
 
-## M29 — Linux perf profiling workflow and artifacts
+## M29. Linux perf profiling workflow and artifacts
 
 - **Branch:** `feat/m29-linux-perf-profiling`
 - **PR title:** `perf: add Linux perf profiling artifacts`
@@ -1269,7 +1269,7 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
 
 ---
 
-## M30 — Kernel/socket path profiling and Linux socket hardening
+## M30. Kernel/socket path profiling and Linux socket hardening
 
 - **Branch:** `feat/m30-socket-profiling-hardening`
 - **PR title:** `perf: profile and harden Linux socket path`
@@ -1293,7 +1293,7 @@ No production matching-latency attempt, no MPMC queue, no kernel bypass, no real
 
 ---
 
-## M31 — External review / maintainer signal
+## M31. External review / maintainer signal
 
 - **Branch:** `docs/m31-external-review`
 - **PR title:** `docs: prepare external review package`
@@ -1369,7 +1369,7 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 ---
 
-## M32 — Pool-backed order-book storage experiment
+## M32. Pool-backed order-book storage experiment
 
 - **Branch:** `feat/m32-pool-backed-order-book-storage`
 - **PR title:** `perf: evaluate pool-backed order-book storage`
@@ -1400,7 +1400,7 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 ---
 
-## M33 — Advanced concurrency validation
+## M33. Advanced concurrency validation
 
 - **Branch:** `feat/m33-advanced-concurrency-validation`
 - **PR title:** `test: expand concurrency validation methodology`
@@ -1423,7 +1423,7 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 ---
 
-## M34 — epoll gateway architecture
+## M34, epoll gateway architecture
 
 - **Branch:** `feat/m34-epoll-gateway-architecture`
 - **PR title:** `feat: add epoll gateway architecture prototype`
@@ -1445,7 +1445,7 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 ---
 
-## M35 — Multi-client load and socket-pressure testing
+## M35. Multi-client load and socket-pressure testing
 
 - **Branch:** `feat/m35-multi-client-socket-pressure`
 - **PR title:** `test: add multi-client socket pressure coverage`
@@ -1471,15 +1471,15 @@ work without pretending the M28 allocator microbenchmark already changed the eng
 
 After M35, a CodeScene Code Health analysis (project 80913) of all production and test files
 identified eleven files below 9.0. They are addressed by the seven behavior-preserving refactor
-milestones **M36–M42** below, inserted before the original networking/persistence roadmap (which
-shifts to **M43–M49**; NUMA is now **M43**). M36–M39 and M41 come from production findings; M40
+milestones **M36-M42** below, inserted before the original networking/persistence roadmap (which
+shifts to **M43-M49**; NUMA is now **M43**). M36-M39 and M41 come from production findings; M40
 consolidates the engine test suites (a CodeScene test finding, kept as its own milestone); M42
 (shell-script helpers) was identified manually because CodeScene cannot score shell. Determinism,
 replay, the differential suite, and integer-tick pricing remain invariants, not refactor targets.
 
 ---
 
-## M36 — Decompose the epoll event loop and connection lifecycle
+## M36. Decompose the epoll event loop and connection lifecycle
 
 - **Branch:** `refactor/m36-epoll-event-loop-decomposition`
 - **PR title:** `refactor: decompose epoll event-loop and connection lifecycle`
@@ -1503,7 +1503,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M37 — Extract threaded-pipeline stage helpers
+## M37. Extract threaded-pipeline stage helpers
 
 - **Branch:** `refactor/m37-threaded-pipeline-stage-helpers`
 - **PR title:** `refactor: extract threaded pipeline stage helpers`
@@ -1527,7 +1527,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M38 — Split the command-stream shrinker into named passes
+## M38. Split the command-stream shrinker into named passes
 
 - **Branch:** `refactor/m38-shrinker-reduction-passes`
 - **PR title:** `refactor: split shrinker into named reduction passes`
@@ -1549,7 +1549,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M39 — Encapsulate order-book matching parameters
+## M39. Encapsulate order-book matching parameters
 
 - **Branch:** `refactor/m39-order-book-matching-parameters`
 - **PR title:** `refactor: encapsulate order-book matching parameters`
@@ -1572,12 +1572,12 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M40 — Consolidate engine correctness test suites
+## M40. Consolidate engine correctness test suites
 
 - **Branch:** `refactor/m40-engine-test-consolidation`
 - **PR title:** `test: consolidate engine correctness test suites`
 - **Goal:** Remove duplication and oversized assertion blocks from the engine/risk test suites
-  without weakening coverage. Test-only milestone — no production change.
+  without weakening coverage. Test-only milestone, no production change.
 
 ### Scope
 
@@ -1590,12 +1590,12 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 - [ ] Code Health ≥ 9.0 for all four files.
 - [ ] No production code changed; the same scenarios and invariants are asserted (coverage and
-      non-vacuity preserved — trades/rejects/cancels/modifies still exercised).
+      non-vacuity preserved, trades/rejects/cancels/modifies still exercised).
 - [ ] `make check` + `make asan` pass; `PROGRESS.md` updated.
 
 ---
 
-## M41 — Simplify gateway session frame dispatch
+## M41. Simplify gateway session frame dispatch
 
 - **Branch:** `refactor/m41-session-frame-dispatch`
 - **PR title:** `refactor: simplify gateway session frame dispatch`
@@ -1615,12 +1615,12 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M42 — Extract shared shell-script helpers
+## M42. Extract shared shell-script helpers
 
 - **Branch:** `refactor/m42-shared-shell-script-helpers`
 - **PR title:** `refactor: extract shared shell-script helpers`
 - **Goal:** Remove duplicated boilerplate across the socket/perf scripts (the M35 deferred follow-up).
-  Manually identified — CodeScene does not score shell, so this milestone has no Code Health metric.
+  Manually identified. CodeScene does not score shell, so this milestone has no Code Health metric.
 
 ### Scope
 
@@ -1637,7 +1637,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M43 — NUMA awareness study
+## M43. NUMA awareness study
 
 - **Branch:** `feat/m43-numa-awareness-study`
 - **PR title:** `docs: study NUMA and CPU affinity effects`
@@ -1680,7 +1680,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M44 — Ingress queue memory-ordering and false-sharing study
+## M44. Ingress queue memory-ordering and false-sharing study
 
 - **Branch:** `feat/m44-ingress-memory-ordering-false-sharing`
 - **PR title:** `perf: study ingress memory ordering and false sharing`
@@ -1724,7 +1724,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M45 — Exchange-grade persistence prototype
+## M45. Exchange-grade persistence prototype
 
 - **Branch:** `feat/m45-persistence-prototype`
 - **PR title:** `feat: prototype stronger persistence strategy`
@@ -1752,13 +1752,13 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M46 — Recovery benchmarking
+## M46. Recovery benchmarking
 
 - **Branch:** `feat/m46-recovery-benchmarking`
 - **PR title:** `perf: benchmark recovery paths`
 - **Goal:** Measure recovery objectives from replay and snapshot restoration.
 - **Status:** ☑ merged via PR #118 (`aeba72c`).
-- **Dependencies:** M8 replay/recovery, M15–M20 differential fixtures, M45 persistence prototype if
+- **Dependencies:** M8 replay/recovery, M15-M20 differential fixtures, M45 persistence prototype if
   it lands first, and the benchmark metadata policy from M11/M29.
 - **Signal gained:** Recovery objective framing, replay-cost visibility, and benchmark
   interpretation.
@@ -1780,7 +1780,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M47 — Contiguous order-book storage and cache-locality study
+## M47. Contiguous order-book storage and cache-locality study
 
 - **Branch:** `feat/m47-contiguous-order-book-storage`
 - **PR title:** `perf: study contiguous order-book storage`
@@ -1814,7 +1814,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M48 — DPDK research and prototype
+## M48. DPDK research and prototype
 
 - **Branch:** `feat/m48-dpdk-research-prototype`
 - **PR title:** `docs: research DPDK packet-path tradeoffs`
@@ -1849,7 +1849,7 @@ replay, the differential suite, and integer-tick pricing remain invariants, not 
 
 ---
 
-## M49 — NIC offload and low-latency networking study
+## M49. NIC offload and low-latency networking study
 
 - **Branch:** `feat/m49-nic-offload-study`
 - **PR title:** `docs: study NIC offload and low-latency networking`

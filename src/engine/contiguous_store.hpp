@@ -17,8 +17,8 @@ namespace qsl::engine {
 // M47 contiguous storage: price levels live in a flat array indexed directly by price tick
 // (band [kContiguousMinPrice, kContiguousMaxPrice]); per-side occupancy bitmaps answer
 // best-price queries; each level's FIFO queue is a contiguous vector with a head cursor and
-// tombstoned cancels. The band constrains *resting* only — out-of-band limit prices still
-// match — and an order whose remainder would rest out of band is refused via can_store_limit.
+// tombstoned cancels. The band constrains *resting* only, out-of-band limit prices still
+// match, and an order whose remainder would rest out of band is refused via can_store_limit.
 struct OrderBook::ContiguousStore {
     static constexpr Price kMinPrice = OrderBook::kContiguousMinPrice;
     static constexpr Price kMaxPrice = OrderBook::kContiguousMaxPrice;

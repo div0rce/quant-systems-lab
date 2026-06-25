@@ -11,6 +11,7 @@
 
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -148,7 +149,13 @@ double profile_seconds_from_args(int argc, char **argv) {
     } else if (const char *e = std::getenv("QSL_BENCH_PROFILE_SECONDS")) {
         seconds = std::strtod(e, nullptr);
     }
-    return (seconds > 0.0) ? seconds : 5.0;
+    // strtod can yield inf/-inf/nan; !(x > 0.0) does not reject inf, and converting a non-finite or
+    // unbounded double to clock_type::duration is UB. Require finite and positive, and clamp the
+    // upper bound so the deadline computation stays well inside the duration's range.
+    if (!std::isfinite(seconds) || seconds <= 0.0) {
+        return 5.0;
+    }
+    return seconds > 3600.0 ? 3600.0 : seconds;
 }
 
 // One bounded steady-state step of the profiling flow: add a limit order, cancel the oldest once

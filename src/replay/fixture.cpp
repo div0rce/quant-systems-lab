@@ -88,7 +88,7 @@ void emit_command_reject(std::ostream &os, const Command &command, core::RejectR
 }
 
 // Replay commands through the engine and return the final snapshot. When `drop_cancels` is set
-// this is a deliberately buggy oracle (it ignores cancels) — used to inject a divergence for the
+// this is a deliberately buggy oracle (it ignores cancels), used to inject a divergence for the
 // shrinker demonstration (issue #37). Risk limits match the property flow.
 engine::EngineSnapshot replay_for_divergence(const std::vector<Command> &cmds, bool drop_cancels) {
     engine::MatchingEngine eng;

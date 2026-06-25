@@ -8,7 +8,7 @@ generator or shrinker later changes (these entries are intentionally **not** gol
 
 ## Status
 
-The C++ engine and the OCaml oracle currently agree on every tested stream — **no real bug has
+The C++ engine and the OCaml oracle currently agree on every tested stream, **no real bug has
 been found.** This archive is therefore seeded with one *synthetic* entry so the structure and
 workflow exist for when a real divergence appears.
 

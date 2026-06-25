@@ -1,4 +1,4 @@
-# PROGRESS.md — Quant Systems Lab live state
+# PROGRESS.md. Quant Systems Lab live state
 
 > **Single source of truth for current build state.** Claude Code updates this at the end of every milestone and before stopping mid-milestone.
 
@@ -20,31 +20,31 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** none — `v0.2.1` is the latest tag, but a post-v0.2.1 hardening + perf wave
-  (12 PRs, #135–#146) has merged to `main` and is **unreleased**; it is being cut as **`v0.2.2`**
-- **Status:** ☑ `v0.2.1` published on top of `v0.2.0`; ☐ `v0.2.2` in preparation — security/robustness
+- **Active milestone:** none, `v0.2.1` is the latest tag, but a post-v0.2.1 hardening + perf wave
+  (12 PRs, #135, #146) has merged to `main` and is **unreleased**; it is being cut as **`v0.2.2`**
+- **Status:** ☑ `v0.2.1` published on top of `v0.2.0`; ☐ `v0.2.2` in preparation, security/robustness
   hardening (decoder enum-domain rejection, network/CLI hardening, a real UBSan abort gate, OCaml
   diff_report robustness) plus two measured order-book perf wins
 - **Active branch:** `docs/post-v0.2.1-overhaul` (the v0.2.2 prep + full doc/artifact staleness sweep)
-- **Last completed milestone:** M49 — NIC offload and low-latency networking study (PR #124,
+- **Last completed milestone:** M49. NIC offload and low-latency networking study (PR #124,
   d8c16b2). Releases since: `v0.2.0` (PR #127, ded6e80) and `v0.2.1` (FIX adapter #131, flamegraph
-  #134, anchor sweep #129). Post-v0.2.1 unreleased work on `main`: #135–#146 (see Last action)
-- **Last completed docs sync:** this v0.2.2-prep overhaul — every `.md`/`.txt` audited against
+  #134, anchor sweep #129). Post-v0.2.1 unreleased work on `main`: #135, #146 (see Last action)
+- **Last completed docs sync:** this v0.2.2-prep overhaul, every `.md`/`.txt` audited against
   current `main`; resume/release anchors, README, CHANGELOG, and all stale `results/*.txt`
   provenance digests brought current to HEAD
 - **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.2.1` (tag on the
   release-PR merge, marked Latest) published as GitHub-only releases; `v0.2.2` prepared here, not yet
   tagged; no packages published
-- **`make check` passing:** yes — `make check` 270/270 and `make asan` 270/270 (the latter now under
+- **`make check` passing:** yes, `make check` 270/270 and `make asan` 270/270 (the latter now under
   the **real** UBSan abort gate from #142) on the bare-metal Apple M2 (aarch64) Fedora Asahi host on
   2026-06-24
-- **Last action:** post-v0.2.1 hardening + perf wave merged to `main` as 12 scoped PRs (#135–#146),
+- **Last action:** post-v0.2.1 hardening + perf wave merged to `main` as 12 scoped PRs (#135, #146),
   driven by a multi-round adversarial bug hunt (converged 5→2→1→0 confirmed) and flamegraph-guided
   optimization. Security/robustness: reject out-of-domain enum bytes in the replay/protocol decoders
-  (#136); network hardening — EINTR retry, accept fairness, connection cap, UDP send-error tracking,
+  (#136); network hardening. EINTR retry, accept fairness, connection cap, UDP send-error tracking,
   transient-accept survival, and threaded/epoll fd-exhaustion handling (#137, #140, #143); CLI arg
   validation so the tools reject malformed input instead of `std::terminate` (#141); the `asan`
-  preset now sets `-fno-sanitize-recover=undefined` so UBSan actually fails CI — previously it ran in
+  preset now sets `-fno-sanitize-recover=undefined` so UBSan actually fails CI, previously it ran in
   recover mode and exited 0 (#142); OCaml `diff_report` guards each fixture so one bad file cannot
   abort the batch (#144). Perf (measured A/B): baseline price levels use `try_emplace` (~+5%, #138)
   and the order-index hash caps its load factor at 0.25 (~+18.6%, #145); flamegraph regenerated
@@ -52,10 +52,10 @@ Do not rely on prior chat memory.
   pass). `make check`/`make asan` 270/270.
 - **Next action:** finish the `v0.2.2` overhaul (this branch): regenerate the remaining stale
   `results/*.txt` artifacts, then cut the `v0.2.2` tag/release. After that, the highest-value
-  remaining work is non-code and gated: issue #94 (independent external review — needs a human
-  reviewer) and issue #90 (full cache-counter PMU evidence — needs a PMU microarchitecture that
+  remaining work is non-code and gated: issue #94 (independent external review, needs a human
+  reviewer) and issue #90 (full cache-counter PMU evidence, needs a PMU microarchitecture that
   exposes cache events, e.g. x86_64).
-- **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap — this bare-metal
+- **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap, this bare-metal
   Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
   implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
   cache events (x86_64, or an ARM server core). Issue #94 remains open for independent external
@@ -144,7 +144,7 @@ Status key:
 - [M6] `BookDelta`/`Snapshot` (full depth) deferred to the networked-feed/snapshot work.
 - [M7] Log record framing: big-endian header (seq_no/record_type/logical_timestamp/payload_size) + opaque payload + FNV-1a u32 checksum; reuses the M2 byte helpers (`replay -> protocol -> core`).
 - [M7] `read_log` is pure and bounds-safe; corruption yields a deterministic `LogError` (Truncated/BadChecksum/PayloadTooLarge) and returns intact records read so far.
-- [M7] File I/O uses C stdio (`fwrite`/`fread`) so byte buffers pass as `void*` — no `reinterpret_cast`. Writer opens in append mode only (no update-in-place).
+- [M7] File I/O uses C stdio (`fwrite`/`fread`) so byte buffers pass as `void*`, no `reinterpret_cast`. Writer opens in append mode only (no update-in-place).
 - [M7] Payload is opaque to the log (e.g. a serialized protocol command frame); typed replay interpretation is M8.
 - [M8] Recorded unit is a `Command` sum type including `RegisterSymbol`, so a log replays standalone (same names in order -> same SymbolIds).
 - [M8] `EngineSnapshot` extended with per-level aggregates (`LevelView` bids/asks); replay equivalence compares snapshot (best bid/ask, levels, counts, last_seq) and the full emitted event sequence.
@@ -158,7 +158,7 @@ Status key:
 - [M9] The only `reinterpret_cast` in the codebase is the POSIX `sockaddr*` cast; protocol serialization stays shift-based.
 - [M9] No authentication; binds `127.0.0.1` only. Local simulator, not a venue (documented in docs/socket_gateway.md).
 - [M10] Market data is exposed over UDP: one datagram per `MdTrade`/`MdTopOfBook`, encoded with the binary protocol; `decode_market_data` dispatches on header type.
-- [M10] Gap detection is a pure `SequenceTracker` (forward gaps only; duplicates/reorder ignored); UDP loss is detected, not recovered — no retransmit/snapshot channel.
+- [M10] Gap detection is a pure `SequenceTracker` (forward gaps only; duplicates/reorder ignored); UDP loss is detected, not recovered, no retransmit/snapshot channel.
 - [M10] `UdpPublisher` is a `MarketDataSubscriber`, so the network feed reuses the M6 publisher unchanged; `inet_pton` is checked (invalid host -> unusable), applying the M9 bind-validation lesson.
 - [M10] UDP unicast on `127.0.0.1` only; no multicast/auth/encryption (documented honestly).
 - [M10] Wire-level UDP test covers out-of-sequence datagrams and gap detection through the real receive/decode/client path.
@@ -172,24 +172,24 @@ Status key:
 - [M11] `results/latest.txt` records iterations, warmup, seed, units, dirty-tree flag, and an explicit "synthetic microbenchmark, not production throughput" caveat.
 - [M11] README benchmark section leads with methodology/exclusions; no production/low-latency/exchange-grade claims; numbers labelled single-machine.
 - [M11] `make fmt`/`fmt-check` now also cover `apps/` (benchmark and CLI code is formatting-checked).
-- [M12] Invariants verified over randomized deterministic flows (`generate_flow`, seeds 1–8): strictly-increasing sequence, no crossed book, executed ≤ submitted, positive quantities; plus focused rejected-cannot-rest, canceled-cannot-trade, and replay-stress (seeds 11/22/33 × 8000 orders) tests.
-- [M12] Protocol/session fuzz tests feed tens of thousands of random buffers to every decoder and the TCP session; decoders are non-throwing and bounds-safe, so the assertion is "no crash / no UB" — proven under the ASan+UBSan build.
+- [M12] Invariants verified over randomized deterministic flows (`generate_flow`, seeds 1-8): strictly-increasing sequence, no crossed book, executed ≤ submitted, positive quantities; plus focused rejected-cannot-rest, canceled-cannot-trade, and replay-stress (seeds 11/22/33 × 8000 orders) tests.
+- [M12] Protocol/session fuzz tests feed tens of thousands of random buffers to every decoder and the TCP session; decoders are non-throwing and bounds-safe, so the assertion is "no crash / no UB", proven under the ASan+UBSan build.
 - [M12] Added a CI `sanitizers` job (`cmake --preset asan` + `ctest --preset asan`) so ASan/UBSan runs on every PR, not just locally.
 - [M12] docs/invariants.md enumerates each invariant and where it is tested; reaffirms structural guarantees (integer-only prices, wall-clock-independent core). No new floating-point or clock dependency introduced.
 - [M12] Added structure-aware mutated-frame fuzz tests so malformed-but-plausible inputs reach body decoders, not only header rejection.
 - [M12] Added valid-frame chunking tests for TCP Session reassembly.
 - [M12] Randomized invariant tests include non-vacuity guards so future generator changes cannot silently remove trades/book activity.
 - [M13] README rewritten for a <60s read with a committed mermaid architecture diagram, clean-clone quickstart, demo section, and honest limitations; benchmark table cites results/latest.txt exactly (no new/unmeasured numbers).
-- [M13] Added scripts/demo.sh + `make demo`: deterministic replay/recovery then a loopback TCP gateway round-trip (readiness polling + cleanup trap). Gateway is unauthenticated/loopback-only — flagged in README and the script.
+- [M13] Added scripts/demo.sh + `make demo`: deterministic replay/recovery then a loopback TCP gateway round-trip (readiness polling + cleanup trap). Gateway is unauthenticated/loopback-only, flagged in README and the script.
 - [M13] Expanded docs/recruiting_notes.md with conservative SWE + Linux résumé bullets, measured-only benchmark bullets (with exclusions caveat), and interview-defense notes. No production/profitability claims.
-- [M14] OCaml toolchain installed via Homebrew (ocaml 5.4.1 + dune 3.23.1); no opam, no third-party packages — verifier uses only the standard library.
+- [M14] OCaml toolchain installed via Homebrew (ocaml 5.4.1 + dune 3.23.1); no opam, no third-party packages, verifier uses only the standard library.
 - [M14] Added a C++ `qsl-export-fixture` app that drives a deterministic flow through the gateway (low max_qty → real rejects) and writes a normalized textual event-log fixture. No engine code changed.
 - [M14] OCaml verifier (`ocaml/`) re-derives replay invariants from the exported log (sequence monotonicity, positive trade qty, canceled-can't-trade, rejected-can't-rest, event-log/summary consistency). It is an independent cross-check, not a re-implementation of matching and not formal verification.
 - [M14] Committed a generated valid fixture plus two hand-crafted violation fixtures so `dune runtest` proves the checker both passes clean logs and catches violations. CI runs a dedicated `ocaml-verifier` job (apt ocaml+dune; opam-free).
 - [M14] OCaml verifier tracks OrderId lifetimes instead of treating rejected/canceled numeric IDs as globally dead (a later accept reuses an id legally); added valid-reuse fixtures alongside the violation fixtures.
 - [M14] Malformed verifier fixtures now fail cleanly with exit 2 instead of uncaught parser exceptions.
 - [M15] Added a differential-fixture exporter (`qsl-export-stream` + `replay::write_stream_fixture`) emitting a normalized command stream, engine events, command-scoped gateway rejections, and the full final per-symbol snapshot (best bid/ask, per-price level aggregates, order counts, last_seq, trade count). Schema in docs/differential_testing.md.
-- [M15] Reused the deterministic `generate_flow` (no new/random generation — that is M18); a low max_qty yields real rejections. Export is byte-deterministic per seed.
+- [M15] Reused the deterministic `generate_flow` (no new/random generation, that is M18); a low max_qty yields real rejections. Export is byte-deterministic per seed.
 - [M15] M15 only exports + tests determinism/parseability; the independent OCaml replay engine (M16) and C++-vs-OCaml snapshot equality (M17) are deferred. M14 verifier (v1 event-log fixtures) is untouched and still green.
 - [M15] Stream fixtures emit structured modify rejection outcomes instead of dropping rejected modify commands.
 - [M15] Differential fixture reject lines are command-scoped so M17 can distinguish C++ risk rejection from no-op commands.
@@ -227,7 +227,7 @@ Status key:
 - _none yet_
 
 Measured by `make bench` (full metadata + raw output in `results/latest.txt`, which is the
-authoritative source). Hardware-, compiler-, and build-dependent — from one machine, not a
+authoritative source). Hardware-, compiler-, and build-dependent, from one machine, not a
 production-latency claim.
 
 - Run: aarch64 (Apple M2), GCC, Release, seed 42, Fedora Asahi Linux (synthetic, in-process;
@@ -239,7 +239,7 @@ production-latency claim.
 - matching-engine flow apply: ~91 ns/command
 - replay from command log: ~101 ns/command
 - Note: these single-process micro-benchmarks hold a near-empty order index, so they do not exercise
-  the deep-book steady state where the v0.2.2 engine wins land — `try_emplace` (~+5%, #138) and the
+  the deep-book steady state where the v0.2.2 engine wins land, `try_emplace` (~+5%, #138) and the
   order-index load-factor cap (~+18.6%, #145) are measured on the `qsl-bench profile` workload.
 
 ---
@@ -261,11 +261,11 @@ This section adds Jane Street internship targeting context. Do not delete earlie
 
 Primary:
 
-- Jane Street Software Engineer Internship, Hong Kong, December–February
+- Jane Street Software Engineer Internship, Hong Kong, December-February
 
 Secondary:
 
-- Jane Street Linux Engineer Internship, Hong Kong, December–February
+- Jane Street Linux Engineer Internship, Hong Kong, December-February
 
 Lower priority:
 
@@ -355,15 +355,14 @@ Lower priority:
   `bench-diff`. All 15 artifacts report `Dirty inputs: no` with refreshed source digests, and
   `git grep -nE '([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}' -- results/ | grep -v 'ff:ff:ff:ff:ff:ff'`
   returns nothing. Closed the README/recruiting benchmark drift: synced the README benchmark table
-  and `docs/recruiting_notes.md` to the regenerated `results/latest.txt` (single source of truth) —
-  order book ~114 ns/op, protocol ~19 ns/op, gateway ~121 ns/op, matching ~99 ns/command, replay
+  and `docs/recruiting_notes.md` to the regenerated `results/latest.txt` (single source of truth), order book ~114 ns/op, protocol ~19 ns/op, gateway ~121 ns/op, matching ~99 ns/command, replay
   ~114 ns/command (the prior macOS-era ~126/39/270/121/132 ns numbers were stale). Added
   `results/*.sqlite` to `.gitignore` so the local `qsl-results` MCP store is never committed. No
   runtime C++ changed, so `make asan` / `make tsan` were not required. Also added
   `tests/shell/test_qsl_common.sh` (registered in CTest; portable) covering both the MAC sanitization
   (link/ether, permaddr, bridge_id/designated_root, group_address redacted; broadcast and the audit
   leak-grep invariant preserved; wlx altname redacted) and the trailing-whitespace / blank-line
-  trimming, so the security-relevant publish logic ships with tests — `make check` 241/241. This
+  trimming, so the security-relevant publish logic ships with tests, `make check` 241/241. This
   supersedes CodeRabbit's PR #126, whose generated tests covered only trimming and were based on
   `d8c16b2` (where `qsl_publish_artifact` does not yet exist, so #126 could not merge before #125);
   #126 was closed as superseded. Do not merge from automation; the human squash-merges PR #125.
@@ -371,12 +370,12 @@ Lower priority:
   Codex review findings left on `main` by PRs #127 and #128: (1) removed PROGRESS.md's stale
   "Next action remains" block that still pointed `/resume` at the merged PR #125 on
   `perf/linux-host-artifact-refresh`, replacing it with the v0.2.0 between-releases state (#94/#90
-  gated); (2) brought AGENTS.md into sync with CLAUDE.md's v0.2.0 partial-PMU reframe — the
+  gated); (2) brought AGENTS.md into sync with CLAUDE.md's v0.2.0 partial-PMU reframe, the
   constraints bullet, the "correct claim" block, and the "M29 perf evidence status" subsection no
   longer call the artifacts "constrained Docker validation," and the stale
   `perf/linux-host-artifact-refresh` follow-up line was updated in both AGENTS.md and CLAUDE.md to
   the released state; (3) narrowed docs/perf_analysis.md so it no longer implies the Apple Blizzard
-  (E-core) PMU carries live counts — the `apple_blizzard_pmu/...` rows read `<not counted>` in
+  (E-core) PMU carries live counts, the `apple_blizzard_pmu/...` rows read `<not counted>` in
   `results/perf_stat_linux.txt` because the single-threaded benchmark stays on the Avalanche P-cores.
   Docs/memory only; no code or artifacts changed.
 - [2026-06-21] Issue #32 flamegraph profiling artifact (`perf/flamegraph-artifact`, stacked on the
@@ -399,7 +398,7 @@ Lower priority:
   on the flamegraph branch). Added `include/qsl/protocol/fix.hpp` + `src/protocol/fix.cpp`: a
   `tag=value` SOH-framed adapter over the SAME internal structs as the binary codec, with genuine
   FIX framing (8 BeginString / 9 BodyLength / 35 MsgType / … / 10 mod-256 CheckSum) for the
-  client→gateway order path — NewOrderSingle (35=D)→`NewOrder` and OrderCancelRequest
+  client→gateway order path. NewOrderSingle (35=D)→`NewOrder` and OrderCancelRequest
   (35=F)→`CancelOrder`. Decoding is total/deterministic/`noexcept` (fixed field table,
   `std::from_chars`, `string_view`; no heap on decode) and reports every malformed input through a
   `FixError` taxonomy mirroring the binary `DecodeError`. Documented, deliberate simplifications:
@@ -428,7 +427,7 @@ Lower priority:
   flamegraph #32, resume-anchor/PMU sweep), and brought the PROGRESS/HANDOFF release anchors current.
   No code or benchmark artifacts change in the release PR itself. On squash-merge the human tags
   `v0.2.1` on the merge commit and publishes the GitHub release. Do not merge from automation.
-- [2026-06-22] Second Codex review round on the open `v0.2.1` stack — addressed every remaining
+- [2026-06-22] Second Codex review round on the open `v0.2.1` stack, addressed every remaining
   inline finding across PRs #129/#130/#131/#133. #131 (`fix.cpp`): the FIX envelope now requires
   MsgType (35) as the first body field (rejecting `8/9/34/35/.../10`) and `tokenize` rejects
   duplicate tags (no repeating groups), with a deterministic rejection test for each; the older
@@ -442,16 +441,16 @@ Lower priority:
   release anchors and removed completed #29/#32 from every backlog list, synced AGENTS.md/CLAUDE.md
   to the v0.2.1 released state, and refreshed this release-readiness audit to 263 tests. `make
   check`/`make asan` 263/263. CodeScene MCP token still expired; CI is the authoritative gate.
-- [2026-06-24] Post-v0.2.1 hardening + perf wave (#135–#146), to be released as `v0.2.2`. Driven by a
+- [2026-06-24] Post-v0.2.1 hardening + perf wave (#135, #146), to be released as `v0.2.2`. Driven by a
   multi-round adversarial bug hunt (4 rounds, converged 5→2→1→0 confirmed) plus flamegraph-guided
   optimization. Security/robustness: reject out-of-domain enum bytes in the replay/protocol decoders
-  (#136, `core::is_valid` for Side/TimeInForce/RejectReason); network hardening — EINTR retry in the
+  (#136, `core::is_valid` for Side/TimeInForce/RejectReason); network hardening. EINTR retry in the
   TCP read/write path, accept fairness (epoll `max_accepts_per_tick`), connection cap
   (`max_active_connections`), UDP send-error counter, transient-accept survival
   (EINTR/ECONNABORTED), and threaded/epoll fd-exhaustion handling (#137, #140, #143); CLI arg
   validation via `std::from_chars` so qsl-client/qsl-mdfeed/qsl-export-fixture reject malformed input
   instead of `std::terminate`/silent port truncation (#141); the `asan` preset now sets
-  `-fno-sanitize-recover=undefined` so UBSan **aborts** on a violation — it previously ran in recover
+  `-fno-sanitize-recover=undefined` so UBSan **aborts** on a violation, it previously ran in recover
   mode and exited 0, so pure-UBSan defects passed CI green; the tree is UBSan-clean under the strict
   gate (#142); OCaml `diff_report` guards each fixture so one malformed file cannot abort the batch
   (#144). Perf (measured back-to-back A/B on the `qsl-bench profile` workload): baseline price levels
@@ -466,7 +465,7 @@ Lower priority:
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
 - [2026-06-04] Project-memory sync after M35: PR #101 squash-merged to `main` as 40f9249. It established the `CLAUDE.md` / `AGENTS.md` memory relationship, exact `Branch:` handling for `/start-milestone`, and the guard that repository-health planning happens before original M36 NUMA. No CodeScene/MCP analysis has started, no refactor milestones have been inserted, and no NUMA work has started.
 - [2026-06-04] Post-merge project-memory sync PR #102 squash-merged to `main` as 7092423.
-- [2026-06-04] Repository-health refactor phase inserted after M35 (docs-only roadmap renumber, branch `docs/roadmap-health-refactor-insertion`). A CodeScene Code Health analysis (project 80913, via MCP) of all production and test files found eleven files below 9.0: production `epoll_server.cpp` 5.35, `pipeline.hpp` 7.13, `shrink.cpp` 8.15, `order_book.cpp` 8.55, `session.cpp` 8.99; tests `test_risk_gateway` 6.69, `test_order_book` 7.32, `test_pipeline` 8.28, `test_backpressure` 8.44, `test_invariants` 8.45, `test_matching_engine` 8.54. These became seven refactor milestones M36–M42: M36 epoll decomposition, M37 pipeline stage helpers (+ its concurrency tests), M38 shrinker passes, M39 order-book matching parameters, M40 engine test-suite consolidation (test-only; split out per the human), M41 session frame dispatch, M42 shared shell-script helpers (manual — CodeScene cannot score shell; the M35 deferred follow-up). The original networking/persistence roadmap shifted after those refactors; the later systems-roadmap audit extends future scope to M43–M49. Behavior-preserving refactors only; determinism/replay/differential/integer-tick pricing remain invariants. No implementation started.
+- [2026-06-04] Repository-health refactor phase inserted after M35 (docs-only roadmap renumber, branch `docs/roadmap-health-refactor-insertion`). A CodeScene Code Health analysis (project 80913, via MCP) of all production and test files found eleven files below 9.0: production `epoll_server.cpp` 5.35, `pipeline.hpp` 7.13, `shrink.cpp` 8.15, `order_book.cpp` 8.55, `session.cpp` 8.99; tests `test_risk_gateway` 6.69, `test_order_book` 7.32, `test_pipeline` 8.28, `test_backpressure` 8.44, `test_invariants` 8.45, `test_matching_engine` 8.54. These became seven refactor milestones M36-M42: M36 epoll decomposition, M37 pipeline stage helpers (+ its concurrency tests), M38 shrinker passes, M39 order-book matching parameters, M40 engine test-suite consolidation (test-only; split out per the human), M41 session frame dispatch, M42 shared shell-script helpers (manual. CodeScene cannot score shell; the M35 deferred follow-up). The original networking/persistence roadmap shifted after those refactors; the later systems-roadmap audit extends future scope to M43-M49. Behavior-preserving refactors only; determinism/replay/differential/integer-tick pricing remain invariants. No implementation started.
 - [2026-06-04] M36: decomposed the Linux epoll transport while preserving public API and wire/session behavior. `src/gateway/epoll_server.cpp` now separates listener setup, accept outcome handling, ready-event dispatch, client fd-generation lookup, read/write outcomes, output-budget/backpressure handling, and re-arm/close decisions. CodeScene MCP score improved from 5.35 to 10.0 with no remaining review findings; final verification passed `git diff --check`, Docker Ubuntu Linux `test_epoll_gateway` (8 test cases / 280 assertions), `make check` 191/191, and `make asan` 191/191. PR #104 squash-merged as 0d2b97a.
 - [2026-06-04] M37: started on `refactor/m37-threaded-pipeline-stage-helpers` from updated `main` (0d2b97a). Scope is behavior-preserving threaded-pipeline helper extraction: decompose `include/qsl/concurrency/pipeline.hpp` and reduce assertion duplication/nesting in `tests/concurrency/test_pipeline.cpp` and `tests/concurrency/test_backpressure.cpp`. DoD requires Code Health >= 9.0 for all three files plus `make check`, `make asan`, and `make tsan`.
 - [2026-06-04] M37: completed behavior-preserving threaded-pipeline decomposition and opened draft PR #105. `ThreadedPipeline::run` now uses `PipelineRunOptions`, a run context, and named input/engine/output stage helpers; concurrency tests use shared assertion and producer/consumer helpers without changing scenarios. CodeScene re-score: `pipeline.hpp` 7.13 -> 10.0, `test_pipeline.cpp` 8.28 -> 10.0, `test_backpressure.cpp` 8.44 -> 10.0. PR review feedback fixed reused-probe accounting so shared `PipelineProbe` counters stay live/cumulative while each returned `PipelineResult` reports per-run backpressure deltas. Verification passed `git diff --check`, focused `test_pipeline` (12 cases / 629 assertions), `make check` 192/192, `make asan` 192/192, and `make tsan` 20/20.
@@ -479,7 +478,7 @@ Lower priority:
 - [2026-06-04] M39: opened draft PR #107 from `refactor/m39-order-book-matching-parameters` after `git diff --check`, focused engine/replay tests, fixture/manifest checks, `dune runtest --root ocaml`, `make check` 192/192, `make asan` 192/192, and CodeScene pre-commit/change-set quality gates passed.
 - [2026-06-04] M39: fixed Codex review feedback on PR #107 by making `find_level` return only the requested side and adding `quantity_at is side-specific at the same price` coverage. Post-fix verification passed focused `test_order_book` (20 cases / 87 assertions), `make check` 193/193, `make asan` 193/193, and CodeScene score remained 9.68.
 - [2026-06-05] M39: PR #107 squash-merged to `main` as 880fbc7.
-- [2026-06-05] M40: consolidated the four sub-9.0 engine/risk test suites to Code Health >= 9.0 — `test_risk_gateway.cpp` 6.69 -> 10.0, `test_order_book.cpp` 7.78 -> 9.09, `test_invariants.cpp` 8.45 -> 10.0, `test_matching_engine.cpp` 8.54 -> 9.38 — by extracting behavior-named helpers (`expect_reject` / `expect_accepted_one` / `expect_trade` / `expect_top` / `expect_strictly_increasing` / `expect_storage_equivalent`, a shared `Gateway` fixture, and per-invariant `classify_command` / `check_events` / `check_book_invariants`), de-duplicating near-identical `TEST_CASE`s, and flattening the deep property-loop nesting in the invariants suite. Test-only: `git diff --stat main` touches only the four test files + `PROGRESS.md` (no `include/` or `src/`). All `TEST_CASE` names/scenarios, deterministic seeds (1-8, 11/22/33, 1-6), and non-vacuity guards preserved; a few previously-partial trade/reject assertions were strengthened to the full verified contract — one (`modify emits OrderModified and any resulting trades`) was caught by `make check` as a wrong quantity (5 vs the post-reduce 3) and corrected. `make check` 193/193 and `make asan` green.
+- [2026-06-05] M40: consolidated the four sub-9.0 engine/risk test suites to Code Health >= 9.0, `test_risk_gateway.cpp` 6.69 -> 10.0, `test_order_book.cpp` 7.78 -> 9.09, `test_invariants.cpp` 8.45 -> 10.0, `test_matching_engine.cpp` 8.54 -> 9.38, by extracting behavior-named helpers (`expect_reject` / `expect_accepted_one` / `expect_trade` / `expect_top` / `expect_strictly_increasing` / `expect_storage_equivalent`, a shared `Gateway` fixture, and per-invariant `classify_command` / `check_events` / `check_book_invariants`), de-duplicating near-identical `TEST_CASE`s, and flattening the deep property-loop nesting in the invariants suite. Test-only: `git diff --stat main` touches only the four test files + `PROGRESS.md` (no `include/` or `src/`). All `TEST_CASE` names/scenarios, deterministic seeds (1-8, 11/22/33, 1-6), and non-vacuity guards preserved; a few previously-partial trade/reject assertions were strengthened to the full verified contract, one (`modify emits OrderModified and any resulting trades`) was caught by `make check` as a wrong quantity (5 vs the post-reduce 3) and corrected. `make check` 193/193 and `make asan` green.
 - [2026-06-05] M40: fixed PR #108 review feedback by collapsing `expect_trade` expected fields into an `ExpectedTrade` value object, clearing the CodeScene excess-arguments finding while preserving the same trade assertions. Also reconciled stale M39/M40 `PROGRESS.md` anchors so PR #108 is the single current action. Verification passed focused matching-engine tests, `git diff --check`, `make check` 193/193, `make asan` 193/193, and CodeScene score for `test_matching_engine.cpp` is 9.38.
 - [2026-06-05] M40: PR #108 squash-merged to `main` as b939730.
 - [2026-06-05] M41: started on `refactor/m41-session-frame-dispatch` from updated `main` (b939730). Baseline CodeScene for `src/gateway/session.cpp`: 8.99; finding is `Session::process_frame` complexity 15. Pre-refactor `./build/dev/tests/test_session` passed 11 cases / 36 assertions.
@@ -577,7 +576,7 @@ Lower priority:
   later valid records. `BadChecksum` is torn only when the failing frame ends exactly at end of
   file; `PayloadTooLarge` headers are never trusted. `repair_log_file` truncates torn tails to the
   last valid record boundary and fsyncs the truncation; it refuses `Corrupt` logs because truncating
-  mid-file damage would silently discard acknowledged records beyond it — a human decision, not
+  mid-file damage would silently discard acknowledged records beyond it, a human decision, not
   automation. The fsync-mode contract: an acknowledged append is never removed by tail repair
   unless the storage stack lied.
 - [2026-06-11] M45: `qsl-replay` gains `recover <file> [--repair]` and
@@ -622,13 +621,12 @@ Lower priority:
   repair-only-provably-torn decisions. M46 will measure full-replay recovery cost before any
   segmentation/snapshot design.
 - [2026-06-11] PR #117 squash-merged to `main` as d10bfb0, completing M45. M46 started on
-  `feat/m46-recovery-benchmarking`. Scope: recovery benchmarking — replay performance, snapshot
+  `feat/m46-recovery-benchmarking`. Scope: recovery benchmarking, replay performance, snapshot
   restoration performance, and recovery-objective framing. Constraints: benchmarks generated only
   by committed scripts with `Provenance version: 1` metadata and dirty-inputs state; docs must
   state exactly what recovery objective was measured; no production-recovery or RTO claims beyond
   the measured synthetic workloads.
-- [2026-06-12] M46: added `OrderBook::resting_orders()` / `MatchingEngine::resting_orders(symbol)`
-  — deterministic priority-order enumeration of resting state (bids best-first then asks, FIFO
+- [2026-06-12] M46: added `OrderBook::resting_orders()` / `MatchingEngine::resting_orders(symbol)`, deterministic priority-order enumeration of resting state (bids best-first then asks, FIFO
   within level) across all three storage modes, with `Order::operator==`. Re-adding the sequence
   into an empty book reproduces levels and intra-level time priority exactly; unit tests cover
   per-mode enumeration, partial-fill/cancel/priority-losing-modify effects, and a generated-flow
@@ -640,12 +638,12 @@ Lower priority:
   `recover_log_file` read+verify+classify, replay decode+apply into a fresh engine, and the
   combined full restart; plus a benchmark-only in-memory snapshot-restoration prototype
   (capture resting state, rebuild book) at the flow's live state and at controlled synthetic
-  depths (1k/10k/50k resting orders), because the realistic flow leaves only ~24–37 resting
+  depths (1k/10k/50k resting orders), because the realistic flow leaves only ~24-37 resting
   orders and per-order timings on such small books are noisy. Every phase self-verifies against
   the reference snapshot and the harness aborts rather than report numbers from a wrong rebuild.
   The committed artifact (clean declared inputs, `Dirty inputs: no`) shows full-replay restart
-  cost linear in history (237–286 ns/command end-to-end on this host; ~23 ms at 80k commands)
-  while book rebuild is linear in live state (109–187 ns/order; ~5.4 ms at 50k resting orders).
+  cost linear in history (237-286 ns/command end-to-end on this host; ~23 ms at 80k commands)
+  while book rebuild is linear in live state (109-187 ns/order; ~5.4 ms at 50k resting orders).
   Explicitly framed: restart cost (RTO-style) measured here; loss bounds (RPO-style) belong to
   the M45 durability modes; prototype numbers are an in-memory lower bound (no serialization,
   disk I/O, or tail replay); no production recovery-time claim.
@@ -658,7 +656,7 @@ Lower priority:
   source in an artifact-only commit so its `Source digest` matches the committed generator.
 - [2026-06-12] PR #118 squash-merged to `main` as aeba72c, completing M46. M47 started on
   `feat/m47-contiguous-order-book-storage`. Scope: flat/contiguous order-book storage study
-  against baseline, PMR pooled, and intrusive pooled modes — explicit symbol/price-domain
+  against baseline, PMR pooled, and intrusive pooled modes, explicit symbol/price-domain
   assumptions, replay/differential equivalence (identical event streams, `EngineSnapshot`,
   `last_seq`), engine-level benchmark artifacts from committed scripts, cache-locality analysis
   only where tooling supports it, and honest documentation of negative/neutral results. No
@@ -704,7 +702,7 @@ Lower priority:
   direct-book regression; focused storage/gateway tests passed, then `git diff --check`,
   `make check` 230/230, and `make asan` 230/230 passed locally.
 - [2026-06-12] M47 PR #119 CodeRabbit follow-up: applied the same residual preflight to
-  `IntrusiveStore::add_limit` — a direct `OrderBook{Storage::IntrusivePooled}` caller that
+  `IntrusiveStore::add_limit`, a direct `OrderBook{Storage::IntrusivePooled}` caller that
   partially crossed a GTC order and then hit pool exhaustion previously dropped the remainder
   despite the rest-the-remainder contract; it now refuses the whole order via `can_store_limit`
   before matching (engine/gateway callers were already pre-gated, so their behavior is
@@ -719,7 +717,7 @@ Lower priority:
 - [2026-06-12] M47 PR #119 review round 3 fixes (docs/roadmap only; committed artifact numbers
   unchanged): corrected a benchmark-claim error in `docs/pool_backed_storage.md` (it named
   contiguous the fastest row, but the committed artifact has PMR 209.6 < contiguous 222.4 <
-  baseline 273.7 < intrusive 373.0 ns/cmd — PMR is fastest, contiguous second) and fixed stale
+  baseline 273.7 < intrusive 373.0 ns/cmd. PMR is fastest, contiguous second) and fixed stale
   `MILESTONES.md` statuses so resume/finish workflows route to the right milestone: M45 is merged
   via PR #117 (not PR #119), M44 (#115) and M46 (#118) are also merged, and M47 is the active
   PR #119.
@@ -742,7 +740,7 @@ Lower priority:
   timed the full per-replay `run_once`, including `MatchingEngine` construction and the
   `RegisterSymbol` prefix. Book construction is eager (`OrderBook` builds its `IntrusiveStore` /
   `ContiguousStore` in its constructor), so for the pooled modes that prefix runs `OrderPool` /
-  `RawPool` free-list initialization over 65536 slots per book — a fixed per-run setup cost that was
+  `RawPool` free-list initialization over 65536 slots per book, a fixed per-run setup cost that was
   charged to per-command time and amortized over only ~5k commands, scaling with symbol count and
   inflating the intrusive mode most. The fix (`bench_storage.cpp`, `run_storage_benchmarks.sh`)
   applies engine construction, the registration prefix, and the end-of-run snapshot outside the
@@ -764,7 +762,7 @@ Lower priority:
   path but not the *characterization* path, leaving the shape line describing a different sequence
   than the rows. Fix: `characterize` now applies the registration prefix unobserved and observes
   only the trading range, sharing one `registration_prefix_len` boundary with `apply_registration`
-  and counting probes with the same `should_probe` predicate over the same range — so `commands` and
+  and counting probes with the same `should_probe` predicate over the same range, so `commands` and
   `top_probe_calls` on the shape line match the per-run `cmds`/`probes/run` by construction. Audited
   the class: `top_probe_calls` and `commands` were the only live instances (`events`/`resting`/
   `last_seq` are immune because `RegisterSymbol` emits no events and rests nothing), so this closes
@@ -784,33 +782,33 @@ Lower priority:
   informational commit cf0396f), tables rebuilt from that one artifact; ranking unchanged.
 - [2026-06-05] Repo review policy: added `.coderabbit.yaml` to disable CodeRabbit docstring coverage because this repo uses sparse "why" comments rather than blanket function docstrings. CodeRabbit Infer is disabled because the trusted C++ analysis path is CMake/CI/sanitizers/CodeScene and CodeRabbit's Infer run currently lacks the compile context needed for useful C++ analysis.
 - [2026-06-04] Local MCP/tooling memory: Codex client has CodeScene, Playwright, filesystem, sequential-thinking, memory, Docker, Context7, and node_repl MCP servers configured. Postgres and Perplexity MCP servers are intentionally not configured; do not assume database or Perplexity access unless the human configures them later.
-- [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only — event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
+- [2026-06-02] M34: started after M33 (#97) squash-merged (commit fe8679a). Scope: Linux `epoll` gateway architecture prototype only, event-driven multi-client readiness, nonblocking accept/read/write behavior, deterministic `Session` semantics preserved. Do not start M35 load/socket-pressure testing and do not make production-capacity claims.
 - [2026-06-02] M34: added `EpollServer`, a Linux-only event-driven transport with one `epoll` loop, nonblocking `accept4`/read/write, per-client outbound buffers, and one existing deterministic `Session` per connection. `qsl-gateway <port> --epoll` opts in; the blocking `TcpServer` remains the default.
 - [2026-06-02] M34: epoll tests are platform-scoped. macOS verifies unsupported mode; Docker Ubuntu Linux verifies availability, invalid bind-host rejection, and two simultaneous loopback clients handled by one event loop without thread-per-connection design.
 - [2026-06-02] M34: local verification passed: `make check` 190/190, `make asan` 190/190, `git diff --check`, and Docker Ubuntu Linux `test_epoll_gateway` 3 tests / 36 assertions.
 - [2026-06-02] M34: opened draft PR #98; do not merge from the automation side.
 - [2026-06-03] M34: Codex review of #98 iterated several rounds (CI green throughout), each fix verified on macOS and Linux Docker as noted in the current-state block: read-backpressure; `--epoll` flag-or-port parsing with whole-token/range/duplicate validation; a soft high-water mark (stop reading) plus a hard outbound cap; O(n²) front-erase flush replaced with a write offset; `EINTR`-on-send retry; survival of transient `accept4` errors (`ECONNABORTED`/pending network errors) instead of tearing down the loop; bounded high-fanout `NewOrder` response budgeting before gateway mutation; `EPOLLERR` immediate close; `EPOLLHUP` drain of already-readable bytes before close; no `EPOLLIN` re-arm once a session is closing; fd-generation checks for stale events after fd reuse; and queued-reply preservation when an over-cap frame follows earlier accepted frames in the same read. Issue #99 was opened as a broader follow-up for shared streaming/byte-budgeted response generation outside the epoll-specific bounded path and is addressed later by PR #111.
 - [2026-06-02] M33: PR #97 squash-merged (commit fe8679a); CI passed all 6 jobs and Codex review found no major issues. M33 delivered deterministic pipeline scheduling perturbation, opt-in repeated concurrency stress, and docs framing TSan/perturbation/stress as evidence rather than proof.
-- [2026-06-02] M33: started after M32 (#96) squash-merged (commit f122ee8). Scope: advanced concurrency validation only — deterministic scheduling perturbation and/or longer stress modes, stronger concurrency methodology docs, opt-in long-running/Linux checks where appropriate. Do not claim proof; TSan and stress tests remain dynamic evidence over executed schedules.
+- [2026-06-02] M33: started after M32 (#96) squash-merged (commit f122ee8). Scope: advanced concurrency validation only, deterministic scheduling perturbation and/or longer stress modes, stronger concurrency methodology docs, opt-in long-running/Linux checks where appropriate. Do not claim proof; TSan and stress tests remain dynamic evidence over executed schedules.
 - [2026-06-02] M33: added deterministic `PipelinePerturbation` yield hooks to the threaded pipeline and a regression test that compares perturbed pipeline output against the single-threaded reference across seeded property flows, queue capacities, and per-stage yield patterns.
 - [2026-06-02] M33: added `make concurrency-stress` / `scripts/concurrency_stress.sh` as an opt-in repeated concurrency-label test loop. Normal CI remains non-flaky; longer local/Linux runs are documented through explicit knobs rather than hidden in the default gate.
 - [2026-06-02] M33: local verification passed: `make check` 189/189, `make asan` 189/189, `make tsan` 19/19 concurrency tests, `QSL_CONCURRENCY_STRESS_LOOPS=2 make concurrency-stress` 2/2 loops, `bash -n scripts/concurrency_stress.sh`, and `git diff --check`.
 - [2026-06-02] M33: opened draft PR #97 and triggered `@codex review`; do not merge from the automation side.
 - [2026-06-02] M33: PR #97 CI passed all 6 jobs (`build-test`, `sanitizers`, `thread-sanitizer`, `determinism`, `differential-sweep`, `ocaml-verifier`) and Codex review found no major issues.
 - [2026-06-02] M32: PR #96 squash-merged (commit f122ee8); Codex review found no major issues and CI passed all jobs. M32 delivered PMR-backed order-book node allocation, an engine-level storage benchmark, docs/ADR, and issue #95 for the later intrusive/custom-node `OrderPool<Capacity>` storage path now handled by `feat/close-storage-flow-tcp-followups`.
-- [2026-06-02] M32: started after M31 (#93) squash-merged (commit b7926ac). Corrected scope: integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator experiment, and measure baseline-vs-pool-backed engine-level workloads — not another allocator microbenchmark. Direct `OrderPool<Capacity>` order-book integration was deferred because the current `std::list<Order>` design allocated implementation-defined list nodes, not bare `engine::Order` objects; the later #95 follow-up handles the intrusive/custom-node path separately. Matching must remain deterministic (replay/differential tests stay green); no storage-architecture claim beyond what the committed measured artifact supports; document even a negative result.
+- [2026-06-02] M32: started after M31 (#93) squash-merged (commit b7926ac). Corrected scope: integrate pool-backed order-book node allocation using PMR, informed by the M28 allocator experiment, and measure baseline-vs-pool-backed engine-level workloads, not another allocator microbenchmark. Direct `OrderPool<Capacity>` order-book integration was deferred because the current `std::list<Order>` design allocated implementation-defined list nodes, not bare `engine::Order` objects; the later #95 follow-up handles the intrusive/custom-node path separately. Matching must remain deterministic (replay/differential tests stay green); no storage-architecture claim beyond what the committed measured artifact supports; document even a negative result.
 - [2026-06-02] M32: implemented the scoped PMR path: `OrderBook::Storage::{Baseline,Pooled}`, per-book `std::pmr::unsynchronized_pool_resource`, PMR list/map/unordered_map node allocation, and `MatchingEngine(OrderBook::Storage)` propagation via `books_.try_emplace(id, book_storage_)`. Baseline remains the default.
 - [2026-06-02] M32: added a generated-flow equivalence invariant test proving baseline and pooled storage produce identical per-command event streams, final `EngineSnapshot`, and `last_seq`; the test includes non-vacuity guards for real trades and resting liquidity.
 - [2026-06-02] M32: added engine-level storage benchmarking (`make bench-storage`, `qsl-bench storage`, `scripts/run_storage_benchmarks.sh`, `results/pool_backed_storage.txt`). This compares baseline engine storage against PMR pooled node allocation; it is not an isolated allocator-only benchmark and not a production-latency claim.
 - [2026-06-02] M31: PR #93 squash-merged (commit b7926ac); Codex auto-reviewed on open and reacted 👍 with no findings (docs-only, deliberately honest/conservative). The external-review request was then opened as GitHub issue #94 (labels backlog/documentation/help wanted), satisfying the "review request issue opened" alternative in the M31 DoD; `review_feedback.md` still records that no external feedback has been received yet.
-- [2026-06-02] M31: started after M30 (#92) squash-merged (commit 3f88a1f). Scope is the external-review package only: a review-request checklist, a review-feedback template, an optional issue template, and a small README link. Non-negotiable: no fabricated endorsements and no claim that review has happened until it has — `review_feedback.md` states plainly that no external review has occurred yet.
+- [2026-06-02] M31: started after M30 (#92) squash-merged (commit 3f88a1f). Scope is the external-review package only: a review-request checklist, a review-feedback template, an optional issue template, and a small README link. Non-negotiable: no fabricated endorsements and no claim that review has happened until it has, `review_feedback.md` states plainly that no external review has occurred yet.
 - [2026-06-02] M30: PR #92 squash-merged (commit 3f88a1f) after Codex review converged clean ("Didn't find any major issues") across four rounds of P2 fixes, each verified (happy + negative paths) in containerized Linux and on macOS before re-requesting review: (1) `profile_gateway_io.sh` fails loudly (no artifact) when strace captures no syscall summary; (2) `socket_stress.sh` reports loss as `published − received` (captures end-of-burst tail drops the interior sequence-gap counter misses); (3) `profile_gateway_io.sh` Pass 2 launches the gateway *under* strace (launch form) so tracing works under Yama `ptrace_scope=1` without `CAP_SYS_PTRACE`, stopping the traced gateway with SIGTERM/SIGKILL (never strace) so the `-c` report is flushed; (4) both scripts fail loudly (no artifact) on port conflicts / helper failures.
-- [2026-06-02] M30: started after PR #91 (post-M29 docs sync) squash-merged to main (commit 86443f0). Scope is Linux kernel/socket-path profiling + socket hardening only; M31–M41 are not implemented here. Also corrected the stale HANDOFF.md "Current handoff" block (it still said "M29 is PR #89 and should land"; the review bot flagged this on #91, which merged before the comment was addressed).
+- [2026-06-02] M30: started after PR #91 (post-M29 docs sync) squash-merged to main (commit 86443f0). Scope is Linux kernel/socket-path profiling + socket hardening only; M31-M41 are not implemented here. Also corrected the stale HANDOFF.md "Current handoff" block (it still said "M29 is PR #89 and should land"; the review bot flagged this on #91, which merged before the comment was addressed).
 - [2026-06-02] M30: added an optional `SO_RCVBUF` knob to `UdpFeedClient(port, recv_buffer_bytes=0)` that requests the buffer and reads back the kernel-granted size via `getsockopt`; `qsl-mdfeed subscribe` gains `[rcvbuf_bytes]`, `qsl-mdfeed publish` gains `[orders]`, and the subscriber idle-breaks after a few empty receives so burst experiments terminate promptly. Backward-compatible (defaulted param); unit-tested for monotonic effective-size growth.
-- [2026-06-02] M30: `scripts/socket_stress.sh` (`make socket-stress`) is portable (Linux+macOS) — UDP burst + receive-buffer experiment over loopback, multi-trial. Measured on this macOS host: a 2 KiB buffer drops datagrams under a ~16.9k-datagram burst while the OS default (~768 KiB) and an 8 MiB buffer lose nothing. Loss is reported as `published − received` (per-trial, varies run-to-run), not a fixed number.
-- [2026-06-02] M30 (Codex review on PR #92, two rounds): (1) fixed `profile_gateway_io.sh` to capture strace's exit status and require a real syscall summary, failing loudly (exit 3, no artifact) when strace cannot attach — previously a blocked-ptrace host could write a successful-looking artifact with an empty syscall section (commit 551a9c5). (2) fixed `socket_stress.sh` to report loss as `published − received` instead of only the `SequenceTracker` gap count: an end-of-burst tail drop has no later datagram to reveal a gap, so the gap counter alone undercounts loss; the interior gap count is kept as a secondary signal. Both were P2 findings.
-- [2026-06-02] M30: `scripts/profile_gateway_io.sh` (`make profile-io`) is Linux-only (skips with exit 2 elsewhere, like the M29 perf scripts). It backgrounds the gateway directly (owns its PID), reads rusage from `/proc/<pid>/{stat,status}` (Pass 1) and attaches `strace -f -c` (Pass 2) — no GNU time / pkill dependency, with SIGKILL escalation so it cannot hang. The committed `results/socket_profile_loopback.txt` was generated in containerized Linux (Docker, `--cap-add=SYS_PTRACE`): user-space matching CPU fell below the 10 ms tick while the measurable CPU was the kernel/socket path, with ~1 voluntary context switch per connection and a syscall mix of exactly accept/read/sendto/close.
-- [2026-06-02] M30: both socket artifacts are loopback-only, constrained-environment evidence (ADR 0008), same honesty policy as ADR 0007 for perf; the gateway profile carries `Dirty tree: yes` because it was generated mid-development in a container — regenerate on a clean Linux checkout for a clean-tree version. No NIC/driver/real-network or production-capacity claim is made.
+- [2026-06-02] M30: `scripts/socket_stress.sh` (`make socket-stress`) is portable (Linux+macOS). UDP burst + receive-buffer experiment over loopback, multi-trial. Measured on this macOS host: a 2 KiB buffer drops datagrams under a ~16.9k-datagram burst while the OS default (~768 KiB) and an 8 MiB buffer lose nothing. Loss is reported as `published − received` (per-trial, varies run-to-run), not a fixed number.
+- [2026-06-02] M30 (Codex review on PR #92, two rounds): (1) fixed `profile_gateway_io.sh` to capture strace's exit status and require a real syscall summary, failing loudly (exit 3, no artifact) when strace cannot attach, previously a blocked-ptrace host could write a successful-looking artifact with an empty syscall section (commit 551a9c5). (2) fixed `socket_stress.sh` to report loss as `published − received` instead of only the `SequenceTracker` gap count: an end-of-burst tail drop has no later datagram to reveal a gap, so the gap counter alone undercounts loss; the interior gap count is kept as a secondary signal. Both were P2 findings.
+- [2026-06-02] M30: `scripts/profile_gateway_io.sh` (`make profile-io`) is Linux-only (skips with exit 2 elsewhere, like the M29 perf scripts). It backgrounds the gateway directly (owns its PID), reads rusage from `/proc/<pid>/{stat,status}` (Pass 1) and attaches `strace -f -c` (Pass 2), no GNU time / pkill dependency, with SIGKILL escalation so it cannot hang. The committed `results/socket_profile_loopback.txt` was generated in containerized Linux (Docker, `--cap-add=SYS_PTRACE`): user-space matching CPU fell below the 10 ms tick while the measurable CPU was the kernel/socket path, with ~1 voluntary context switch per connection and a syscall mix of exactly accept/read/sendto/close.
+- [2026-06-02] M30: both socket artifacts are loopback-only, constrained-environment evidence (ADR 0008), same honesty policy as ADR 0007 for perf; the gateway profile carries `Dirty tree: yes` because it was generated mid-development in a container, regenerate on a clean Linux checkout for a clean-tree version. No NIC/driver/real-network or production-capacity claim is made.
 - [2026-06-02] M30: deferred the optional `epoll` adapter to M34 (multi-client pressure to M35) and `io_uring` to discuss-only. Rationale: `epoll` is Linux-only and cannot be compiled or tested on the macOS development host, and committing untested platform-specific code violates the no-untested-C++ bar; M30 profiles and hardens the existing one-connection-at-a-time gateway instead of rewriting it.
 - [2026-06-01] M29: started after M28 merged (PR #88, squash commit 03b4d9a). M29 scope is Linux `perf` evidence only: scripts/docs/artifacts for `perf stat` and `perf record/report`; no engine optimization and no M30 socket profiling.
 - [2026-06-01] M29: `make perf-stat` and `make perf-record` fail before building on non-Linux hosts; Linux scripts capture hardware/kernel/compiler/perf/build/git/dirty-tree metadata and keep generated M29 result files out of the dirty-tree calculation.
@@ -832,21 +830,21 @@ Lower priority:
 - [2026-06-01] M28: kept order-book storage unchanged; the pool is an allocation experiment for future storage decisions, not a semantic refactor or an end-to-end engine latency claim.
 - [2026-06-01] M28 review fix: changed `OrderPool<Capacity>` from default-constructed `std::array<engine::Order>` slots to raw aligned storage with explicit `std::construct_at` on acquire and `std::destroy_at` on release/reset/destructor, preserving per-acquire object lifetime while keeping exhaustion explicit and avoiding heap fallback.
 - [2026-06-01] M27: started after M26 merged (PR #86, squash commit 8ec4967). Reset the env-designated branch to `origin/main` rather than create a `feat/m27-*` branch (the environment forbids pushing to a different branch); the branch now carries only M27.
-- [2026-06-01] M27: ThreadSanitizer is a *separate* sanitizer preset because `-fsanitize=thread` is incompatible with the ASan preset's `-fsanitize=address`; `cmake/Sanitizers.cmake` errors if both are enabled at once. Labeled the three `tests/concurrency/` executables `concurrency` so `make tsan` runs only the genuinely multithreaded tests (TSan on single-threaded tests adds nothing). TSan is a data-race *correctness* gate, not a performance tool — no benchmark numbers are collected under it.
-- [2026-06-01] M26: addressed a Codex review on PR #86 — the "backpressure occurred (spins >= 1)" assertions were timing-dependent (`std::this_thread::yield()` can let the consumer keep pace, so a spin count of 0 is legitimately possible on a fast/lightly-loaded run). Replaced them with a deterministic barrier: added an optional `PipelineProbe` (live spin counters the pipeline bumps as backpressure happens) and a gated-consumer test that blocks the downstream stage, waits on the probe until BOTH queues have provably back-pressured, then releases — and made the lag/saturation tests correctness-only. Confirmed non-flaky over 50 repeated runs; `make check` 182/182, `make asan` 182/182.
-- [2026-06-01] M26: reconciled stale PROGRESS state — M25 was already merged (PR #85, commit 9360364 on main), not "ready for PR"; M24 (#84) + M25 (#85) confirmed merged, satisfying the M26 prerequisites.
+- [2026-06-01] M27: ThreadSanitizer is a *separate* sanitizer preset because `-fsanitize=thread` is incompatible with the ASan preset's `-fsanitize=address`; `cmake/Sanitizers.cmake` errors if both are enabled at once. Labeled the three `tests/concurrency/` executables `concurrency` so `make tsan` runs only the genuinely multithreaded tests (TSan on single-threaded tests adds nothing). TSan is a data-race *correctness* gate, not a performance tool, no benchmark numbers are collected under it.
+- [2026-06-01] M26: addressed a Codex review on PR #86, the "backpressure occurred (spins >= 1)" assertions were timing-dependent (`std::this_thread::yield()` can let the consumer keep pace, so a spin count of 0 is legitimately possible on a fast/lightly-loaded run). Replaced them with a deterministic barrier: added an optional `PipelineProbe` (live spin counters the pipeline bumps as backpressure happens) and a gated-consumer test that blocks the downstream stage, waits on the probe until BOTH queues have provably back-pressured, then releases, and made the lag/saturation tests correctness-only. Confirmed non-flaky over 50 repeated runs; `make check` 182/182, `make asan` 182/182.
+- [2026-06-01] M26: reconciled stale PROGRESS state. M25 was already merged (PR #85, commit 9360364 on main), not "ready for PR"; M24 (#84) + M25 (#85) confirmed merged, satisfying the M26 prerequisites.
 - [2026-06-01] M26: the threaded pipeline is a new header-only `qsl::concurrency::ThreadedPipeline<InboundCapacity, OutboundCapacity>` (`include/qsl/concurrency/pipeline.hpp`). The engine thread is the **sole owner** of `MatchingEngine`+`OrderGateway`, so the concurrency boundary is a value hand-off and deterministic matching semantics are unchanged (no engine code modified).
-- [2026-06-01] M26: the downstream publisher/log stage consumes self-contained `ProcessedCommand` records and never reads the engine — the M6 publisher derives top-of-book from the engine, which would race the engine thread, so keeping the sink engine-free makes "publisher lag cannot corrupt engine state" structurally true, not merely tested.
-- [2026-06-01] M26: both hand-off queues use the lossless spin/yield policy (orders + event-log/feed records never dropped) and drain-then-stop shutdown via per-stage `atomic<bool>` done-flags; rings live on `run()`'s stack and are joined before return (SPSC lifetime bracket). Determinism is proven by asserting the threaded result equals a single-threaded reference *and* a replay of the concurrently-written command log, across seeds and queue capacities (2..4096) — capacity/timing change only backpressure, never the result.
-- [2026-06-01] M26: branch-name deviation — the managed remote environment mandates development on `claude/serene-fermi-rhuFJ` and forbids pushing to a different branch, so M26 keeps the milestone intent (one branch, one PR titled `feat: add threaded gateway-engine-feed pipeline prototype`) but not the `feat/mNN-slug` branch name.
-- [2026-06-01] M25: split the concurrency docs — kept the high-level model (ownership lifecycle, visibility, backpressure, shutdown, limits) in `docs/concurrency_model.md` and moved the C++ memory-model deep dive (ordering table, happens-before proof both directions, wait-free-by-construction argument) into a new `docs/memory_ordering.md`, cross-linked, to avoid one drifting from the other.
-- [2026-06-01] M25: justified the "wait-free per operation" / "lock-free" claim by construction (bounded step count, no loops, no CAS) rather than dropping it, and explicitly scoped it to the queue op — a caller spinning on backpressure is application-level and not wait-free.
+- [2026-06-01] M26: the downstream publisher/log stage consumes self-contained `ProcessedCommand` records and never reads the engine, the M6 publisher derives top-of-book from the engine, which would race the engine thread, so keeping the sink engine-free makes "publisher lag cannot corrupt engine state" structurally true, not merely tested.
+- [2026-06-01] M26: both hand-off queues use the lossless spin/yield policy (orders + event-log/feed records never dropped) and drain-then-stop shutdown via per-stage `atomic<bool>` done-flags; rings live on `run()`'s stack and are joined before return (SPSC lifetime bracket). Determinism is proven by asserting the threaded result equals a single-threaded reference *and* a replay of the concurrently-written command log, across seeds and queue capacities (2..4096), capacity/timing change only backpressure, never the result.
+- [2026-06-01] M26: branch-name deviation, the managed remote environment mandates development on `claude/serene-fermi-rhuFJ` and forbids pushing to a different branch, so M26 keeps the milestone intent (one branch, one PR titled `feat: add threaded gateway-engine-feed pipeline prototype`) but not the `feat/mNN-slug` branch name.
+- [2026-06-01] M25: split the concurrency docs, kept the high-level model (ownership lifecycle, visibility, backpressure, shutdown, limits) in `docs/concurrency_model.md` and moved the C++ memory-model deep dive (ordering table, happens-before proof both directions, wait-free-by-construction argument) into a new `docs/memory_ordering.md`, cross-linked, to avoid one drifting from the other.
+- [2026-06-01] M25: justified the "wait-free per operation" / "lock-free" claim by construction (bounded step count, no loops, no CAS) rather than dropping it, and explicitly scoped it to the queue op, a caller spinning on backpressure is application-level and not wait-free.
 - [2026-06-01] M25: introduced `tests/concurrency/` (separate from `tests/unit/`) for sustained stress + backpressure/shutdown evidence; deferred dynamic data-race detection (ThreadSanitizer) to M27 per the roadmap rather than adding a TSan preset now.
 - [2026-06-01] M25: qualified the wait-free claim further so it only covers payload types with bounded, non-blocking copy/move assignment; `SpscRing` remains SPSC-only and the queue protocol proof does not overpromise for arbitrary `T`.
 - [2026-05-31] Cut GitHub-only `v0.1.0` release after the release-readiness gate; no packages published.
-- [2026-05-31] Promoted old issues into the Phase III/IV roadmap (issue → milestone): #24 → M24, #26 → M26, #27 → M27, #25 → M28, #32 → M29 — instead of leaving them as loose backlog.
-- [2026-05-31] Added Phase IV milestones M29–M31 for Linux perf/socket profiling and external review signal (with M28 memory-pool experiment closing Phase III).
-- [2026-05-31] Deferred generic product items #28–#31 and #33 (realistic flow model, FIX adapter, dashboard, Docker, Pages) until after the systems-credibility arc; #32 (perf/flamegraph) is promoted to M29.
+- [2026-05-31] Promoted old issues into the Phase III/IV roadmap (issue → milestone): #24 → M24, #26 → M26, #27 → M27, #25 → M28, #32 → M29, instead of leaving them as loose backlog.
+- [2026-05-31] Added Phase IV milestones M29-M31 for Linux perf/socket profiling and external review signal (with M28 memory-pool experiment closing Phase III).
+- [2026-05-31] Deferred generic product items #28, #31 and #33 (realistic flow model, FIX adapter, dashboard, Docker, Pages) until after the systems-credibility arc; #32 (perf/flamegraph) is promoted to M29.
 - [2026-05-29] Target Jane Street SWE first and Linux Engineering second; avoid optimizing for IT Operations because it weakens software-engineering signal.
 - [2026-05-29] Preserve the C++20 exchange simulator as the core project; add OCaml only as a replay-verifier subproject, not as a replacement for the engine.
 - [2026-05-29] Add Linux performance and socket gateway documentation requirements to strengthen Linux Engineering fit.
@@ -856,28 +854,28 @@ Lower priority:
 ### SWE title
 
 ```text
-Quant Systems Lab — C++20 Exchange Simulator + OCaml Replay Verifier
+Quant Systems Lab. C++20 Exchange Simulator + OCaml Replay Verifier
 ```
 
 ### Linux title
 
 ```text
-Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
+Quant Systems Lab. Linux Systems + Exchange Infrastructure Simulator
 ```
 
 ## Next action remains
 
 `v0.2.1` is the latest tag, on top of `v0.2.0` (PR #127 ded6e80) and `v0.1.0`. A post-v0.2.1
-hardening + perf wave (#135–#146) is squash-merged to `main` and **unreleased**, being cut as
-`v0.2.2`: out-of-domain enum rejection in the decoders (#136); network hardening — EINTR retry,
+hardening + perf wave (#135, #146) is squash-merged to `main` and **unreleased**, being cut as
+`v0.2.2`: out-of-domain enum rejection in the decoders (#136); network hardening. EINTR retry,
 accept fairness, connection cap, UDP send-error tracking, transient-accept survival, and fd-exhaustion
 handling (#137, #140, #143); CLI arg validation (#141); a real UBSan abort gate (#142); OCaml
-`diff_report` robustness (#144); and two measured order-book perf wins — `try_emplace` (~+5%, #138)
+`diff_report` robustness (#144); and two measured order-book perf wins, `try_emplace` (~+5%, #138)
 and the order-index load-factor cap (~+18.6%, #145), with the flamegraph regenerated (#135/#139/#146).
 `make check`/`make asan` 270/270. The committed perf artifacts remain **partial hardware PMU
-evidence** from this bare-metal Apple M2 (aarch64) Fedora Asahi host — real
+evidence** from this bare-metal Apple M2 (aarch64) Fedora Asahi host, real
 cycles/instructions/branches/branch-misses with cache-reference/cache-miss counters unsupported by
-the Apple Silicon PMU — not NIC-offload, latency, or full hardware-PMU evidence.
+the Apple Silicon PMU, not NIC-offload, latency, or full hardware-PMU evidence.
 
 Highest-value remaining work is non-code and gated: issue #94 (independent external review) and
 issue #90 (full cache-PMU evidence). Issue #90 needs a PMU **microarchitecture** that exposes cache
@@ -889,7 +887,7 @@ After each squash merge, return to this file and update state factually. If benc
 
 ## Additive deep-testing roadmap replacing old optional M15
 
-The old optional `M15 — Jane Street application polish` is removed. It is replaced by technical milestones M15–M20. The purpose is to add actual depth rather than recruiter-facing decoration.
+The old optional `M15. Jane Street application polish` is removed. It is replaced by technical milestones M15-M20. The purpose is to add actual depth rather than recruiter-facing decoration.
 
 - **M15** exports normalized command streams and final C++ snapshots.
 - **M16** implements an independent OCaml replay engine.
@@ -901,13 +899,13 @@ The old optional `M15 — Jane Street application polish` is removed. It is repl
 Decision log additions:
 
 - [2026-05-30] Removed optional Jane Street application-polish milestone because recruiter-facing polish is lower signal than technical depth.
-- [2026-05-30] Added M15–M20 to turn the OCaml verifier into independent replay/differential-testing infrastructure.
+- [2026-05-30] Added M15-M20 to turn the OCaml verifier into independent replay/differential-testing infrastructure.
 - [2026-05-30] Property-based generation and shrinking are now the intended final “deep idea” layer: the repo should test market-state systems, not merely implement one.
 - [Roadmap] Repository hygiene is deferred until after Phase II differential testing; no CODE_OF_CONDUCT.md or GOVERNANCE.md unless the project becomes multi-maintainer.
 - [Roadmap] Packaging is intentionally deferred; the repo is a technical artifact, not an installable product.
 - [Roadmap] A GitHub v0.1.0 release is optional and only after the release-readiness audit.
 - [Roadmap] M22 is the Phase II equivalent of M13: final README/demo/docs/readiness polish with conservative claims and reproducible checks.
-- [M16] OCaml `replay_engine.ml` is an independent immutable matching engine (price-time, GTC/IOC/market/cancel/modify, gateway risk, active-lifetime ids) that replays the M15 command stream and computes its own snapshot — it does not read the C++ events/snapshot during replay.
+- [M16] OCaml `replay_engine.ml` is an independent immutable matching engine (price-time, GTC/IOC/market/cancel/modify, gateway risk, active-lifetime ids) that replays the M15 command stream and computes its own snapshot, it does not read the C++ events/snapshot during replay.
 - [M16] Sequence numbers count emitted events (accept + trades; cancel; modify + trades) so the OCaml `last_seq` matches the C++ engine; snapshot includes every registered symbol (mirrors `try_emplace`).
 - [M16] On the committed `stream_seed7.txt`, the OCaml-computed snapshot matches the C++ snapshot exactly (last_seq 47, trades 13, per-symbol best bid/ask + counts); the automated C++-vs-OCaml equality check in CI is deferred to M17.
 - [M17] Differential test compares the OCaml-computed snapshot against the C++ snapshot embedded in each fixture (best bid/ask, level aggregates, order counts, last_seq, trade count) via canonical `snapshot_to_lines`, printing a readable computed-vs-expected diff on mismatch; runs under the existing `ocaml-verifier` CI job (no new job).
@@ -916,14 +914,14 @@ Decision log additions:
 - [M18] Added `generate_property_flow` (C++) + `qsl-export-stream prop <seed>` producing enriched seeded streams (IOC, invalid price/qty, duplicate/reused/unknown ids, cancel/modify active+inactive, market, multi-symbol); committed `prop_seed1..8.txt` (later expanded to `prop_seed1..50` in #49). C++ and OCaml snapshots agree on all 8 seeds, exercising every reject reason plus real trades.
 - [M18] The differential test discovers all `prop_*.txt` via `Sys.readdir` and checks snapshot equality + a no-crossed-book invariant per fixture, reporting the failing seed.
 - [M18] Restored the M17 parser-rejection check (`bad_snapshot_level_symbol.txt` / `expect_parse_error`) that the M18 differential-test rewrite had dropped; this also cleared a warning-as-error (unused value) that had broken the OCaml build.
-- [M18] Broadened negative coverage (`stream_bad_lastseq.txt`, `stream_bad_orders.txt`) and added a golden fixture-regeneration guard (`scripts/check_fixtures.sh`, `make check-fixtures`, CI `build-test` step) so committed fixtures must match current C++ output — closing the M17-review gap where the differential could compare OCaml against a stale C++ snapshot.
+- [M18] Broadened negative coverage (`stream_bad_lastseq.txt`, `stream_bad_orders.txt`) and added a golden fixture-regeneration guard (`scripts/check_fixtures.sh`, `make check-fixtures`, CI `build-test` step) so committed fixtures must match current C++ output, closing the M17-review gap where the differential could compare OCaml against a stale C++ snapshot.
 - [M19] Added a deterministic, greedy command-stream shrinker (`replay::shrink`): chunk removal, single-command removal, and field simplification (lower quantities), iterated to a fixed point, preserving a pluggable failure predicate; `count_trades` is a gateway-driven predicate helper.
 - [M19] Demonstrated against an artificial "produces a trade" predicate (the engines currently agree, so there is no real divergence to shrink); the shrinker is predicate-agnostic and a divergence predicate plugs in unchanged.
 - [M19] `qsl-export-stream shrink <seed>` writes a minimized differential fixture + shrink report; committed `shrunk_seed1.txt` (123→5 commands) is golden-checked and replayed by the OCaml differential test. Limitations (greedy/not-globally-minimal, qty-only field simplification, no symbol/id renumbering) documented in docs/differential_testing.md.
 - [M20] Finalized docs/differential_testing.md with a top-level architecture overview, a mermaid pipeline diagram, a minimized-fixture example, and an explicit "what this proves / does not prove" section (agreement over tested seeds; not formal verification; shared-assumption risk acknowledged).
 - [M20] Added docs/property_testing.md (generator coverage + delta-debug shrinker + determinism/golden + honest limits); added a README "Differential testing (OCaml)" <60s section + diagram links and conservative differential-testing résumé bullets. Docs-only; no code change.
-- [M21] Added MIT LICENSE (Copyright (c) 2026 Moustafa Nasr), CONTRIBUTING.md (branch-per-milestone workflow + checks + no fabricated perf), SECURITY.md (no bounty; qsl-gateway/qsl-mdfeed unauthenticated + loopback-only; honest systems-lab-not-production), CHANGELOG.md ([Unreleased] M3–M20 history), and README links.
+- [M21] Added MIT LICENSE (Copyright (c) 2026 Moustafa Nasr), CONTRIBUTING.md (branch-per-milestone workflow + checks + no fabricated perf), SECURITY.md (no bounty; qsl-gateway/qsl-mdfeed unauthenticated + loopback-only; honest systems-lab-not-production), CHANGELOG.md ([Unreleased] M3-M20 history), and README links.
 - [M21] Deliberately omitted CODE_OF_CONDUCT.md and GOVERNANCE.md (single-maintainer; no community-process theater) and skipped SUPPORT.md; no packaging and no release (deferred to optional M23).
 - [M22] Release-readiness audit recorded in docs/release_readiness.md: verified make check/asan/check-fixtures/dune runtest/demo/bench all green, all README + doc-to-doc links resolve, no overclaiming (forbidden phrases appear only as negations or avoid-lists), benchmark language measured/synthetic/reproducible, differential vocabulary distinct. `make bench` was rerun to confirm reproduction; committed results/latest.txt retained (single-machine variance). No GitHub release created (that is the optional, human-approved M23).
-- [M20–M22 re-finalization] After the #34–#51 backlog landed, re-ran the Phase II finalization milestones against the current state: M20 differential/property docs + Mermaid diagrams + ADRs refreshed (PR #78); M21 CONTRIBUTING checks (added check-manifest/determinism/bench-diff/divergence-demo) and per-issue branch naming; M22 release_readiness.md re-audited — make check 157/157, asan 157/157, check-fixtures/check-manifest clean, determinism byte-identical across gcc/clang over all 50 property seeds, divergence-demo OK, dune runtest 5 suites, demo clean; benchmarks reproduce and committed results/latest.txt + results/differential.txt retained.
+- [M20-M22 re-finalization] After the #34, #51 backlog landed, re-ran the Phase II finalization milestones against the current state: M20 differential/property docs + Mermaid diagrams + ADRs refreshed (PR #78); M21 CONTRIBUTING checks (added check-manifest/determinism/bench-diff/divergence-demo) and per-issue branch naming; M22 release_readiness.md re-audited, make check 157/157, asan 157/157, check-fixtures/check-manifest clean, determinism byte-identical across gcc/clang over all 50 property seeds, divergence-demo OK, dune runtest 5 suites, demo clean; benchmarks reproduce and committed results/latest.txt + results/differential.txt retained.
 - [M17] Snapshot parsing validates per-level symbol ownership so malformed embedded C++ snapshots cannot be normalized into equality.

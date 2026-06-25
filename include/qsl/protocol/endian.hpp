@@ -7,7 +7,7 @@
 namespace qsl::protocol {
 
 // Explicit big-endian (network byte order) serialization via byte shifts.
-// No reinterpret_cast, no memcpy, no struct overlay — well-defined on any host.
+// No reinterpret_cast, no memcpy, no struct overlay, well-defined on any host.
 
 template <class UInt> void store_be(std::byte *p, UInt v) noexcept {
     static_assert(std::is_unsigned_v<UInt>, "store_be requires an unsigned type");

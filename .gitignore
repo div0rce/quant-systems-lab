@@ -12,6 +12,6 @@ results/*.json
 results/*.csv
 results/*.sqlite
 
-# Agent working files — never committed
+# Agent working files, never committed
 .agents/
 AGENTS.md

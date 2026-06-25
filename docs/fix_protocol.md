@@ -53,7 +53,7 @@ adapter uses the standard FIX envelope:
 |-----|--------------|----------------|-------|
 | 34  | MsgSeqNum    | sequence no.   | as above |
 | 41  | OrigClOrdID  | `order_id`     | the order being cancelled |
-| 11  | ClOrdID      | —              | required by FIX; validated on decode, echoes `order_id` on encode (no separate cancel-request id is modelled) |
+| 11  | ClOrdID      | (none)         | required by FIX; validated on decode, echoes `order_id` on encode (no separate cancel-request id is modelled) |
 | 55  | Symbol       | `symbol`       | decimal `SymbolId` |
 
 ## Deliberate simplifications
@@ -61,7 +61,7 @@ adapter uses the standard FIX envelope:
 These are documented departures from strict FIX, chosen so the adapter stays a deterministic,
 lossless map onto the simulator's internal model:
 
-- **Symbol (tag 55) carries the numeric `SymbolId`** in decimal, not a ticker string — the engine
+- **Symbol (tag 55) carries the numeric `SymbolId`** in decimal, not a ticker string, the engine
   keys on `SymbolId`, so mapping to a string table would only add a lossy layer.
 - **Price (tag 44) carries integer ticks and is always present**, including market orders. The
   project never represents price as a float, and `NewOrder` always has a `price` field; carrying it
@@ -72,7 +72,7 @@ lossless map onto the simulator's internal model:
 
 Decoding is total and deterministic: it never throws, allocates nothing on the decode path (a
 fixed field table, `std::from_chars`, `std::string_view`), and reports every malformed input via
-`FixError` rather than undefined behavior — mirroring the binary codec's `DecodeError` discipline.
+`FixError` rather than undefined behavior, mirroring the binary codec's `DecodeError` discipline.
 
 `FixError`: `None`, `Malformed`, `UnsupportedBeginString`, `UnknownMsgType`, `MissingField`,
 `InvalidField`, `BodyLengthMismatch`, `ChecksumMismatch`, `InvalidEnumValue`, `OutOfRange`.

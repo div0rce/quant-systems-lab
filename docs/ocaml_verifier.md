@@ -2,15 +2,27 @@
 
 An independent replay-invariant checker for exported exchange event logs, written in OCaml
 (`ocaml/`). It is deliberately small and external: this *log verifier* (`verify_replay`, M14) does
-**not** re-implement the matching engine and does **not** prove the engine correct — it re-derives a
+**not** re-implement the matching engine and does **not** prove the engine correct, it re-derives a
 set of replay invariants from a normalized event-log fixture and reports pass/fail.
 
 The OCaml side also includes a separate, stronger component: an **independent replay engine**
 (`ocaml/lib/replay_engine.ml`, M16) that *does* re-implement price-time matching (GTC/IOC/market/
 cancel/modify plus gateway risk) from the command stream and computes its own final snapshot, which
-the differential tests assert equals the C++ snapshot. That engine — not this verifier — is the
+the differential tests assert equals the C++ snapshot. That engine, not this verifier, is the
 matching-independent oracle; see [`differential_testing.md`](differential_testing.md). This page
 covers only the log-invariant checker.
+
+```mermaid
+flowchart LR
+    cmds["Command stream, seeded generator"] --> cpp["C++ MatchingEngine"]
+    cmds --> ml["OCaml replay_engine, independent"]
+    cpp --> s1["C++ snapshot"]
+    ml --> s2["OCaml snapshot"]
+    s1 --> cmp{"Equal? best bid/ask, level aggregates, counts, trades, last seq"}
+    s2 --> cmp
+    cmp -->|No| shrink["Shrink to minimal counterexample"]
+    cmp -->|Yes| pass["Differential pass"]
+```
 
 ## Why a second language
 
@@ -18,7 +30,7 @@ The C++ tests and the engine share code and assumptions; a bug in a shared assum
 from tests written against the same model. A verifier written independently, in a typed
 functional language with immutable data, is a cheap cross-check: it parses the *output* of the
 C++ pipeline and validates properties that must hold regardless of how the engine is
-implemented. The signal is an independent checker in a typed functional language — not a claim
+implemented. The signal is an independent checker in a typed functional language, not a claim
 of OCaml mastery or formal verification.
 
 ## Fixture format
@@ -43,13 +55,13 @@ summary last_seq <n> trades <n>       # engine-reported totals
 
 Each is recomputed from the raw records, independently of the engine:
 
-1. **Sequence strictly increasing** — event sequence numbers are monotonic.
-2. **Positive trade quantity** — no zero/negative trade quantities.
-3. **Canceled order cannot later trade** — an id is canceled only for its *current* lifetime;
+1. **Sequence strictly increasing**, event sequence numbers are monotonic.
+2. **Positive trade quantity**, no zero/negative trade quantities.
+3. **Canceled order cannot later trade**, an id is canceled only for its *current* lifetime;
    trading it counts as a violation only if there is no later `accept` re-establishing it.
-4. **Rejected order never rests or trades** — a rejected attempt never entered the engine, so
+4. **Rejected order never rests or trades**, a rejected attempt never entered the engine, so
    the id must not rest (`cancel`/`modify`) or trade *until* a later `accept` reuses it.
-5. **Summary matches event log** — the reported `last_seq` equals the maximum event sequence
+5. **Summary matches event log**, the reported `last_seq` equals the maximum event sequence
    and the reported trade count equals the number of `trade` records.
 
 ## OrderId lifetimes
@@ -58,7 +70,7 @@ OrderId uniqueness in this system is scoped to currently-active resting orders, 
 global history:
 
 - A rejected attempt never enters the engine, so the same numeric id may later be submitted
-  and accepted — the rejected attempt does not permanently tombstone the id.
+  and accepted, the rejected attempt does not permanently tombstone the id.
 - A canceled (or fully-filled) order leaves the active set, so its id may be reused by a later
   accept, which begins a new valid lifetime.
 
@@ -72,7 +84,7 @@ logs that are valid under the engine's active-order semantics.
 Beyond the log-invariant checker above, `ocaml/lib/replay_engine.ml` is an **independent**
 matching engine: it consumes an M15 command-stream fixture (`stream_parser.ml` parses the
 `meta` risk config and `cmd` lines, ignoring the C++ `evt`/`snapshot` output) and replays it
-immutably to compute its own final snapshot — it does not trust the C++ engine's emitted
+immutably to compute its own final snapshot, it does not trust the C++ engine's emitted
 events. It mirrors the C++ semantics so the snapshots can be compared:
 
 - integer ticks; bids best = highest, asks best = lowest; FIFO within a level; fills at the
@@ -113,7 +125,7 @@ transcribes C++ logic, agreement proves nothing. This is an honest audit of wher
 **Deliberately mirrored (a *shared* error here would NOT be caught):**
 
 - **Integer notional rule.** `check_limit_values` rejects when `qty > max_notional / price`
-  using truncating integer division — the exact C++ formula. A shared off-by-one in this
+  using truncating integer division, the exact C++ formula. A shared off-by-one in this
   truncation is invisible to the differential. *(Highest-risk mirror.)*
 - **Modify priority rule.** `modify_book` keeps queue priority only for a same-price reduction
   (`new_price = price0 && new_qty <= resting_qty`), treats a price change or quantity increase
@@ -121,7 +133,7 @@ transcribes C++ logic, agreement proves nothing. This is an honest audit of wher
   matched to C++ by construction.
 - **Sequence-number accounting.** `put_book` advances `seq` by `1 + #trades` on accept,
   `1` on cancel, `1 + #trades` on modify, and `0` on reject. `last_seq` is compared, so a
-  divergence is caught — but the *rule itself* was written to match, not re-specified.
+  divergence is caught, but the *rule itself* was written to match, not re-specified.
 - **Validation gating and snapshot shape.** The check order (unknown symbol → duplicate active
   id → value checks), the active-lifetime id scoping, and "every registered symbol appears,
   ordered by id ascending" are all mirrored conventions.
@@ -147,14 +159,14 @@ snapshot-equality oracle.
 
 - This checks **invariants over the exported log**, not full book-state re-computation. It does
   not independently re-run price-time matching, so it cannot by itself confirm best bid/ask or
-  resting quantities — those are covered on the C++ side (`docs/invariants.md`, replay-equivalence
+  resting quantities, those are covered on the C++ side (`docs/invariants.md`, replay-equivalence
   tests). The OCaml side ties the event log to the engine's reported summary.
 - It is **not** formal verification and makes **no** correctness proof; it is reproducible,
   deterministic invariant checking on fixed-seed fixtures.
 
 ## Build and run
 
-Local toolchain: OCaml + dune (e.g. `brew install ocaml dune`; no opam required — only the
+Local toolchain: OCaml + dune (e.g. `brew install ocaml dune`; no opam required, only the
 standard library is used).
 
 ```bash

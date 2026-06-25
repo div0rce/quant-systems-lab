@@ -556,7 +556,7 @@ OrderBook::OrderBook(Storage storage)
       contiguous_(storage == Storage::Contiguous ? std::make_unique<ContiguousStore>() : nullptr) {
     // The order index is on the hot path: every new/cancel/modify/fill does 1-4 point lookups on
     // it. Capping the load factor at 0.25 (vs the default 1.0) keeps probe chains short, which
-    // measurably speeds the whole engine on a busy book — a measured ~+18% on the steady-state
+    // measurably speeds the whole engine on a busy book, a measured ~+18% on the steady-state
     // profile workload, trading a modest amount of memory (more empty buckets) for fewer
     // collisions. This only changes bucket count, never iteration-for-output: index_ is used solely
     // for find/insert/erase/size, while snapshots and resting_orders() iterate the ordered
@@ -637,11 +637,11 @@ std::size_t OrderBook::count_matches(const OppMap &opposite, MatchQuery query) c
 OrderBook::Level &OrderBook::level_for(Side side, Price price) {
     // try_emplace avoids allocating+freeing a map node (std::map::emplace constructs the node
     // before checking for a duplicate key) and constructing a throwaway pmr list when the price
-    // level already exists — the steady-state common case with a bounded price band. The intrusive
+    // level already exists, the steady-state common case with a bounded price band. The intrusive
     // store already uses this; this brings the baseline path in line. Semantics are identical: an
     // absent level is inserted empty with the same pmr allocator, and erase_level_if_empty still
     // prunes it. The map carries resource_, so pmr scoped-allocator propagation constructs the
-    // inserted Level with that same resource — no explicit allocator argument needed (matching the
+    // inserted Level with that same resource, no explicit allocator argument needed (matching the
     // intrusive store).
     if (side == Side::Buy) {
         return bids_.try_emplace(price).first->second;

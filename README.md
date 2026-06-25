@@ -8,7 +8,7 @@ Binary order gateway. Price-time-priority matching engine. Market-data feed. App
 
 [![build](https://img.shields.io/github/actions/workflow/status/div0rce/quant-systems-lab/ci.yml?branch=main&label=CI&logo=github)](https://github.com/div0rce/quant-systems-lab/actions/workflows/ci.yml)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus)](CMakeLists.txt)
-[![tests](https://img.shields.io/badge/tests-271%20passing-2ea44f)](tests/)
+[![tests](https://img.shields.io/badge/tests-272%20passing-2ea44f)](tests/)
 [![sanitizers](https://img.shields.io/badge/ASan%20%C2%B7%20UBSan%20%C2%B7%20TSan-clean-2ea44f)](cmake/Sanitizers.cmake)
 [![determinism](https://img.shields.io/badge/replay-byte--identical-8957e5)](docs/invariants.md)
 [![license](https://img.shields.io/badge/license-MIT-3da639)](LICENSE)
@@ -29,31 +29,32 @@ Binary order gateway. Price-time-priority matching engine. Market-data feed. App
 
 ## The numbers
 
-Measured on a bare-metal Apple M2 (aarch64), Fedora Asahi, GCC 16, Release. Hot-path optimizations
-(`try_emplace` for price levels, an order-index hash load-factor cap) were profiled with `perf` and
-verified by back-to-back A/B. Full evidence and the honest mechanism in **[PERFORMANCE.md](PERFORMANCE.md)**.
+Measured on a bare-metal Apple M2 (aarch64), Fedora Asahi, GCC 16, Release. The hot path was profiled
+with `perf` and flamegraphs; the table compares the **v0.1.0 first release to v0.2.2** on the same
+host and harness (baseline storage, deep book). Full evidence and the honest mechanism in
+**[PERFORMANCE.md](PERFORMANCE.md)**.
 
 <table>
 <tr>
 <td width="50%">
 
-| Hot path (deep book) | Before | After |
+| Hot path (deep book) | v0.1.0 | v0.2.2 |
 |---|--:|--:|
-| **Throughput** | 8.89M/s | **11.13M/s** |
-| **p99 latency** | 250 ns | **208 ns** |
-| **Cycles / order** | 348 | **288** |
-| Instructions / order | 1239 | 1143 |
-| Branch-miss rate | 2.02% | **1.81%** |
-| Allocations / order | 1.106 | 1.106 |
+| **Allocations / order** | 4.09 | **2.67** |
+| **Cycles / order** | 310.7 | **289.5** |
+| Instructions / order | 1215 | **1157** |
+| IPC | 3.91 | **4.00** |
+| Branch-miss rate | 2.01% | **1.68%** |
+| p50 / p99 latency | 83 / 209 ns | 83 / 209 ns |
 
-`+25%` orders/sec, `-17%` cycles/order, determinism preserved.
+`-35%` allocations/order, `-7%` cycles/order, `-16%` branch misses, determinism preserved.
 
 </td>
 <td width="50%">
 
 | Quality bar | |
 |---|---|
-| Tests | **271** passing |
+| Tests | **272** passing |
 | Coverage | unit, integration, property, concurrency, shell |
 | Sanitizers | ASan + UBSan (aborting) + TSan, clean |
 | Determinism | snapshots byte-identical across GCC and Clang |

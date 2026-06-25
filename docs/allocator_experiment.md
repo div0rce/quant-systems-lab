@@ -41,9 +41,9 @@ qsl-bench pool
 `scripts/run_allocator_experiment.sh` writes `results/allocator_experiment.txt` with hardware,
 OS, compiler, build type, source-digest provenance, date, and the measured scenarios:
 
-- `order new/delete` — baseline heap allocation for one `engine::Order`;
-- `order pool acquire/release` — one acquire and release against a fixed pool;
-- `order pool burst cycle` — fill a 1024-slot pool, then release all slots.
+- `order new/delete`, baseline heap allocation for one `engine::Order`;
+- `order pool acquire/release`, one acquire and release against a fixed pool;
+- `order pool burst cycle`, fill a 1024-slot pool, then release all slots.
 
 ## Interpreting Results
 

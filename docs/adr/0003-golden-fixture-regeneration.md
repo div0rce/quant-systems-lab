@@ -27,10 +27,10 @@ committed corpus.
 - A fixture cannot drift from current C++ output, or change without a visible manifest update.
 - The corpus is reproducible across compilers/platforms (macOS-committed vs Linux CI).
 - The generator version is human-set provenance, not an automatically enforced invariant
-  (a generator change still requires a deliberate version bump — documented, not enforced).
+  (a generator change still requires a deliberate version bump, documented, not enforced).
 
 ## Alternatives considered
 
-- **Trust committed fixtures without regeneration** — rejected: silent drift risk.
-- **Hashes only (no regeneration)** — rejected: a hash matches a stale-but-unchanged fixture; the
+- **Trust committed fixtures without regeneration**, rejected: silent drift risk.
+- **Hashes only (no regeneration)**, rejected: a hash matches a stale-but-unchanged fixture; the
   regenerate-and-diff step is what proves equivalence to current C++ output.
