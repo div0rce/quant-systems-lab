@@ -15,13 +15,15 @@
 
 #include <algorithm>
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <new>
-#include <string>
+#include <optional>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -103,7 +105,8 @@ struct PerfFlow {
 
     PerfFlow() { ring.reserve(kRing); }
 
-    // Submit one limit order; returns its id so the caller can park it in the ring.
+    // Submit one limit order; returns its id. It may match resting liquidity and rest its
+    // remainder, or fully fill (marketable) and never rest.
     core::OrderId submit() {
         const std::uint64_t r = splitmix64(state);
         const auto side = ((r & 1U) != 0U) ? core::Side::Buy : core::Side::Sell;
@@ -114,9 +117,18 @@ struct PerfFlow {
         return oid;
     }
 
-    // Cancel the oldest resting order and park the new id in its slot, holding the book ~kRing
-    // deep.
-    void retire_oldest(core::OrderId oid) {
+    // Track only orders that actually rested, holding the book ~kRing deep: a fully-filled order is
+    // ignored, a resting order is parked, and once the ring is full the oldest resting order is
+    // cancelled. Checking eng.contains keeps depth steady instead of drifting with the match rate
+    // (and never cancels an id that never rested).
+    void track(core::OrderId oid) {
+        if (!eng.contains(sym, oid)) {
+            return;
+        }
+        if (ring.size() < kRing) {
+            ring.push_back(oid);
+            return;
+        }
         sink += eng.cancel(sym, ring[head]).size();
         ring[head] = oid;
         head = (head + 1) % kRing;
@@ -124,7 +136,7 @@ struct PerfFlow {
 
     void warmup() {
         while (ring.size() < kRing) {
-            ring.push_back(submit());
+            track(submit());
         }
     }
 };
@@ -147,8 +159,8 @@ void fill_latency_stats(std::vector<std::uint32_t> &lat, Result &res) {
         sum += v;
     }
     res.mean_ns = static_cast<std::uint32_t>(sum / lat.size());
-    res.p50_ns = lat[lat.size() / 2];
-    res.p99_ns = lat[(lat.size() * 99) / 100];
+    res.p50_ns = lat[(lat.size() - 1) / 2];
+    res.p99_ns = lat[((lat.size() - 1) * 99) / 100];
     res.overhead_ns = timer_overhead_ns();
 }
 
@@ -160,7 +172,7 @@ Result run_throughput(std::uint64_t orders) {
     const std::uint64_t a0 = g_allocs.load(std::memory_order_relaxed);
     const auto t0 = clk::now();
     for (std::uint64_t i = 0; i < orders; ++i) {
-        flow.retire_oldest(flow.submit());
+        flow.track(flow.submit());
     }
     const auto t1 = clk::now();
     Result res;
@@ -191,7 +203,7 @@ Result run_latency(std::uint64_t orders) {
             flow.eng.new_limit(flow.sym, oid, side, price, qty, core::TimeInForce::GTC).size();
         const auto b = clk::now();
         lat.push_back(ns_between(a, b));
-        flow.retire_oldest(oid);
+        flow.track(oid);
     }
     const auto t1 = clk::now();
     Result res;
@@ -204,32 +216,42 @@ Result run_latency(std::uint64_t orders) {
     return res;
 }
 
-std::uint64_t parse_orders(int argc, char **argv, bool latency) {
-    for (int i = 1; i < argc; ++i) {
-        const std::string a = argv[i];
-        if (a != "--latency") {
-            const std::uint64_t n = std::strtoull(a.c_str(), nullptr, 10);
-            if (n > 0) {
-                return n;
-            }
-        }
+// Parse a whole token as a positive order count. Rejects partial parses ("123abc"), trailing junk,
+// and negative-looking input ("-1") that std::strtoull would wrap to a huge value and feed straight
+// into reserve()/the loop bound.
+std::optional<std::uint64_t> parse_orders_arg(std::string_view s) {
+    std::uint64_t v = 0;
+    const char *begin = s.data();
+    const char *end = begin + s.size();
+    const auto [ptr, ec] = std::from_chars(begin, end, v);
+    if (ec != std::errc{} || ptr != end || v == 0) {
+        return std::nullopt;
     }
-    return latency ? 5'000'000ULL : 60'000'000ULL;
+    return v;
 }
 } // namespace
 
-// qsl-perfeval [orders] [--latency]
+// qsl-perfeval [orders>0] [--latency]
 //   default: untimed throughput + allocations/order (run under perf stat / perf record)
 //   --latency: also record per-order latency mean/p50/p99
 int main(int argc, char **argv) {
     bool latency = false;
+    std::optional<std::uint64_t> orders;
     for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "--latency") {
+        const std::string_view a = argv[i];
+        if (a == "--latency") {
             latency = true;
+            continue;
         }
+        const auto parsed = parse_orders_arg(a);
+        if (!parsed) {
+            std::fprintf(stderr, "usage: qsl-perfeval [orders>0] [--latency]\n");
+            return 2;
+        }
+        orders = *parsed;
     }
-    const std::uint64_t orders = parse_orders(argc, argv, latency);
-    const Result r = latency ? run_latency(orders) : run_throughput(orders);
+    const std::uint64_t count = orders.value_or(latency ? 5'000'000ULL : 60'000'000ULL);
+    const Result r = latency ? run_latency(count) : run_throughput(count);
     std::printf("perfeval: storage=baseline orders=%llu elapsed=%.3fs orders_per_sec=%.0f "
                 "allocs_per_order=%.4f\n",
                 static_cast<unsigned long long>(r.orders), r.seconds,

@@ -101,8 +101,12 @@ bool at_capacity(const std::vector<ConnectionWorker> &workers, std::size_t cap) 
 // related per-connection errnos). These must not tear the server down — only a genuinely fatal
 // listener error (e.g. EBADF/EINVAL) should. Mirrors the epoll path's is_transient_accept_error().
 bool transient_accept_errno() noexcept {
-    static constexpr int kTransient[] = {EINTR,     ECONNABORTED, EPROTO,       ENETDOWN,
-                                         EHOSTDOWN, ENONET,       EHOSTUNREACH, ENETUNREACH};
+    // The full set of already-pending per-connection network errors Linux accept(2) can surface,
+    // matching the epoll path's is_transient_accept_error() (it previously omitted ENOPROTOOPT and
+    // EOPNOTSUPP, so those two were wrongly fatal in the threaded acceptor).
+    static constexpr int kTransient[] = {EINTR,       ECONNABORTED, EPROTO, ENETDOWN,
+                                         ENOPROTOOPT, EHOSTDOWN,    ENONET, EHOSTUNREACH,
+                                         EOPNOTSUPP,  ENETUNREACH};
     return std::find(std::begin(kTransient), std::end(kTransient), errno) != std::end(kTransient);
 }
 
