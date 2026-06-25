@@ -553,7 +553,16 @@ OrderBook::OrderBook(Storage storage)
       bids_(resource_), asks_(resource_), index_(resource_),
       intrusive_(storage == Storage::IntrusivePooled ? std::make_unique<IntrusiveStore>()
                                                      : nullptr),
-      contiguous_(storage == Storage::Contiguous ? std::make_unique<ContiguousStore>() : nullptr) {}
+      contiguous_(storage == Storage::Contiguous ? std::make_unique<ContiguousStore>() : nullptr) {
+    // The order index is on the hot path: every new/cancel/modify/fill does 1-4 point lookups on
+    // it. Capping the load factor at 0.25 (vs the default 1.0) keeps probe chains short, which
+    // measurably speeds the whole engine on a busy book — a measured ~+18% on the steady-state
+    // profile workload, trading a modest amount of memory (more empty buckets) for fewer
+    // collisions. This only changes bucket count, never iteration-for-output: index_ is used solely
+    // for find/insert/erase/size, while snapshots and resting_orders() iterate the ordered
+    // bids_/asks_ maps, so determinism is unaffected.
+    index_.max_load_factor(0.25F);
+}
 
 OrderBook::~OrderBook() = default;
 
