@@ -1219,6 +1219,8 @@ exited 0, so pure-UBSan defects passed CI green (#142); OCaml `diff_report` per-
 (#144). Perf (measured back-to-back A/B): `try_emplace` for baseline price levels (~+5%, #138) and
 an order-index hash `max_load_factor` cap at 0.25 (~+18.6%, #145), flamegraph regenerated
 (#135/#139/#146). Determinism preserved (byte-identical fixtures; OCaml differential pass).
-`make check`/`make asan` 270/270 (the latter now a real UBSan gate). After `v0.2.2`, the
+`make check`/`make asan` 272/272 (the latter now a real UBSan gate). `v0.2.2` then also folded in a
+documentation overhaul, a `PERFORMANCE.md` v0.1.0-to-v0.2.2 evidence report, and a bug/style/mermaid
+sweep (#147-#150). After `v0.2.2`, the
 highest-value remaining work is non-code and gated on #94 (external review) and #90 (full cache-PMU
 evidence on a PMU-capable microarchitecture).

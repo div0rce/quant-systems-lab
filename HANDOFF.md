@@ -43,8 +43,10 @@ connection cap, UDP send-error tracking, transient-accept survival, and threaded
 handling (#137, #140, #143); CLI arg validation (#141); a **real UBSan abort gate**, `-fno-sanitize-recover=undefined`, since UBSan previously ran in recover mode and exited 0 (#142);
 OCaml `diff_report` robustness (#144). Perf (measured A/B): `try_emplace` for baseline price levels
 (~+5%, #138) and an order-index hash load-factor cap (~+18.6%, #145), with the flamegraph regenerated
-(#135/#139/#146). `make check`/`make asan` 270/270 (the latter now under the real UBSan gate). The
-next action is to finish this `v0.2.2` doc/artifact overhaul and cut the tag.
+(#135/#139/#146), then a documentation overhaul, a `PERFORMANCE.md` v0.1.0-to-v0.2.2 evidence report,
+and a bug/style/mermaid sweep (#147-#150). `make check`/`make asan` 272/272 (the latter now under the
+real UBSan gate). `v0.2.2` is tagged; the next high-value work is non-code (#94 external review, #90
+cache-PMU evidence).
 
 Background. Linux perf evidence (merged, now bare-metal partial PMU):
 
@@ -87,13 +89,14 @@ Current state:
 
 - latest synced main baseline: `ded6e80` (PR #127, v0.2.0); the `v0.2.1` baseline is the release-PR
   merge commit, after PRs #129/#130/#131
-- current active branch, if active: `docs/post-v0.2.1-overhaul` (v0.2.2 prep + doc/artifact sweep)
-- current active status: `v0.2.1` is the latest tag; a post-v0.2.1 hardening + perf wave (#135, #146)
-  is merged to `main` and unreleased, being cut as `v0.2.2` (decoder enum rejection, network/CLI
-  hardening, a real UBSan abort gate, OCaml diff_report robustness, and two measured order-book perf
-  wins, `try_emplace` ~+5% and an index load-factor cap ~+18.6%). `make check` 270/270 and
-  `make asan` 270/270 (the latter now under the real UBSan gate) on the bare-metal Apple M2 Fedora
-  Asahi host; every touched file passes the CI CodeScene Code Health gate
+- current active branch, if active: none (`main` is at the `v0.2.2` release)
+- current active status: **`v0.2.2` is the latest tag**: the post-v0.2.1 hardening + perf wave (#135,
+  #146: decoder enum rejection, network/CLI hardening, a real UBSan abort gate, OCaml diff_report
+  robustness, and two measured order-book perf wins, `try_emplace` ~+5% and an index load-factor cap
+  ~+18.6%), plus a documentation overhaul, a `PERFORMANCE.md` v0.1.0-to-v0.2.2 evidence report, and a
+  bug/style/mermaid sweep (#147-#150). `make check` 272/272 and `make asan` 272/272 (the latter now
+  under the real UBSan gate) on the bare-metal Apple M2 Fedora Asahi host; every touched file passes
+  the CI CodeScene Code Health gate
 - release tag: `v0.2.1` (Latest, tagged on the release-PR merge commit), after `v0.2.0` and `v0.1.0`;
   `v0.2.2` prepared on this branch, not yet tagged
 - open follow-up issue: #90, narrowed to the full cache-counter PMU set; the bare-metal Apple host

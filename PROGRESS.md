@@ -20,24 +20,25 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** none, `v0.2.1` is the latest tag, but a post-v0.2.1 hardening + perf wave
-  (12 PRs, #135, #146) has merged to `main` and is **unreleased**; it is being cut as **`v0.2.2`**
-- **Status:** ☑ `v0.2.1` published on top of `v0.2.0`; ☐ `v0.2.2` in preparation, security/robustness
-  hardening (decoder enum-domain rejection, network/CLI hardening, a real UBSan abort gate, OCaml
-  diff_report robustness) plus two measured order-book perf wins
-- **Active branch:** `docs/post-v0.2.1-overhaul` (the v0.2.2 prep + full doc/artifact staleness sweep)
+- **Active milestone:** none, **`v0.2.2` is the latest tag**. It bundled the post-v0.2.1
+  hardening + perf wave (#135, #146) plus a full documentation overhaul (#147, #149), a reproducible
+  performance-evidence report (#148), and a bug/style sweep with mermaid diagrams (#150)
+- **Status:** ☑ `v0.2.2` published on top of `v0.2.1`: security/robustness hardening (decoder
+  enum-domain rejection, network/CLI hardening, a real UBSan abort gate, OCaml diff_report
+  robustness), two measured order-book perf wins, `PERFORMANCE.md` (v0.1.0 to v0.2.2 evidence),
+  README rebuild, repo-wide em-dash purge, and mermaid diagrams across the docs
+- **Active branch:** none (`main` is at the `v0.2.2` release)
 - **Last completed milestone:** M49. NIC offload and low-latency networking study (PR #124,
-  d8c16b2). Releases since: `v0.2.0` (PR #127, ded6e80) and `v0.2.1` (FIX adapter #131, flamegraph
-  #134, anchor sweep #129). Post-v0.2.1 unreleased work on `main`: #135, #146 (see Last action)
-- **Last completed docs sync:** this v0.2.2-prep overhaul, every `.md`/`.txt` audited against
-  current `main`; resume/release anchors, README, CHANGELOG, and all stale `results/*.txt`
+  d8c16b2). Releases since: `v0.2.0` (PR #127, ded6e80), `v0.2.1` (#131/#134/#129), and `v0.2.2`
+  (#135 through #150)
+- **Last completed docs sync:** the v0.2.2 release sweep, every `.md`/`.txt` audited against
+  current `main`, em/en dashes removed repo-wide, mermaid diagrams added, and all `results/*.txt`
   provenance digests brought current to HEAD
-- **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.2.1` (tag on the
-  release-PR merge, marked Latest) published as GitHub-only releases; `v0.2.2` prepared here, not yet
-  tagged; no packages published
-- **`make check` passing:** yes, `make check` 270/270 and `make asan` 270/270 (the latter now under
+- **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), `v0.2.1`, and `v0.2.2`
+  published as GitHub-only releases; no packages published
+- **`make check` passing:** yes, `make check` 272/272 and `make asan` 272/272 (the latter now under
   the **real** UBSan abort gate from #142) on the bare-metal Apple M2 (aarch64) Fedora Asahi host on
-  2026-06-24
+  2026-06-25
 - **Last action:** post-v0.2.1 hardening + perf wave merged to `main` as 12 scoped PRs (#135, #146),
   driven by a multi-round adversarial bug hunt (converged 5→2→1→0 confirmed) and flamegraph-guided
   optimization. Security/robustness: reject out-of-domain enum bytes in the replay/protocol decoders
@@ -49,12 +50,12 @@ Do not rely on prior chat memory.
   abort the batch (#144). Perf (measured A/B): baseline price levels use `try_emplace` (~+5%, #138)
   and the order-index hash caps its load factor at 0.25 (~+18.6%, #145); flamegraph regenerated
   (#135, #139, #146). Determinism preserved throughout (byte-identical fixtures, OCaml differential
-  pass). `make check`/`make asan` 270/270.
-- **Next action:** finish the `v0.2.2` overhaul (this branch): regenerate the remaining stale
-  `results/*.txt` artifacts, then cut the `v0.2.2` tag/release. After that, the highest-value
-  remaining work is non-code and gated: issue #94 (independent external review, needs a human
-  reviewer) and issue #90 (full cache-counter PMU evidence, needs a PMU microarchitecture that
-  exposes cache events, e.g. x86_64).
+  pass). The wave then gained a documentation overhaul (#147, #149), a `PERFORMANCE.md` evidence
+  report (#148), and a bug/style/mermaid sweep (#150), all tagged as `v0.2.2`. `make check`/`make
+  asan` 272/272.
+- **Next action:** none, `v0.2.2` is released. The highest-value remaining work is non-code and
+  gated: issue #94 (independent external review, needs a human reviewer) and issue #90 (full
+  cache-counter PMU evidence, needs a PMU microarchitecture that exposes cache events, e.g. x86_64).
 - **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap, this bare-metal
   Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
   implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
@@ -865,14 +866,15 @@ Quant Systems Lab. Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-`v0.2.1` is the latest tag, on top of `v0.2.0` (PR #127 ded6e80) and `v0.1.0`. A post-v0.2.1
-hardening + perf wave (#135, #146) is squash-merged to `main` and **unreleased**, being cut as
-`v0.2.2`: out-of-domain enum rejection in the decoders (#136); network hardening. EINTR retry,
-accept fairness, connection cap, UDP send-error tracking, transient-accept survival, and fd-exhaustion
-handling (#137, #140, #143); CLI arg validation (#141); a real UBSan abort gate (#142); OCaml
-`diff_report` robustness (#144); and two measured order-book perf wins, `try_emplace` (~+5%, #138)
-and the order-index load-factor cap (~+18.6%, #145), with the flamegraph regenerated (#135/#139/#146).
-`make check`/`make asan` 270/270. The committed perf artifacts remain **partial hardware PMU
+**`v0.2.2` is the latest tag**, on top of `v0.2.1`, `v0.2.0` (PR #127 ded6e80), and `v0.1.0`. It
+bundled the post-v0.2.1 hardening + perf wave (#135, #146): out-of-domain enum rejection in the
+decoders (#136); network hardening. EINTR retry, accept fairness, connection cap, UDP send-error
+tracking, transient-accept survival, and fd-exhaustion handling (#137, #140, #143); CLI arg
+validation (#141); a real UBSan abort gate (#142); OCaml `diff_report` robustness (#144); and two
+measured order-book perf wins, `try_emplace` (~+5%, #138) and the order-index load-factor cap
+(~+18.6%, #145), with the flamegraph regenerated (#135/#139/#146); plus a documentation overhaul, a
+`PERFORMANCE.md` v0.1.0-to-v0.2.2 evidence report, and a bug/style/mermaid sweep (#147-#150).
+`make check`/`make asan` 272/272. The committed perf artifacts remain **partial hardware PMU
 evidence** from this bare-metal Apple M2 (aarch64) Fedora Asahi host, real
 cycles/instructions/branches/branch-misses with cache-reference/cache-miss counters unsupported by
 the Apple Silicon PMU, not NIC-offload, latency, or full hardware-PMU evidence.
