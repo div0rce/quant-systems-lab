@@ -42,6 +42,11 @@ target_link_libraries(qsl-export-fixture PRIVATE qsl_core qsl_warnings)
 add_executable(qsl-export-stream apps/qsl-export-stream/main.cpp)
 target_link_libraries(qsl-export-stream PRIVATE qsl_core qsl_warnings)
 
+# Performance-evidence harness (PERFORMANCE.md). Separate binary: it overrides operator new to count
+# allocations, which must not perturb the qsl-bench numbers. Built Release for honest measurement.
+add_executable(qsl-perfeval apps/qsl-perfeval/main.cpp)
+target_link_libraries(qsl-perfeval PRIVATE qsl_core qsl_warnings)
+
 if(QSL_BUILD_BENCHMARKS)
   find_package(Threads REQUIRED)
   add_executable(qsl-bench apps/qsl-bench/main.cpp benchmarks/bench_order_pool.cpp
