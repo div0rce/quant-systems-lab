@@ -82,6 +82,38 @@ add_test(
           -D "EXPECT_OUTPUT=orders must be an unsigned integer" -P
           "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
 
+# CLI argument hardening: malformed numeric args must print usage and exit non-zero, not throw out
+# of main (std::terminate) or silently truncate an out-of-range port.
+add_test(
+  NAME qsl_client_invalid_port_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-client>" -D "ARGS=99xyz" -D
+          "EXPECT_OUTPUT=usage:" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_client_out_of_range_port_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-client>" -D "ARGS=70000" -D
+          "EXPECT_OUTPUT=usage:" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_mdfeed_invalid_count_fails
+  COMMAND
+    ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-mdfeed>" -D "ARGS=subscribe;9009;notanumber" -D
+    "EXPECT_OUTPUT=usage:" -P "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_mdfeed_out_of_range_port_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-mdfeed>" -D "ARGS=publish;70000" -D
+          "EXPECT_OUTPUT=usage:" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
+add_test(
+  NAME qsl_export_fixture_invalid_seed_fails
+  COMMAND ${CMAKE_COMMAND} -D "PROGRAM=$<TARGET_FILE:qsl-export-fixture>" -D "ARGS=abc" -D
+          "EXPECT_OUTPUT=usage:" -P
+          "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
+
 # Shell unit tests for the shared artifact-publish helper (MAC sanitization +
 # trailing-whitespace/blank-line trimming). Portable (sed/awk/mktemp); the script
 # locates the repo via BASH_SOURCE, so it runs correctly by absolute path.

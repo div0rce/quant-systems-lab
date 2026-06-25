@@ -4,13 +4,56 @@
 #include "qsl/feed/udp_feed.hpp"
 #include "qsl/replay/recovery.hpp"
 
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <limits>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 
 namespace {
+
+// Parse a whole token as an unsigned integer, rejecting junk/trailing chars/overflow (unlike
+// std::stoul/std::stoull which throw on bad input and std::stoi which can wrap a port silently).
+std::optional<std::uint64_t> parse_u64(std::string_view s) {
+    std::uint64_t value = 0;
+    const char *begin = s.data();
+    const char *end = begin + s.size();
+    const auto [ptr, ec] = std::from_chars(begin, end, value);
+    if (ec != std::errc{} || ptr != end) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+std::optional<std::uint16_t> parse_port(std::string_view s) {
+    const auto value = parse_u64(s);
+    if (!value || *value > std::numeric_limits<std::uint16_t>::max()) {
+        return std::nullopt;
+    }
+    return static_cast<std::uint16_t>(*value);
+}
+
+std::optional<int> parse_rcvbuf(std::string_view s) {
+    const auto value = parse_u64(s);
+    if (!value || *value > std::numeric_limits<int>::max()) {
+        return std::nullopt;
+    }
+    return static_cast<int>(*value);
+}
+
+template <class... Opts> bool all_present(const Opts &...opts) noexcept {
+    return (static_cast<bool>(opts) && ...);
+}
+
+int usage() {
+    std::cerr << "usage:\n  qsl-mdfeed subscribe <port> [count] [rcvbuf_bytes]\n  qsl-mdfeed "
+                 "publish <port> [seed] [orders]\n";
+    return 2;
+}
 
 int publish(std::uint16_t port, std::uint64_t seed, std::size_t orders) {
     qsl::engine::MatchingEngine engine;
@@ -74,22 +117,34 @@ int subscribe(std::uint16_t port, std::size_t count, int recv_buffer_bytes) {
 
 } // namespace
 
+int run_subscribe(int argc, char **argv) {
+    const auto port = parse_port(argv[2]);
+    const auto count = (argc >= 4) ? parse_u64(argv[3]) : std::optional<std::uint64_t>{20};
+    const auto rcvbuf = (argc >= 5) ? parse_rcvbuf(argv[4]) : std::optional<int>{0};
+    if (!all_present(port, count, rcvbuf)) {
+        return usage();
+    }
+    return subscribe(*port, static_cast<std::size_t>(*count), *rcvbuf);
+}
+
+int run_publish(int argc, char **argv) {
+    const auto port = parse_port(argv[2]);
+    const auto seed = (argc >= 4) ? parse_u64(argv[3]) : std::optional<std::uint64_t>{42};
+    const auto orders = (argc >= 5) ? parse_u64(argv[4]) : std::optional<std::uint64_t>{200};
+    if (!all_present(port, seed, orders)) {
+        return usage();
+    }
+    return publish(*port, *seed, static_cast<std::size_t>(*orders));
+}
+
 // qsl-mdfeed subscribe <port> [count] [rcvbuf_bytes]  -> receive datagrams and report gaps
 // qsl-mdfeed publish   <port> [seed] [orders]         -> run a synthetic flow, stream its data
 int main(int argc, char **argv) {
     if (argc >= 3 && std::string(argv[1]) == "subscribe") {
-        const auto port = static_cast<std::uint16_t>(std::stoul(argv[2]));
-        const std::size_t count = (argc >= 4) ? std::stoul(argv[3]) : 20;
-        const int recv_buffer_bytes = (argc >= 5) ? std::stoi(argv[4]) : 0;
-        return subscribe(port, count, recv_buffer_bytes);
+        return run_subscribe(argc, argv);
     }
     if (argc >= 3 && std::string(argv[1]) == "publish") {
-        const auto port = static_cast<std::uint16_t>(std::stoul(argv[2]));
-        const std::uint64_t seed = (argc >= 4) ? std::stoull(argv[3]) : 42;
-        const std::size_t orders = (argc >= 5) ? std::stoul(argv[4]) : 200;
-        return publish(port, seed, orders);
+        return run_publish(argc, argv);
     }
-    std::cerr << "usage:\n  qsl-mdfeed subscribe <port> [count] [rcvbuf_bytes]\n  qsl-mdfeed "
-                 "publish <port> [seed] [orders]\n";
-    return 2;
+    return usage();
 }

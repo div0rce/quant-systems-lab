@@ -2,17 +2,42 @@
 
 #include <arpa/inet.h>
 #include <array>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <netinet/in.h>
+#include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
 
 namespace {
+
+// Parse a whole token as a TCP port (0-65535). Rejects junk, trailing characters, and out-of-range
+// values instead of std::stoul's throw-or-silently-truncate behavior.
+std::optional<std::uint16_t> parse_port(std::string_view s) {
+    std::uint32_t value = 0;
+    const char *begin = s.data();
+    const char *end = begin + s.size();
+    const auto [ptr, ec] = std::from_chars(begin, end, value);
+    if (ec != std::errc{} || ptr != end || value > std::numeric_limits<std::uint16_t>::max()) {
+        return std::nullopt;
+    }
+    return static_cast<std::uint16_t>(value);
+}
+
+// The optional port arg defaults to 9009; nullopt means it was present but malformed.
+std::optional<std::uint16_t> port_from_args(int argc, char **argv) {
+    if (argc < 2) {
+        return std::uint16_t{9009};
+    }
+    return parse_port(argv[1]);
+}
 
 bool write_all(int fd, const std::vector<std::byte> &data) {
     std::size_t offset = 0;
@@ -73,7 +98,12 @@ void print_responses(std::span<const std::byte> bytes) {
 
 // qsl-client [port]  -> connect to 127.0.0.1:port, send a NewOrder and a Heartbeat, print replies.
 int main(int argc, char **argv) {
-    const std::uint16_t port = (argc >= 2) ? static_cast<std::uint16_t>(std::stoul(argv[1])) : 9009;
+    const auto port_opt = port_from_args(argc, argv);
+    if (!port_opt) {
+        std::cerr << "usage: qsl-client [port]   (one optional port, 0-65535)\n";
+        return 2;
+    }
+    const std::uint16_t port = *port_opt;
 
     const int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
