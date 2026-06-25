@@ -21,7 +21,7 @@ flowchart TD
     pc -->|"fsync / fdatasync"| disk[("Disk platter / flash")]
     buf -.->|"crash here"| l1["Lost: never reached the kernel"]
     pc -.->|"crash here"| l2["Lost unless already fsync'd"]
-    disk --> dur["Durable, survives power loss"]
+    disk --> dur["On disk (best-effort durability; fsync semantics vary, see below)"]
 ```
 
 | Layer                   | Reached by                            | Lost on               |

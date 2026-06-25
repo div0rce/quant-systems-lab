@@ -53,7 +53,7 @@ adapter uses the standard FIX envelope:
 |-----|--------------|----------------|-------|
 | 34  | MsgSeqNum    | sequence no.   | as above |
 | 41  | OrigClOrdID  | `order_id`     | the order being cancelled |
-| 11  | ClOrdID      |, | required by FIX; validated on decode, echoes `order_id` on encode (no separate cancel-request id is modelled) |
+| 11  | ClOrdID      | (none)         | required by FIX; validated on decode, echoes `order_id` on encode (no separate cancel-request id is modelled) |
 | 55  | Symbol       | `symbol`       | decimal `SymbolId` |
 
 ## Deliberate simplifications

@@ -190,7 +190,7 @@ input thread --[inbound SpscRing<Command>]--> engine thread --[outbound SpscRing
 
 | Stage         | Thread owns exclusively              | Consumes                     | Produces                              |
 | ------------- | ------------------------------------ | ---------------------------- | ------------------------------------- |
-| Input         | the command source (`vector<Command>`) |, | pushes `Command`s onto inbound        |
+| Input         | the command source (`vector<Command>`) | nothing                      | pushes `Command`s onto inbound        |
 | Engine        | the `MatchingEngine` + `OrderGateway`  | pops `Command`s from inbound | pushes `ProcessedCommand`s onto outbound |
 | Publisher/log | the downstream `OutputSink`            | pops from outbound           | side effects (log append, feed, counters) |
 

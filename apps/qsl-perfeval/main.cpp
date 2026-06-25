@@ -273,29 +273,46 @@ std::optional<std::uint64_t> parse_orders_arg(std::string_view s) {
     }
     return v;
 }
+
+struct Args {
+    bool ok = true;
+    bool latency = false;
+    std::uint64_t count = 0;
+};
+
+// Parse argv: an optional "--latency" flag and at most one positive order count. A malformed token
+// or a second count is rejected (ambiguous sample size). Defaults to 5M (latency) / 60M orders.
+Args parse_args(int argc, char **argv) {
+    Args out;
+    std::optional<std::uint64_t> orders;
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view a = argv[i];
+        if (a == "--latency") {
+            out.latency = true;
+            continue;
+        }
+        const auto parsed = parse_orders_arg(a);
+        if (!parsed || orders) {
+            out.ok = false;
+            return out;
+        }
+        orders = *parsed;
+    }
+    out.count = orders.value_or(out.latency ? 5'000'000ULL : 60'000'000ULL);
+    return out;
+}
 } // namespace
 
 // qsl-perfeval [orders>0] [--latency]
 //   default: untimed throughput + allocations/order (run under perf stat / perf record)
 //   --latency: also record per-order latency mean/p50/p99
 int main(int argc, char **argv) {
-    bool latency = false;
-    std::optional<std::uint64_t> orders;
-    for (int i = 1; i < argc; ++i) {
-        const std::string_view a = argv[i];
-        if (a == "--latency") {
-            latency = true;
-            continue;
-        }
-        const auto parsed = parse_orders_arg(a);
-        if (!parsed) {
-            std::fprintf(stderr, "usage: qsl-perfeval [orders>0] [--latency]\n");
-            return 2;
-        }
-        orders = *parsed;
+    const Args args = parse_args(argc, argv);
+    if (!args.ok) {
+        std::fprintf(stderr, "usage: qsl-perfeval [orders>0] [--latency]\n");
+        return 2;
     }
-    const std::uint64_t count = orders.value_or(latency ? 5'000'000ULL : 60'000'000ULL);
-    const Result r = latency ? run_latency(count) : run_throughput(count);
+    const Result r = args.latency ? run_latency(args.count) : run_throughput(args.count);
     char allocs_buf[24];
     if constexpr (kCountingAllocs) {
         std::snprintf(allocs_buf, sizeof(allocs_buf), "%.4f", r.allocs_per_order);

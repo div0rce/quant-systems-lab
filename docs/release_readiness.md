@@ -94,7 +94,7 @@ verification.
 ## Outcome
 
 Release-ready as a portfolio artifact. `v0.2.1` is already tagged (FIX adapter #29, perf flamegraph
-#32, anchor sweep) on top of `v0.2.0` (Phase III/IV systems work. M24-M49, plus the bare-metal
+issue #32, anchor sweep) on top of `v0.2.0` (Phase III/IV systems work, M24-M49, plus the bare-metal
 evidence refresh). The next GitHub-only release is **`v0.2.2`**, bundling the post-v0.2.1
 hardening + perf wave merged to `main` (#135, #146): decoder enum rejection, network/CLI hardening, a
 real UBSan abort gate, OCaml diff_report robustness, and the two measured order-book perf wins. It
