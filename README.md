@@ -29,24 +29,25 @@ Binary order gateway. Price-time-priority matching engine. Market-data feed. App
 
 ## The numbers
 
-Measured on a bare-metal Apple M2 (aarch64), Fedora Asahi, GCC 16, Release. Hot-path optimizations
-(`try_emplace` for price levels, an order-index hash load-factor cap) were profiled with `perf` and
-verified by back-to-back A/B. Full evidence and the honest mechanism in **[PERFORMANCE.md](PERFORMANCE.md)**.
+Measured on a bare-metal Apple M2 (aarch64), Fedora Asahi, GCC 16, Release. The hot path was profiled
+with `perf` and flamegraphs; the table compares the **v0.1.0 first release to v0.2.2** on the same
+host and harness (baseline storage, deep book). Full evidence and the honest mechanism in
+**[PERFORMANCE.md](PERFORMANCE.md)**.
 
 <table>
 <tr>
 <td width="50%">
 
-| Hot path (deep book) | Before | After |
+| Hot path (deep book) | v0.1.0 | v0.2.2 |
 |---|--:|--:|
-| **Throughput** | 9.25M/s | **10.76M/s** |
-| **Cycles / order** | 345.7 | **297.3** |
-| Instructions / order | 1246 | 1144 |
-| IPC | 3.60 | **3.85** |
-| Branch-miss rate | 1.86% | **1.69%** |
-| Allocations / order | 1.108 | 1.108 |
+| **Allocations / order** | 4.09 | **1.11** |
+| **Branch-miss rate** | 2.05% | **1.69%** |
+| Throughput | 10.54M/s | **10.99M/s** |
+| Cycles / order | 304.5 | **290.7** |
+| IPC | 3.84 | **3.94** |
+| p50 / p99 latency | 83 / 209 ns | 83 / 208 ns |
 
-`+16%` orders/sec, `-14%` cycles/order, determinism preserved.
+`-73%` allocations/order, `-18%` branch misses, determinism preserved.
 
 </td>
 <td width="50%">
