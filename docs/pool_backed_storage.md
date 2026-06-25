@@ -215,28 +215,28 @@ produced the earlier "intrusive is ~4-5x slower" ranking.
 
 This artifact moves engine construction, the registration prefix, and the end-of-run snapshot
 readout outside the timed interval (`Source digest:
-sha256:b606452b1bbff3d1c4eed8f59839701590cfbc824207f7b707c03ca66766353a`, `Dirty inputs: no`), so
-each row reflects per-command work. The corrected medians are:
+sha256:c1e4cd7db8472a87cbd23ece3a2d4b330f78ad876b58da412e0e54f6c4eb4cf7`, `Dirty inputs: no`), so
+each row reflects per-command work. The medians are:
 
 | Workload | Shape summary | Median ns/timed-command, fastest to slowest |
 | --- | --- | --- |
-| General generated flow | 4 symbols, 5000 timed cmds, 2238 trades, 793 cancels, 690 modifies, max 41 active levels, width 67, density 0.076 | Contiguous 93.2, intrusive 95.4, baseline 111.0, PMR 121.4 |
-| Dense bounded flow | 2 symbols, 5002 timed cmds, 1048 trades, 984 market orders, 20008 probes, max 80 active levels, width 136, density 0.147 | Intrusive 66.0, contiguous 70.7, PMR 88.3, baseline 96.4 |
-| Sparse wide flow | 4 symbols, 5000 timed cmds, no trades, 828 cancels, 828 modifies, max 32 active levels, width 985, density 0.004 | Intrusive 48.2, contiguous 60.9, PMR 72.1, baseline 81.0 |
-| Cancel/modify-heavy flow | 3 symbols, 5001 timed cmds, no trades, 1599 cancels, 1603 modifies, max 60 active levels, width 30, density 0.333 | Contiguous 42.8, intrusive 44.3, baseline 59.7, PMR 59.8 |
-| Match/traversal-heavy flow | 1 symbol, 5003 timed cmds, 4012 trades, 494 market orders, max 60 active levels, width 81, density 0.370 | Contiguous 69.9, intrusive 87.2, baseline 109.3, PMR 117.9 |
+| General generated flow | 4 symbols, 5000 timed cmds, 2238 trades, 793 cancels, 690 modifies, max 41 active levels, width 67, density 0.076 | Contiguous 71.2, intrusive 80.3, baseline 89.4, PMR 100.0 |
+| Dense bounded flow | 2 symbols, 5002 timed cmds, 1048 trades, 984 market orders, 20008 probes, max 80 active levels, width 136, density 0.147 | Intrusive 52.2, contiguous 57.8, baseline 66.1, PMR 66.3 |
+| Sparse wide flow | 4 symbols, 5000 timed cmds, no trades, 828 cancels, 828 modifies, max 32 active levels, width 985, density 0.004 | Contiguous 40.3, intrusive 42.8, baseline 55.7, PMR 57.9 |
+| Cancel/modify-heavy flow | 3 symbols, 5001 timed cmds, no trades, 1599 cancels, 1603 modifies, max 60 active levels, width 30, density 0.333 | Contiguous 31.4, intrusive 36.7, baseline 49.0, PMR 54.7 |
+| Match/traversal-heavy flow | 1 symbol, 5003 timed cmds, 4012 trades, 494 market orders, max 60 active levels, width 81, density 0.370 | Contiguous 56.8, intrusive 65.1, baseline 96.5, PMR 110.0 |
 
-### What the corrected numbers show
+### What the numbers show
 
-With per-run setup excluded the four modes cluster into a much tighter band (roughly 40-120
+With per-run setup excluded the four modes cluster into a much tighter band (roughly 30-110
 ns/command) instead of the earlier 40-486 spread, and the large earlier gaps are explained by
-per-run pool initialization rather than per-command cost. Intrusive and contiguous storage are the
-two fastest modes and trade the lead by workload shape: intrusive leads the insert/resting-heavy
-dense and sparse flows, contiguous leads the cancel/modify and traversal-heavy flows, and they are
-within a few ns/command on the general flow. Baseline `std::map`/`std::list` and PMR pooling sit
-behind both, with PMR sometimes ahead of baseline and sometimes behind. The medians above come from
-a quiet-host regeneration whose min/max ranges are tight; treat absolute values as environment- and
-build-dependent.
+per-run pool initialization rather than per-command cost. Contiguous storage is fastest on four of
+the five workloads (general, sparse, cancel/modify, match/traversal); the intrusive pool leads only
+the dense bounded flow and is close behind contiguous elsewhere. Baseline `std::map`/`std::list` and
+PMR pooling sit behind both, with baseline usually ahead of PMR. The medians above come from a
+regeneration whose per-mode min/max ranges are tight; treat absolute values as environment- and
+build-dependent, and note these post-v0.2.2 baseline rows already include the `try_emplace` (#138)
+and index load-factor (#145) wins.
 
 This does not make the intrusive pool "free". It pays a large fixed initialization cost
 (pre-allocating 65536 order and node slots per book) that this per-command metric deliberately

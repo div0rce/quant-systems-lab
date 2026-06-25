@@ -4,12 +4,12 @@ OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): 33f8d11
-Source digest: sha256:4f09cf6b1db08de00d5fb480b77d0b1fe7ebb9ea70dbcc7d73807c7eb06e4598
+Git commit (informational): f9f7e98
+Source digest: sha256:e5fb637e109ffba8b25ab7a5274d325ea8edbbbf13aec8d88d1a486cdb1cc168
 Source digest scope: allocator-experiment
 Dirty inputs: no
 Generated output: results/allocator_experiment.txt
-Date: 2026-06-21T05:25:21Z
+Date: 2026-06-25T02:29:37Z
 Dataset:     engine::Order allocation microbenchmark (new/delete vs fixed pool)
 Warmup:      iters/10 per benchmark, before timing
 Units:       latency = ns/op + ops/sec
@@ -19,6 +19,6 @@ This measures allocator mechanics for order-like objects, not end-to-end engine 
 hardware/compiler/build dependent. A negative or tiny delta is acceptable.
 
 Scenario / Metric / Result:
-order new/delete              500000 ops         14.4 ns/op       69407890 ops/sec
-order pool acquire/release    500000 ops          7.0 ns/op      142345350 ops/sec
-order pool burst cycle          2000 ops       7970.4 ns/op         125464 ops/sec
+order new/delete              500000 ops         12.4 ns/op       80810144 ops/sec
+order pool acquire/release    500000 ops          7.0 ns/op      142468570 ops/sec
+order pool burst cycle          2000 ops       7368.3 ns/op         135716 ops/sec

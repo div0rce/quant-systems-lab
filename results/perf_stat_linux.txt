@@ -8,12 +8,12 @@ Perf:        perf version 6.19.14-400.asahi.fc44.aarch64
 Perf paranoid: 2
 Build type:  Release
 Provenance version: 1
-Git commit (informational): 33f8d11
-Source digest: sha256:d8856d2f599416a9e74050726279a67f88d61a3bb3d06de86eb3bf948d2a16a5
+Git commit (informational): f9f7e98
+Source digest: sha256:59d9fdbc9d64b974bd28094e55610cced29a381c6e2ec968092862a975bde281
 Source digest scope: perf-stat-benchmark
 Dirty inputs: no
 Generated output: results/perf_stat_linux.txt
-Date: 2026-06-21T05:25:23Z
+Date: 2026-06-25T02:30:17Z
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
 Dataset:     qsl-bench default synthetic benchmark suite
@@ -28,39 +28,39 @@ until every requested counter is supported. Profiling evidence for investigation
 not a production-latency claim.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops        143.9 ns/op        6947208 ops/sec
-protocol encode+decode        500000 ops         21.5 ns/op       46599221 ops/sec
-gateway session (fill)        200000 ops        129.7 ns/op        7710496 ops/sec
-matching engine flow            5004 items      102.4 ns/item      9769779 items/sec
-replay command log              5004 items      110.3 ns/item      9064737 items/sec
+order_book add/mod/cancel     200000 ops        137.2 ns/op        7288189 ops/sec
+protocol encode+decode        500000 ops         21.2 ns/op       47087754 ops/sec
+gateway session (fill)        200000 ops        120.8 ns/op        8277978 ops/sec
+matching engine flow            5004 items       93.2 ns/item     10733865 items/sec
+replay command log              5004 items       97.1 ns/item     10294783 items/sec
 
 Benchmark output under perf:
-order_book add/mod/cancel     200000 ops         92.7 ns/op       10785353 ops/sec
-protocol encode+decode        500000 ops         16.3 ns/op       61508483 ops/sec
-gateway session (fill)        200000 ops        110.8 ns/op        9023997 ops/sec
-matching engine flow            5004 items       98.1 ns/item     10190493 items/sec
-replay command log              5004 items      109.4 ns/item      9137639 items/sec
+order_book add/mod/cancel     200000 ops        121.9 ns/op        8202972 ops/sec
+protocol encode+decode        500000 ops         21.0 ns/op       47563493 ops/sec
+gateway session (fill)        200000 ops        120.9 ns/op        8269791 ops/sec
+matching engine flow            5004 items       95.8 ns/item     10437399 items/sec
+replay command log              5004 items       99.6 ns/item     10043348 items/sec
 
 perf stat output:
 
  Performance counter stats for 'build/bench/qsl-bench':
 
-       233,479,932      apple_avalanche_pmu/cycles/u
+       221,558,456      apple_avalanche_pmu/cycles/u
      <not counted>      apple_blizzard_pmu/cycles/u                                             (0.00%)
-     1,247,839,058      apple_avalanche_pmu/instructions/u
+     1,160,776,150      apple_avalanche_pmu/instructions/u
      <not counted>      apple_blizzard_pmu/instructions/u                                        (0.00%)
-       245,495,434      apple_avalanche_pmu/branches/u
+       233,032,815      apple_avalanche_pmu/branches/u
      <not counted>      apple_blizzard_pmu/branches/u                                           (0.00%)
-         1,272,574      apple_avalanche_pmu/branch-misses/u
+         1,143,050      apple_avalanche_pmu/branch-misses/u
      <not counted>      apple_blizzard_pmu/branch-misses/u                                        (0.00%)
    <not supported>      apple_avalanche_pmu/cache-references/u
    <not supported>      apple_blizzard_pmu/cache-references/u
    <not supported>      apple_avalanche_pmu/cache-misses/u
    <not supported>      apple_blizzard_pmu/cache-misses/u
                  0      context-switches:u
-               208      page-faults:u
+               229      page-faults:u
 
-       0.081496718 seconds time elapsed
+       0.091141580 seconds time elapsed
 
-       0.080390000 seconds user
-       0.000988000 seconds sys
+       0.090001000 seconds user
+       0.001001000 seconds sys
