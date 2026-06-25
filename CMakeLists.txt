@@ -42,10 +42,18 @@ target_link_libraries(qsl-export-fixture PRIVATE qsl_core qsl_warnings)
 add_executable(qsl-export-stream apps/qsl-export-stream/main.cpp)
 target_link_libraries(qsl-export-stream PRIVATE qsl_core qsl_warnings)
 
-# Performance-evidence harness (PERFORMANCE.md). Separate binary: it overrides operator new to count
-# allocations, which must not perturb the qsl-bench numbers. Built Release for honest measurement.
+# Performance-evidence harness (PERFORMANCE.md). Separate binary from qsl-bench so it cannot perturb
+# the qsl-bench numbers. The default target measures pure performance (throughput, latency, cycles).
 add_executable(qsl-perfeval apps/qsl-perfeval/main.cpp)
 target_link_libraries(qsl-perfeval PRIVATE qsl_core qsl_warnings)
+
+# Same source, allocation-counting build: it overrides every global operator new to count ALL
+# allocations (plain and over-aligned). Kept a separate target because those overrides add a little
+# work per aligned allocation and would perturb cycle/throughput numbers, so performance is measured
+# with qsl-perfeval and allocations/order with qsl-perfeval-allocs. See PERFORMANCE.md methodology.
+add_executable(qsl-perfeval-allocs apps/qsl-perfeval/main.cpp)
+target_link_libraries(qsl-perfeval-allocs PRIVATE qsl_core qsl_warnings)
+target_compile_definitions(qsl-perfeval-allocs PRIVATE QSL_PERFEVAL_COUNT_ALLOCS)
 
 if(QSL_BUILD_BENCHMARKS)
   find_package(Threads REQUIRED)

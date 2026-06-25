@@ -40,14 +40,14 @@ host and harness (baseline storage, deep book). Full evidence and the honest mec
 
 | Hot path (deep book) | v0.1.0 | v0.2.2 |
 |---|--:|--:|
-| **Allocations / order** | 4.09 | **1.11** |
-| **Branch-miss rate** | 2.05% | **1.69%** |
-| Throughput | 10.54M/s | **10.99M/s** |
-| Cycles / order | 304.5 | **290.7** |
-| IPC | 3.84 | **3.94** |
-| p50 / p99 latency | 83 / 209 ns | 83 / 208 ns |
+| **Allocations / order** | 4.09 | **2.67** |
+| **Cycles / order** | 310.7 | **289.5** |
+| Instructions / order | 1215 | **1157** |
+| IPC | 3.91 | **4.00** |
+| Branch-miss rate | 2.01% | **1.68%** |
+| p50 / p99 latency | 83 / 209 ns | 83 / 209 ns |
 
-`-73%` allocations/order, `-18%` branch misses, determinism preserved.
+`-35%` allocations/order, `-7%` cycles/order, `-16%` branch misses, determinism preserved.
 
 </td>
 <td width="50%">

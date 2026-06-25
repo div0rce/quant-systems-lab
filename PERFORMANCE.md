@@ -24,35 +24,38 @@ v0.1.0 figure comes from the same harness ported into a `git worktree` at the `v
 
 | Metric | v0.1.0 | v0.2.2 | Delta |
 |---|--:|--:|--:|
-| **Allocations / order** | 4.094 | **1.108** | **-73.0 %** |
-| **Branch-miss rate** | 2.05 % | **1.69 %** | -0.36 pp |
-| Throughput (orders/sec) | 10.54 M | 10.99 M | +4.3 % |
-| Cycles / order | 304.5 | 290.7 | -4.5 % |
-| Instructions / order | 1170 | 1146 | -2.0 % |
-| IPC | 3.84 | 3.94 | +2.6 % |
-| Median (p50) latency, new_limit | ~83 ns | ~83 ns | ~0 |
-| p99 latency, new_limit | ~209 ns | ~208 ns | ~0 |
+| **Allocations / order** | 4.094 | **2.670** | **-34.8 %** |
+| **Cycles / order** | 310.7 | **289.5** | **-6.8 %** |
+| Instructions / order | 1215 | 1157 | -4.7 % |
+| IPC | 3.91 | 4.00 | +2.3 % |
+| Branch-miss rate | 2.01 % | 1.68 % | -0.33 pp |
+| p50 / p99 latency, new_limit | 83 / 209 ns | 83 / 209 ns | ~0 |
 | Cache-miss rate | _unavailable_ | _unavailable_ | ([#90]) |
 
-Latency is per `new_limit` only (not the maintenance cancel) and includes ~12 ns of `steady_clock`
-read overhead per measured op; the delta cancels it.
+Cycles/order, instructions/order, and allocations/order are **frequency-independent counts**, so they
+are the reliable comparison metrics; raw wall-clock throughput (~10.5 to 11 M orders/sec) is governed
+by CPU frequency scaling under `schedutil` and is too thermally noisy to quote a precise delta. At a
+fixed clock the -6.8 % cycles/order corresponds to roughly +7 % throughput. Latency is per `new_limit`
+only and includes ~12 ns of `steady_clock` read overhead per op; the delta cancels it.
 
 ### The honest mechanism
 
-Measuring with hardware counters keeps the claims grounded:
+Measuring with hardware counters keeps the claims grounded, and corrected two earlier mistakes:
 
-- **The dominant cumulative win is allocations: 4.094 to 1.108 per order, a 73 % cut.** That is the
-  payoff of the storage and PMR work across the v0.1.x and v0.2.x arc (pooled/monotonic resources for
-  the order-book nodes), measured here even on the **default baseline storage path**. Far less heap
-  traffic per order is the single biggest behavioral change since the first release.
-- **Throughput and cycles moved modestly** (+4 % / -4.5 %) because the baseline-storage hot path is
-  bounded by the ordered-map and intrusive-list operations, not by allocation count; fewer
-  allocations cut memory traffic and branch mispredictions (-18 % relative) more than they cut raw
-  cycles. The two most recent micro-optimizations (see below) recovered the small per-op overhead the
-  storage abstraction added, landing v0.2.2 ahead of v0.1.0 on every counter.
-- **The latency distribution is essentially unchanged** (p50 ~83 ns, p99 ~208 ns on both). The median
-  order already hits an existing level with a short probe; the gains are in aggregate memory traffic
-  and throughput, not the per-op tail.
+- **The dominant cumulative win is allocations: 4.094 to 2.670 per order, a 35 % cut**, the payoff of
+  the storage and PMR work across the v0.1.x and v0.2.x arc (pooled/monotonic resources for the
+  order-book nodes), measured even on the **default baseline storage path**. (An earlier draft claimed
+  73 %; that was a measurement bug. The allocation counter only overrode `operator new(size_t)`, so it
+  missed the ~1.56 **over-aligned** allocations per order that v0.2.2's storage makes and v0.1.0 does
+  not. Counting every `operator new` variant gives the true 2.670, and the harness now counts all of
+  them in its `qsl-perfeval-allocs` build.)
+- **Cycles/order fell 6.8 % and instructions/order 4.7 %.** Fewer, and cheaper, allocations cut memory
+  traffic and branch mispredictions (-16 % relative); the baseline-storage hot path is otherwise
+  bounded by the ordered-map and intrusive-list operations. The two most recent micro-optimizations
+  (see below) are part of this.
+- **The latency distribution is unchanged** (p50 83 ns, p99 209 ns on both). The median order already
+  hits an existing level with a short probe; the gains are in aggregate allocation traffic and
+  cycles/order, not the per-op tail.
 
 ## Profiling: where the time goes
 
@@ -68,7 +71,7 @@ after next for how the unresolvable boundary frames were identified and handled)
 Both flamegraphs show **order-book insertion and matching dominating** (`new_limit` to `add_limit` to
 `rest`/match, ~77 % to ~83 % of samples). The libc malloc internals (`operator new`, `_mid_memalign`,
 `_int_malloc`, `_int_free`, `cfree`) are visible and named on both; their share shrinks in v0.2.2,
-consistent with the 73 % allocation cut.
+consistent with the 35 % allocation cut.
 
 ## The two most recent optimizations (within v0.2.2)
 
@@ -137,24 +140,30 @@ Flags      Release (-O3 -DNDEBUG); flamegraphs add -fno-omit-frame-pointer -g
 perf       6.19.14, kernel.perf_event_paranoid = 2
 ```
 
-Reproduce the v0.2.2 side (the `qsl-perfeval` harness is a dedicated binary; it overrides global
-`operator new` to count allocations, kept out of `qsl-bench` so it cannot perturb
-`results/latest.txt`):
+There are **two build targets**, on purpose: performance is measured with `qsl-perfeval` (the system
+allocator untouched), and allocations/order with `qsl-perfeval-allocs` (it overrides every global
+`operator new` variant to count, which adds a little work per aligned allocation and would perturb
+the cycle numbers). Both are kept out of `qsl-bench` so neither can perturb `results/latest.txt`.
 
 ```bash
 cmake --preset release
-cmake --build --preset release --target qsl-perfeval
-BIN=build/release/qsl-perfeval
+cmake --build --preset release --target qsl-perfeval qsl-perfeval-allocs
 
-"$BIN" 60000000             # throughput + allocations/order
-"$BIN" 5000000 --latency    # latency distribution (mean / p50 / p99)
-perf stat -e cycles,instructions,branches,branch-misses -- "$BIN" 60000000
+# performance (no allocation-counting instrumentation):
+build/release/qsl-perfeval 60000000            # throughput
+build/release/qsl-perfeval 5000000 --latency   # latency (mean / p50 / p99)
+perf stat -e cycles,instructions,branches,branch-misses -- build/release/qsl-perfeval 60000000
+
+# allocations/order (counting build, reports "n/a" in the plain build):
+build/release/qsl-perfeval-allocs 60000000
 ```
 
-The **v0.1.0** column was produced by adding the same `apps/qsl-perfeval/main.cpp` and its two CMake
-lines to a `git worktree` checked out at the `v0.1.0` tag (its `MatchingEngine` API is identical:
-`register_symbol`, `new_limit`, `cancel`, `contains`), building the same `release` preset, and
-running the same commands. Both versions were measured back-to-back on the same host.
+The **v0.1.0** column was produced by adding the same `apps/qsl-perfeval/main.cpp` and the two CMake
+target blocks to a `git worktree` checked out at the `v0.1.0` tag (its `MatchingEngine` API is
+identical: `register_symbol`, `new_limit`, `cancel`, `contains`), building the same `release` preset,
+and running the same commands. Both versions were measured on the same host; the
+frequency-independent counts (cycles, instructions, allocations per order) are the load-bearing
+comparison.
 
 ## Tuning balance (why index load-factor 0.25, not lower)
 

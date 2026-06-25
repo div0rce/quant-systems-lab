@@ -26,11 +26,31 @@
 #include <string_view>
 #include <vector>
 
+// Allocation counting replaces every global operator new variant so it can count ALL allocations
+// (plain AND over-aligned, the latter used by the order book's alignas types). Counting and the
+// pure-performance run are mutually exclusive on purpose: intercepting the aligned operators adds a
+// little work per aligned allocation, which would perturb the cycle/throughput numbers for an
+// allocation-heavy build. So counting is compile-time opt-in (QSL_PERFEVAL_COUNT_ALLOCS); the
+// default build leaves the system allocator untouched and reports allocs/order as "n/a". Measure
+// allocations and performance in separate builds (see PERFORMANCE.md methodology).
+#ifdef QSL_PERFEVAL_COUNT_ALLOCS
 namespace {
-// Allocations during the timed region only (the counter is sampled before and after the loop). The
-// override below counts the primary std::operator new path used by the baseline pmr new_delete
-// resource for order-book list/map nodes.
 std::atomic<std::uint64_t> g_allocs{0};
+constexpr bool kCountingAllocs = true;
+std::uint64_t allocs_now() {
+    return g_allocs.load(std::memory_order_relaxed);
+}
+void *aligned_new(std::size_t n, std::align_val_t a) {
+    g_allocs.fetch_add(1, std::memory_order_relaxed);
+    // aligned_alloc (what libstdc++'s default aligned new uses) requires size to be a multiple of
+    // the alignment.
+    const std::size_t align = std::max(sizeof(void *), static_cast<std::size_t>(a));
+    const std::size_t size = (n + align - 1) & ~(align - 1);
+    if (void *p = std::aligned_alloc(align, size)) {
+        return p;
+    }
+    throw std::bad_alloc();
+}
 } // namespace
 
 void *operator new(std::size_t n) {
@@ -40,12 +60,6 @@ void *operator new(std::size_t n) {
     }
     throw std::bad_alloc();
 }
-void operator delete(void *p) noexcept {
-    std::free(p);
-}
-void operator delete(void *p, std::size_t) noexcept {
-    std::free(p);
-}
 void *operator new[](std::size_t n) {
     g_allocs.fetch_add(1, std::memory_order_relaxed);
     if (void *p = std::malloc(n)) {
@@ -53,12 +67,44 @@ void *operator new[](std::size_t n) {
     }
     throw std::bad_alloc();
 }
+void *operator new(std::size_t n, std::align_val_t a) {
+    return aligned_new(n, a);
+}
+void *operator new[](std::size_t n, std::align_val_t a) {
+    return aligned_new(n, a);
+}
+void operator delete(void *p) noexcept {
+    std::free(p);
+}
+void operator delete(void *p, std::size_t) noexcept {
+    std::free(p);
+}
 void operator delete[](void *p) noexcept {
     std::free(p);
 }
 void operator delete[](void *p, std::size_t) noexcept {
     std::free(p);
 }
+void operator delete(void *p, std::align_val_t) noexcept {
+    std::free(p);
+}
+void operator delete(void *p, std::size_t, std::align_val_t) noexcept {
+    std::free(p);
+}
+void operator delete[](void *p, std::align_val_t) noexcept {
+    std::free(p);
+}
+void operator delete[](void *p, std::size_t, std::align_val_t) noexcept {
+    std::free(p);
+}
+#else
+namespace {
+constexpr bool kCountingAllocs = false;
+std::uint64_t allocs_now() {
+    return 0;
+}
+} // namespace
+#endif
 
 namespace {
 using clk = std::chrono::steady_clock;
@@ -169,7 +215,7 @@ void fill_latency_stats(std::vector<std::uint32_t> &lat, Result &res) {
 Result run_throughput(std::uint64_t orders) {
     PerfFlow flow;
     flow.warmup();
-    const std::uint64_t a0 = g_allocs.load(std::memory_order_relaxed);
+    const std::uint64_t a0 = allocs_now();
     const auto t0 = clk::now();
     for (std::uint64_t i = 0; i < orders; ++i) {
         flow.track(flow.submit());
@@ -178,8 +224,7 @@ Result run_throughput(std::uint64_t orders) {
     Result res;
     res.orders = orders;
     res.seconds = std::chrono::duration<double>(t1 - t0).count();
-    res.allocs_per_order = static_cast<double>(g_allocs.load(std::memory_order_relaxed) - a0) /
-                           static_cast<double>(orders);
+    res.allocs_per_order = static_cast<double>(allocs_now() - a0) / static_cast<double>(orders);
     return res;
 }
 
@@ -190,7 +235,7 @@ Result run_latency(std::uint64_t orders) {
     flow.warmup();
     std::vector<std::uint32_t> lat;
     lat.reserve(orders);
-    const std::uint64_t a0 = g_allocs.load(std::memory_order_relaxed);
+    const std::uint64_t a0 = allocs_now();
     const auto t0 = clk::now();
     for (std::uint64_t i = 0; i < orders; ++i) {
         const std::uint64_t r = splitmix64(flow.state);
@@ -209,8 +254,7 @@ Result run_latency(std::uint64_t orders) {
     Result res;
     res.orders = orders;
     res.seconds = std::chrono::duration<double>(t1 - t0).count();
-    res.allocs_per_order = static_cast<double>(g_allocs.load(std::memory_order_relaxed) - a0) /
-                           static_cast<double>(orders);
+    res.allocs_per_order = static_cast<double>(allocs_now() - a0) / static_cast<double>(orders);
     res.has_latency = true;
     fill_latency_stats(lat, res);
     return res;
@@ -252,10 +296,16 @@ int main(int argc, char **argv) {
     }
     const std::uint64_t count = orders.value_or(latency ? 5'000'000ULL : 60'000'000ULL);
     const Result r = latency ? run_latency(count) : run_throughput(count);
+    char allocs_buf[24];
+    if constexpr (kCountingAllocs) {
+        std::snprintf(allocs_buf, sizeof(allocs_buf), "%.4f", r.allocs_per_order);
+    } else {
+        std::snprintf(allocs_buf, sizeof(allocs_buf), "n/a");
+    }
     std::printf("perfeval: storage=baseline orders=%llu elapsed=%.3fs orders_per_sec=%.0f "
-                "allocs_per_order=%.4f\n",
+                "allocs_per_order=%s\n",
                 static_cast<unsigned long long>(r.orders), r.seconds,
-                static_cast<double>(r.orders) / r.seconds, r.allocs_per_order);
+                static_cast<double>(r.orders) / r.seconds, allocs_buf);
     if (r.has_latency) {
         std::printf("perfeval: latency_ns mean=%u p50=%u p99=%u (each incl ~%uns timer overhead)\n",
                     r.mean_ns, r.p50_ns, r.p99_ns, r.overhead_ns);

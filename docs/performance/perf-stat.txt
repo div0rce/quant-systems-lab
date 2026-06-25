@@ -3,52 +3,59 @@ QSL matching-engine hot path: perf stat (hardware counters), v0.1.0 baseline vs 
 
 Comparison: first release (v0.1.0) to current (v0.2.2), baseline storage on both.
 
+Two build targets, on purpose:
+  - qsl-perfeval         : system allocator untouched -> used for cycles/instructions/branches.
+  - qsl-perfeval-allocs  : overrides every operator new variant to count ALL allocations (plain and
+                           over-aligned). The override adds a little work per aligned allocation, so
+                           it is NOT used for the cycle numbers, only for allocations/order.
+
 Workload / benchmark command:
-  qsl-perfeval 60000000
+  qsl-perfeval 60000000   (and qsl-perfeval-allocs 60000000 for the allocation count)
   (steady-state deep book, baseline storage. Each "order" is one new_limit that may match resting
-   liquidity and rest its remainder, or fully fill and not rest. The book is held ~512 deep by
-   cancelling the oldest RESTING order each cycle; only orders that actually rested are tracked, so
-   depth does not drift with the match rate. 60,000,000 orders.)
+   liquidity and rest its remainder, or fully fill. The book is held ~512 deep by cancelling the
+   oldest RESTING order each cycle; only orders that actually rested are tracked. 60,000,000 orders.)
 
 Build:
   Compiler:   GCC (c++) 16.1.1 20260515 (Red Hat 16.1.1-2)
   Flags:      Release (-O3 -DNDEBUG), CMake "release" preset, both versions
-  Binary:     build/release/qsl-perfeval
   v0.1.0:     same harness ported into a git worktree at the v0.1.0 tag (identical MatchingEngine API)
 
 Hardware / OS:
-  CPU:        Apple M2 (aarch64), scheduled on the Avalanche performance cores (MIDR CPU part 0x032),
-              bare metal. perf opens each event against both apple_avalanche_pmu (P-core) and
-              apple_blizzard_pmu (E-core); the single-threaded workload runs on the P-cores, so the
-              Avalanche rows carry the real counts and Blizzard reads <not counted>.
+  CPU:        Apple M2 (aarch64), Avalanche performance cores (MIDR CPU part 0x032), bare metal.
+              perf opens each event against apple_avalanche_pmu (P-core) and apple_blizzard_pmu
+              (E-core); the single-threaded workload runs on the P-cores, so Avalanche carries the
+              real counts and Blizzard reads <not counted>.
   Kernel:     Linux 6.19.14-400.asahi.fc44.aarch64+16k (Fedora Asahi Remix)
-  Governor:   schedutil   (/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)
-  perf:       perf version 6.19.14-400.asahi.fc44.aarch64
-  paranoid:   2
+  Governor:   schedutil
+  perf:       perf version 6.19.14-400.asahi.fc44.aarch64 ; kernel.perf_event_paranoid = 2
 
 Counter availability (issue #90):
-  The Apple Silicon PMU exposed by the Asahi driver implements cycles, instructions, branches, and
-  branch-misses, but NOT the generic cache-references / cache-misses events. Cache-miss rate is
-  therefore UNMEASURABLE on this host and is reported as "unavailable", never estimated.
+  The Apple Silicon PMU implements cycles, instructions, branches, and branch-misses, but NOT the
+  generic cache-references / cache-misses events. Cache-miss rate is UNMEASURABLE here and is
+  reported as "unavailable", never estimated.
+
+Note: cycles/instructions/allocations per order are frequency-independent counts and are the
+load-bearing metrics. Raw wall-clock throughput (~10.5 to 11 M orders/sec) is governed by schedutil
+frequency scaling and is too thermally noisy to quote a precise delta.
 
 --------------------------------------------------------------------------------------
 v0.1.0  (first release baseline)
 --------------------------------------------------------------------------------------
  perf stat -e cycles,instructions,branches,branch-misses -- qsl-perfeval 60000000
 
-    18,272,171,571      apple_avalanche_pmu/cycles/u
-    70,192,622,388      apple_avalanche_pmu/instructions/u
-    14,075,610,218      apple_avalanche_pmu/branches/u
-       288,600,337      apple_avalanche_pmu/branch-misses/u
+    18,643,248,999      apple_avalanche_pmu/cycles/u
+    72,868,263,291      apple_avalanche_pmu/instructions/u
+    14,442,756,162      apple_avalanche_pmu/branches/u
+       289,942,740      apple_avalanche_pmu/branch-misses/u
 
   Derived (per 60,000,000 orders):
-    allocations/order         4.094
-    cycles/order            304.5
-    instructions/order     1169.9
-    IPC                       3.84
-    branches/order          234.6
-    branch-miss rate         2.050 %   (288,600,337 / 14,075,610,218)
-    p50 / p99 latency        ~83 ns / ~209 ns  (new_limit, includes ~12 ns timer overhead)
+    allocations/order         4.094    (qsl-perfeval-allocs)
+    cycles/order            310.7
+    instructions/order     1214.5
+    IPC                       3.91
+    branches/order          240.7
+    branch-miss rate         2.008 %   (289,942,740 / 14,442,756,162)
+    p50 / p99 latency        83 ns / 209 ns  (new_limit, includes ~12 ns timer overhead)
     cache-miss rate         unavailable (#90)
 
 --------------------------------------------------------------------------------------
@@ -56,25 +63,25 @@ v0.2.2  (current)
 --------------------------------------------------------------------------------------
  perf stat -e cycles,instructions,branches,branch-misses -- qsl-perfeval 60000000
 
-    17,443,233,036      apple_avalanche_pmu/cycles/u
-    68,777,314,983      apple_avalanche_pmu/instructions/u
-    14,171,028,053      apple_avalanche_pmu/branches/u
-       239,630,477      apple_avalanche_pmu/branch-misses/u
+    17,370,897,443      apple_avalanche_pmu/cycles/u
+    69,419,645,517      apple_avalanche_pmu/instructions/u
+    14,246,421,285      apple_avalanche_pmu/branches/u
+       239,493,400      apple_avalanche_pmu/branch-misses/u
 
   Derived (per 60,000,000 orders):
-    allocations/order         1.108    (-73.0 % vs v0.1.0)
-    cycles/order            290.7     ( -4.5 %)
-    instructions/order     1146.3     ( -2.0 %)
-    IPC                       3.94     ( +2.6 %)
-    branches/order          236.2
-    branch-miss rate         1.691 %  (-0.36 pp; -17.5 % relative)
-    p50 / p99 latency        ~83 ns / ~208 ns  (unchanged)
+    allocations/order         2.670    (-34.8 % vs v0.1.0; qsl-perfeval-allocs)
+    cycles/order            289.5     ( -6.8 %)
+    instructions/order     1157.0     ( -4.7 %)
+    IPC                       4.00     ( +2.3 %)
+    branches/order          237.4
+    branch-miss rate         1.681 %  (-0.33 pp; -16.3 % relative)
+    p50 / p99 latency        83 ns / 209 ns  (unchanged)
     cache-miss rate         unavailable (#90)
 
-Reading: the dominant cumulative change since v0.1.0 is allocations/order, cut 73 % (4.094 -> 1.108)
+Reading: the dominant cumulative change since v0.1.0 is allocations/order, cut ~35 % (4.094 -> 2.670)
 by the storage/PMR work, even on the default baseline-storage path. That cuts memory traffic and
-branch mispredictions (-17.5 % relative) more than raw cycles, because the baseline hot path is
-bounded by the ordered-map and intrusive-list operations rather than allocation count; throughput is
-modestly up (+4.3 %) and the per-order new_limit latency distribution is unchanged (p50 ~83 ns, p99
-~208 ns). Two late micro-optimizations (try_emplace in level_for, index load-factor 0.25) recovered
-the small per-op overhead the storage abstraction added, landing v0.2.2 ahead on every counter.
+branch mispredictions (-16 % relative); cycles/order falls 6.8 % and instructions/order 4.7 %. The
+per-order new_limit latency distribution is unchanged (p50 83 ns, p99 209 ns). An earlier draft
+claimed a 73 % allocation cut; that was a counting bug (the override missed the ~1.56 over-aligned
+allocations/order that v0.2.2 makes and v0.1.0 does not). Counting every operator new variant gives
+the true 2.670.
