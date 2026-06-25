@@ -114,6 +114,11 @@ add_test(
           "EXPECT_OUTPUT=usage:" -P
           "${CMAKE_CURRENT_LIST_DIR}/cmake/expect_command_failure.cmake")
 
+# Performance-evidence harness smoke test (PERFORMANCE.md): a tiny run must complete and report.
+add_test(NAME qsl_perfeval_smoke COMMAND qsl-perfeval 5000 --latency)
+set_tests_properties(qsl_perfeval_smoke PROPERTIES PASS_REGULAR_EXPRESSION
+                     "perfeval: latency_ns")
+
 # Shell unit tests for the shared artifact-publish helper (MAC sanitization +
 # trailing-whitespace/blank-line trimming). Portable (sed/awk/mktemp); the script
 # locates the repo via BASH_SOURCE, so it runs correctly by absolute path.
