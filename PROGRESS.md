@@ -20,36 +20,41 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** none — `v0.2.1` released; project is between releases
-- **Status:** ☑ `v0.2.1` published (FIX-like text protocol adapter #29, perf flamegraph #32, and a
-  resume-anchor/PMU consistency sweep) on top of `v0.2.0`
-- **Active branch:** none (work lands via scoped PRs from `main`)
+- **Active milestone:** none — `v0.2.1` is the latest tag, but a post-v0.2.1 hardening + perf wave
+  (12 PRs, #135–#146) has merged to `main` and is **unreleased**; it is being cut as **`v0.2.2`**
+- **Status:** ☑ `v0.2.1` published on top of `v0.2.0`; ☐ `v0.2.2` in preparation — security/robustness
+  hardening (decoder enum-domain rejection, network/CLI hardening, a real UBSan abort gate, OCaml
+  diff_report robustness) plus two measured order-book perf wins
+- **Active branch:** `docs/post-v0.2.1-overhaul` (the v0.2.2 prep + full doc/artifact staleness sweep)
 - **Last completed milestone:** M49 — NIC offload and low-latency networking study (PR #124,
-  d8c16b2); since then `v0.2.0` (PR #127, ded6e80) and the `v0.2.1` content: Codex resume-anchor
-  sweep (PR #129), perf flamegraph #32 (PR #134), and the FIX text adapter #29 (PR #131)
-- **Last completed docs sync:** v0.2.1 release prep (this PR): version bump + CHANGELOG `[0.2.1]`
-  and resume/release anchors brought current
-- **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.2.1` (tag created on the
-  squash-merge of the release PR, marked Latest) published as GitHub-only releases; no packages
-  published
-- **`make check` passing:** yes — `make check` 263/263 and `make asan` 263/263 on the bare-metal
-  Apple M2 (aarch64) Fedora Asahi host on 2026-06-21 (includes the v0.2.1 FIX-adapter and flamegraph
-  renderer tests)
-- **Last action:** delivered the `v0.2.1` content as scoped PRs and prepared this version-bump
-  release. Two reprioritized backlog items — the FIX-like text protocol adapter (#29) and the perf
-  call-graph flamegraph (#32) — plus the Codex resume-anchor/PMU consistency sweep (#127/#128
-  follow-up). Ran Codex as an independent reviewer across the stack and resolved every finding: the
-  FIX envelope now requires MsgType as the first body field and rejects duplicate tags;
-  `flamegraph.sh` classifies zero-sample/partial runs honestly, fails hard on renderer errors, and
-  gates on the folded sample total (not perf's estimate); and the resume anchors were made
-  consistent across PROGRESS/HANDOFF/AGENTS/CLAUDE. Brought every touched file through the CodeScene
-  Code Health gate (table-driven enum maps, a `decode_typed` skeleton, split `parse_envelope`,
-  flattened `flamegraph.py`). `make check`/`make asan` 263/263.
-- **Next action:** no active milestone. Highest-value remaining work is non-code and gated:
-  issue #94 (independent external review — needs a human reviewer) and issue #90 (full
-  cache-counter PMU evidence — needs a PMU microarchitecture that exposes cache events, e.g.
-  x86_64). The #32 (flamegraph) and #29 (FIX adapter) backlog items are done — shipped in `v0.2.1`
-  (PR #134 and PR #131) — so do not reopen them.
+  d8c16b2). Releases since: `v0.2.0` (PR #127, ded6e80) and `v0.2.1` (FIX adapter #131, flamegraph
+  #134, anchor sweep #129). Post-v0.2.1 unreleased work on `main`: #135–#146 (see Last action)
+- **Last completed docs sync:** this v0.2.2-prep overhaul — every `.md`/`.txt` audited against
+  current `main`; resume/release anchors, README, CHANGELOG, and all stale `results/*.txt`
+  provenance digests brought current to HEAD
+- **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.2.1` (tag on the
+  release-PR merge, marked Latest) published as GitHub-only releases; `v0.2.2` prepared here, not yet
+  tagged; no packages published
+- **`make check` passing:** yes — `make check` 270/270 and `make asan` 270/270 (the latter now under
+  the **real** UBSan abort gate from #142) on the bare-metal Apple M2 (aarch64) Fedora Asahi host on
+  2026-06-24
+- **Last action:** post-v0.2.1 hardening + perf wave merged to `main` as 12 scoped PRs (#135–#146),
+  driven by a multi-round adversarial bug hunt (converged 5→2→1→0 confirmed) and flamegraph-guided
+  optimization. Security/robustness: reject out-of-domain enum bytes in the replay/protocol decoders
+  (#136); network hardening — EINTR retry, accept fairness, connection cap, UDP send-error tracking,
+  transient-accept survival, and threaded/epoll fd-exhaustion handling (#137, #140, #143); CLI arg
+  validation so the tools reject malformed input instead of `std::terminate` (#141); the `asan`
+  preset now sets `-fno-sanitize-recover=undefined` so UBSan actually fails CI — previously it ran in
+  recover mode and exited 0 (#142); OCaml `diff_report` guards each fixture so one bad file cannot
+  abort the batch (#144). Perf (measured A/B): baseline price levels use `try_emplace` (~+5%, #138)
+  and the order-index hash caps its load factor at 0.25 (~+18.6%, #145); flamegraph regenerated
+  (#135, #139, #146). Determinism preserved throughout (byte-identical fixtures, OCaml differential
+  pass). `make check`/`make asan` 270/270.
+- **Next action:** finish the `v0.2.2` overhaul (this branch): regenerate the remaining stale
+  `results/*.txt` artifacts, then cut the `v0.2.2` tag/release. After that, the highest-value
+  remaining work is non-code and gated: issue #94 (independent external review — needs a human
+  reviewer) and issue #90 (full cache-counter PMU evidence — needs a PMU microarchitecture that
+  exposes cache events, e.g. x86_64).
 - **Blockers:** issue #90 is now a *cache-counter* PMU gap, not a host-access gap — this bare-metal
   Apple M2 exposes real `cycles`/`instructions`/`branches`/`branch-misses` but its PMU does not
   implement `cache-references`/`cache-misses`; closing it needs a PMU microarchitecture that exposes
@@ -221,15 +226,21 @@ Status key:
 
 - _none yet_
 
-Measured by `make bench` (full metadata + raw output in `results/latest.txt`). Hardware-,
-compiler-, and build-dependent — these are from one machine, not a production-latency claim.
+Measured by `make bench` (full metadata + raw output in `results/latest.txt`, which is the
+authoritative source). Hardware-, compiler-, and build-dependent — from one machine, not a
+production-latency claim.
 
-- Run: arm64, Apple clang 17, Release, seed 42, commit fbb8180 (synthetic, in-process; excludes network/disk/kernel path).
-- order book add/modify/cancel: ~126 ns/op
-- protocol NewOrder encode+decode: ~39 ns/op
-- in-process gateway session (crossing order with fill): ~270 ns/op
-- matching-engine flow apply: ~121 ns/command
-- replay from command log: ~132 ns/command
+- Run: aarch64 (Apple M2), GCC, Release, seed 42, Fedora Asahi Linux (synthetic, in-process;
+  excludes network/disk/kernel path). The earlier macOS Apple-clang numbers (~126/39/270/121/132 ns)
+  were superseded by the Linux regeneration and are not the current set.
+- order book add/modify/cancel: ~90 ns/op
+- protocol NewOrder encode+decode: ~16 ns/op
+- in-process gateway session (crossing order with fill): ~102 ns/op
+- matching-engine flow apply: ~91 ns/command
+- replay from command log: ~101 ns/command
+- Note: these single-process micro-benchmarks hold a near-empty order index, so they do not exercise
+  the deep-book steady state where the v0.2.2 engine wins land — `try_emplace` (~+5%, #138) and the
+  order-index load-factor cap (~+18.6%, #145) are measured on the `qsl-bench profile` workload.
 
 ---
 
@@ -431,6 +442,25 @@ Lower priority:
   release anchors and removed completed #29/#32 from every backlog list, synced AGENTS.md/CLAUDE.md
   to the v0.2.1 released state, and refreshed this release-readiness audit to 263 tests. `make
   check`/`make asan` 263/263. CodeScene MCP token still expired; CI is the authoritative gate.
+- [2026-06-24] Post-v0.2.1 hardening + perf wave (#135–#146), to be released as `v0.2.2`. Driven by a
+  multi-round adversarial bug hunt (4 rounds, converged 5→2→1→0 confirmed) plus flamegraph-guided
+  optimization. Security/robustness: reject out-of-domain enum bytes in the replay/protocol decoders
+  (#136, `core::is_valid` for Side/TimeInForce/RejectReason); network hardening — EINTR retry in the
+  TCP read/write path, accept fairness (epoll `max_accepts_per_tick`), connection cap
+  (`max_active_connections`), UDP send-error counter, transient-accept survival
+  (EINTR/ECONNABORTED), and threaded/epoll fd-exhaustion handling (#137, #140, #143); CLI arg
+  validation via `std::from_chars` so qsl-client/qsl-mdfeed/qsl-export-fixture reject malformed input
+  instead of `std::terminate`/silent port truncation (#141); the `asan` preset now sets
+  `-fno-sanitize-recover=undefined` so UBSan **aborts** on a violation — it previously ran in recover
+  mode and exited 0, so pure-UBSan defects passed CI green; the tree is UBSan-clean under the strict
+  gate (#142); OCaml `diff_report` guards each fixture so one malformed file cannot abort the batch
+  (#144). Perf (measured back-to-back A/B on the `qsl-bench profile` workload): baseline price levels
+  use `try_emplace` (~+5%, #138) and the order-index hash caps `max_load_factor` at 0.25 (~+18.6%,
+  #145); flamegraph regenerated against the new code (#135/#139/#146). Determinism preserved
+  throughout (byte-identical fixtures across g++/clang++ and vs committed; OCaml differential pass).
+  Then a full doc/artifact staleness overhaul (this branch): every `.md`/`.txt` audited against HEAD,
+  resume/release anchors + README + CHANGELOG brought current, and the stale `results/*.txt`
+  provenance digests regenerated. `make check`/`make asan` 270/270.
 - [2026-06-03] M35: implemented a multi-client TCP connection-scaling load test (`scripts/socket_load.sh`, `make socket-load`, Linux-only) driving N concurrent `qsl-client`s against the portable TCP and epoll (M34) gateways; `results/socket_load_summary.txt` is Docker-generated and constrained. A `/code-review` (3 finder agents) caught and fixed real measurement-integrity bugs before the PR: a failed trial's `wall=0` no longer poisons the reported best (only trials whose gateway served count toward the min); the `completed` column reports the WORST per-trial completion, not the last, so partial/total trial failures are surfaced rather than masked; a per-client `timeout` bounds a hang if the gateway dies; and `QSL_LOAD_TRIALS` is validated. Post-PR hardening uses fresh monotonic ports per gateway start, retries transient startup/serve failures on new ports, and refuses to write a partial artifact unless `QSL_LOAD_ALLOW_PARTIAL=1` is set intentionally; the refreshed artifact records `Dirty tree: no`. The scaling-shape claim remains constrained to loopback connection setup, not a demonstrated production-capacity advantage for either transport. Deferred follow-up: a shared `scripts/lib` to remove the dirty-tree / `wait_ready` / gateway-stop duplication across the three socket scripts.
 - [2026-06-03] M35: started after M34 (#98) squash-merged (commit 9e3750b). Scope: multi-client load / socket-pressure testing of the gateway/feed path (TCP/UDP stress, socket-buffer pressure, connection scaling, backpressure) building on M34's epoll multi-client path and M30's socket tooling. Constraints: scripts/tests document load shape + environment; results must distinguish kernel/socket pressure from user-space engine cost; no production-capacity claims (honest constrained-environment framing, like M29/M30).
 - [2026-06-04] M35: PR #100 squash-merged to `main` as a86b701 after all CI jobs and review checks were green. M35 is now landed; original M36 NUMA remains deferred until the repository-health refactor analysis is completed or explicitly skipped by the human.
@@ -837,14 +867,17 @@ Quant Systems Lab — Linux Systems + Exchange Infrastructure Simulator
 
 ## Next action remains
 
-There is no active milestone. `v0.2.1` is the current release, on top of `v0.2.0` (PR #127 ded6e80)
-and `v0.1.0`. The `v0.2.1` content is squash-merged to `main`: the Codex resume-anchor sweep
-(PR #129), the perf flamegraph #32 (PR #134, superseding the auto-closed #130), the FIX text adapter
-#29 (PR #131), and the version-bump release PR (#133), with `v0.2.1` tagged on the release merge
-commit. The committed perf artifacts remain **partial hardware PMU evidence** from this bare-metal
-Apple M2 (aarch64) Fedora Asahi host — real cycles/instructions/branches/branch-misses with
-cache-reference/cache-miss counters unsupported by the Apple Silicon PMU — not NIC-offload, latency,
-or full hardware-PMU evidence.
+`v0.2.1` is the latest tag, on top of `v0.2.0` (PR #127 ded6e80) and `v0.1.0`. A post-v0.2.1
+hardening + perf wave (#135–#146) is squash-merged to `main` and **unreleased**, being cut as
+`v0.2.2`: out-of-domain enum rejection in the decoders (#136); network hardening — EINTR retry,
+accept fairness, connection cap, UDP send-error tracking, transient-accept survival, and fd-exhaustion
+handling (#137, #140, #143); CLI arg validation (#141); a real UBSan abort gate (#142); OCaml
+`diff_report` robustness (#144); and two measured order-book perf wins — `try_emplace` (~+5%, #138)
+and the order-index load-factor cap (~+18.6%, #145), with the flamegraph regenerated (#135/#139/#146).
+`make check`/`make asan` 270/270. The committed perf artifacts remain **partial hardware PMU
+evidence** from this bare-metal Apple M2 (aarch64) Fedora Asahi host — real
+cycles/instructions/branches/branch-misses with cache-reference/cache-miss counters unsupported by
+the Apple Silicon PMU — not NIC-offload, latency, or full hardware-PMU evidence.
 
 Highest-value remaining work is non-code and gated: issue #94 (independent external review) and
 issue #90 (full cache-PMU evidence). Issue #90 needs a PMU **microarchitecture** that exposes cache

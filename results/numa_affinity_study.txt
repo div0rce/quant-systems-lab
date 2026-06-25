@@ -1,4 +1,4 @@
-Command:     QSL_NUMA_ALLOW_CONSTRAINED=1 QSL_NUMA_BIN=build/bench/qsl-bench make numa-study
+Command:     QSL_NUMA_BIN=build/bench/qsl-bench make numa-study
 Evidence class: linux-constrained
 Host support summary: Linux host, constrained evidence
 Hardware:    aarch64
@@ -7,12 +7,12 @@ CPU:         Avalanche-M2
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): 33f8d11
-Source digest: sha256:ff7a0a6b696ef700cd7bb568a531cf2e06ea16932d1031a8cfe85be6e0d21b91
+Git commit (informational): f9f7e98
+Source digest: sha256:0b9e8373fa304d7e734399a92e3b7f8bc8f4c6ee538621ad53cc35b443c67909
 Source digest scope: numa-affinity-study
 Dirty inputs: no
 Generated output: results/numa_affinity_study.txt
-Date: 2026-06-21T05:25:24Z
+Date: 2026-06-25T02:30:17Z
 Benchmark binary: build/bench/qsl-bench
 Allowed CPUs: 0-7
 CPU chosen:  0
@@ -50,18 +50,18 @@ Pinned command:
 taskset -c 0 build/bench/qsl-bench
 
 Unpinned benchmark output:
-order_book add/mod/cancel     200000 ops        138.0 ns/op        7248959 ops/sec
-protocol encode+decode        500000 ops         20.9 ns/op       47914709 ops/sec
-gateway session (fill)        200000 ops        128.2 ns/op        7800869 ops/sec
-matching engine flow            5004 items      101.7 ns/item      9834865 items/sec
-replay command log              5004 items      113.7 ns/item      8798241 items/sec
+order_book add/mod/cancel     200000 ops        113.5 ns/op        8807360 ops/sec
+protocol encode+decode        500000 ops         20.0 ns/op       50088843 ops/sec
+gateway session (fill)        200000 ops        115.6 ns/op        8652239 ops/sec
+matching engine flow            5004 items       93.6 ns/item     10682213 items/sec
+replay command log              5004 items      101.4 ns/item      9862110 items/sec
 
 Pinned benchmark output:
-order_book add/mod/cancel     200000 ops        143.3 ns/op        6976774 ops/sec
-protocol encode+decode        500000 ops         27.7 ns/op       36063756 ops/sec
-gateway session (fill)        200000 ops        236.9 ns/op        4220492 ops/sec
-matching engine flow            5004 items      187.1 ns/item      5345523 items/sec
-replay command log              5004 items      221.8 ns/item      4508370 items/sec
+order_book add/mod/cancel     200000 ops        234.2 ns/op        4269507 ops/sec
+protocol encode+decode        500000 ops         29.9 ns/op       33473413 ops/sec
+gateway session (fill)        200000 ops        219.4 ns/op        4558316 ops/sec
+matching engine flow            5004 items      168.2 ns/item      5946192 items/sec
+replay command log              5004 items      187.6 ns/item      5329445 items/sec
 
 NUMA local benchmark output:
 NUMA node-local/remote binding skipped: fewer than two NUMA nodes found
@@ -76,10 +76,10 @@ Unpinned perf stat output:
                  0      context-switches:u
                  0      cpu-migrations:u
 
-       0.084315551 seconds time elapsed
+       0.095650252 seconds time elapsed
 
-       0.084129000 seconds user
-       0.000000000 seconds sys
+       0.094408000 seconds user
+       0.000983000 seconds sys
 
 
 
@@ -90,10 +90,10 @@ Pinned perf stat output:
                  0      context-switches:u
                  0      cpu-migrations:u
 
-       0.154719226 seconds time elapsed
+       0.144623525 seconds time elapsed
 
-       0.152299000 seconds user
-       0.001988000 seconds sys
+       0.141344000 seconds user
+       0.002985000 seconds sys
 
 
 
@@ -111,7 +111,7 @@ Core(s) per socket:                      4
 Socket(s):                               1
 Stepping:                                0x1
 Frequency boost:                         disabled
-CPU(s) scaling MHz:                      53%
+CPU(s) scaling MHz:                      100%
 CPU max MHz:                             2424.0000
 CPU min MHz:                             600.0000
 BogoMIPS:                                48.00
@@ -156,7 +156,7 @@ numactl --hardware output:
 available: 1 nodes (0)
 node 0 cpus: 0 1 2 3 4 5 6 7
 node 0 size: 7481 MB
-node 0 free: 1620 MB
+node 0 free: 2023 MB
 node distances:
 node     0
    0:   10

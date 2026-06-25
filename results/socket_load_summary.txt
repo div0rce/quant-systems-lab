@@ -7,12 +7,12 @@ Cores:       8
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Debug
 Provenance version: 1
-Git commit (informational): 33f8d11
-Source digest: sha256:bc03fe85ae7177600ecff2a3acca3c7f6892e071716ae5e63529732fea798607
+Git commit (informational): f9f7e98
+Source digest: sha256:221f3a2da54f889cdd448da347faccb9a81c38d5191fee759d69a66aaf54f677
 Source digest scope: socket-load
 Dirty inputs: no
 Generated output: results/socket_load_summary.txt
-Date: 2026-06-21T05:26:56Z
+Date: 2026-06-25T02:31:10Z
 Dataset:     synthetic order flow via qsl-client (NewOrder + Heartbeat per connection)
 Scenario:    concurrent short-lived client sweep across the threaded and epoll transports
 Metric:      best (min) wall time per cell, approximate conns/s, and completion ratio
@@ -30,14 +30,14 @@ path, not matching.
 
 mode       clients   wall(s,best)     conns/s(~)  completed
 -------    -------   ------------     ----------  ---------
-threaded         1         0.0037            270        1/1
-threaded         4         0.0084            476        4/4
-threaded         8         0.0187            428        8/8
-threaded        16         0.0416            385      16/16
-epoll            1         0.0038            263        1/1
-epoll            4         0.0093            430        4/4
-epoll            8         0.0197            406        8/8
-epoll           16         0.0340            471      16/16
+threaded         1         0.0044            227        1/1
+threaded         4         0.0085            471        4/4
+threaded         8         0.0154            519        8/8
+threaded        16         0.0396            404      16/16
+epoll            1         0.0046            217        1/1
+epoll            4         0.0070            571        4/4
+epoll            8         0.0146            548        8/8
+epoll           16         0.0385            416      16/16
 
 Reading the result: compare how the best wall time grows with the client count within each
 mode. At these small loopback counts connection setup dominates and the two modes can stay close

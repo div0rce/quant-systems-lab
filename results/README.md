@@ -35,6 +35,13 @@ Benchmark results produced by `make bench` and scripts under `scripts/`.
 - `false_sharing_study.txt` — benchmark-only packed-vs-padded SPSC queue-cursor contention study
   (`make false-sharing-study`). It is research-note evidence about cache-line sharing shape, not
   a production throughput or latency claim.
+- `socket_load_summary.txt` — Linux multi-client TCP connection-scaling load experiment
+  (`make socket-load`, `scripts/socket_load.sh`): N concurrent `qsl-client`s against the threaded and
+  epoll gateways. Constrained loopback connection-setup shape only, not a production-capacity claim.
+- `socket_profile_loopback.txt` — Linux syscall/socket-path profiling of the gateway I/O path
+  (`make profile-io`, `scripts/profile_gateway_io.sh`). Loopback, constrained evidence.
+- `socket_stress_summary.txt` — UDP socket-buffer / burst-loss experiment (`make socket-stress`):
+  receive-buffer sizing vs observed sequence-gap loss on loopback. Research-note evidence only.
 - `crash_recovery_validation.txt` — M45 SIGKILL crash / torn-tail recovery validation for the
   append-only event log across durability modes (`make crash-recovery`). It is process-kill
   evidence only: it validates crash-mid-append recovery and acknowledged-record retention across

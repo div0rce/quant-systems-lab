@@ -92,4 +92,6 @@ ones:
   out-of-range integers, and oversized messages;
 - signed/extreme `int64` price and `uint64` id/seq round-trips.
 
-The adapter is also covered by the ASan/UBSan preset (`make asan`), since it parses untrusted text.
+The adapter is also covered by the ASan/UBSan preset (`make asan`), since it parses untrusted text;
+the UBSan half now aborts on the first violation (`-fno-sanitize-recover=undefined`, #142), so a
+UBSan defect in the parser fails the build rather than being silently recovered.

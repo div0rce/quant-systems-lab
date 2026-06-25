@@ -11,8 +11,10 @@ The demo network components are intentionally minimal:
   and bind to `127.0.0.1` only.
 - They are for local demonstration. **Do not expose `qsl-gateway` or `qsl-mdfeed` to untrusted
   networks**, and do not run them on a shared or public interface.
-- There is no TLS, access control, rate limiting, or DoS protection. Malformed input is handled
-  by disconnecting the peer, not by recovering the stream.
+- There is no TLS, access control, or rate limiting. The acceptors do have bounded resilience: an
+  optional connection cap, survival of transient `accept()` errors and fd exhaustion, and `EINTR`
+  retry on read/write — but this is robustness hardening, not DoS protection. Malformed input is
+  handled by disconnecting the peer, not by recovering the stream.
 
 ## Reporting
 

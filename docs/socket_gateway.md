@@ -38,7 +38,9 @@ The portable `TcpServer` writes responses with a send-all loop that tolerates pa
 The Linux `EpollServer` keeps a per-client outbound buffer and leaves the connection registered
 for `EPOLLOUT` until all pending response bytes are accepted by the kernel. Both write paths use
 `send(..., MSG_NOSIGNAL)` where available, and the platform socket option where available, so a
-client that drops before reading a response cannot terminate the gateway through `SIGPIPE`.
+client that drops before reading a response cannot terminate the gateway through `SIGPIPE`. Both the
+read and write paths retry on `EINTR` — a signal interruption is treated as retryable, not a
+disconnect.
 
 The epoll path treats `EAGAIN` / `EWOULDBLOCK` as normal nonblocking backpressure:
 
@@ -93,7 +95,12 @@ induces an over-cap response is disconnected.
 
 The default demo uses `TcpServer` because it is portable and easiest to inspect. The accept loop
 spawns one worker per accepted connection, so a slow or still-open client no longer prevents the
-server from accepting a later client. The shared `OrderGateway` remains protected by an internal
+server from accepting a later client. A connection cap (`TcpServerOptions::max_active_connections`,
+default `0` = unbounded) load-sheds — a freshly accepted connection at the cap is closed immediately
+rather than spawning another worker. The accept loop also survives transient `accept()` errors
+(`EINTR`/`ECONNABORTED`, retried) and file-descriptor exhaustion (`EMFILE`/`ENFILE`, a brief back-off
+retry) instead of tearing the listener down; the `EpollServer` handles the same conditions by
+disarming and re-arming the listener. The shared `OrderGateway` remains protected by an internal
 mutex; network I/O can overlap across clients, but matching-engine mutation stays serialized and
 deterministic.
 

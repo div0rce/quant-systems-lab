@@ -8,18 +8,18 @@ Perf:          perf version 6.19.14-400.asahi.fc44.aarch64
 Perf paranoid: 2
 Build type:    Release
 Provenance version: 1
-Git commit (informational): 33f8d11
-Source digest: sha256:c991d51c8076952f2c3dcd5e407f78e512d9fb4e573cb7ad65f7a700a9ed37a2
+Git commit (informational): f9f7e98
+Source digest: sha256:1837aa008369e0029dd4a16e7e780bacac293688e03351b88dbb4c586fbbf34e
 Source digest scope: perf-record-benchmark
 Dirty inputs: no
 Generated output: results/perf_report_linux.txt
-Date: 2026-06-21T05:25:24Z
+Date: 2026-06-25T02:30:02Z
 Benchmark binary: build/bench/qsl-bench
 Benchmark status: 0
 Dataset:       qsl-bench default synthetic benchmark suite
 Record event:  cpu-clock
 Sample freq:   2000 Hz
-Sample count:  186
+Sample count:  188
 Minimum samples for hot profile: 100
 Insufficient samples: no
 Report limit:  1%
@@ -34,22 +34,22 @@ cpu-clock event is a software sampling profile for hot-symbol investigation,
 not a latency or throughput measurement.
 
 Benchmark output:
-order_book add/mod/cancel     200000 ops        141.9 ns/op        7047598 ops/sec
-protocol encode+decode        500000 ops         21.3 ns/op       47032627 ops/sec
-gateway session (fill)        200000 ops        129.1 ns/op        7743908 ops/sec
-matching engine flow            5004 items      103.0 ns/item      9713046 items/sec
-replay command log              5004 items      112.8 ns/item      8863630 items/sec
+order_book add/mod/cancel     200000 ops        131.2 ns/op        7621590 ops/sec
+protocol encode+decode        500000 ops         20.1 ns/op       49771400 ops/sec
+gateway session (fill)        200000 ops        118.7 ns/op        8425787 ops/sec
+matching engine flow            5004 items       95.1 ns/item     10520557 items/sec
+replay command log              5004 items       99.8 ns/item     10021725 items/sec
 
 Benchmark output under perf:
-order_book add/mod/cancel     200000 ops        112.7 ns/op        8873425 ops/sec
-protocol encode+decode        500000 ops         21.0 ns/op       47551868 ops/sec
-gateway session (fill)        200000 ops        127.6 ns/op        7833933 ops/sec
-matching engine flow            5004 items      101.1 ns/item      9892789 items/sec
-replay command log              5004 items      119.5 ns/item      8368038 items/sec
+order_book add/mod/cancel     200000 ops        139.1 ns/op        7190560 ops/sec
+protocol encode+decode        500000 ops         20.5 ns/op       48888534 ops/sec
+gateway session (fill)        200000 ops        117.5 ns/op        8511050 ops/sec
+matching engine flow            5004 items       92.2 ns/item     10847835 items/sec
+replay command log              5004 items       97.9 ns/item     10213751 items/sec
 
 perf record stderr:
 [ perf record: Woken up 1 times to write data ]
-[ perf record: Captured and wrote 0.028 MB build/perf/qsl-bench.perf.data (186 samples) ]
+[ perf record: Captured and wrote 0.027 MB build/perf/qsl-bench.perf.data (188 samples) ]
 
 perf report stderr:
 
@@ -59,15 +59,20 @@ perf report output:
 #
 # Total Lost Samples: 0
 #
-# Samples: 186  of event 'cpu-clock:u'
-# Event count (approx.): 93000000
+# Samples: 188  of event 'cpu-clock:u'
+# Event count (approx.): 94000000
 #
-# Overhead  Symbol                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   Shared Object          IPC   [IPC Coverage]
-# ........  .......................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................  .....................  ....................
+# Overhead  Symbol                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       Shared Object          IPC   [IPC Coverage]
+# ........  ...........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................  .....................  ....................
 #
-    10.22%  [.] cfree@GLIBC_2.17                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     libc.so.6              -      -
+    12.23%  [.] cfree@GLIBC_2.17                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         libc.so.6              -      -
             |
-            |--1.61%--qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
+            |--3.19%--main
+            |          __libc_start_call_main
+            |          __libc_start_main@@GLIBC_2.34
+            |          _start
+            |
+            |--1.60%--qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
             |          decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
             |          qsl::engine::OrderBook::cancel(unsigned long)
             |          main
@@ -75,7 +80,7 @@ perf report output:
             |          __libc_start_main@@GLIBC_2.34
             |          _start
             |
-            |--1.08%--qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+            |--1.06%--qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
             |          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
             |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
             |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
@@ -84,7 +89,7 @@ perf report output:
             |          __libc_start_main@@GLIBC_2.34
             |          _start
             |
-            |--1.08%--qsl::gateway::(anonymous namespace)::append(std::vector<std::byte, std::allocator<std::byte> >&, std::vector<std::byte, std::allocator<std::byte> > const&, unsigned long) [clone .isra.0]
+            |--1.06%--qsl::gateway::(anonymous namespace)::append(std::vector<std::byte, std::allocator<std::byte> >&, std::vector<std::byte, std::allocator<std::byte> > const&, unsigned long) [clone .isra.0]
             |          qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
             |          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
             |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
@@ -94,160 +99,93 @@ perf report output:
             |          __libc_start_main@@GLIBC_2.34
             |          _start
             |
-            |--1.08%--qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&)
-            |          main
-            |          __libc_start_call_main
-            |          __libc_start_main@@GLIBC_2.34
-            |          _start
+            |--1.06%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
             |
-            |--1.08%--std::_Hashtable<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_erase(unsigned long, std::__detail::_Hash_node_base*, std::__detail::_Hash_node<std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, false>*)
-            |          qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&)
-            |
-             --1.08%--main
+             --1.06%--0x5000000402b63
                        __libc_start_call_main
                        __libc_start_main@@GLIBC_2.34
                        _start
 
-     9.68%  [.] malloc                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               libc.so.6              -      -
+     6.91%  [.] malloc                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   libc.so.6              -      -
             |
-            |--6.45%--operator new(unsigned long)
+            |--3.72%--operator new(unsigned long)
             |          |
-            |          |--2.15%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-            |          |          |
-            |          |           --1.61%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-            |          |                     qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-            |          |                     qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-            |          |                     qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
-            |          |                     main
-            |          |                     __libc_start_call_main
-            |          |                     __libc_start_main@@GLIBC_2.34
-            |          |                     _start
-            |          |
-            |          |--1.61%--qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-            |          |          qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-            |          |          qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-            |          |          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-            |          |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-            |          |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
-            |          |          main
-            |          |          __libc_start_call_main
-            |          |          __libc_start_main@@GLIBC_2.34
-            |          |          _start
-            |          |
-            |          |--1.08%--qsl::gateway::(anonymous namespace)::append(std::vector<std::byte, std::allocator<std::byte> >&, std::vector<std::byte, std::allocator<std::byte> > const&, unsigned long) [clone .isra.0]
-            |          |          qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-            |          |          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-            |          |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-            |          |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
-            |          |          main
-            |          |          __libc_start_call_main
-            |          |          __libc_start_main@@GLIBC_2.34
-            |          |          _start
-            |          |
-            |           --1.08%--qsl::protocol::encode(qsl::protocol::NewOrder const&, unsigned long)
+            |           --1.60%--qsl::protocol::encode(qsl::protocol::NewOrder const&, unsigned long)
             |                     main
             |                     __libc_start_call_main
             |                     __libc_start_main@@GLIBC_2.34
             |                     _start
             |
-             --3.23%--__posix_memalign
+             --3.19%--__posix_memalign
                        operator new(unsigned long, std::align_val_t)
                        |
-                       |--1.61%--std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)
-                       |          qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
+                       |--1.60%--qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
                        |          qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
                        |          |
-                       |           --1.08%--main
+                       |           --1.06%--main
                        |                     __libc_start_call_main
                        |                     __libc_start_main@@GLIBC_2.34
                        |                     _start
                        |
-                        --1.08%--qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
+                        --1.06%--qsl::engine::OrderBook::level_for[abi:cxx11](qsl::core::Side, long)
+                                  qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
                                   qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+
+     5.32%  [.] qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            qsl-bench              -      -
+            |
+            |--3.19%--main
+            |          __libc_start_call_main
+            |          __libc_start_main@@GLIBC_2.34
+            |          _start
+            |
+             --1.60%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+                       |
+                        --1.06%--qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
+                                  qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&)
                                   main
                                   __libc_start_call_main
                                   __libc_start_main@@GLIBC_2.34
                                   _start
 
-     8.60%  [.] qsl::protocol::decode_new_order(std::span<std::byte const, 18446744073709551615ul>)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  qsl-bench              -      -
+     4.79%  [.] qsl::engine::OrderBook::modify(unsigned long, long, unsigned int)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        qsl-bench              -      -
             |
-            |--6.99%--main
+            ---main
+               __libc_start_call_main
+               __libc_start_main@@GLIBC_2.34
+               _start
+
+     3.72%  [.] operator new(unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              libstdc++.so.6.0.35    -      -
+            |
+            |--1.06%--qsl::engine::OrderBook::fill_front_order(std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> >&, long, qsl::engine::OrderBook::MatchContext&)
+            |          qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&)
+            |          qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+            |          qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+            |          qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+            |          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+            |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+            |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+            |          main
             |          __libc_start_call_main
             |          __libc_start_main@@GLIBC_2.34
             |          _start
             |
-             --1.61%--qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                       qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                       qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+             --1.06%--qsl::protocol::encode(qsl::protocol::NewOrder const&, unsigned long)
                        main
                        __libc_start_call_main
                        __libc_start_main@@GLIBC_2.34
                        _start
 
-     4.84%  [.] qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       qsl-bench              -      -
+     3.72%  [.] qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         qsl-bench              -      -
             |
-             --4.30%--qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-                       |
-                        --3.76%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-                                  |
-                                  |--2.15%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-                                  |          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                                  |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                                  |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
-                                  |          main
-                                  |          __libc_start_call_main
-                                  |          __libc_start_main@@GLIBC_2.34
-                                  |          _start
-                                  |
-                                   --1.61%--qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
-                                             |
-                                              --1.08%--main
-                                                        __libc_start_call_main
-                                                        __libc_start_main@@GLIBC_2.34
-                                                        _start
-
-     4.30%  [.] malloc@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           libstdc++.so.6.0.35    -      -
-            |
-            ---operator new(unsigned long)
-               |
-               |--2.15%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-               |          |
-               |          |--1.08%--qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
-               |          |
-               |           --1.08%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-               |                     qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-               |                     qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-               |                     qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
-               |                     main
-               |                     __libc_start_call_main
-               |                     __libc_start_main@@GLIBC_2.34
-               |                     _start
-               |
-                --1.08%--qsl::protocol::encode(qsl::protocol::Fill const&)
-                          qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
-                          main
-                          __libc_start_call_main
-                          __libc_start_main@@GLIBC_2.34
-                          _start
-
-     2.69%  [.] operator new(unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          libstdc++.so.6.0.35    -      -
-            |
-             --1.08%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-
-     2.69%  [.] qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     qsl-bench              -      -
-            |
-            |--1.61%--qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
+            |--2.13%--qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
             |          |
-            |           --1.08%--qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&)
+            |           --1.60%--qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&)
             |                     main
             |                     __libc_start_call_main
             |                     __libc_start_main@@GLIBC_2.34
             |                     _start
             |
-             --1.08%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+             --1.60%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
                        qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
                        qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
                        qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
@@ -256,93 +194,102 @@ perf report output:
                        __libc_start_main@@GLIBC_2.34
                        _start
 
-     2.69%  [.] qsl::engine::OrderBook::contains(unsigned long) const                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                qsl-bench              -      -
+     3.72%  [.] qsl::protocol::decode_header(std::span<std::byte const, 18446744073709551615ul>)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         qsl-bench              -      -
             |
-             --1.61%--qsl::replay::generate_flow(unsigned long, unsigned int, unsigned long)
+            |--2.13%--qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+            |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+            |          main
+            |          __libc_start_call_main
+            |          __libc_start_main@@GLIBC_2.34
+            |          _start
+            |
+             --1.60%--qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+                       qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+                       qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
                        main
                        __libc_start_call_main
                        __libc_start_main@@GLIBC_2.34
                        _start
 
-     2.15%  [.] __posix_memalign                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     libc.so.6              -      -
+     3.19%  [.] malloc@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               libstdc++.so.6.0.35    -      -
             |
-            ---operator new(unsigned long, std::align_val_t)
+            ---operator new(unsigned long)
                |
-                --1.08%--std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)
-                          qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
-                          qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+               |--1.06%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+               |          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+               |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+               |          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+               |          main
+               |          __libc_start_call_main
+               |          __libc_start_main@@GLIBC_2.34
+               |          _start
+               |
+                --1.06%--qsl::protocol::encode(qsl::protocol::NewOrder const&, unsigned long)
+                          main
+                          __libc_start_call_main
+                          __libc_start_main@@GLIBC_2.34
+                          _start
 
-     2.15%  [.] main                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 qsl-bench              -      -
-            |
-            ---__libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
-
-     2.15%  [.] operator delete(void*)@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           libstdc++.so.6.0.35    -      -
-     2.15%  [.] operator delete(void*, unsigned long, std::align_val_t)@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          libstdc++.so.6.0.35    -      -
-            |
-            |--1.08%--std::_Hashtable<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_erase(unsigned long, std::__detail::_Hash_node_base*, std::__detail::_Hash_node<std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, false>*)
-            |          decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
-            |          qsl::engine::OrderBook::cancel(unsigned long)
-            |
-             --1.08%--qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
-                       decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
-                       qsl::engine::OrderBook::cancel(unsigned long)
-
-     2.15%  [.] qsl::engine::OrderBook::modify(unsigned long, long, unsigned int)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    qsl-bench              -      -
-            |
-            ---main
-               __libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
-
-     2.15%  [.] std::_Hashtable<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_erase(unsigned long, std::__detail::_Hash_node_base*, std::__detail::_Hash_node<std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, false>*)                                                                                                                                                                                                                                                                                                                                              qsl-bench              -      -
-            |
-             --1.61%--decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
-                       |
-                        --1.08%--qsl::engine::OrderBook::cancel(unsigned long)
-
-     2.15%  [.] std::_Rb_tree_rebalance_for_erase(std::_Rb_tree_node_base*, std::_Rb_tree_node_base&)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                libstdc++.so.6.0.35    -      -
-            |
-            ---qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
-               decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
-               qsl::engine::OrderBook::cancel(unsigned long)
-               main
-               __libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
-
-     2.15%  [.] std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)                                                                                                                                                                                                                                                                                                                                                                                                                                                            qsl-bench              -      -
+     3.19%  [.] qsl::engine::OrderBook::level_for[abi:cxx11](qsl::core::Side, long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      qsl-bench              -      -
             |
             ---qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
                qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-               main
-               __libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
+               |
+               |--2.13%--main
+               |          __libc_start_call_main
+               |          __libc_start_main@@GLIBC_2.34
+               |          _start
+               |
+                --1.06%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+                          qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
 
-     1.61%  [.] decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]                                                                                                                                                                                                                                                                                                                                            qsl-bench              -      -
+     3.19%  [.] qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           qsl-bench              -      -
             |
-            ---qsl::engine::OrderBook::cancel(unsigned long)
-               main
-               __libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
+            ---qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+               |
+                --2.66%--qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+                          |
+                          |--1.60%--qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
+                          |          |
+                          |           --1.06%--qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&)
+                          |                     main
+                          |                     __libc_start_call_main
+                          |                     __libc_start_main@@GLIBC_2.34
+                          |                     _start
+                          |
+                           --1.06%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+                                     qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+                                     qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+                                     qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+                                     main
+                                     __libc_start_call_main
+                                     __libc_start_main@@GLIBC_2.34
+                                     _start
 
-     1.61%  [.] memcpy@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           qsl-bench              -      -
-     1.61%  [.] operator new(unsigned long, std::align_val_t)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        libstdc++.so.6.0.35    -      -
+     3.19%  [.] qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         qsl-bench              -      -
             |
-             --1.08%--qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
-                       qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-                       main
-                       __libc_start_call_main
-                       __libc_start_main@@GLIBC_2.34
-                       _start
+            ---qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+               |
+                --2.66%--main
+                          __libc_start_call_main
+                          __libc_start_main@@GLIBC_2.34
+                          _start
 
-     1.61%  [.] operator new(unsigned long, std::align_val_t)@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    libstdc++.so.6.0.35    -      -
+     2.66%  [.] _mid_memalign                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            libc.so.6              -      -
             |
-             --1.08%--std::pair<std::_Rb_tree_iterator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, bool> std::_Rb_tree<long, std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >, std::_Select1st<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, std::greater<long>, std::pmr::polymorphic_allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > > >::_M_emplace_unique<long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >(long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> >&&)
-                       qsl::engine::OrderBook::level_for[abi:cxx11](qsl::core::Side, long)
+            |--1.60%--0x2fffff346e1a63
+            |          operator new(unsigned long, std::align_val_t)
+            |          qsl::engine::OrderBook::level_for[abi:cxx11](qsl::core::Side, long)
+            |          qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
+            |          qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+            |          main
+            |          __libc_start_call_main
+            |          __libc_start_main@@GLIBC_2.34
+            |          _start
+            |
+             --1.06%--0x63ffff346e1a63
+                       operator new(unsigned long, std::align_val_t)
+                       std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)
                        qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
                        qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
                        main
@@ -350,33 +297,37 @@ perf report output:
                        __libc_start_main@@GLIBC_2.34
                        _start
 
-     1.61%  [.] qsl::engine::OrderBook::fill_front_order(std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> >&, long, qsl::engine::OrderBook::MatchContext&)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 qsl-bench              -      -
+     2.66%  [.] qsl::engine::OrderBook::contains(unsigned long) const                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    qsl-bench              -      -
             |
-            ---qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&)
-               qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-               qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-               |
-                --1.08%--qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-                          qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                          qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
-                          main
-                          __libc_start_call_main
-                          __libc_start_main@@GLIBC_2.34
-                          _start
-
-     1.61%  [.] qsl::protocol::decode_header(std::span<std::byte const, 18446744073709551615ul>)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     qsl-bench              -      -
-            |
-             --1.08%--qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
-                       qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+             --2.13%--qsl::replay::generate_flow(unsigned long, unsigned int, unsigned long)
                        main
                        __libc_start_call_main
                        __libc_start_main@@GLIBC_2.34
                        _start
 
-     1.61%  [.] std::__detail::_List_node_base::_M_unhook()@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      qsl-bench              -      -
+     2.66%  [.] qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      qsl-bench              -      -
             |
-             --1.08%--qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
+            ---decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
+               |
+                --2.13%--qsl::engine::OrderBook::cancel(unsigned long)
+                          main
+                          __libc_start_call_main
+                          __libc_start_main@@GLIBC_2.34
+                          _start
+
+     2.66%  [.] std::_Rb_tree_rebalance_for_erase(std::_Rb_tree_node_base*, std::_Rb_tree_node_base&)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    libstdc++.so.6.0.35    -      -
+            |
+            |--1.60%--qsl::engine::OrderBook::match_baseline(qsl::core::Side, qsl::engine::OrderBook::MatchContext&)
+            |          |
+            |           --1.06%--qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+            |                     qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+            |                     qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
+            |                     main
+            |                     __libc_start_call_main
+            |                     __libc_start_main@@GLIBC_2.34
+            |                     _start
+            |
+             --1.06%--qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
                        decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
                        qsl::engine::OrderBook::cancel(unsigned long)
                        main
@@ -384,60 +335,29 @@ perf report output:
                        __libc_start_main@@GLIBC_2.34
                        _start
 
-     1.61%  [.] std::pair<std::_Rb_tree_iterator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, bool> std::_Rb_tree<long, std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >, std::_Select1st<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > >, std::greater<long>, std::pmr::polymorphic_allocator<std::pair<long const, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > > > >::_M_emplace_unique<long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> > >(long&, std::__cxx11::list<qsl::engine::Order, std::pmr::polymorphic_allocator<qsl::engine::Order> >&&)                                                                                                        qsl-bench              -      -
+     2.13%  [.] __posix_memalign                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         libc.so.6              -      -
             |
-            ---qsl::engine::OrderBook::level_for[abi:cxx11](qsl::core::Side, long)
-               qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
-               qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-               |
-                --1.08%--qsl::engine::OrderBook::modify(unsigned long, long, unsigned int)
-                          qsl::engine::MatchingEngine::modify(unsigned int, unsigned long, long, unsigned int)
-                          qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
-                          qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&)
-                          main
-                          __libc_start_call_main
-                          __libc_start_main@@GLIBC_2.34
-                          _start
-
-     1.08%  [.] __memcpy_generic                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     libc.so.6              -      -
-     1.08%  [.] _mid_memalign                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        libc.so.6              -      -
+            |--1.06%--operator new(unsigned long, std::align_val_t)
+            |          std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)
+            |          qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
+            |          qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
             |
-            ---__posix_memalign
-               operator new(unsigned long, std::align_val_t)
-               std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)
-               qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
-               qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
-               main
-               __libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
+             --1.06%--0x14ffff349d51d3
+                       qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
+                       qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+                       main
+                       __libc_start_call_main
+                       __libc_start_main@@GLIBC_2.34
+                       _start
 
-     1.08%  [.] operator delete(void*, unsigned long)@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            qsl-bench              -      -
-     1.08%  [.] qsl::engine::MatchingEngine::cancel(unsigned int, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     qsl-bench              -      -
+     2.13%  [.] operator delete(void*)@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               libstdc++.so.6.0.35    -      -
             |
-            ---qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
+             --1.60%--main
+                       __libc_start_call_main
+                       __libc_start_main@@GLIBC_2.34
+                       _start
 
-     1.08%  [.] qsl::engine::MatchingEngine::contains(unsigned int, unsigned long) const                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             qsl-bench              -      -
-     1.08%  [.] qsl::engine::MatchingEngine::new_market(unsigned int, unsigned long, qsl::core::Side, unsigned int)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  qsl-bench              -      -
-            |
-            ---qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
-               qsl::replay::replay(qsl::engine::MatchingEngine&, std::vector<qsl::replay::LogRecord, std::allocator<qsl::replay::LogRecord> > const&)
-               main
-               __libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
-
-     1.08%  [.] qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        qsl-bench              -      -
-            |
-            ---qsl::engine::OrderBook::modify(unsigned long, long, unsigned int)
-               qsl::engine::MatchingEngine::modify(unsigned int, unsigned long, long, unsigned int)
-               qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
-               main
-               __libc_start_call_main
-               __libc_start_main@@GLIBC_2.34
-               _start
-
-     1.08%  [.] qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              qsl-bench              -      -
+     2.13%  [.] qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  qsl-bench              -      -
             |
             ---qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
                qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
@@ -447,9 +367,21 @@ perf report output:
                __libc_start_main@@GLIBC_2.34
                _start
 
-     1.08%  [.] qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      qsl-bench              -      -
+     1.60%  [.] decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]                                                                                qsl-bench              -      -
             |
-            ---qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+             --1.06%--qsl::engine::OrderBook::cancel(unsigned long)
+                       main
+                       __libc_start_call_main
+                       __libc_start_main@@GLIBC_2.34
+                       _start
+
+     1.60%  [.] free@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 libstdc++.so.6.0.35    -      -
+     1.60%  [.] operator delete(void*, unsigned long, std::align_val_t)@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              libstdc++.so.6.0.35    -      -
+     1.60%  [.] qsl::engine::OrderBook::can_store_limit(qsl::core::Side, long, unsigned int, qsl::core::TimeInForce) const                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               qsl-bench              -      -
+            |
+            ---qsl::engine::MatchingEngine::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+               qsl::gateway::OrderGateway::new_limit(unsigned int, unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+               qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
                qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
                qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
                main
@@ -457,15 +389,78 @@ perf report output:
                __libc_start_main@@GLIBC_2.34
                _start
 
-     1.08%  [.] qsl::replay::generate_flow(unsigned long, unsigned int, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               qsl-bench              -      -
+     1.60%  [.] qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  qsl-bench              -      -
+            |
+            ---qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+               main
+               __libc_start_call_main
+               __libc_start_main@@GLIBC_2.34
+               _start
+
+     1.60%  [.] qsl::protocol::decode_new_order(std::span<std::byte const, 18446744073709551615ul>)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      qsl-bench              -      -
+            |
+             --1.06%--main
+                       __libc_start_call_main
+                       __libc_start_main@@GLIBC_2.34
+                       _start
+
+     1.60%  [.] qsl::protocol::encode(qsl::protocol::NewOrder const&, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     qsl-bench              -      -
             |
             ---main
                __libc_start_call_main
                __libc_start_main@@GLIBC_2.34
                _start
 
-     1.08%  [.] std::_Rb_tree_insert_and_rebalance(bool, std::_Rb_tree_node_base*, std::_Rb_tree_node_base*, std::_Rb_tree_node_base&)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               libstdc++.so.6.0.35    -      -
-     1.08%  [.] std::__detail::_List_node_base::_M_hook(std::__detail::_List_node_base*)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             libstdc++.so.6.0.35    -      -
+     1.06%  [.] __memcpy_generic                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         libc.so.6              -      -
+     1.06%  [.] decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::contains(unsigned long) const::{lambda()#1}, qsl::engine::OrderBook::contains(unsigned long) const::{lambda(qsl::engine::OrderBook::IntrusiveStore const&)#1}, qsl::engine::OrderBook::contains(unsigned long) const::{lambda(qsl::engine::OrderBook::ContiguousStore const&)#1}>(qsl::engine::OrderBook::contains(unsigned long) const::{lambda()#1}&&, qsl::engine::OrderBook::contains(unsigned long) const::{lambda(qsl::engine::OrderBook::IntrusiveStore const&)#1}&&, qsl::engine::OrderBook::contains(unsigned long) const::{lambda(qsl::engine::OrderBook::ContiguousStore const&)#1}&&) const [clone .isra.0]  qsl-bench              -      -
+            |
+            ---qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+
+     1.06%  [.] operator new(unsigned long)@plt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          qsl-bench              -      -
+     1.06%  [.] qsl::engine::MatchingEngine::cancel(unsigned int, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         qsl-bench              -      -
+            |
+            ---qsl::replay::apply(qsl::engine::MatchingEngine&, std::variant<qsl::replay::RegisterSymbol, qsl::replay::NewLimit, qsl::replay::NewMarket, qsl::replay::Cancel, qsl::replay::Modify> const&)
+
+     1.06%  [.] qsl::engine::MatchingEngine::contains(unsigned int, unsigned long) const                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 qsl-bench              -      -
+            |
+            ---qsl::replay::generate_flow(unsigned long, unsigned int, unsigned long)
+               main
+               __libc_start_call_main
+               __libc_start_main@@GLIBC_2.34
+               _start
+
+     1.06%  [.] qsl::gateway::(anonymous namespace)::append(std::vector<std::byte, std::allocator<std::byte> >&, std::vector<std::byte, std::allocator<std::byte> > const&, unsigned long) [clone .isra.0]                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               qsl-bench              -      -
+            |
+            ---qsl::gateway::(anonymous namespace)::emit_result(unsigned long, qsl::gateway::GatewayResult const&, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+               qsl::gateway::Session::process_frame(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+               qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>, std::vector<std::byte, std::allocator<std::byte> >&, unsigned long)
+               qsl::gateway::Session::on_bytes(std::span<std::byte const, 18446744073709551615ul>)
+               main
+               __libc_start_call_main
+               __libc_start_main@@GLIBC_2.34
+               _start
+
+     1.06%  [.] qsl::replay::generate_flow(unsigned long, unsigned int, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   qsl-bench              -      -
+            |
+            ---main
+               __libc_start_call_main
+               __libc_start_main@@GLIBC_2.34
+               _start
+
+     1.06%  [.] std::_Hashtable<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_erase(unsigned long, std::__detail::_Hash_node_base*, std::__detail::_Hash_node<std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, false>*)                                                                                  qsl-bench              -      -
+     1.06%  [.] std::_Hashtable<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true> >::_M_insert_unique_node(unsigned long, unsigned long, std::__detail::_Hash_node<std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, false>*, unsigned long)                                                                        qsl-bench              -      -
+            |
+            ---std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)
+               qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
+               qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
+
+     1.06%  [.] std::__detail::_List_node_base::_M_unhook()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              libstdc++.so.6.0.35    -      -
+            |
+            ---qsl::engine::OrderBook::erase_resting_order(qsl::engine::OrderBook::Locator const&)
+               decltype(auto) qsl::engine::OrderBook::dispatch_storage<qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}>(qsl::engine::OrderBook::cancel(unsigned long)::{lambda()#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::IntrusiveStore&)#1}&&, qsl::engine::OrderBook::cancel(unsigned long)::{lambda(qsl::engine::OrderBook::ContiguousStore&)#1}&&) [clone .isra.0]
+               qsl::engine::OrderBook::cancel(unsigned long)
+
+     1.06%  [.] std::__detail::_Map_base<unsigned long, std::pair<unsigned long const, qsl::engine::OrderBook::Locator>, std::pmr::polymorphic_allocator<std::pair<unsigned long const, qsl::engine::OrderBook::Locator> >, std::__detail::_Select1st, std::equal_to<unsigned long>, std::hash<unsigned long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Prime_rehash_policy, std::__detail::_Hashtable_traits<false, false, true>, true>::operator[](unsigned long const&)                                                                                                                                                                                                qsl-bench              -      -
             |
             ---qsl::engine::OrderBook::rest(unsigned long, qsl::core::Side, long, unsigned int)
                qsl::engine::OrderBook::add_limit(unsigned long, qsl::core::Side, long, unsigned int, qsl::core::TimeInForce)
@@ -474,9 +469,8 @@ perf report output:
                __libc_start_main@@GLIBC_2.34
                _start
 
-     1.08%  [.] std::pmr::(anonymous namespace)::newdel_res_t::do_deallocate(void*, unsigned long, unsigned long)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    libstdc++.so.6.0.35    -      -
 
 
 #
-# (Tip: Compare performance results with: perf diff [<old file> <new file>])
+# (Tip: To see list of saved events and attributes: perf evlist -v)
 #

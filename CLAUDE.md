@@ -1207,6 +1207,19 @@ Fedora Asahi, and `v0.2.0` was released (PR #127 ded6e80; resume-anchor sync PR 
 `v0.2.1` then shipped two reprioritized backlog items plus a consistency sweep: a Codex
 resume-anchor/PMU sweep (PR #129), a perf call-graph flamegraph + `make flamegraph` (PR #134,
 superseding the auto-closed #130, closing #32), and the FIX-like text protocol adapter (PR #131,
-closing #29), with the version bump on the release PR. There is no active milestone; the
+closing #29), with the version bump on the release PR.
+
+Since `v0.2.1`, a post-v0.2.1 hardening + perf wave (PRs #135–#146) is merged to `main` and
+unreleased, being cut as **`v0.2.2`**. It came out of a 4-round adversarial bug hunt (converged
+5→2→1→0 confirmed) plus flamegraph-guided optimization. Security/robustness: out-of-domain enum
+rejection in the replay/protocol decoders (#136); network hardening — EINTR retry, accept fairness,
+connection cap, UDP send-error tracking, transient-accept survival, and threaded/epoll fd-exhaustion
+handling (#137, #140, #143); CLI arg validation (#141); a **real UBSan abort gate** — the `asan`
+preset now sets `-fno-sanitize-recover=undefined`, since UBSan previously ran in recover mode and
+exited 0, so pure-UBSan defects passed CI green (#142); OCaml `diff_report` per-fixture robustness
+(#144). Perf (measured back-to-back A/B): `try_emplace` for baseline price levels (~+5%, #138) and
+an order-index hash `max_load_factor` cap at 0.25 (~+18.6%, #145), flamegraph regenerated
+(#135/#139/#146). Determinism preserved (byte-identical fixtures; OCaml differential pass).
+`make check`/`make asan` 270/270 (the latter now a real UBSan gate). After `v0.2.2`, the
 highest-value remaining work is non-code and gated on #94 (external review) and #90 (full cache-PMU
 evidence on a PMU-capable microarchitecture).

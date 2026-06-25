@@ -98,14 +98,18 @@ methodology and caveats in [docs/benchmarking.md](docs/benchmarking.md) and
 
 | Scenario (synthetic, in-process) | Measured on this run |
 |---|---|
-| Order book add/modify/cancel | ~87 ns/op |
+| Order book add/modify/cancel | ~90 ns/op |
 | Protocol `NewOrder` encode+decode | ~16 ns/op |
-| Gateway session, crossing order with fill | ~110 ns/op |
-| Matching-engine flow (apply) | ~98 ns/command |
-| Replay from command log | ~110 ns/command |
+| Gateway session, crossing order with fill | ~102 ns/op |
+| Matching-engine flow (apply) | ~91 ns/command |
+| Replay from command log | ~101 ns/command |
 
-Reproduce with `make bench` (numbers will differ by machine). The differential-testing harness
-(generation, replay, shrinking) has its own benchmark — `make bench-diff`, written to
+Reproduce with `make bench` (numbers will differ by machine). These micro-benchmarks hold a
+near-empty order index, so they do **not** exercise the deep-book steady state where the v0.2.2
+engine optimizations land: `try_emplace` for baseline price levels (#138) and capping the
+order-index hash load factor (#145) were measured by back-to-back A/B on the `qsl-bench profile`
+workload at **~+5%** and **~+18.6%** respectively (determinism preserved). The differential-testing
+harness (generation, replay, shrinking) has its own benchmark — `make bench-diff`, written to
 [`results/differential.txt`](results/differential.txt) — kept separate so it does not disturb
 the core numbers above.
 
@@ -121,8 +125,10 @@ capture is dense (~20k samples) and stacks are fully symbolized — no `[unknown
 
 This is a **software cpu-clock sampling** hot-symbol profile, **not** PMU evidence: frame width is
 proportional to on-CPU samples, not wall-clock latency or throughput, and it is
-hardware/kernel/compiler/build dependent. The hot frames are `MatchingEngine::new_limit`/`cancel`,
-the order-book level/index operations, and the allocator. Provenance and classification are in
+hardware/kernel/compiler/build dependent. The hot frames are the matching and resting work —
+`MatchingEngine::new_limit` → `OrderBook::match_baseline` and `rest` → `level_for`, plus `cancel`;
+the per-level allocation churn and order-index lookups that previously dominated were cut by the
+v0.2.2 `try_emplace` (#138) and index load-factor (#145) wins. Provenance and classification are in
 [`results/flamegraph.txt`](results/flamegraph.txt); methodology in
 [docs/perf_analysis.md](docs/perf_analysis.md). GitHub renders the SVG statically; download the raw
 file for interactive zoom and search.
@@ -132,9 +138,12 @@ file for interactive zoom and search.
 - **Synthetic and local.** No real market data, no real venue connectivity, no order types
   beyond limit/market + GTC/IOC.
 - **Networking remains scoped.** The default TCP gateway is intentionally
-  loopback-only and unauthenticated. It now has portable threaded serving for multiple clients, and
-  Linux builds also include an opt-in `epoll` gateway prototype for event-driven readiness. These
-  are architecture and pressure-validation paths, not a production event loop or capacity claim.
+  loopback-only and unauthenticated. It has portable threaded serving for multiple clients, plus an
+  opt-in Linux `epoll` gateway prototype for event-driven readiness. Both paths were hardened in
+  v0.2.2: `EINTR` retry on read/write, survival of transient `accept()` errors and fd exhaustion
+  (`EMFILE`/`ENFILE`) instead of tearing the listener down, a connection cap, and per-tick accept
+  fairness. These are architecture and robustness paths, not a production event loop or capacity
+  claim.
 - **Benchmarks are microbenchmarks**, not end-to-end or production latency (see above).
   CPU-affinity/scheduler-migration and false-sharing studies are separate hardware-dependent
   artifacts; contiguous order-book storage is a bounded-domain architecture study, not a general

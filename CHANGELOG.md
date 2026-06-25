@@ -7,6 +7,55 @@ All notable changes to this project. The format is loosely based on
 
 _Nothing yet._
 
+## [0.2.2] - 2026-06-24
+
+A security/robustness **hardening** wave plus two measured order-book **performance** wins, driven by
+a multi-round adversarial bug hunt (converged 5→2→1→0 confirmed bugs) and flamegraph-guided
+optimization. Same honesty bar: a deterministic C++20 exchange simulator and cross-language
+differential-testing harness — **not** a production exchange, no real-market connectivity, no latency
+or profitability claims, not formal verification. Determinism preserved throughout (fixtures
+byte-identical across g++/clang++ and vs the committed copies; the OCaml differential passes).
+`make check`/`make asan` 270/270.
+
+### Fixed
+
+- **Reject out-of-domain enum bytes in the decoders (#136).** `replay::decode_command` (NewLimit /
+  NewMarket) and `protocol::decode_reject` cast raw bytes to `Side` / `TimeInForce` / `RejectReason`
+  without validating the domain. Since the replay path applies decoded commands straight to the
+  engine with no gateway risk check, a corrupt log record could silently diverge replayed state.
+  Both now validate via `core::is_valid` (added `is_valid(RejectReason)`) and refuse out-of-domain
+  bytes like a malformed frame.
+- **Network-path hardening (#137, #140, #143).** The TCP gateway now retries `EINTR` in its
+  read/write paths and survives transient `accept()` errors (`EINTR`/`ECONNABORTED`) instead of
+  tearing the listener down; both the threaded acceptor (back-off retry) and the epoll loop (listener
+  disarm/re-arm) survive fd exhaustion (`EMFILE`/`ENFILE`); a `TcpServerOptions::max_active_connections`
+  cap sheds load; the epoll loop bounds accepts per tick for fairness; and `UdpPublisher` counts
+  `send_failures` rather than silently dropping datagrams.
+- **CLI argument validation (#141).** `qsl-client`, `qsl-mdfeed`, and `qsl-export-fixture` parse
+  numeric arguments with `std::from_chars` and reject malformed / out-of-range input with a usage
+  message and non-zero exit, instead of `std::terminate` (from an uncaught `std::sto*` exception) or
+  silently truncating an out-of-range port.
+- **UBSan gate now actually fails (#142).** The `asan` preset adds `-fno-sanitize-recover=undefined`
+  so UBSan **aborts** on the first violation. It previously ran in recover mode (print a diagnostic,
+  exit 0), so a pure-UBSan defect passed `make asan` / CI green. The tree is UBSan-clean under the
+  strict gate.
+- **OCaml `diff_report` robustness (#144).** The differential-bundle bin guards each fixture
+  (catching `Stream_parser.Parse_error` / `Sys_error`) so one malformed or unreadable fixture cannot
+  abort the whole batch and silently lose the divergence bundles for the rest.
+
+### Performance
+
+- **`try_emplace` for baseline price levels (#138).** `OrderBook::level_for` used
+  `std::map::emplace`, which allocates and frees a node even when the price level already exists.
+  `try_emplace` avoids that on the steady-state common path. Measured back-to-back A/B on the
+  `qsl-bench profile` workload: **~+5%**.
+- **Order-index hash load-factor cap (#145).** The `OrderId → Locator` index is the busiest structure
+  on the engine hot path (1–4 point lookups per op). Capping its `max_load_factor` at 0.25 shortens
+  probe chains. Measured A/B: **~+18.6%**. Determinism is unaffected — the index is never iterated
+  for output.
+- **Flamegraph regenerated (#135, #139, #146)** against the new code, now a dense (~20k-sample),
+  fully-symbolized frame-pointer profile with zero `[unknown]` frames.
+
 ## [0.2.1] - 2026-06-21
 
 Two backlog items — reprioritized by the maintainer and delivered — plus a resume-anchor and

@@ -33,8 +33,19 @@ partial-PMU reframe, and a full documentation staleness sweep — landed as PR #
 **v0.2.1 release** then adds two reprioritized backlog items and a consistency sweep: a Codex
 resume-anchor/PMU sweep (PR #129), a perf call-graph flamegraph + `make flamegraph` (PR #130,
 issue #32), the FIX-like text protocol adapter (PR #131, issue #29), and the version-bump release
-PR — merged in that order, with `v0.2.1` tagged on the release merge commit. There is no active
-milestone; the project is between releases.
+PR — merged in that order, with `v0.2.1` tagged on the release merge commit.
+
+Since `v0.2.1`, a **post-v0.2.1 hardening + perf wave (#135–#146) is merged to `main` and
+unreleased**, being cut as **`v0.2.2`**. It came out of a 4-round adversarial bug hunt (converged
+5→2→1→0 confirmed bugs) plus flamegraph-guided optimization. Security/robustness: out-of-domain enum
+rejection in the replay/protocol decoders (#136); network hardening — EINTR retry, accept fairness,
+connection cap, UDP send-error tracking, transient-accept survival, and threaded/epoll fd-exhaustion
+handling (#137, #140, #143); CLI arg validation (#141); a **real UBSan abort gate** —
+`-fno-sanitize-recover=undefined`, since UBSan previously ran in recover mode and exited 0 (#142);
+OCaml `diff_report` robustness (#144). Perf (measured A/B): `try_emplace` for baseline price levels
+(~+5%, #138) and an order-index hash load-factor cap (~+18.6%, #145), with the flamegraph regenerated
+(#135/#139/#146). `make check`/`make asan` 270/270 (the latter now under the real UBSan gate). The
+next action is to finish this `v0.2.2` doc/artifact overhaul and cut the tag.
 
 Background — Linux perf evidence (merged, now bare-metal partial PMU):
 
@@ -77,13 +88,15 @@ Current state:
 
 - latest synced main baseline: `ded6e80` (PR #127, v0.2.0); the `v0.2.1` baseline is the release-PR
   merge commit, after PRs #129/#130/#131
-- current active branch, if active: none (work lands via scoped PRs from `main`)
-- current active status: `v0.2.1` is the current release on top of `v0.2.0`. It adds the FIX-like
-  text protocol adapter (#29), `make flamegraph` + a bare-metal flamegraph artifact (#32), and a
-  Codex resume-anchor/PMU consistency sweep. `make check` 263/263 and `make asan` 263/263 on the
-  bare-metal Apple M2 Fedora Asahi host; both new code files pass the CI CodeScene Code Health gate.
-  No active milestone
-- release tag: `v0.2.1` (Latest, tagged on the release-PR merge commit), after `v0.2.0` and `v0.1.0`
+- current active branch, if active: `docs/post-v0.2.1-overhaul` (v0.2.2 prep + doc/artifact sweep)
+- current active status: `v0.2.1` is the latest tag; a post-v0.2.1 hardening + perf wave (#135–#146)
+  is merged to `main` and unreleased, being cut as `v0.2.2` (decoder enum rejection, network/CLI
+  hardening, a real UBSan abort gate, OCaml diff_report robustness, and two measured order-book perf
+  wins — `try_emplace` ~+5% and an index load-factor cap ~+18.6%). `make check` 270/270 and
+  `make asan` 270/270 (the latter now under the real UBSan gate) on the bare-metal Apple M2 Fedora
+  Asahi host; every touched file passes the CI CodeScene Code Health gate
+- release tag: `v0.2.1` (Latest, tagged on the release-PR merge commit), after `v0.2.0` and `v0.1.0`;
+  `v0.2.2` prepared on this branch, not yet tagged
 - open follow-up issue: #90 — narrowed to the full cache-counter PMU set; the bare-metal Apple host
   provides real cycles/instructions/branches/branch-misses but no cache-reference/cache-miss support
 - issues #95, #28, and #26 were closed by PR #112; issues #32 and #29 were closed by PR #134 and
@@ -94,12 +107,13 @@ Current state:
 
 ### Next milestone
 
-There is no active milestone. M0–M49, the Linux artifact refresh (PR #125), the v0.2.0 release
-(PR #127), and the v0.2.1 content (PRs #129/#134/#131 + release PR) are merged. The highest-value
-remaining work is non-code and externally gated: issue #94 (independent external review — needs a
-human reviewer) and issue #90 (full cache-counter PMU evidence — needs a PMU microarchitecture that
-exposes cache events). The #32 (flamegraph) and #29 (FIX adapter) backlog items are now done. Do not
-invent a new milestone without an explicit human request.
+There is no active milestone. M0–M49 are merged, as are the v0.2.0/v0.2.1 releases and the
+post-v0.2.1 hardening + perf wave (#135–#146, being released as `v0.2.2`). The immediate next action
+is to finish the `v0.2.2` doc/artifact overhaul (this branch) and cut the tag. After that the
+highest-value remaining work is non-code and externally gated: issue #94 (independent external
+review — needs a human reviewer) and issue #90 (full cache-counter PMU evidence — needs a PMU
+microarchitecture that exposes cache events). Do not invent a new milestone without an explicit
+human request.
 
 ### Phase III / IV purpose
 
