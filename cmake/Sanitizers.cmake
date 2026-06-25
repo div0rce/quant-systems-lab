@@ -7,7 +7,14 @@ if(QSL_ENABLE_ASAN AND QSL_ENABLE_TSAN)
 endif()
 
 if(QSL_ENABLE_ASAN)
-  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+  # -fno-sanitize-recover=undefined makes UBSan ABORT on the first violation instead of its default
+  # "recover" mode (print a diagnostic and continue, with the process still exiting 0). Without it
+  # the UBSan half of this gate is non-functional: a pure-UBSan defect (signed overflow, invalid
+  # enum/bool load, out-of-range shift, misaligned/null pointer arithmetic) prints a warning but the
+  # test still PASSES, so `make asan` and the CI sanitizers job stay green. ASan already aborts on
+  # memory errors by default; this brings UBSan to parity.
+  add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=undefined
+                      -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address,undefined)
 endif()
 
