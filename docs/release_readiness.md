@@ -16,8 +16,8 @@ after squash-merge.
 
 | Check | Result |
 |---|---|
-| `make check` | 270/270 tests pass, no warnings (incl. the FIX-adapter, flamegraph-renderer, decoder enum-rejection, and CLI-arg-validation tests) |
-| `make asan` (ASan + UBSan) | 270/270, sanitizer-clean; the UBSan gate now **aborts** on the first violation (`-fno-sanitize-recover=undefined`, #142), so pure-UBSan defects no longer pass green, and the tree is clean under it |
+| `make check` | 272/272 tests pass, no warnings (incl. the FIX-adapter, flamegraph-renderer, decoder enum-rejection, CLI-arg-validation, and perfeval-harness tests) |
+| `make asan` (ASan + UBSan) | 272/272, sanitizer-clean; the UBSan gate now **aborts** on the first violation (`-fno-sanitize-recover=undefined`, #142), so pure-UBSan defects no longer pass green, and the tree is clean under it |
 | `make tsan` (ThreadSanitizer) | 20/20 concurrency-labelled tests, race-clean |
 | `make check-fixtures` | committed differential fixtures match current C++ output |
 | `make check-manifest` | provenance manifest matches the committed fixtures |
