@@ -194,7 +194,21 @@ struct EventLoop {
     OrderGateway &gateway;
     ClientMap clients{};
     std::uint32_t next_generation = 1;
+    bool listener_armed = true; // false while paused on fd exhaustion (EMFILE/ENFILE)
 };
+
+// Arm/disarm the listener's EPOLLIN. On fd exhaustion we cannot accept (or even close) a new
+// connection, and the listener is level-triggered, so leaving it armed would busy-spin epoll_wait.
+// Disarming (MOD to 0 events) stops it being reported until a client fd frees and we re-arm — the
+// server keeps serving existing clients instead of tearing down (Fatal) or spinning (Retry).
+void set_listener_armed(EventLoop &loop, bool armed) {
+    if (loop.listener_armed == armed) {
+        return;
+    }
+    if (mod_fd(loop.epoll_fd, loop.listen_fd, armed ? EPOLLIN : 0U, kListenerGeneration)) {
+        loop.listener_armed = armed;
+    }
+}
 
 bool is_listener_event(const epoll_event &ev, int listen_fd) noexcept {
     return event_generation(ev) == kListenerGeneration && event_fd(ev) == listen_fd;
@@ -259,6 +273,12 @@ AcceptResult accept_one(EventLoop &loop) {
         return AcceptResult::Accepted;
     }
     if (is_would_block()) {
+        return AcceptResult::Drained;
+    }
+    if (errno == EMFILE || errno == ENFILE) {
+        // Out of file descriptors: pausing (not tearing down) keeps existing clients served. Disarm
+        // the listener so the level-triggered fd stops waking epoll until a client frees an fd.
+        set_listener_armed(loop, false);
         return AcceptResult::Drained;
     }
     if (is_transient_accept_error()) {
@@ -461,6 +481,8 @@ bool service_client_event(EventLoop &loop, int fd, ClientState &client, std::uin
 void close_client_entry(EventLoop &loop, ClientMap::iterator it) {
     close_client(loop.epoll_fd, it->first);
     loop.clients.erase(it);
+    // A descriptor just freed: resume accepting if we had paused on fd exhaustion.
+    set_listener_armed(loop, true);
 }
 
 // Service one ready event for an existing client: error -> drain writable backlog -> read ->
