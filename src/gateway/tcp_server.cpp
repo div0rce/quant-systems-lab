@@ -2,6 +2,7 @@
 
 #include "qsl/gateway/session.hpp"
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <array>
 #include <atomic>
@@ -94,6 +95,35 @@ bool at_capacity(const std::vector<ConnectionWorker> &workers, std::size_t cap) 
     return cap != 0 && workers.size() >= cap;
 }
 
+// accept() can fail transiently without the listener being broken: a signal (EINTR) or a peer that
+// RSTs between the kernel completing the handshake and accept() returning (ECONNABORTED, and
+// related per-connection errnos). These must not tear the server down — only a genuinely fatal
+// listener error (e.g. EBADF/EINVAL) should. Mirrors the epoll path's is_transient_accept_error().
+bool transient_accept_errno() noexcept {
+    static constexpr int kTransient[] = {EINTR,     ECONNABORTED, EPROTO,       ENETDOWN,
+                                         EHOSTDOWN, ENONET,       EHOSTUNREACH, ENETUNREACH};
+    return std::find(std::begin(kTransient), std::end(kTransient), errno) != std::end(kTransient);
+}
+
+// accept() one connection, retrying transient errors. Returns a connected fd, or -1 on a genuinely
+// fatal listener error (which should stop the accept loop).
+int accept_retry(int listen_fd) {
+    for (;;) {
+        const int conn = ::accept(listen_fd, nullptr, nullptr);
+        if (conn >= 0) {
+            return conn;
+        }
+        if (!transient_accept_errno()) {
+            return -1;
+        }
+    }
+}
+
+// Test/embedding hook: stop after this many *served* connections (0 = serve indefinitely).
+bool reached_accept_limit(std::size_t accepted, std::size_t max_accepts) noexcept {
+    return max_accepts != 0 && accepted >= max_accepts;
+}
+
 // Spawn a worker thread to serve one connection. The worker closes the descriptor and flags itself
 // done (release) so the acceptor can reap and join it (acquire) without blocking on live clients.
 void spawn_worker(TcpServer &server, std::vector<ConnectionWorker> &workers, int conn) {
@@ -137,7 +167,7 @@ bool TcpServer::serve_listen_socket(int listen_fd) {
     std::vector<ConnectionWorker> workers;
     std::size_t accepted = 0;
     while (true) {
-        const int conn = ::accept(listen_fd, nullptr, nullptr);
+        const int conn = accept_retry(listen_fd); // retries transient errors; -1 only if fatal
         if (conn < 0) {
             break;
         }
@@ -148,7 +178,7 @@ bool TcpServer::serve_listen_socket(int listen_fd) {
         }
         spawn_worker(*this, workers, conn);
         ++accepted;
-        if (options_.max_accepts != 0 && accepted >= options_.max_accepts) {
+        if (reached_accept_limit(accepted, options_.max_accepts)) {
             break;
         }
     }
