@@ -24,4 +24,17 @@ let () =
     prerr_endline "FAIL: unexpected divergence for stream_seed7.txt";
     exit 1);
 
+  (* A malformed fixture must raise a catchable Stream_parser.Parse_error, not some other exception:
+     the diff_report bin relies on catching exactly this (and Sys_error) to guard each fixture in
+     the batch so one bad file cannot abort the whole run and silently lose later bundles. *)
+  let bad = Filename.concat out "malformed.txt" in
+  let oc = open_out bad in
+  output_string oc "version 1\ncmd reg S0\n" (* no meta line *);
+  close_out oc;
+  (match Diff_report.bundle_if_divergent ~out_dir:out bad with
+  | _ ->
+      prerr_endline "FAIL: expected Parse_error for malformed fixture";
+      exit 1
+  | exception Stream_parser.Parse_error _ -> ());
+
   print_endline "diff_report: all tests passed"
