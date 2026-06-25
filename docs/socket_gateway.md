@@ -15,6 +15,21 @@ the M2 binary protocol. It is split into two pieces:
   transport prototype: one `epoll` loop accepts multiple clients and drives one `Session` per
   connection with nonblocking reads and writes.
 
+The threaded `TcpServer` accept loop tolerates transient and resource-exhaustion errors instead of
+tearing the listener down, and sheds load at the connection cap:
+
+```mermaid
+flowchart TD
+    run["run(host, port)"] --> bind["socket, bind, listen"]
+    bind --> acc["accept_retry"]
+    acc -->|"transient errno (EINTR, ECONNABORTED, ...)"| acc
+    acc -->|"fd exhausted (EMFILE, ENFILE, ...)"| backoff["back off 10ms"] --> acc
+    acc -->|"fatal (EBADF, EINVAL)"| stop["Stop listener"]
+    acc -->|"connected fd"| cap{"At connection cap?"}
+    cap -->|Yes| shed["close fd, shed load"] --> acc
+    cap -->|No| worker["Spawn worker thread: Session over fd"] --> acc
+```
+
 ## Message flow
 
 ```text

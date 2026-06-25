@@ -12,6 +12,19 @@ in `include/qsl/protocol/` and `src/protocol/codec.cpp`.
 - A version field for forward compatibility.
 - Deterministic rejection of malformed frames.
 
+```mermaid
+flowchart LR
+    bytes["Inbound bytes"] --> hdr["Parse 16-byte header: msg_type, version, body_len, seq_no"]
+    hdr --> v1{"Known msg_type?"}
+    v1 -->|No| rej["Reject frame"]
+    v1 -->|Yes| v2{"Supported version?"}
+    v2 -->|No| rej
+    v2 -->|Yes| v3{"body_len within max and matches type?"}
+    v3 -->|No| rej
+    v3 -->|Yes| body["Decode body, big-endian byte shifts"]
+    body --> ok["Typed message"]
+```
+
 Internal engine structs are independent of this wire layout.
 
 ## Frame

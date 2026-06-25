@@ -27,6 +27,14 @@ with plain loads/stores, and the two indices are the only synchronization. Each 
 single-writer: `tail_` is written only by the producer, `head_` only by the consumer. That
 single-writer property is what makes "load my own cursor relaxed" sound.
 
+```mermaid
+flowchart LR
+    w["Producer: write payload to slot k"] --> rel["Producer: store tail = k+1, release"]
+    rel ==>|"synchronizes-with"| acq["Consumer: load tail, acquire"]
+    acq --> r["Consumer: read payload from slot k"]
+    w -.->|"happens-before"| r
+```
+
 ## Per-operation ordering
 
 Each side performs a fixed sequence of accesses. There are no loops and no compare-and-swap.

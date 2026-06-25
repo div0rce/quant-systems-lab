@@ -4,6 +4,21 @@ Single-symbol, deterministic, price-time-priority limit order book. Implemented 
 `include/qsl/engine/order_book.hpp` and `src/engine/order_book.cpp`. Prices are integer
 ticks; there is no wall-clock dependence (time priority is queue position).
 
+```mermaid
+flowchart TD
+    in["Incoming order"] --> type{"Limit or market?"}
+    type -->|Market| cross["Cross best opposite level, price-time"]
+    type -->|Limit| px{"Crosses? buy price >= best ask, or sell price <= best bid"}
+    px -->|Yes| cross
+    px -->|No| rest["Rest at price level, FIFO tail"]
+    cross --> fill{"Filled or book depleted?"}
+    fill -->|"Liquidity left"| cross
+    fill -->|"Fully filled"| done["Done, trades emitted"]
+    fill -->|"Depleted, remainder left"| tif{"IOC?"}
+    tif -->|Yes| canc["Cancel remainder"]
+    tif -->|"No, GTC"| rest
+```
+
 ## Book structure
 
 - Bids are ordered highest-price-first, asks lowest-price-first (`std::map` with the

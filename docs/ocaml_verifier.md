@@ -12,6 +12,18 @@ the differential tests assert equals the C++ snapshot. That engine, not this ver
 matching-independent oracle; see [`differential_testing.md`](differential_testing.md). This page
 covers only the log-invariant checker.
 
+```mermaid
+flowchart LR
+    cmds["Command stream, seeded generator"] --> cpp["C++ MatchingEngine"]
+    cmds --> ml["OCaml replay_engine, independent"]
+    cpp --> s1["C++ snapshot"]
+    ml --> s2["OCaml snapshot"]
+    s1 --> cmp{"Equal? best bid/ask, level aggregates, counts, trades, last seq"}
+    s2 --> cmp
+    cmp -->|No| shrink["Shrink to minimal counterexample"]
+    cmp -->|Yes| pass["Differential pass"]
+```
+
 ## Why a second language
 
 The C++ tests and the engine share code and assumptions; a bug in a shared assumption can hide

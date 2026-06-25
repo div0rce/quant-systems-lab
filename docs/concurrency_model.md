@@ -23,6 +23,13 @@ single-threaded stages connected by hand-off queues:
 input thread  --[inbound queue]-->  engine thread  --[outbound queue]-->  publisher/log thread
 ```
 
+```mermaid
+flowchart LR
+    it["Input thread"] -->|"inbound SPSC queue"| et["Engine thread"]
+    et -->|"outbound SPSC queue"| pt["Publisher / log thread"]
+    et -.->|"queue full: try_push fails, backpressure"| it
+```
+
 Each queue has **exactly one producer and one consumer**. That is the defining condition for a
 single-producer/single-consumer (SPSC) queue, so an MPMC queue would add compare-and-swap
 contention, retry loops, and ABA/hazard concerns for a problem we do not have. SPSC lets each

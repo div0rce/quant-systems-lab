@@ -14,6 +14,16 @@ holds under the failures we can actually inject.
 An `EventLogWriter::append` moves a record through up to three layers of buffering. Each
 durability mode stops at a different layer, and each layer dies with a different failure:
 
+```mermaid
+flowchart TD
+    app["EventLogWriter::append"] --> buf["Application buffer"]
+    buf -->|write| pc["Kernel page cache"]
+    pc -->|"fsync / fdatasync"| disk[("Disk platter / flash")]
+    buf -.->|"crash here"| l1["Lost: never reached the kernel"]
+    pc -.->|"crash here"| l2["Lost unless already fsync'd"]
+    disk --> dur["Durable, survives power loss"]
+```
+
 | Layer                   | Reached by                            | Lost on               |
 |-------------------------|---------------------------------------|-----------------------|
 | user-space stdio buffer | `BufferedOnly`                        | process crash         |
