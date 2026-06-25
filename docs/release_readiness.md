@@ -93,9 +93,10 @@ verification.
 
 ## Outcome
 
-Release-ready as a portfolio artifact. `v0.2.1` is already tagged (FIX adapter #29, perf flamegraph
-issue #32, anchor sweep) on top of `v0.2.0` (Phase III/IV systems work, M24-M49, plus the bare-metal
-evidence refresh). The next GitHub-only release is **`v0.2.2`**, bundling the post-v0.2.1
-hardening + perf wave merged to `main` (#135, #146): decoder enum rejection, network/CLI hardening, a
-real UBSan abort gate, OCaml diff_report robustness, and the two measured order-book perf wins. It
-requires explicit human approval and a squash-merge before tagging.
+Release-ready as a portfolio artifact. `v0.2.2` is tagged on top of `v0.2.1` (FIX adapter #29, perf
+flamegraph issue #32, anchor sweep) and `v0.2.0` (Phase III/IV systems work, M24-M49, plus the
+bare-metal evidence refresh). `v0.2.2` bundled the post-v0.2.1 hardening + perf wave (#135, #146:
+decoder enum rejection, network/CLI hardening, a real UBSan abort gate, OCaml diff_report robustness,
+and the two measured order-book perf wins) plus a full documentation overhaul (#147, #149), a
+reproducible performance-evidence report comparing v0.1.0 to v0.2.2 (#148), and a bug/style sweep
+with mermaid diagrams (#150). Each release is a GitHub-only tag with explicit human approval.

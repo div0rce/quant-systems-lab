@@ -7,15 +7,17 @@ All notable changes to this project. The format is loosely based on
 
 _Nothing yet._
 
-## [0.2.2] - 2026-06-24
+## [0.2.2] - 2026-06-25
 
-A security/robustness **hardening** wave plus two measured order-book **performance** wins, driven by
-a multi-round adversarial bug hunt (converged 5→2→1→0 confirmed bugs) and flamegraph-guided
-optimization. Same honesty bar: a deterministic C++20 exchange simulator and cross-language
-differential-testing harness, **not** a production exchange, no real-market connectivity, no latency
-or profitability claims, not formal verification. Determinism preserved throughout (fixtures
-byte-identical across g++/clang++ and vs the committed copies; the OCaml differential passes).
-`make check`/`make asan` 270/270.
+A security/robustness **hardening** wave plus two measured order-book **performance** wins (driven by
+a multi-round adversarial bug hunt, converged 5→2→1→0 confirmed bugs, and flamegraph-guided
+optimization), then a full **documentation overhaul**: a reproducible performance-evidence report, a
+rebuilt README, mermaid diagrams across the docs, and a repo-wide style sweep. Same honesty bar: a
+deterministic C++20 exchange simulator and cross-language differential-testing harness, **not** a
+production exchange, no real-market connectivity, no latency or profitability claims, not formal
+verification. Determinism preserved throughout (fixtures byte-identical across g++/clang++ and vs the
+committed copies; the OCaml differential passes). `make check`/`make asan` 272/272 (the latter a real
+UBSan abort gate).
 
 ### Fixed
 
@@ -55,6 +57,31 @@ byte-identical across g++/clang++ and vs the committed copies; the OCaml differe
   for output.
 - **Flamegraph regenerated (#135, #139, #146)** against the new code, now a dense (~20k-sample),
   fully-symbolized frame-pointer profile with zero `[unknown]` frames.
+
+### Documentation and evidence
+
+- **Performance-evidence report (#148, #150).** New `PERFORMANCE.md` profiles the matching-engine hot
+  path with Linux `perf` and flamegraphs on ARM64 (Apple M2), comparing the **v0.1.0 first release to
+  v0.2.2** (the same `qsl-perfeval` harness ported into a `v0.1.0` worktree, measured on the same
+  host): allocations/order 4.094 → 2.670 (-35%), cycles/order 310.7 → 289.5 (-6.8%), branch-miss rate
+  2.01% → 1.68%, latency unchanged. Cache-miss rate is reported unavailable, never estimated (Apple
+  Silicon PMU; #90). A dedicated `qsl-perfeval` target (plus a `qsl-perfeval-allocs` counting build)
+  makes every number reproducible. The before/after flamegraphs render fully symbolized with zero
+  `[unknown]` frames; the unresolvable boundary frames were identified (an fp glibc-malloc-boundary
+  artifact and the vDSO `clock_gettime` leaf) and folded into their resolved caller, not hidden.
+- **Documentation overhaul and README rebuild (#147, #149).** Every doc, artifact, and provenance
+  header was refreshed to the v0.2.2 state, and the README was rebuilt to lead with the performance
+  numbers and the matching-engine flamegraph. Mermaid diagrams were added across the docs (matching
+  rules, binary protocol, persistence, concurrency model, memory ordering, gateway accept loop, OCaml
+  differential), and every em dash and en dash was removed repo-wide.
+- **Honesty corrections, made in the open.** Two measurement errors caught by self-review and code
+  review were fixed and documented rather than buried: the allocation counter had missed
+  over-aligned allocations (so the cumulative reduction is -35%, not the -73% an earlier draft
+  claimed), and a thermal-warmup p99 artifact was corrected to "latency distribution unchanged".
+- **Previously-unaddressed review findings (#150).** Acted on CodeRabbit comments left open on earlier
+  PRs: a non-finite `strtod` guard in the bench profile timer, `ENOPROTOOPT`/`EOPNOTSUPP` added to the
+  threaded accept-retry set to match the epoll path, and the perfeval harness's resting-order
+  tracking, percentile index, and argument validation.
 
 ## [0.2.1] - 2026-06-21
 

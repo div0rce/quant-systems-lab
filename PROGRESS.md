@@ -20,21 +20,22 @@ Do not rely on prior chat memory.
 
 ## Current state
 
-- **Active milestone:** none, `v0.2.1` is the latest tag, but a post-v0.2.1 hardening + perf wave
-  (12 PRs, #135, #146) has merged to `main` and is **unreleased**; it is being cut as **`v0.2.2`**
-- **Status:** ☑ `v0.2.1` published on top of `v0.2.0`; ☐ `v0.2.2` in preparation, security/robustness
-  hardening (decoder enum-domain rejection, network/CLI hardening, a real UBSan abort gate, OCaml
-  diff_report robustness) plus two measured order-book perf wins
-- **Active branch:** `docs/post-v0.2.1-overhaul` (the v0.2.2 prep + full doc/artifact staleness sweep)
+- **Active milestone:** none, **`v0.2.2` is the latest tag**. It bundled the post-v0.2.1
+  hardening + perf wave (#135, #146) plus a full documentation overhaul (#147, #149), a reproducible
+  performance-evidence report (#148), and a bug/style sweep with mermaid diagrams (#150)
+- **Status:** ☑ `v0.2.2` published on top of `v0.2.1`: security/robustness hardening (decoder
+  enum-domain rejection, network/CLI hardening, a real UBSan abort gate, OCaml diff_report
+  robustness), two measured order-book perf wins, `PERFORMANCE.md` (v0.1.0 to v0.2.2 evidence),
+  README rebuild, repo-wide em-dash purge, and mermaid diagrams across the docs
+- **Active branch:** none (`main` is at the `v0.2.2` release)
 - **Last completed milestone:** M49. NIC offload and low-latency networking study (PR #124,
-  d8c16b2). Releases since: `v0.2.0` (PR #127, ded6e80) and `v0.2.1` (FIX adapter #131, flamegraph
-  #134, anchor sweep #129). Post-v0.2.1 unreleased work on `main`: #135, #146 (see Last action)
-- **Last completed docs sync:** this v0.2.2-prep overhaul, every `.md`/`.txt` audited against
-  current `main`; resume/release anchors, README, CHANGELOG, and all stale `results/*.txt`
+  d8c16b2). Releases since: `v0.2.0` (PR #127, ded6e80), `v0.2.1` (#131/#134/#129), and `v0.2.2`
+  (#135 through #150)
+- **Last completed docs sync:** the v0.2.2 release sweep, every `.md`/`.txt` audited against
+  current `main`, em/en dashes removed repo-wide, mermaid diagrams added, and all `results/*.txt`
   provenance digests brought current to HEAD
-- **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), and `v0.2.1` (tag on the
-  release-PR merge, marked Latest) published as GitHub-only releases; `v0.2.2` prepared here, not yet
-  tagged; no packages published
+- **Release:** `v0.1.0` (tag on 9857e1a), `v0.2.0` (tag on ded6e80), `v0.2.1`, and `v0.2.2`
+  published as GitHub-only releases; no packages published
 - **`make check` passing:** yes, `make check` 270/270 and `make asan` 270/270 (the latter now under
   the **real** UBSan abort gate from #142) on the bare-metal Apple M2 (aarch64) Fedora Asahi host on
   2026-06-24
