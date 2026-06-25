@@ -68,7 +68,8 @@ buffer holds the full declared body before parsing.
 
 NewOrder enum fields are validated during decode. Out-of-range values for Side, OrderType,
 or TimeInForce return DecodeError::InvalidEnumValue and are not surfaced as internal domain
-messages.
+messages. Gateway-response decoders apply the same domain check: `decode_reject` returns
+`InvalidEnumValue` for a `RejectReason` byte outside the defined codes (#136).
 
 ## Trailing bytes and framing
 

@@ -2,17 +2,22 @@
 
 A pre-release pass verifying the repo builds, demos, reproduces, and reads honestly. This audit
 covers **M0–M49, the v0.2.0 evidence refresh** (bare-metal Linux artifact regeneration and the
-documentation/staleness sweep), **and the v0.2.1 content** (the FIX-like text protocol adapter #29,
-the perf call-graph flamegraph + `make flamegraph` #32, and a Codex resume-anchor/PMU consistency
-sweep). It supersedes the v0.1.0-era audit; the actual GitHub release is cut by a human after
-squash-merge.
+documentation/staleness sweep), **the v0.2.1 content** (the FIX-like text protocol adapter #29, the
+perf call-graph flamegraph + `make flamegraph` #32, and a Codex resume-anchor/PMU consistency sweep),
+**and the post-v0.2.1 hardening + perf wave being cut as v0.2.2** (#135–#146): out-of-domain enum
+rejection in the decoders (#136), network-path hardening — EINTR retry, accept fairness, connection
+cap, UDP send-error tracking, transient-accept survival, and fd-exhaustion handling (#137/#140/#143),
+CLI argument validation (#141), a real UBSan abort gate (#142), OCaml `diff_report` robustness (#144),
+and two measured order-book perf wins — `try_emplace` (~+5%, #138) and an index load-factor cap
+(~+18.6%, #145). It supersedes the v0.1.0-era audit; the actual GitHub release is cut by a human
+after squash-merge.
 
 ## Verification (this session, bare-metal Apple M2 / aarch64 / GCC 16.1.1, Fedora Asahi Remix)
 
 | Check | Result |
 |---|---|
-| `make check` | 263/263 tests pass, no warnings (incl. the v0.2.1 FIX-adapter + flamegraph-renderer tests) |
-| `make asan` (ASan + UBSan) | 263/263, sanitizer-clean (the FIX text parser handles untrusted input) |
+| `make check` | 270/270 tests pass, no warnings (incl. the FIX-adapter, flamegraph-renderer, decoder enum-rejection, and CLI-arg-validation tests) |
+| `make asan` (ASan + UBSan) | 270/270, sanitizer-clean; the UBSan gate now **aborts** on the first violation (`-fno-sanitize-recover=undefined`, #142), so pure-UBSan defects no longer pass green, and the tree is clean under it |
 | `make tsan` (ThreadSanitizer) | 20/20 concurrency-labelled tests, race-clean |
 | `make check-fixtures` | committed differential fixtures match current C++ output |
 | `make check-manifest` | provenance manifest matches the committed fixtures |
@@ -88,7 +93,9 @@ verification.
 
 ## Outcome
 
-Release-ready as a portfolio artifact. The next GitHub-only release is `v0.2.1` (the FIX-like text
-protocol adapter #29, the perf flamegraph #32, and a Codex resume-anchor/PMU consistency sweep) on
-top of `v0.2.0` (Phase III/IV systems work — M24–M49 — plus the bare-metal evidence refresh); it
+Release-ready as a portfolio artifact. `v0.2.1` is already tagged (FIX adapter #29, perf flamegraph
+#32, anchor sweep) on top of `v0.2.0` (Phase III/IV systems work — M24–M49 — plus the bare-metal
+evidence refresh). The next GitHub-only release is **`v0.2.2`**, bundling the post-v0.2.1
+hardening + perf wave merged to `main` (#135–#146): decoder enum rejection, network/CLI hardening, a
+real UBSan abort gate, OCaml diff_report robustness, and the two measured order-book perf wins. It
 requires explicit human approval and a squash-merge before tagging.

@@ -20,7 +20,7 @@ reviewable.
 
 ```bash
 make check                 # clang-format check + build + tests
-make asan                  # AddressSanitizer + UBSan build and tests
+make asan                  # AddressSanitizer + UBSan build and tests (UBSan aborts on first violation)
 dune runtest --root ocaml  # OCaml log verifier + independent replay + differential + mutation tests
 ```
 

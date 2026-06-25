@@ -18,6 +18,11 @@ service.** Nothing here claims a production-networking stack.
 | Peer disconnect mid-write | `send(MSG_NOSIGNAL)` / `SO_NOSIGPIPE` so `SIGPIPE` can't kill the process | `Session` |
 | Indefinite blocking recv | Bounded `SO_RCVTIMEO` on the UDP client | `udp_feed` |
 | UDP burst loss | Detected via sequence gaps; receive-buffer sizing knob (below) | `udp_feed` |
+| UDP transmit failure | Counted, not silently dropped (`UdpPublisher::send_failures()`) | `udp_feed` |
+| Signal during read/write | `EINTR` retried (not treated as a disconnect) | `TcpServer`/`EpollServer` |
+| Transient accept error | `EINTR`/`ECONNABORTED` retried; listener kept alive | `TcpServer`/`EpollServer` |
+| FD exhaustion | `EMFILE`/`ENFILE` survived (back-off retry / listener disarm-rearm), not a teardown | `TcpServer`/`EpollServer` |
+| Connection-count overload | Optional cap (`max_active_connections`) load-sheds at the cap | `TcpServer` |
 
 The first five rows pre-date M30 (M9/M10); M30 adds the receive-buffer sizing knob and documents
 the loss model and the things deliberately left out.
@@ -75,9 +80,12 @@ stated plainly so the gap counter is not mistaken for reliability.
   bottleneck here. No `io_uring` code exists; none is claimed.
 - **TLS / authentication / authorization.** None. The services are loopback-only demos. Do not
   expose them on a routable interface (see `SECURITY.md`).
-- **Idle-peer timeouts, connection caps, rate limiting.** Not implemented. Heartbeats are a
-  liveness round-trip only; the gateway does not yet time out idle peers. These are reasonable
-  future hardening steps, explicitly not done today.
+- **Connection caps.** Implemented as an opt-in `TcpServer` knob (`max_active_connections`, default
+  `0` = unbounded): at the cap a freshly accepted connection is closed (load-shed) rather than
+  spawning another worker. See the posture table above.
+- **Idle-peer timeouts, rate limiting.** Not implemented. Heartbeats are a liveness round-trip only;
+  the gateway does not yet time out idle peers. These are reasonable future hardening steps,
+  explicitly not done today.
 - **`SO_REUSEADDR` / rapid rebind.** Not set; the profiling scripts dodge `TIME_WAIT` by using
   separate ports per pass instead of forcing address reuse.
 

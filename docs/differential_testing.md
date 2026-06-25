@@ -332,6 +332,9 @@ When the differential check fails in CI, the `ocaml-verifier` job runs `diff_rep
 positive fixtures and uploads a `differential-failure-bundle` artifact. For each diverging
 fixture it contains `<base>.original` (the fixture), `<base>.computed` (OCaml snapshot),
 `<base>.expected` (C++ snapshot), and `<base>.diff` (a line diff) — so a divergence can be
-debugged from the CI run without reproducing locally. The minimal-counterexample form of a
+debugged from the CI run without reproducing locally. `diff_report` guards each fixture
+independently: a malformed or unreadable fixture is reported as a comparison failure (non-zero
+exit), not allowed to abort the batch and lose the remaining fixtures' bundles (#144). The
+minimal-counterexample form of a
 failing *generated* stream is produced separately by the C++ shrinker (`qsl-export-stream
 shrink`, M19).

@@ -163,6 +163,8 @@ measurements, not a production recovery-time claim.
   not read back from the log (the log could also store events, but the engine is the source
   of truth for replay equivalence).
 - The reader loads the whole log into memory before replaying (adequate for the simulator).
-- Commands are trusted once their record checksum validates (M7); the command codec does not
-  re-validate enum domains — wire-level enum validation lives at the protocol boundary (M2)
-  and risk checks at the gateway (M5).
+- Commands are trusted once their record checksum validates (M7). The command codec also rejects
+  out-of-domain enum bytes: `replay::decode_command` refuses a `NewLimit`/`NewMarket` record whose
+  `Side` or `TimeInForce` byte is not a defined enum value (#136), so a corrupt log record cannot
+  apply garbage straight to the engine. Higher-level validation still lives at the protocol boundary
+  (M2) and the risk gateway (M5).

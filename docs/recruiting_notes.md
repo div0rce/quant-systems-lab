@@ -45,8 +45,9 @@
 ## Résumé bullets — Linux Engineering (conservative)
 
 - Implemented TCP order-gateway transports and a UDP market-data feed on POSIX sockets
-  (loopback), with bounded receive timeouts, sequence-gap detection, threaded portable serving,
-  epoll-based Linux serving, and disconnect-on-malformed-framing.
+  (loopback), with bounded receive timeouts, sequence-gap detection, UDP send-error counting,
+  threaded portable serving with a connection cap and accept-error/fd-exhaustion survival,
+  epoll-based Linux serving, `EINTR`-retry on read/write, and disconnect-on-malformed-framing.
 - Built CLI tools for append-only-log inspection and deterministic replay, plus a demo script
   that orchestrates a loopback gateway round-trip with port-readiness polling and clean
   process teardown.
