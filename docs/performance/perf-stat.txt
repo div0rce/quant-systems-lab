@@ -1,87 +1,79 @@
-QSL matching-engine hot path — perf stat (hardware counters), before vs after
-==============================================================================
+QSL matching-engine hot path: perf stat (hardware counters), before vs after
+=============================================================================
 
 Optimizations under test (order-book insertion + matching hot path):
-  - #138  OrderBook::level_for: std::map::emplace  ->  try_emplace
-  - #145  OrderBook ctor:       index_ unordered_map max_load_factor 1.0 -> 0.25
+  #138  OrderBook::level_for: std::map::emplace  ->  try_emplace
+  #145  OrderBook ctor:       index_ unordered_map max_load_factor 1.0 -> 0.25
 
 Workload / benchmark command:
   qsl-perfeval 60000000
-  (steady-state deep book, baseline storage; each "order" = one new_limit that may
-   match resting liquidity and rest its remainder; the book is held ~512 deep by
-   cancelling the oldest order each cycle. 60,000,000 orders.)
+  (steady-state deep book, baseline storage. Each "order" is one new_limit that may match resting
+   liquidity and rest its remainder, or fully fill and not rest. The book is held ~512 deep by
+   cancelling the oldest RESTING order each cycle; only orders that actually rested are tracked, so
+   depth does not drift with the match rate. 60,000,000 orders.)
 
 Build:
   Compiler:   GCC (c++) 16.1.1 20260515 (Red Hat 16.1.1-2)
-  Flags:      Release (-O3 -DNDEBUG) + -fno-omit-frame-pointer -g   (CMake "flamegraph" preset)
+  Flags:      Release (-O3 -DNDEBUG) plus -fno-omit-frame-pointer -g  (CMake "flamegraph" preset)
   Binary:     build/flamegraph/qsl-perfeval
 
 Hardware / OS:
-  CPU:        Apple M2 (aarch64); scheduled on the Avalanche performance cores
-              (MIDR CPU part 0x032). Heterogeneous SoC: perf opens each event against
-              both apple_avalanche_pmu (P-core) and apple_blizzard_pmu (E-core); the
-              single-threaded workload runs on the P-cores, so the Avalanche rows carry
-              the real counts and the Blizzard rows read <not counted>.
-  Kernel:     Linux 6.19.14-400.asahi.fc44.aarch64+16k (Fedora Asahi Remix, bare metal)
+  CPU:        Apple M2 (aarch64), scheduled on the Avalanche performance cores (MIDR CPU part 0x032),
+              bare metal. Heterogeneous SoC: perf opens each event against both apple_avalanche_pmu
+              (P-core) and apple_blizzard_pmu (E-core); the single-threaded workload runs on the
+              P-cores, so the Avalanche rows carry the real counts and Blizzard reads <not counted>.
+  Kernel:     Linux 6.19.14-400.asahi.fc44.aarch64+16k (Fedora Asahi Remix)
   Governor:   schedutil   (/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)
   perf:       perf version 6.19.14-400.asahi.fc44.aarch64
   paranoid:   2
 
 Counter availability (issue #90):
-  The Apple Silicon PMU exposed by the Asahi driver implements cycles, instructions,
-  branches, and branch-misses, but NOT the generic cache-references / cache-misses
-  events. Cache-miss rate is therefore UNMEASURABLE on this host and is reported as
-  "unavailable" — never estimated. (A PMU microarchitecture that exposes cache events,
-  e.g. x86_64 or an ARM server core, is needed to close that gap.)
+  The Apple Silicon PMU exposed by the Asahi driver implements cycles, instructions, branches, and
+  branch-misses, but NOT the generic cache-references / cache-misses events. Cache-miss rate is
+  therefore UNMEASURABLE on this host and is reported as "unavailable", never estimated. A PMU
+  microarchitecture that exposes cache events (x86_64 or an ARM server core) is needed to close it.
 
-------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 BEFORE  (std::map::emplace + default index load-factor 1.0)
-------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
  perf stat -e cycles,instructions,branches,branch-misses -- qsl-perfeval 60000000
 
-    20,894,373,501      apple_avalanche_pmu/cycles/u
-     <not counted>      apple_blizzard_pmu/cycles/u
-    74,351,477,053      apple_avalanche_pmu/instructions/u
-     <not counted>      apple_blizzard_pmu/instructions/u
-    14,635,813,879      apple_avalanche_pmu/branches/u
-     <not counted>      apple_blizzard_pmu/branches/u
-       295,293,764      apple_avalanche_pmu/branch-misses/u
-     <not counted>      apple_blizzard_pmu/branch-misses/u
+    20,743,161,363      apple_avalanche_pmu/cycles/u
+    74,766,971,711      apple_avalanche_pmu/instructions/u
+    15,104,392,009      apple_avalanche_pmu/branches/u
+       280,191,290      apple_avalanche_pmu/branch-misses/u
 
   Derived (per 60,000,000 orders):
-    cycles/order            348.2
-    instructions/order     1239.2
-    IPC                       3.56
-    branches/order          243.9
-    branch-miss rate         2.018 %   (295,293,764 / 14,635,813,879)
+    cycles/order            345.7
+    instructions/order     1246.1
+    IPC                       3.60
+    branches/order          251.7
+    branch-miss rate         1.855 %   (280,191,290 / 15,104,392,009)
     cache-miss rate         unavailable (PMU does not expose cache counters; #90)
 
-------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
 AFTER  (try_emplace + index load-factor 0.25)
-------------------------------------------------------------------------------
+-----------------------------------------------------------------------------
  perf stat -e cycles,instructions,branches,branch-misses -- qsl-perfeval 60000000
 
-    17,303,430,508      apple_avalanche_pmu/cycles/u            (99.50%)
-     <not counted>      apple_blizzard_pmu/cycles/u
-    68,572,470,652      apple_avalanche_pmu/instructions/u      (99.50%)
-     <not counted>      apple_blizzard_pmu/instructions/u
-    13,741,483,668      apple_avalanche_pmu/branches/u          (99.50%)
-     <not counted>      apple_blizzard_pmu/branches/u
-       249,062,345      apple_avalanche_pmu/branch-misses/u     (99.50%)
-     <not counted>      apple_blizzard_pmu/branch-misses/u
+    17,836,300,762      apple_avalanche_pmu/cycles/u
+    68,614,201,853      apple_avalanche_pmu/instructions/u
+    14,137,436,042      apple_avalanche_pmu/branches/u
+       239,025,863      apple_avalanche_pmu/branch-misses/u
 
   Derived (per 60,000,000 orders):
-    cycles/order            288.4    (-17.2 % vs before)
-    instructions/order     1142.9    ( -7.8 %)
-    IPC                       3.96    (+11.4 %)
-    branches/order          229.0    ( -6.1 %)
-    branch-miss rate         1.813 %  (-0.205 pp; -10.2 % relative)
+    cycles/order            297.3    (-14.0 % vs before)
+    instructions/order     1143.6    ( -8.2 %)
+    IPC                       3.85    ( +6.7 %)
+    branches/order          235.6    ( -6.4 %)
+    branch-miss rate         1.691 %  (-0.16 pp)
     cache-miss rate         unavailable (#90)
 
-Reading: the ~+25% throughput is explained by ~-17% cycles/order. That cycle drop
-is part fewer instructions/order (-7.8%: shorter index probe chains + no throwaway
-per-insert pmr::list construction) and part higher IPC (+11.4%: shorter probe chains
-stall the pipeline/memory system less). The branch-miss rate also falls, consistent
-with fewer mispredicted bucket-traversal loop-back branches. Allocations/order are
-UNCHANGED (1.106 -> 1.106) — the win is instruction/cycle efficiency, not allocation
-count (libstdc++ std::map::emplace checks the key before allocating a node).
+Reading: the ~+16 % throughput is explained by ~-14 % cycles/order, which is part fewer
+instructions/order (-8.2 %: shorter index probe chains plus no throwaway per-insert pmr::list
+construction) and part higher IPC (+6.7 %: shorter probe chains stall the pipeline/memory system
+less). Allocations/order are UNCHANGED (1.108 -> 1.108): the win is instruction/cycle efficiency,
+not allocation count (libstdc++ std::map::emplace checks the key before allocating). The per-order
+new_limit LATENCY distribution barely moves (p50 ~83 ns, p99 ~208 ns both); the median order already
+hits an existing level with a short probe, and the optimization's benefit shows in the aggregate
+new_limit+cancel cycle (throughput) rather than the new_limit tail.
