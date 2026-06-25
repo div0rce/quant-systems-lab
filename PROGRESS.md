@@ -234,10 +234,10 @@ production-latency claim.
   excludes network/disk/kernel path). The earlier macOS Apple-clang numbers (~126/39/270/121/132 ns)
   were superseded by the Linux regeneration and are not the current set.
 - order book add/modify/cancel: ~90 ns/op
-- protocol NewOrder encode+decode: ~17 ns/op
-- in-process gateway session (crossing order with fill): ~105 ns/op
+- protocol NewOrder encode+decode: ~16 ns/op
+- in-process gateway session (crossing order with fill): ~102 ns/op
 - matching-engine flow apply: ~91 ns/command
-- replay from command log: ~105 ns/command
+- replay from command log: ~101 ns/command
 - Note: these single-process micro-benchmarks hold a near-empty order index, so they do not exercise
   the deep-book steady state where the v0.2.2 engine wins land — `try_emplace` (~+5%, #138) and the
   order-index load-factor cap (~+18.6%, #145) are measured on the `qsl-bench profile` workload.

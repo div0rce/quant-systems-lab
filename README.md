@@ -98,11 +98,11 @@ methodology and caveats in [docs/benchmarking.md](docs/benchmarking.md) and
 
 | Scenario (synthetic, in-process) | Measured on this run |
 |---|---|
-| Order book add/modify/cancel | ~87 ns/op |
+| Order book add/modify/cancel | ~90 ns/op |
 | Protocol `NewOrder` encode+decode | ~16 ns/op |
-| Gateway session, crossing order with fill | ~110 ns/op |
-| Matching-engine flow (apply) | ~98 ns/command |
-| Replay from command log | ~110 ns/command |
+| Gateway session, crossing order with fill | ~102 ns/op |
+| Matching-engine flow (apply) | ~91 ns/command |
+| Replay from command log | ~101 ns/command |
 
 Reproduce with `make bench` (numbers will differ by machine). These micro-benchmarks hold a
 near-empty order index, so they do **not** exercise the deep-book steady state where the v0.2.2

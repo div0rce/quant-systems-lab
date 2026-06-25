@@ -4,12 +4,12 @@ OS:          Linux 6.19.14-400.asahi.fc44.aarch64+16k
 Compiler:    c++ (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)
 Build type:  Release
 Provenance version: 1
-Git commit (informational): 33f8d11
-Source digest: sha256:1271610ad6c9c96534b350239f0341fe413ce0b989f3aca3434b2f4652395b64
+Git commit (informational): 114445a
+Source digest: sha256:c54df82614b53ea736e845a5893096a9ee12b65a8cee49be28b9c53a25d5a9df
 Source digest scope: core-benchmark-suite
 Dirty inputs: no
 Generated output: results/latest.txt
-Date: 2026-06-21T05:25:21Z
+Date: 2026-06-25T02:36:30Z
 Dataset:     synthetic order flow (replay::generate_flow, seed 42, 4 symbols)
 Warmup:      iters/10 (or 1 throughput pass) per benchmark, before timing
 Units:       latency = ns/op + ops/sec; throughput = ns/item + items/sec
@@ -19,8 +19,8 @@ no kernel/IO path, stock allocator). NOT production exchange throughput or
 end-to-end latency; hardware/compiler/build dependent.
 
 Scenario / Metric / Result:
-order_book add/mod/cancel     200000 ops         87.3 ns/op       11458608 ops/sec
-protocol encode+decode        500000 ops         15.9 ns/op       62727387 ops/sec
-gateway session (fill)        200000 ops        109.7 ns/op        9115527 ops/sec
-matching engine flow            5004 items       98.2 ns/item     10181380 items/sec
-replay command log              5004 items      110.4 ns/item      9059370 items/sec
+order_book add/mod/cancel     200000 ops         90.6 ns/op       11043024 ops/sec
+protocol encode+decode        500000 ops         16.1 ns/op       62049736 ops/sec
+gateway session (fill)        200000 ops        102.3 ns/op        9776174 ops/sec
+matching engine flow            5004 items       91.4 ns/item     10939533 items/sec
+replay command log              5004 items      101.3 ns/item      9874313 items/sec
