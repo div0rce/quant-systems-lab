@@ -4,16 +4,47 @@
 #include "qsl/replay/dispatch.hpp"
 #include "qsl/replay/recovery.hpp"
 
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <optional>
 #include <ostream>
+#include <string_view>
 #include <type_traits>
 #include <variant>
 
 using namespace qsl;
 
 namespace {
+
+// Parse a whole token as an unsigned integer; rejects junk/trailing chars/overflow rather than
+// std::stoull's throw-on-bad-input (which would call std::terminate from main).
+std::optional<std::uint64_t> parse_u64(std::string_view s) {
+    std::uint64_t value = 0;
+    const char *begin = s.data();
+    const char *end = begin + s.size();
+    const auto [ptr, ec] = std::from_chars(begin, end, value);
+    if (ec != std::errc{} || ptr != end) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+struct FixtureArgs {
+    std::uint64_t seed;
+    std::size_t orders;
+};
+
+// Optional [seed] [orders] args (defaults 42 / 200); nullopt if either is present but malformed.
+std::optional<FixtureArgs> parse_args(int argc, char **argv) {
+    const auto seed = (argc >= 2) ? parse_u64(argv[1]) : std::optional<std::uint64_t>{42};
+    const auto orders = (argc >= 3) ? parse_u64(argv[2]) : std::optional<std::uint64_t>{200};
+    if (!seed || !orders) {
+        return std::nullopt;
+    }
+    return FixtureArgs{*seed, static_cast<std::size_t>(*orders)};
+}
 
 // Emit one normalized line per engine event (in emission order).
 void emit_events(std::ostream &os, const std::vector<engine::EngineEvent> &events) {
@@ -45,8 +76,13 @@ void emit_events(std::ostream &os, const std::vector<engine::EngineEvent> &event
 // max_order_quantity makes some new orders reject, so the fixture exercises the
 // "rejected order never rests" invariant. Engine-neutral: no engine code is modified.
 int main(int argc, char **argv) {
-    const std::uint64_t seed = (argc >= 2) ? std::stoull(argv[1]) : 42;
-    const std::size_t orders = (argc >= 3) ? std::stoull(argv[2]) : 200;
+    const auto args = parse_args(argc, argv);
+    if (!args) {
+        std::cerr << "usage: qsl-export-fixture [seed] [orders]\n";
+        return 2;
+    }
+    const std::uint64_t seed = args->seed;
+    const std::size_t orders = args->orders;
     const core::SymbolId symbols = 4;
     const core::Quantity max_qty = 8; // generate_flow can emit qty > 8 -> some orders reject
 
