@@ -10,8 +10,20 @@ let () =
       let any =
         List.fold_left
           (fun acc f ->
-            let diverged = Diff_report.bundle_if_divergent ~out_dir f in
-            if diverged then Printf.eprintf "divergence: %s -> bundle in %s\n" f out_dir;
+            (* Guard each fixture: a malformed or unreadable one must not raise out of the fold and
+               abort the whole batch, which would silently lose the divergence bundles for every
+               later fixture -- exactly when CI needs them. Surface it as a failure (diverged=true)
+               so the missing comparison forces a non-zero exit instead of disappearing. Matches the
+               explicit Parse_error/Sys_error handling in verify_replay.ml and replay_snapshot.ml. *)
+            let diverged =
+              try
+                let d = Diff_report.bundle_if_divergent ~out_dir f in
+                if d then Printf.eprintf "divergence: %s -> bundle in %s\n" f out_dir;
+                d
+              with Stream_parser.Parse_error msg | Sys_error msg ->
+                Printf.eprintf "cannot compare %s: %s\n" f msg;
+                true
+            in
             acc || diverged)
           false fixtures
       in
