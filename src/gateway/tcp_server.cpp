@@ -7,6 +7,7 @@
 #include <array>
 #include <atomic>
 #include <cerrno>
+#include <chrono>
 #include <cstddef>
 #include <limits>
 #include <memory>
@@ -105,13 +106,27 @@ bool transient_accept_errno() noexcept {
     return std::find(std::begin(kTransient), std::end(kTransient), errno) != std::end(kTransient);
 }
 
-// accept() one connection, retrying transient errors. Returns a connected fd, or -1 on a genuinely
-// fatal listener error (which should stop the accept loop).
+// Descriptor/resource exhaustion: out of fds (process or system-wide) or kernel buffers. Like the
+// epoll path, this must not tear the server down — the condition clears as clients disconnect and
+// their worker threads close their sockets. It cannot be added to transient_accept_errno() (an
+// immediate retry would just re-fail, since the pending connection stays in the backlog), so the
+// acceptor backs off briefly between retries instead of busy-spinning.
+bool fd_exhausted_errno() noexcept {
+    return errno == EMFILE || errno == ENFILE || errno == ENOBUFS || errno == ENOMEM;
+}
+
+// accept() one connection. Retries transient per-connection errors immediately and resource
+// exhaustion after a short back-off. Returns a connected fd, or -1 only on a genuinely fatal
+// listener error (e.g. EBADF/EINVAL) that should stop the accept loop.
 int accept_retry(int listen_fd) {
     for (;;) {
         const int conn = ::accept(listen_fd, nullptr, nullptr);
         if (conn >= 0) {
             return conn;
+        }
+        if (fd_exhausted_errno()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // wait for an fd to free
+            continue;
         }
         if (!transient_accept_errno()) {
             return -1;
